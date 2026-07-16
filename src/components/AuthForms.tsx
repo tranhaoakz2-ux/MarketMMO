@@ -51,6 +51,7 @@ export default function AuthForms({
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginSuccess, setLoginSuccess] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginTurnstileToken, setLoginTurnstileToken] = useState("");
 
@@ -67,6 +68,7 @@ export default function AuthForms({
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
+    setLoginSuccess(null);
     setLoginLoading(true);
     const res = await signIn("credentials", {
       email: loginEmail,
@@ -114,25 +116,24 @@ export default function AuthForms({
     });
     const data = await res.json();
 
+    setRegLoading(false);
     if (!res.ok) {
-      setRegLoading(false);
       setRegError(data.error ?? "Đăng ký thất bại, vui lòng thử lại.");
       return;
     }
 
-    const signInRes = await signIn("credentials", {
-      email: regEmail,
-      password: regPassword,
-      turnstileToken: regTurnstileToken,
-      redirect: false,
-    });
-    setRegLoading(false);
-    if (signInRes?.error) {
-      router.push("/dang-nhap");
-      return;
-    }
-    router.push(callbackUrl);
-    router.refresh();
+    // Không tự đăng nhập ngay bằng cách gọi lại signIn("credentials", ...) ở
+    // đây — mã xác minh Turnstile (regTurnstileToken) đã bị Cloudflare tiêu
+    // thụ (dùng 1 lần) trong request POST /api/auth/register phía trên, gọi
+    // lại signIn với CÙNG token đó chắc chắn bị từ chối xác minh lần 2, gây
+    // lỗi CredentialsSignin — bug thật đã gặp trên production sau khi bật
+    // Turnstile thật (không lộ ra lúc dev vì thiếu key thì verify luôn qua).
+    // Chuyển sang tab đăng nhập, điền sẵn email, để người dùng tự đăng nhập
+    // với 1 lượt xác minh Turnstile mới — an toàn và đơn giản hơn là tạo
+    // thêm cơ chế "token nội bộ dùng 1 lần" chỉ để né việc đăng nhập lại.
+    setTab("login");
+    setLoginEmail(regEmail);
+    setLoginSuccess("Đăng ký thành công! Vui lòng đăng nhập để tiếp tục.");
   };
 
   return (
@@ -202,6 +203,12 @@ export default function AuthForms({
 
         {turnstileSiteKey && (
           <TurnstileWidget siteKey={turnstileSiteKey} onVerify={setLoginTurnstileToken} onExpire={() => setLoginTurnstileToken("")} />
+        )}
+
+        {loginSuccess && (
+          <p className="rounded-lg bg-success/10 px-3 py-2 text-xs font-semibold text-success">
+            {loginSuccess}
+          </p>
         )}
 
         {loginError && (
