@@ -54,6 +54,13 @@ export default function AuthForms({
   const [loginSuccess, setLoginSuccess] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginTurnstileToken, setLoginTurnstileToken] = useState("");
+  // Đổi key này để ép <TurnstileWidget> unmount/remount, sinh lại challenge +
+  // token mới — bắt buộc sau MỌI lần submit thất bại (kể cả sai mật khẩu,
+  // không liên quan gì đến Turnstile), vì token Turnstile chỉ dùng được 1
+  // lần: nếu không reset, lần thử lại sẽ tái sử dụng token đã bị Cloudflare
+  // tiêu thụ ở lần trước, luôn báo "Xác minh chống spam thất bại" dù widget
+  // vẫn hiển thị "Success" (bug thật đã gặp trên production).
+  const [loginTurnstileKey, setLoginTurnstileKey] = useState(0);
 
   const [regUsername, setRegUsername] = useState("");
   const [regEmail, setRegEmail] = useState("");
@@ -64,6 +71,7 @@ export default function AuthForms({
   const [regError, setRegError] = useState<string | null>(null);
   const [regLoading, setRegLoading] = useState(false);
   const [regTurnstileToken, setRegTurnstileToken] = useState("");
+  const [regTurnstileKey, setRegTurnstileKey] = useState(0);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,6 +91,10 @@ export default function AuthForms({
           ? "Xác minh chống spam thất bại, vui lòng thử lại."
           : "Email hoặc mật khẩu không đúng."
       );
+      // Token Turnstile vừa dùng đã bị tiêu thụ dù đăng nhập thất bại vì lý
+      // do gì đi nữa (kể cả sai mật khẩu) — bắt buộc giải lại captcha mới.
+      setLoginTurnstileToken("");
+      setLoginTurnstileKey((k) => k + 1);
       return;
     }
     router.push(callbackUrl);
@@ -119,6 +131,11 @@ export default function AuthForms({
     setRegLoading(false);
     if (!res.ok) {
       setRegError(data.error ?? "Đăng ký thất bại, vui lòng thử lại.");
+      // Server đã tiêu thụ token Turnstile khi xử lý request này (dù request
+      // thất bại vì lý do khác như trùng email/username) — bắt buộc giải lại
+      // captcha mới trước khi cho thử lại, cùng lý do như handleLogin ở trên.
+      setRegTurnstileToken("");
+      setRegTurnstileKey((k) => k + 1);
       return;
     }
 
@@ -202,7 +219,7 @@ export default function AuthForms({
         </div>
 
         {turnstileSiteKey && (
-          <TurnstileWidget siteKey={turnstileSiteKey} onVerify={setLoginTurnstileToken} onExpire={() => setLoginTurnstileToken("")} />
+          <TurnstileWidget key={loginTurnstileKey} siteKey={turnstileSiteKey} onVerify={setLoginTurnstileToken} onExpire={() => setLoginTurnstileToken("")} />
         )}
 
         {loginSuccess && (
@@ -354,7 +371,7 @@ export default function AuthForms({
         </label>
 
         {turnstileSiteKey && (
-          <TurnstileWidget siteKey={turnstileSiteKey} onVerify={setRegTurnstileToken} onExpire={() => setRegTurnstileToken("")} />
+          <TurnstileWidget key={regTurnstileKey} siteKey={turnstileSiteKey} onVerify={setRegTurnstileToken} onExpire={() => setRegTurnstileToken("")} />
         )}
 
         {regError && (
