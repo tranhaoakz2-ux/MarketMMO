@@ -84,9 +84,14 @@ và các trang pháp lý cho MarketMMO:
   từ lúc còn dùng SQLite (không hỗ trợ enum); có thể chuyển sang `enum` thật
   trong `prisma/schema.prisma` bất kỳ lúc nào nếu muốn (Postgres hỗ trợ đầy
   đủ), không bắt buộc.
-- **Auth**: Auth.js (`next-auth@5` beta) — Credentials (email/mật khẩu, hash
-  bằng `bcryptjs`) + Google OAuth (chỉ bật khi có `AUTH_GOOGLE_ID`/
-  `AUTH_GOOGLE_SECRET` trong `.env`). Session dùng chiến lược `jwt` (bắt buộc
+- **Auth**: Auth.js (`next-auth@5` beta) — Credentials (đăng nhập bằng
+  **email hoặc username** + mật khẩu, hash bằng `bcryptjs` — field wire vẫn
+  tên `email` để không phải đổi mọi nơi gọi `signIn`, nhưng `authorize()`
+  tra cả `email` lẫn `username` qua `findFirst({ OR: [...] })`) + Google
+  OAuth (chỉ bật khi có `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` trong `.env`).
+  Đăng ký (`/api/auth/register`) vẫn bắt buộc nhập cả username lẫn email
+  riêng biệt — chỉ luồng đăng nhập mới chấp nhận 1 trong 2. Session dùng
+  chiến lược `jwt` (bắt buộc
   khi có Credentials provider). Cấu hình tại `src/auth.ts`. Đăng nhập/đăng ký
   đều có xác minh chống bot **Cloudflare Turnstile** (`src/components/
 TurnstileWidget.tsx` + `src/lib/turnstile.ts`), theo cùng quy ước "tuỳ chọn

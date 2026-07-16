@@ -15,20 +15,26 @@ const providers: NextAuthConfig["providers"] = [
   Credentials({
     name: "credentials",
     credentials: {
-      email: { label: "Email", type: "text" },
+      email: { label: "Email hoặc Username", type: "text" },
       password: { label: "Mật khẩu", type: "password" },
       turnstileToken: { label: "Turnstile", type: "text" },
     },
     async authorize(credentials) {
-      const email = credentials?.email as string | undefined;
+      // Trường "email" thực chất nhận cả email lẫn username — form đăng
+      // nhập cho phép người dùng gõ 1 trong 2 (xem AuthForms.tsx, nhãn
+      // "Email hoặc Username"). Giữ nguyên tên field "email" trên wire để
+      // không phải đổi mọi nơi gọi signIn("credentials", { email: ... }).
+      const identifier = credentials?.email as string | undefined;
       const password = credentials?.password as string | undefined;
       const turnstileToken = credentials?.turnstileToken as string | undefined;
-      if (!email || !password) return null;
+      if (!identifier || !password) return null;
 
       const turnstileOk = await verifyTurnstileToken(turnstileToken);
       if (!turnstileOk) throw new TurnstileSignin();
 
-      const user = await prisma.user.findUnique({ where: { email } });
+      const user = await prisma.user.findFirst({
+        where: { OR: [{ email: identifier }, { username: identifier }] },
+      });
       if (!user?.passwordHash) return null;
 
       const valid = await bcrypt.compare(password, user.passwordHash);

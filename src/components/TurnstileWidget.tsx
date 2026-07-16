@@ -83,36 +83,20 @@ const TurnstileWidget = forwardRef<
 
   useEffect(() => {
     let cancelled = false;
-    console.log("[Turnstile] effect start, siteKey=", siteKey);
 
     loadTurnstileScript().then(() => {
-      console.log(
-        "[Turnstile] script ready, cancelled=",
-        cancelled,
-        "container=",
-        !!containerRef.current,
-        "window.turnstile=",
-        !!window.turnstile
-      );
       if (cancelled || !containerRef.current || !window.turnstile) return;
       try {
         widgetIdRef.current = window.turnstile.render(containerRef.current, {
           sitekey: siteKey,
-          callback: (token: string) => {
-            console.log("[Turnstile] onVerify fired, token length=", token?.length);
-            onVerifyRef.current(token);
-          },
-          "expired-callback": () => {
-            console.log("[Turnstile] expired-callback fired");
-            onExpireRef.current?.();
-          },
+          callback: (token: string) => onVerifyRef.current(token),
+          "expired-callback": () => onExpireRef.current?.(),
           "error-callback": () => {
-            console.error("[Turnstile] error-callback fired");
+            console.error("Turnstile render error-callback fired.");
           },
         });
-        console.log("[Turnstile] render() returned widgetId=", widgetIdRef.current);
       } catch (err) {
-        console.error("[Turnstile] render() threw:", err);
+        console.error("Turnstile render() threw:", err);
       }
     });
 

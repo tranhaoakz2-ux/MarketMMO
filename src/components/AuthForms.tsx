@@ -180,16 +180,16 @@ export default function AuthForms({
       <form onSubmit={handleLogin} className="flex flex-col gap-4 p-6 sm:p-8">
         <div>
           <label className="mb-1.5 block text-sm font-semibold text-ink">
-            Email
+            Email hoặc Username
           </label>
           <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
             <Mail className="h-4 w-4 text-muted" />
             <input
-              type="email"
+              type="text"
               required
               value={loginEmail}
               onChange={(e) => setLoginEmail(e.target.value)}
-              placeholder="Nhập email"
+              placeholder="Nhập email hoặc username"
               className="w-full text-sm focus:outline-none"
             />
           </div>
