@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: marketmmo
+      POSTGRES_PASSWORD: marketmmo
+      POSTGRES_DB: marketmmo
+    ports:
+      - "5433:5432"
+    volumes:
+      - marketmmo_pgdata:/var/lib/postgresql/data
+
+volumes:
+  marketmmo_pgdata:

@@ -1,0 +1,448 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Kept as plain strings (not native Prisma enums) even though PostgreSQL
+// supports them — these fields were originally added on SQLite (no enum
+// support there) and app code already treats them as validated strings via
+// the TypeScript union types in src/lib/constants.ts. Converting to native
+// `enum` blocks is a safe follow-up if wanted, but isn't required for the
+// SQLite → PostgreSQL migration itself. Allowed values per field:
+//   User.role            "BUYER" | "SELLER" | "ADMIN"
+//   Order.status          "ESCROW" | "RELEASED" | "CANCELLED" | "DISPUTED"
+//   OrderItem.status       same as Order.status
+//   WalletTransaction.type   "DEPOSIT" | "PURCHASE" | "PAYOUT" | "REFUND" |
+//                            "REFERRAL_BONUS" | "WITHDRAW" | "INSURANCE_DEPOSIT"
+//   WalletTransaction.status "PENDING" | "CONFIRMED" | "REJECTED"
+//   SellerVerification.status "PENDING" | "APPROVED" | "REJECTED"
+//   DiscountCode.type         "PERCENT" | "FIXED"
+//   Dispute.status             "OPEN" | "RESOLVED_REFUND" | "RESOLVED_RELEASE"
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  username      String?   @unique
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  phone         String?
+  role          String    @default("BUYER")
+  walletBalance Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  // Cập nhật trong callback jwt() của Auth.js (src/auth.ts) mỗi khi có phiên
+  // đăng nhập/làm mới token (throttle 2 phút/lần để tránh ghi DB liên tục) —
+  // dùng để hiển thị "Online X trước" ở trang chi tiết sản phẩm.
+  lastActiveAt  DateTime?
+
+  // Affiliate/giới thiệu: mã của chính người dùng này (chia sẻ cho người
+  // khác) + liên kết tới người đã giới thiệu mình (nếu đăng ký qua mã mời).
+  // Nullable vì các tài khoản có sẵn trước khi có tính năng này chưa có mã —
+  // sinh "lười" (lazy) khi họ vào trang /affiliate lần đầu, xem
+  // src/lib/referral.ts. Không dùng migration backfill vì dự án dùng
+  // `prisma db push` (không có thư mục migrations).
+  referralCode     String?  @unique
+  referredById     String?
+  referredBy       User?    @relation("Referrals", fields: [referredById], references: [id])
+  referrals        User[]   @relation("Referrals")
+  // true khi người giới thiệu (referredBy) đã nhận hoa hồng cho CHÍNH user
+  // này — đánh dấu trên người được mời (không phải người mời) để idempotent
+  // dễ dàng dù có nhiều lượt mời khác nhau. Set true trong POST /api/checkout
+  // khi đơn hàng đầu tiên của user này đủ điều kiện (xem REFERRAL_MIN_FIRST_ORDER_VND).
+  referralRewarded Boolean  @default(false)
+
+  accounts      Account[]
+  sessions      Session[]
+  seller        Seller?
+  orders        Order[]
+  walletTxs     WalletTransaction[]
+  reviews       Review[]
+  forumPosts    ForumPost[]
+  forumComments ForumComment[]
+  forumLikes    ForumLike[]
+  disputesOpened Dispute[]
+  conversationsAsUserA Conversation[] @relation("ConversationsAsUserA")
+  conversationsAsUserB Conversation[] @relation("ConversationsAsUserB")
+  sentMessages         Message[]
+  passwordResetTokens  PasswordResetToken[]
+}
+
+// Quên mật khẩu: token lưu dạng SHA-256 hash (không lưu token gốc) để dữ
+// liệu bị rò rỉ từ DB không thể dùng trực tiếp reset mật khẩu người khác —
+// token gốc (đủ entropy, 32 byte ngẫu nhiên) chỉ gửi qua email, xem
+// src/lib/email.ts + src/app/api/auth/forgot-password/route.ts.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Seller {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopName     String
+  slug         String   @unique
+  description  String
+  phone        String?
+  facebookLink String?
+  level       Int      @default(1)
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  // Số dư quỹ bảo hiểm seller đã đóng lên sàn (hiển thị ở trang chi tiết sản
+  // phẩm như 1 tín hiệu tin cậy, giống shopmini.pro) — nạp thật qua
+  // /trang-ban-hang/quy-bao-hiem (POST /api/seller/insurance-deposit).
+  insuranceBalance Int @default(0)
+
+  // Telegram Bot (Trang Bán Hàng > Telegram Bot) — env-gated giống VNPay,
+  // xem TELEGRAM_BOT_TOKEN trong .env.example. telegramLinkCode: mã 6 ký tự
+  // tạm thời seller gửi cho bot qua lệnh /link để xác nhận đúng Chat ID là
+  // của mình; xoá sau khi liên kết thành công. telegramChatId: null nghĩa là
+  // chưa liên kết, không gửi thông báo.
+  telegramChatId   String?
+  telegramLinkCode String?
+
+  products       Product[]
+  reviews        Review[]
+  auctionBids    AuctionBid[]
+  discountCodes  DiscountCode[]
+  verification   SellerVerification?
+}
+
+// Xác thực CCCD người bán (Trang Bán Hàng > Xác thực CCCD). Ảnh lưu NGOÀI
+// /public (thư mục /uploads ở root, xem .gitignore) — chỉ phục vụ qua route
+// được bảo vệ (chính seller đó hoặc admin), KHÔNG public như ảnh sản phẩm/logo.
+model SellerVerification {
+  id            String    @id @default(cuid())
+  sellerId      String    @unique
+  seller        Seller    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  fullName      String
+  idNumber      String
+  frontImagePath String
+  backImagePath  String
+  status        String    @default("PENDING")
+  adminNote     String?
+  createdAt     DateTime  @default(now())
+  reviewedAt    DateTime?
+}
+
+// Mã giảm giá do seller tự tạo, áp dụng cho TOÀN BỘ sản phẩm của chính họ
+// (không áp dụng chéo sang sản phẩm seller khác trong cùng đơn) — xem
+// POST /api/checkout để biết cách áp dụng an toàn trong 1 $transaction.
+model DiscountCode {
+  id        String    @id @default(cuid())
+  sellerId  String
+  seller    Seller    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  code      String    @unique
+  type      String // "PERCENT" | "FIXED"
+  value     Int // % (1-100) nếu PERCENT, hoặc số tiền VNĐ cố định nếu FIXED
+  maxUses   Int?
+  usedCount Int       @default(0)
+  active    Boolean   @default(true)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// Đấu giá "vị trí vàng" — seller trả giá để sản phẩm của mình hiện trong
+// carousel "Sản phẩm nổi bật" ở trang chủ trong một khoảng thời gian.
+//   position 1-4: period WEEKLY (1 tuần/phiên)
+//   position 5-6: period DAILY  (1 ngày/phiên)
+// status: "OPEN" | "CLOSED"
+model AuctionSlot {
+  id           String    @id @default(cuid())
+  position     Int
+  period       String
+  floorPrice   Int
+  startAt      DateTime
+  endAt        DateTime
+  status       String    @default("OPEN")
+  winningBidId String?
+  createdAt    DateTime  @default(now())
+
+  bids AuctionBid[]
+}
+
+model AuctionBid {
+  id        String      @id @default(cuid())
+  slotId    String
+  slot      AuctionSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  sellerId  String
+  seller    Seller      @relation(fields: [sellerId], references: [id])
+  productId String
+  product   Product     @relation(fields: [productId], references: [id])
+  amount    Int
+  createdAt DateTime    @default(now())
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  sellerId  String
+  seller    Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sellerId, userId])
+}
+
+model Category {
+  id    String @id @default(cuid())
+  slug  String @unique
+  name  String
+  emoji String
+
+  products Product[]
+}
+
+model Product {
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  name             String
+  shortDescription String
+  description      String
+  attributes       String
+  price            Int
+  priceMax         Int?
+  originalPrice    Int?
+  stock            Int      @default(0)
+  sold             Int      @default(0)
+  views            Int      @default(0)
+  rating           Float    @default(4.5)
+  reviewCount      Int      @default(0)
+  verified         Boolean  @default(false)
+  hot              Boolean  @default(false)
+  featuredUntil    DateTime?
+  createdAt        DateTime @default(now())
+  // Seller đánh dấu "sắp có hàng" (Trang Bán Hàng > Đặt trước). Buyer vẫn
+  // trả 100% tiền như checkout bình thường (giữ nguyên hệ thống escrow có
+  // sẵn) nhưng POST /api/checkout BỎ QUA kiểm tra tồn kho cho sản phẩm này
+  // — stock có thể xuống 0/âm, đó là tín hiệu seller đang "nợ hàng" cần giao.
+  preOrder         Boolean  @default(false)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  sellerId   String
+  seller     Seller   @relation(fields: [sellerId], references: [id])
+
+  orderItems  OrderItem[]
+  auctionBids AuctionBid[]
+  variants    ProductVariant[]
+}
+
+// Biến thể/gói của 1 sản phẩm — vd Gmail: "Domain .US - Thuê 24h - Tên Việt"
+// vs "Domain .Com - Thuê 24h" — mỗi biến thể có giá/kho riêng, seller tự
+// thêm/sửa/xoá tại trang quản lý (src/app/quan-ly-san-pham). Khi 1 sản phẩm
+// có >=1 variant, trang chi tiết sản phẩm bắt buộc chọn 1 variant trước khi
+// mua — giá/kho hiệu lực lấy từ variant thay vì từ Product (Product.price/
+// stock vẫn giữ nguyên làm giá trị "mặc định" cho sản phẩm chưa có variant
+// nào, tương thích ngược với toàn bộ sản phẩm seed cũ).
+model ProductVariant {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label     String
+  price     Int
+  stock     Int      @default(0)
+  sold      Int      @default(0)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  orderItems OrderItem[]
+}
+
+model Order {
+  id          String   @id @default(cuid())
+  buyerId     String
+  buyer       User     @relation(fields: [buyerId], references: [id])
+  totalAmount Int
+  status      String   @default("ESCROW")
+  createdAt   DateTime @default(now())
+  // Ghi lại mã giảm giá ĐÃ ÁP DỤNG cho đơn này (nếu có) để đối chiếu lịch sử
+  // — không dùng để tính lại tiền, chỉ mang tính hiển thị/audit.
+  discountCode   String?
+  discountAmount Int      @default(0)
+
+  items    OrderItem[]
+}
+
+model OrderItem {
+  id               String   @id @default(cuid())
+  orderId          String
+  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product  @relation(fields: [productId], references: [id])
+  sellerId         String
+  productName      String
+  // Snapshot tên + id variant tại thời điểm mua (variantId nullable + xoá
+  // thì SetNull, KHÔNG cascade) — giữ nguyên variantLabel hiển thị trong
+  // lịch sử đơn hàng ngay cả khi seller đã xoá variant đó sau này.
+  variantId        String?
+  variant          ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  variantLabel     String?
+  quantity         Int
+  price            Int
+  status           String   @default("ESCROW")
+  escrowReleaseAt  DateTime
+  deliveredPayload String?
+  createdAt        DateTime @default(now())
+
+  dispute Dispute?
+}
+
+// Khiếu nại (Trang Bán Hàng > Khiếu nại) — buyer hoặc seller mở trên 1
+// OrderItem đang ESCROW (chuyển OrderItem.status sang "DISPUTED" để loại khỏi
+// vòng giải ngân tự động của admin/escrow/release). CHỈ admin quyết định kết
+// quả cuối: hoàn toàn bộ tiền cho buyer HOẶC giải ngân cho seller — không có
+// hoàn tiền một phần, giữ đúng pattern "admin tự quyết" xuyên suốt dự án.
+model Dispute {
+  id          String    @id @default(cuid())
+  orderItemId String    @unique
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  openedById  String
+  openedBy    User      @relation(fields: [openedById], references: [id])
+  reason      String
+  status      String    @default("OPEN") // "OPEN" | "RESOLVED_REFUND" | "RESOLVED_RELEASE"
+  adminNote   String?
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+}
+
+// Diễn đàn cộng đồng — bất kỳ user đăng nhập nào cũng đăng bài, bình luận
+// (đóng vai trò "chat" theo từng bài viết) và thả tim 1 bài viết. Trước đây
+// dữ liệu chỉ là mock tĩnh (src/data/posts.ts), giờ là dữ liệu thật.
+model ForumPost {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  category  String   @default("Chia sẻ")
+  createdAt DateTime @default(now())
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  comments ForumComment[]
+  likes    ForumLike[]
+}
+
+model ForumComment {
+  id        String    @id @default(cuid())
+  postId    String
+  post      ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime  @default(now())
+}
+
+// Mỗi user chỉ thả tim 1 lần/bài viết — bấm lại để bỏ thích (toggle qua
+// @@unique, xem POST /api/forum/posts/[postId]/like).
+model ForumLike {
+  id        String    @id @default(cuid())
+  postId    String
+  post      ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@unique([postId, userId])
+}
+
+model WalletTransaction {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  type        String
+  amount      Int
+  status      String    @default("PENDING")
+  method      String?
+  note        String?
+  adminNote   String?
+  gatewayRef  String?
+  createdAt   DateTime  @default(now())
+  confirmedAt DateTime?
+}
+
+// Chat giữa 2 user bất kỳ (buyer-seller, hoặc user với bot "Hệ Thống" —
+// xem src/lib/system-bot.ts) — KHÔNG dùng khái niệm buyer/seller cứng vì hội
+// thoại với bot không khớp khung đó. userAId/userBId LUÔN được chuẩn hoá
+// (id nhỏ hơn xếp vào userAId) khi tạo/tìm hội thoại để 1 cặp user chỉ có
+// đúng 1 Conversation dù ai nhắn trước — xem getOrCreateConversation().
+model Conversation {
+  id            String   @id @default(cuid())
+  userAId       String
+  userA         User     @relation("ConversationsAsUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userBId       String
+  userB         User     @relation("ConversationsAsUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  messages Message[]
+
+  @@unique([userAId, userBId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content        String
+  // Ảnh/file đính kèm (tuỳ chọn) — lưu ngoài /public giống ảnh CCCD (xem
+  // src/lib/uploads.ts), chỉ đọc qua GET /api/messages/attachments/[messageId]
+  // (verify người gọi là 1 trong 2 người tham gia hội thoại). attachmentType:
+  // "IMAGE" | "FILE". content có thể rỗng nếu tin chỉ có đính kèm.
+  attachmentPath String?
+  attachmentName String?
+  attachmentType String?
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+}
