@@ -4,8 +4,8 @@ import { Gift, Lock, LogIn, Mail, ShieldCheck, User, UserPlus } from "lucide-rea
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import TurnstileWidget from "@/components/TurnstileWidget";
+import { useRef, useState } from "react";
+import TurnstileWidget, { type TurnstileWidgetHandle } from "@/components/TurnstileWidget";
 
 // lucide-react không có icon logo thương hiệu (Google) — dùng SVG inline
 // riêng theo đúng quy ước đã dùng cho Facebook/YouTube/TikTok, xem Footer.tsx.
@@ -54,13 +54,13 @@ export default function AuthForms({
   const [loginSuccess, setLoginSuccess] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginTurnstileToken, setLoginTurnstileToken] = useState("");
-  // Đổi key này để ép <TurnstileWidget> unmount/remount, sinh lại challenge +
-  // token mới — bắt buộc sau MỌI lần submit thất bại (kể cả sai mật khẩu,
-  // không liên quan gì đến Turnstile), vì token Turnstile chỉ dùng được 1
-  // lần: nếu không reset, lần thử lại sẽ tái sử dụng token đã bị Cloudflare
-  // tiêu thụ ở lần trước, luôn báo "Xác minh chống spam thất bại" dù widget
-  // vẫn hiển thị "Success" (bug thật đã gặp trên production).
-  const [loginTurnstileKey, setLoginTurnstileKey] = useState(0);
+  // Gọi .reset() trên ref này để sinh lại challenge Turnstile mới trên CÙNG
+  // widget instance (không unmount/remount cả component) — bắt buộc sau MỌI
+  // lần submit thất bại (kể cả sai mật khẩu, không liên quan gì đến
+  // Turnstile), vì token Turnstile chỉ dùng được 1 lần: nếu không reset, lần
+  // thử lại sẽ tái sử dụng token đã bị Cloudflare tiêu thụ ở lần trước, luôn
+  // báo "Xác minh chống spam thất bại" dù widget vẫn hiển thị "Success".
+  const loginTurnstileRef = useRef<TurnstileWidgetHandle>(null);
 
   const [regUsername, setRegUsername] = useState("");
   const [regEmail, setRegEmail] = useState("");
@@ -71,7 +71,7 @@ export default function AuthForms({
   const [regError, setRegError] = useState<string | null>(null);
   const [regLoading, setRegLoading] = useState(false);
   const [regTurnstileToken, setRegTurnstileToken] = useState("");
-  const [regTurnstileKey, setRegTurnstileKey] = useState(0);
+  const regTurnstileRef = useRef<TurnstileWidgetHandle>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +94,7 @@ export default function AuthForms({
       // Token Turnstile vừa dùng đã bị tiêu thụ dù đăng nhập thất bại vì lý
       // do gì đi nữa (kể cả sai mật khẩu) — bắt buộc giải lại captcha mới.
       setLoginTurnstileToken("");
-      setLoginTurnstileKey((k) => k + 1);
+      loginTurnstileRef.current?.reset();
       return;
     }
     router.push(callbackUrl);
@@ -135,7 +135,7 @@ export default function AuthForms({
       // thất bại vì lý do khác như trùng email/username) — bắt buộc giải lại
       // captcha mới trước khi cho thử lại, cùng lý do như handleLogin ở trên.
       setRegTurnstileToken("");
-      setRegTurnstileKey((k) => k + 1);
+      regTurnstileRef.current?.reset();
       return;
     }
 
@@ -219,7 +219,7 @@ export default function AuthForms({
         </div>
 
         {turnstileSiteKey && (
-          <TurnstileWidget key={loginTurnstileKey} siteKey={turnstileSiteKey} onVerify={setLoginTurnstileToken} onExpire={() => setLoginTurnstileToken("")} />
+          <TurnstileWidget ref={loginTurnstileRef} siteKey={turnstileSiteKey} onVerify={setLoginTurnstileToken} onExpire={() => setLoginTurnstileToken("")} />
         )}
 
         {loginSuccess && (
@@ -371,7 +371,7 @@ export default function AuthForms({
         </label>
 
         {turnstileSiteKey && (
-          <TurnstileWidget key={regTurnstileKey} siteKey={turnstileSiteKey} onVerify={setRegTurnstileToken} onExpire={() => setRegTurnstileToken("")} />
+          <TurnstileWidget ref={regTurnstileRef} siteKey={turnstileSiteKey} onVerify={setRegTurnstileToken} onExpire={() => setRegTurnstileToken("")} />
         )}
 
         {regError && (

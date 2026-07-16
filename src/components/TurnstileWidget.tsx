@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 declare global {
   interface Window {
@@ -15,6 +15,7 @@ declare global {
         }
       ) => string;
       reset: (widgetId?: string) => void;
+      remove: (widgetId?: string) => void;
     };
     __turnstileOnLoad?: () => void;
   }
@@ -40,38 +41,78 @@ function loadTurnstileScript(): Promise<void> {
   return scriptPromise;
 }
 
-export default function TurnstileWidget({
-  siteKey,
-  onVerify,
-  onExpire,
-}: {
-  siteKey: string;
-  onVerify: (token: string) => void;
-  onExpire?: () => void;
-}) {
+export type TurnstileWidgetHandle = {
+  /** Sinh lại challenge mới trên CÙNG 1 widget instance (không unmount/remount
+   * component) — dùng sau mỗi lần submit thất bại vì token Turnstile chỉ
+   * dùng được 1 lần. Callback `onVerify` gốc vẫn được gọi lại bình thường
+   * khi giải xong challenge mới. */
+  reset: () => void;
+};
+
+const TurnstileWidget = forwardRef<
+  TurnstileWidgetHandle,
+  {
+    siteKey: string;
+    onVerify: (token: string) => void;
+    onExpire?: () => void;
+  }
+>(function TurnstileWidget({ siteKey, onVerify, onExpire }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  // Giữ callback mới nhất trong ref — widget chỉ render() đúng 1 lần (theo
+  // siteKey), "callback" truyền vào render() lúc đó phải luôn gọi tới phiên
+  // bản MỚI NHẤT của onVerify/onExpire (props có thể đổi identity giữa các
+  // lần render cha), tránh đóng gói (closure) 1 phiên bản cũ vĩnh viễn.
+  const onVerifyRef = useRef(onVerify);
+  const onExpireRef = useRef(onExpire);
+
+  useEffect(() => {
+    onVerifyRef.current = onVerify;
+  }, [onVerify]);
+  useEffect(() => {
+    onExpireRef.current = onExpire;
+  }, [onExpire]);
+
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.reset(widgetIdRef.current);
+      }
+    },
+  }));
 
   useEffect(() => {
     let cancelled = false;
 
     loadTurnstileScript().then(() => {
       if (cancelled || !containerRef.current || !window.turnstile) return;
-      widgetIdRef.current = window.turnstile.render(containerRef.current, {
-        sitekey: siteKey,
-        callback: onVerify,
-        "expired-callback": onExpire,
-      });
+      try {
+        widgetIdRef.current = window.turnstile.render(containerRef.current, {
+          sitekey: siteKey,
+          callback: (token: string) => onVerifyRef.current(token),
+          "expired-callback": () => onExpireRef.current?.(),
+          "error-callback": () => {
+            console.error("Turnstile render error-callback fired.");
+          },
+        });
+      } catch (err) {
+        console.error("Turnstile render() threw:", err);
+      }
     });
 
     return () => {
       cancelled = true;
+      // remove() (không phải reset()) khi component thật sự unmount — huỷ
+      // hẳn widget instance đó, tránh còn sót instance "ma" gây nhầm lẫn nếu
+      // sau này render() lại được gọi cho 1 lần mount khác.
       if (widgetIdRef.current && window.turnstile) {
-        window.turnstile.reset(widgetIdRef.current);
+        window.turnstile.remove(widgetIdRef.current);
+        widgetIdRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteKey]);
 
   return <div ref={containerRef} />;
-}
+});
+
+export default TurnstileWidget;
