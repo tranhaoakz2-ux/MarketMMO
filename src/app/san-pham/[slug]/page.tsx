@@ -179,7 +179,7 @@ export default async function ProductDetailPage({
           <Reveal>
             <div className="grid grid-cols-1 overflow-hidden rounded-xl border border-border-c bg-surface shadow-sm sm:grid-cols-3">
               <div className="flex flex-col border-b border-border-c sm:border-b-0 sm:border-r">
-                <div className="bg-ink px-5 py-4 text-sm font-bold text-white sm:text-base">
+                <div className="bg-ink px-5 py-4 text-center text-sm font-bold text-white sm:text-base">
                   MÔ TẢ SẢN PHẨM
                 </div>
                 <div className="flex flex-1 flex-col gap-2 p-6 text-sm leading-relaxed text-ink/80">
@@ -190,7 +190,7 @@ export default async function ProductDetailPage({
               </div>
 
               <div className="flex flex-col border-b border-border-c sm:border-b-0 sm:border-r">
-                <div className="bg-brand px-5 py-4 text-sm font-bold text-ink sm:text-base">
+                <div className="bg-brand px-5 py-4 text-center text-sm font-bold text-ink sm:text-base">
                   TÍCH HỢP API
                 </div>
                 <div className="flex flex-1 flex-col gap-3 p-6 text-sm leading-relaxed text-ink/80">
@@ -208,7 +208,7 @@ export default async function ProductDetailPage({
               </div>
 
               <div className="flex flex-col">
-                <div className="bg-brand px-5 py-4 text-sm font-bold text-ink sm:text-base">
+                <div className="bg-brand px-5 py-4 text-center text-sm font-bold text-ink sm:text-base">
                   ĐÁNH GIÁ (REVIEWS)
                 </div>
                 <div className="flex flex-1 flex-col gap-3 p-6 text-sm text-ink/80">
