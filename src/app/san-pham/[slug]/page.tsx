@@ -180,11 +180,11 @@ export default async function ProductDetailPage({
         <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
           <Reveal>
             <div className="overflow-hidden rounded-xl border border-border-c bg-surface shadow-sm">
-              <div className="flex flex-wrap">
+              <div className="grid grid-cols-3">
                 {tabs.map((tab, i) => (
                   <button
                     key={tab}
-                    className={`px-5 py-3 text-xs font-bold sm:text-sm ${
+                    className={`px-5 py-4 text-sm font-bold sm:text-base ${
                       i === 0
                         ? "bg-ink text-white"
                         : "bg-brand text-ink hover:bg-brand-dark"
