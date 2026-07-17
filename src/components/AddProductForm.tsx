@@ -473,33 +473,6 @@ export default function AddProductForm({
         </div>
       </div>
 
-      <div>
-        <label className="mb-1 block text-xs font-semibold text-ink">Mô tả ngắn</label>
-        <input
-          type="text"
-          required
-          minLength={10}
-          maxLength={200}
-          value={shortDescription}
-          onChange={(e) => setShortDescription(e.target.value)}
-          placeholder="1 câu ngắn hiện trên thẻ sản phẩm"
-          className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-xs font-semibold text-ink">Mô tả chi tiết</label>
-        <textarea
-          required
-          minLength={20}
-          rows={5}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder={"Mỗi dòng là 1 đoạn mô tả, ví dụ:\nTài khoản chính chủ, đã xác minh 2 lớp.\nBảo hành 7 ngày lỗi 1 đổi 1.\nGiao hàng tự động ngay sau khi thanh toán."}
-          className="w-full rounded-lg border border-border-c px-3 py-2.5 text-sm focus:border-brand-dark focus:outline-none"
-        />
-      </div>
-
       <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -593,6 +566,33 @@ export default function AddProductForm({
             </p>
           </div>
         )}
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-ink">Mô tả ngắn</label>
+        <input
+          type="text"
+          required
+          minLength={10}
+          maxLength={200}
+          value={shortDescription}
+          onChange={(e) => setShortDescription(e.target.value)}
+          placeholder="1 câu ngắn hiện trên thẻ sản phẩm"
+          className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-ink">Mô tả chi tiết</label>
+        <textarea
+          required
+          minLength={20}
+          rows={5}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder={"Mỗi dòng là 1 đoạn mô tả, ví dụ:\nTài khoản chính chủ, đã xác minh 2 lớp.\nBảo hành 7 ngày lỗi 1 đổi 1.\nGiao hàng tự động ngay sau khi thanh toán."}
+          className="w-full rounded-lg border border-border-c px-3 py-2.5 text-sm focus:border-brand-dark focus:outline-none"
+        />
       </div>
 
       {error && (
