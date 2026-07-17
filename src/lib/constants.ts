@@ -25,6 +25,14 @@ export const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {
   REJECTED: "Bị từ chối",
 };
 
+export type CategoryStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export const CATEGORY_STATUS_LABEL: Record<CategoryStatus, string> = {
+  PENDING: "Chờ duyệt",
+  APPROVED: "Đã duyệt",
+  REJECTED: "Bị từ chối",
+};
+
 export type DiscountType = "PERCENT" | "FIXED";
 
 // Khoảng ngày lọc doanh thu ở Quản Lý Bán Hàng (Tổng quan).

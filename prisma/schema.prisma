@@ -23,6 +23,7 @@ datasource db {
 //   DiscountCode.type         "PERCENT" | "FIXED"
 //   Dispute.status             "OPEN" | "RESOLVED_REFUND" | "RESOLVED_RELEASE"
 //   Product.status             "PENDING" | "APPROVED" | "REJECTED"
+//   Category.status            "PENDING" | "APPROVED" | "REJECTED"
 
 model User {
   id            String    @id @default(cuid())
@@ -153,6 +154,10 @@ model Seller {
   auctionBids    AuctionBid[]
   discountCodes  DiscountCode[]
   verification   SellerVerification?
+  // Danh mục do chính seller này đề xuất (nút "+ Thêm danh mục mới" trong
+  // form đăng sản phẩm) — chỉ để admin biết ai đã đề xuất, KHÔNG có UI riêng
+  // cho seller theo dõi danh sách này (ngoài phạm vi, xem CLAUDE.md).
+  proposedCategories Category[]
 }
 
 // Xác thực CCCD người bán (Trang Bán Hàng > Xác thực CCCD). Ảnh lưu NGOÀI
@@ -239,6 +244,17 @@ model Category {
   slug  String @unique
   name  String
   emoji String
+
+  // Seller có thể tự đề xuất danh mục mới (nút "+ Thêm danh mục mới" ở cuối
+  // dropdown chọn danh mục trong AddProductForm) khi sản phẩm của họ chưa
+  // khớp danh mục nào có sẵn — cần admin duyệt mới hiện công khai (trang
+  // chủ/trang danh mục/mega-menu), giống hệt pattern Product.status.
+  // @default("APPROVED") để 10 category seed có sẵn không bị ẩn khi thêm
+  // field này (migration-safety, cùng lý do đã áp dụng cho Product.status).
+  status       String  @default("APPROVED")
+  adminNote    String?
+  proposedById String?
+  proposedBy   Seller? @relation(fields: [proposedById], references: [id], onDelete: SetNull)
 
   products Product[]
 }

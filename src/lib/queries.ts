@@ -56,8 +56,26 @@ function mapProduct(p: ProductWithRelations): Product {
   };
 }
 
+// Dùng cho mọi nơi hiển thị công khai (trang chủ, trang danh mục, mega-menu)
+// — chỉ trả danh mục đã được admin duyệt. Danh mục do seller tự đề xuất
+// (status PENDING/REJECTED) không được lộ ra ngoài cho tới khi admin duyệt.
 export async function getAllCategories() {
-  return prisma.category.findMany({ orderBy: { name: "asc" } });
+  return prisma.category.findMany({
+    where: { status: "APPROVED" },
+    orderBy: { name: "asc" },
+  });
+}
+
+// Dùng riêng cho dropdown chọn danh mục trong form đăng sản phẩm của seller
+// (AddProductForm) — seller cần thấy CẢ danh mục đang chờ duyệt (kể cả do
+// chính họ hoặc seller khác vừa đề xuất) để có thể gán sản phẩm mới vào đó
+// ngay, không cần đợi admin duyệt xong category mới đăng được sản phẩm. Loại
+// trừ REJECTED vì danh mục đó coi như không tồn tại.
+export async function getSellerVisibleCategories() {
+  return prisma.category.findMany({
+    where: { status: { in: ["APPROVED", "PENDING"] } },
+    orderBy: { name: "asc" },
+  });
 }
 
 export async function getAllProducts(): Promise<Product[]> {

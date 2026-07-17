@@ -6,3 +6,8 @@ export function slugifySeller(name: string): string {
 export function slugifyProduct(name: string): string {
   return name.toLowerCase().trim().replace(/\s+/g, "-");
 }
+
+/** Dùng cho slug danh mục do seller tự đề xuất — cùng quy tắc với slugifyProduct/slugifySeller. */
+export function slugifyCategory(name: string): string {
+  return name.toLowerCase().trim().replace(/\s+/g, "-");
+}

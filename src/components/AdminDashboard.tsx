@@ -5,6 +5,7 @@ import {
   BadgeCheck,
   Check,
   ExternalLink,
+  FolderPlus,
   Gavel,
   Package,
   PackageCheck,
@@ -75,6 +76,15 @@ type PendingProduct = {
   seller: { shopName: string; slug: string };
 };
 
+type PendingCategory = {
+  id: string;
+  name: string;
+  emoji: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  adminNote: string | null;
+  proposedBy: { shopName: string; slug: string } | null;
+};
+
 const statusStyle: Record<WalletTxStatus, string> = {
   PENDING: "bg-brand-light text-brand-dark",
   CONFIRMED: "bg-success/10 text-success",
@@ -87,6 +97,7 @@ export default function AdminDashboard() {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [pendingProducts, setPendingProducts] = useState<PendingProduct[]>([]);
+  const [pendingCategories, setPendingCategories] = useState<PendingCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [releaseMsg, setReleaseMsg] = useState<string | null>(null);
@@ -96,13 +107,14 @@ export default function AdminDashboard() {
 
   const load = async () => {
     setLoading(true);
-    const [depositsRes, withdrawalsRes, disputesRes, verificationsRes, productsRes] =
+    const [depositsRes, withdrawalsRes, disputesRes, verificationsRes, productsRes, categoriesRes] =
       await Promise.all([
         fetch("/api/admin/deposits"),
         fetch("/api/admin/withdrawals"),
         fetch("/api/admin/disputes"),
         fetch("/api/admin/verifications"),
         fetch("/api/admin/products"),
+        fetch("/api/admin/categories"),
       ]);
     if (depositsRes.ok) {
       const data = await depositsRes.json();
@@ -123,6 +135,10 @@ export default function AdminDashboard() {
     if (productsRes.ok) {
       const data = await productsRes.json();
       setPendingProducts(data.products);
+    }
+    if (categoriesRes.ok) {
+      const data = await categoriesRes.json();
+      setPendingCategories(data.categories);
     }
     setLoading(false);
   };
@@ -186,6 +202,17 @@ export default function AdminDashboard() {
     load();
   };
 
+  const handleCategoryAction = async (id: string, action: "approve" | "reject") => {
+    setBusyId(id);
+    await fetch(`/api/admin/categories/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    setBusyId(null);
+    load();
+  };
+
   const handleReleaseEscrow = async () => {
     setReleasing(true);
     setReleaseMsg(null);
@@ -219,6 +246,7 @@ export default function AdminDashboard() {
   const openDisputes = disputes.filter((d) => d.status === "OPEN");
   const pendingVerifications = verifications.filter((v) => v.status === "PENDING");
   const pendingProductsOnly = pendingProducts.filter((p) => p.status === "PENDING");
+  const pendingCategoriesOnly = pendingCategories.filter((c) => c.status === "PENDING");
 
   return (
     <div className="flex flex-col gap-8">
@@ -451,6 +479,57 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => handleProductAction(p.id, "reject")}
                     disabled={busyId === p.id}
+                    className="flex items-center gap-1 rounded-full bg-danger px-3 py-1.5 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    <X className="h-3.5 w-3.5" /> Từ chối
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+            <FolderPlus className="h-4 w-4" /> Danh mục mới chờ duyệt (
+            {pendingCategoriesOnly.length})
+          </h2>
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-muted">Đang tải...</p>
+        ) : pendingCategoriesOnly.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border-c bg-surface p-8 text-center text-sm text-muted">
+            Không có danh mục nào đang chờ duyệt.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {pendingCategoriesOnly.map((c) => (
+              <div
+                key={c.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-c bg-surface p-4 shadow-sm"
+              >
+                <div>
+                  <p className="text-sm font-bold text-ink">
+                    {c.emoji} {c.name}
+                  </p>
+                  <p className="text-xs text-muted">
+                    Đề xuất bởi: {c.proposedBy?.shopName ?? "—"}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleCategoryAction(c.id, "approve")}
+                    disabled={busyId === c.id}
+                    className="flex items-center gap-1 rounded-full bg-success px-3 py-1.5 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    <Check className="h-3.5 w-3.5" /> Duyệt
+                  </button>
+                  <button
+                    onClick={() => handleCategoryAction(c.id, "reject")}
+                    disabled={busyId === c.id}
                     className="flex items-center gap-1 rounded-full bg-danger px-3 py-1.5 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
                   >
                     <X className="h-3.5 w-3.5" /> Từ chối

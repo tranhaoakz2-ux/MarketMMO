@@ -54,10 +54,19 @@ export default function AddProductForm({
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  // Bản sao cục bộ của danh sách danh mục — cho phép chèn thêm danh mục seller
+  // vừa tự đề xuất (POST /api/seller/categories) vào dropdown ngay lập tức mà
+  // không cần tải lại trang (server component cha chỉ fetch 1 lần lúc render).
+  const [localCategories, setLocalCategories] = useState<Category[]>(categories);
   const [categoryId, setCategoryId] = useState("");
   // Seller tự bấm chọn 1 lần trong dropdown thì không tự động ghi đè gợi ý
   // nữa, kể cả khi họ gõ tiếp tên sản phẩm — chỉ gợi ý khi field còn "trinh".
   const [categoryTouched, setCategoryTouched] = useState(false);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [categoryNotice, setCategoryNotice] = useState<string | null>(null);
+  const [categorySubmitting, setCategorySubmitting] = useState(false);
   const [shortDescription, setShortDescription] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -72,9 +81,48 @@ export default function AddProductForm({
     if (categoryTouched) return;
     const slug = detectCategorySlug(name);
     if (!slug) return;
-    const match = categories.find((c) => c.slug === slug);
+    const match = localCategories.find((c) => c.slug === slug);
     if (match) setCategoryId(match.id);
-  }, [name, categoryTouched, categories]);
+  }, [name, categoryTouched, localCategories]);
+
+  const handleProposeCategory = async () => {
+    const trimmed = newCategoryName.trim();
+    setCategoryError(null);
+    setCategoryNotice(null);
+    if (trimmed.length < 2 || trimmed.length > 40) {
+      setCategoryError("Tên danh mục phải từ 2-40 ký tự.");
+      return;
+    }
+
+    setCategorySubmitting(true);
+    const res = await fetch("/api/seller/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed }),
+    });
+    const data = await res.json().catch(() => null);
+    setCategorySubmitting(false);
+
+    if (!res.ok) {
+      setCategoryError(data?.error ?? "Không thể gửi danh mục, vui lòng thử lại.");
+      return;
+    }
+
+    const newCategory: Category = {
+      id: data.id,
+      slug: data.slug,
+      name: data.name,
+      emoji: data.emoji,
+    };
+    setLocalCategories((prev) => [...prev, newCategory]);
+    setCategoryId(newCategory.id);
+    setCategoryTouched(true);
+    setNewCategoryName("");
+    setAddingCategory(false);
+    setCategoryNotice(
+      `Đã gửi danh mục "${newCategory.name}" để admin duyệt — bạn có thể chọn danh mục này ngay cho sản phẩm.`
+    );
+  };
 
   const handlePickImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -94,6 +142,10 @@ export default function AddProductForm({
     setName("");
     setCategoryId("");
     setCategoryTouched(false);
+    setAddingCategory(false);
+    setNewCategoryName("");
+    setCategoryError(null);
+    setCategoryNotice(null);
     setShortDescription("");
     setDescription("");
     setPrice("");
@@ -222,12 +274,68 @@ export default function AddProductForm({
               className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
             >
               <option value="">-- Chọn danh mục --</option>
-              {categories.map((c) => (
+              {localCategories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.emoji} {c.name}
                 </option>
               ))}
             </select>
+
+            {!addingCategory ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setAddingCategory(true);
+                  setCategoryNotice(null);
+                }}
+                className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-brand-dark hover:underline"
+              >
+                <Plus className="h-3 w-3" /> Thêm danh mục mới chưa có
+              </button>
+            ) : (
+              <div className="mt-1.5 flex flex-col gap-1.5 rounded-lg border border-dashed border-brand-dark/40 bg-brand-light/10 p-2.5">
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="VD: Netflix"
+                    maxLength={40}
+                    className="w-full rounded-lg border border-border-c px-2.5 py-1.5 text-xs focus:border-brand-dark focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleProposeCategory}
+                    disabled={categorySubmitting}
+                    className="shrink-0 rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-ink hover:bg-brand-dark disabled:opacity-60"
+                  >
+                    {categorySubmitting ? "Đang gửi..." : "Gửi"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddingCategory(false);
+                      setNewCategoryName("");
+                      setCategoryError(null);
+                    }}
+                    className="shrink-0 rounded-lg px-2 py-1.5 text-xs font-semibold text-muted hover:bg-surface-alt"
+                  >
+                    Huỷ
+                  </button>
+                </div>
+                <p className="text-[11px] leading-relaxed text-ink/70">
+                  Danh mục mới sẽ được gửi để admin duyệt trước khi hiện công
+                  khai trên site — bạn vẫn có thể chọn ngay danh mục này cho
+                  sản phẩm đang đăng.
+                </p>
+                {categoryError && (
+                  <p className="text-[11px] font-semibold text-danger">{categoryError}</p>
+                )}
+              </div>
+            )}
+            {categoryNotice && (
+              <p className="mt-1.5 text-[11px] font-semibold text-success">{categoryNotice}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

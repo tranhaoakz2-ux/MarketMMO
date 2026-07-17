@@ -1,8 +1,8 @@
 import SellerProductsPanel from "@/components/SellerProductsPanel";
-import { getAllCategories } from "@/lib/queries";
+import { getSellerVisibleCategories } from "@/lib/queries";
 
 export default async function SellerProductsPage() {
-  const categories = await getAllCategories();
+  const categories = await getSellerVisibleCategories();
 
   return (
     <div className="flex flex-col gap-4">
