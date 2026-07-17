@@ -39,6 +39,10 @@ export async function POST(req: Request) {
         productName: string;
         quantity: number;
         price: number;
+        // Kho dữ liệu giao hàng thật đã claim được cho dòng hàng này (rỗng =
+        // sản phẩm/biến thể chưa dùng kho thật, xem model ProductStockItem).
+        claimedStockItemIds: string[];
+        deliveredPayload: string | null;
       }[] = [];
 
       for (const item of items) {
@@ -49,23 +53,72 @@ export async function POST(req: Request) {
 
         let unitPrice = product.price;
         let variantLabel: string | undefined;
+        let variant: (typeof product.variants)[number] | undefined;
+
         if (item.variantId) {
-          const variant = product.variants.find((v) => v.id === item.variantId);
+          variant = product.variants.find((v) => v.id === item.variantId);
           if (!variant) {
             throw new Error(`Biến thể không tồn tại cho sản phẩm "${product.name}".`);
-          }
-          // Sản phẩm "Đặt trước" (preOrder) bỏ qua kiểm tra tồn kho — seller
-          // chưa có hàng thật, buyer vẫn trả tiền trước (giữ nguyên hệ thống
-          // ký quỹ có sẵn), stock có thể xuống âm làm tín hiệu "nợ hàng".
-          if (!product.preOrder && variant.stock < item.quantity) {
-            throw new Error(`"${product.name} - ${variant.label}" không đủ tồn kho.`);
           }
           unitPrice = variant.price;
           variantLabel = variant.label;
         } else if (product.variants.length > 0) {
           throw new Error(`Vui lòng chọn loại sản phẩm cho "${product.name}".`);
-        } else if (!product.preOrder && product.stock < item.quantity) {
-          throw new Error(`"${product.name}" không đủ tồn kho.`);
+        }
+
+        const displayLabel = variantLabel ? `${product.name} - ${variantLabel}` : product.name;
+
+        // Sản phẩm/biến thể có kho dữ liệu giao hàng thật hay không — kiểm
+        // tra bằng COUNT (không cần cờ boolean riêng, xem model
+        // ProductStockItem). count = 0 nghĩa là seller CHƯA từng nhập kho
+        // thật cho SKU này, giữ nguyên hành vi cũ 100% (kiểm tra theo
+        // Product.stock/ProductVariant.stock, không có nội dung giao hàng).
+        const stockItemTotal = await tx.productStockItem.count({
+          where: { productId: product.id, variantId: item.variantId ?? null },
+        });
+
+        let claimedStockItemIds: string[] = [];
+        let deliveredPayload: string | null = null;
+
+        if (stockItemTotal > 0) {
+          // Chế độ kho thật: BẮT BUỘC "claim" đủ số lượng bản ghi AVAILABLE
+          // ngay trong transaction này (FOR UPDATE SKIP LOCKED để 2 checkout
+          // chạy song song không bao giờ claim trúng cùng 1 bản ghi). Áp
+          // dụng kể cả khi sản phẩm đang preOrder — không thể "giao trước"
+          // 1 nội dung chưa thật sự tồn tại trong kho, khác hẳn chế độ cũ
+          // (stock chỉ là con số, preOrder cho phép âm).
+          const claimed = await tx.$queryRaw<{ id: string; content: string }[]>`
+            SELECT id, content FROM "ProductStockItem"
+            WHERE "productId" = ${product.id}
+              AND "variantId" IS NOT DISTINCT FROM ${item.variantId ?? null}
+              AND status = 'AVAILABLE'
+            ORDER BY "createdAt" ASC
+            LIMIT ${item.quantity}
+            FOR UPDATE SKIP LOCKED
+          `;
+          if (claimed.length < item.quantity) {
+            throw new Error(
+              `"${displayLabel}" không đủ hàng trong kho (chỉ còn ${claimed.length}/${item.quantity}).`
+            );
+          }
+          // Đánh dấu SOLD ngay lập tức (chưa gắn orderItemId — OrderItem
+          // chưa được tạo) để chặn đúng trường hợp giỏ hàng có 2 dòng trùng
+          // productId+variantId (gửi thẳng lên API, không qua CartContext
+          // dedup) claim trúng cùng 1 bản ghi ở vòng lặp kế tiếp.
+          await tx.productStockItem.updateMany({
+            where: { id: { in: claimed.map((c) => c.id) } },
+            data: { status: "SOLD", soldAt: new Date() },
+          });
+          claimedStockItemIds = claimed.map((c) => c.id);
+          deliveredPayload = JSON.stringify(claimed.map((c) => c.content));
+        } else if (!product.preOrder) {
+          if (item.variantId) {
+            if (variant!.stock < item.quantity) {
+              throw new Error(`"${displayLabel}" không đủ tồn kho.`);
+            }
+          } else if (product.stock < item.quantity) {
+            throw new Error(`"${product.name}" không đủ tồn kho.`);
+          }
         }
 
         total += unitPrice * item.quantity;
@@ -77,6 +130,8 @@ export async function POST(req: Request) {
           productName: product.name,
           quantity: item.quantity,
           price: unitPrice,
+          claimedStockItemIds,
+          deliveredPayload,
         });
       }
 
@@ -142,24 +197,38 @@ export async function POST(req: Request) {
           status: "ESCROW",
           discountCode: appliedDiscountCode,
           discountAmount,
-          items: {
-            create: itemsToCreate.map((i) => ({
-              productId: i.productId,
-              variantId: i.variantId,
-              variantLabel: i.variantLabel,
-              sellerId: i.sellerId,
-              productName: i.productName,
-              quantity: i.quantity,
-              price: i.price,
-              status: "ESCROW",
-              escrowReleaseAt,
-            })),
-          },
         },
-        include: { items: true },
       });
 
+      // Tạo từng OrderItem TUẦN TỰ (không dùng nested `items: { create: [...] }`
+      // như trước) để lấy được đúng id của từng OrderItem ngay sau khi tạo —
+      // cần thiết để gắn orderItemId cho đúng lô ProductStockItem đã claim ở
+      // trên (thứ tự trả về của include:{items:true} không đảm bảo khớp thứ
+      // tự mảng gốc, không thể tin tưởng để ghép cặp chính xác).
       for (const item of itemsToCreate) {
+        const orderItem = await tx.orderItem.create({
+          data: {
+            orderId: createdOrder.id,
+            productId: item.productId,
+            variantId: item.variantId,
+            variantLabel: item.variantLabel,
+            sellerId: item.sellerId,
+            productName: item.productName,
+            quantity: item.quantity,
+            price: item.price,
+            status: "ESCROW",
+            escrowReleaseAt,
+            deliveredPayload: item.deliveredPayload,
+          },
+        });
+
+        if (item.claimedStockItemIds.length > 0) {
+          await tx.productStockItem.updateMany({
+            where: { id: { in: item.claimedStockItemIds } },
+            data: { orderItemId: orderItem.id },
+          });
+        }
+
         if (item.variantId) {
           await tx.productVariant.update({
             where: { id: item.variantId },

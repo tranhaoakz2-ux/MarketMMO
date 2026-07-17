@@ -4,6 +4,10 @@ export type ProductVariant = {
   price: number;
   stock: number;
   sold: number;
+  /** Đã có kho dữ liệu giao hàng thật (ProductStockItem) hay chưa — chỉ có khi fetch qua getMySellerProducts (trang quản lý của seller). true nghĩa là `stock` giờ được đồng bộ tự động theo số bản ghi AVAILABLE, không còn là số seller tự gõ tay. */
+  stockManaged?: boolean;
+  /** Số bản ghi kho thật còn AVAILABLE — chỉ có khi fetch qua getMySellerProducts. */
+  stockAvailable?: number;
 };
 
 export type Product = {
@@ -43,6 +47,10 @@ export type Product = {
   /** "PENDING" | "APPROVED" | "REJECTED" — chỉ có khi fetch qua getMySellerProducts (trang quản lý sản phẩm của seller); các trang public chỉ trả sản phẩm APPROVED nên field này luôn ngầm định "APPROVED" ở đó, không cần set. */
   status?: "PENDING" | "APPROVED" | "REJECTED";
   adminNote?: string | null;
+  /** Đã có kho dữ liệu giao hàng thật (ProductStockItem) hay chưa — chỉ có khi fetch qua getMySellerProducts, áp dụng cho sản phẩm KHÔNG có variant nào. */
+  stockManaged?: boolean;
+  /** Số bản ghi kho thật còn AVAILABLE (sản phẩm không có variant) — chỉ có khi fetch qua getMySellerProducts. */
+  stockAvailable?: number;
 };
 
 export const products: Product[] = [

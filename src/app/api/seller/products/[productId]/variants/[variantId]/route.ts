@@ -85,6 +85,14 @@ export async function DELETE(
     return NextResponse.json({ error: "Biến thể không tồn tại." }, { status: 404 });
   }
 
-  await prisma.productVariant.delete({ where: { id: variantId } });
+  // Dọn các bản ghi kho thật CHƯA BÁN của variant này TRƯỚC khi xoá — nếu
+  // không, variantId của chúng sẽ tự SetNull (xem prisma/schema.prisma) và
+  // vô tình "mồ côi" lẫn sang kho của Product gốc (sai dữ liệu khi Product
+  // vẫn còn variant khác). Bản ghi ĐÃ BÁN giữ nguyên (SetNull tự động) để
+  // không mất lịch sử giao hàng của buyer.
+  await prisma.$transaction([
+    prisma.productStockItem.deleteMany({ where: { variantId, status: "AVAILABLE" } }),
+    prisma.productVariant.delete({ where: { id: variantId } }),
+  ]);
   return NextResponse.json({ ok: true });
 }

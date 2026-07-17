@@ -256,7 +256,42 @@ export async function getMySellerProducts(userId: string): Promise<Product[]> {
     include: productInclude,
     orderBy: { createdAt: "desc" },
   });
-  return rows.map(mapProduct);
+  const products = rows.map(mapProduct);
+  if (products.length === 0) return products;
+
+  // Gắn số liệu kho dữ liệu giao hàng thật (ProductStockItem) — chỉ tính
+  // riêng cho trang quản lý sản phẩm của seller, KHÔNG đụng tới mapProduct()
+  // dùng chung cho mọi trang public (tránh tốn thêm 1 query group-by trên
+  // mỗi lượt xem trang chi tiết sản phẩm công khai).
+  const productIds = products.map((p) => p.id);
+  const counts = await prisma.productStockItem.groupBy({
+    by: ["productId", "variantId", "status"],
+    where: { productId: { in: productIds } },
+    _count: { _all: true },
+  });
+
+  const availableMap = new Map<string, number>();
+  const totalMap = new Map<string, number>();
+  for (const row of counts) {
+    const key = `${row.productId}|${row.variantId ?? ""}`;
+    totalMap.set(key, (totalMap.get(key) ?? 0) + row._count._all);
+    if (row.status === "AVAILABLE") {
+      availableMap.set(key, (availableMap.get(key) ?? 0) + row._count._all);
+    }
+  }
+
+  for (const product of products) {
+    const baseKey = `${product.id}|`;
+    product.stockManaged = totalMap.has(baseKey);
+    product.stockAvailable = availableMap.get(baseKey) ?? 0;
+    for (const variant of product.variants ?? []) {
+      const variantKey = `${product.id}|${variant.id}`;
+      variant.stockManaged = totalMap.has(variantKey);
+      variant.stockAvailable = availableMap.get(variantKey) ?? 0;
+    }
+  }
+
+  return products;
 }
 
 export async function getAllSellersWithStats() {

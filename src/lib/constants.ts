@@ -33,6 +33,9 @@ export const CATEGORY_STATUS_LABEL: Record<CategoryStatus, string> = {
   REJECTED: "Bị từ chối",
 };
 
+// Kho dữ liệu giao hàng thật (ProductStockItem) — xem prisma/schema.prisma.
+export type StockItemStatus = "AVAILABLE" | "SOLD";
+
 export type DiscountType = "PERCENT" | "FIXED";
 
 // Khoảng ngày lọc doanh thu ở Quản Lý Bán Hàng (Tổng quan).

@@ -24,6 +24,7 @@ datasource db {
 //   Dispute.status             "OPEN" | "RESOLVED_REFUND" | "RESOLVED_RELEASE"
 //   Product.status             "PENDING" | "APPROVED" | "REJECTED"
 //   Category.status            "PENDING" | "APPROVED" | "REJECTED"
+//   ProductStockItem.status    "AVAILABLE" | "SOLD"
 
 model User {
   id            String    @id @default(cuid())
@@ -307,6 +308,7 @@ model Product {
   orderItems  OrderItem[]
   auctionBids AuctionBid[]
   variants    ProductVariant[]
+  stockItems  ProductStockItem[]
 }
 
 // Biến thể/gói của 1 sản phẩm — vd Gmail: "Domain .US - Thuê 24h - Tên Việt"
@@ -328,6 +330,53 @@ model ProductVariant {
   createdAt DateTime @default(now())
 
   orderItems OrderItem[]
+  stockItems ProductStockItem[]
+}
+
+// Kho dữ liệu giao hàng THẬT — mỗi dòng là 1 đơn vị nội dung có thể giao cho
+// đúng 1 buyer (vd 1 dòng "email|password|2fa" của 1 tài khoản Gmail, 1 mã
+// kích hoạt Steam key...). Seller nhập hàng loạt (mỗi dòng textarea = 1 bản
+// ghi) qua Trang Bán Hàng > Sản phẩm — xem POST /api/seller/products/
+// [productId]/stock. Đây là điểm khác biệt CỐT LÕI so với Product.stock/
+// ProductVariant.stock (chỉ là 1 con số seller tự gõ tay, không gắn nội dung
+// giao hàng thật) — model này giữ chỗ cho việc DELIVERY THẬT: khi buyer mua,
+// POST /api/checkout tự động "claim" đúng số lượng bản ghi AVAILABLE, gắn
+// vào OrderItem.deliveredPayload (buyer xem tại /don-hang).
+//
+// Sản phẩm/biến thể chỉ chuyển sang "chế độ kho thật" khi seller đã từng
+// nhập >=1 bản ghi ở đây (kiểm tra bằng COUNT, không cần thêm cờ boolean
+// riêng) — 180+ sản phẩm cũ chưa từng nhập kho thật vẫn hoạt động y hệt như
+// trước (Product.stock/ProductVariant.stock vẫn là nguồn kiểm tra tồn kho
+// duy nhất, deliveredPayload luôn null), không có gì bị phá vỡ.
+model ProductStockItem {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // null khi sản phẩm CHƯA có variant nào (kho gắn thẳng vào Product) — có
+  // giá trị khi kho thuộc về 1 variant cụ thể. onDelete: SetNull (không
+  // Cascade) để bản ghi ĐÃ BÁN (status SOLD, đã gắn vào 1 OrderItem) không
+  // bao giờ bị xoá khi seller xoá variant sau này — lịch sử giao hàng của
+  // buyer phải giữ nguyên vĩnh viễn. Bản ghi CHƯA BÁN (AVAILABLE) của 1
+  // variant sắp xoá phải được dọn tường minh TRƯỚC khi xoá variant (xem
+  // DELETE /api/seller/products/[productId]/variants/[variantId]) để tránh
+  // bị "mồ côi" lẫn sang kho của Product gốc.
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  // Nội dung giao hàng thật (email:password, mã kích hoạt...) — seller tự
+  // nhập, không validate format cụ thể vì mỗi category 1 kiểu dữ liệu khác
+  // nhau (Gmail vs Discord vs Steam key vs gold...).
+  content String
+  // "AVAILABLE" | "SOLD" — chuyển sang SOLD NGAY khi bị claim trong
+  // transaction checkout (không đợi tới lúc gắn xong orderItemId) để chặn
+  // đúng trường hợp giỏ hàng có 2 dòng trùng productId+variantId (client gửi
+  // thẳng lên API, không qua CartContext dedup) claim trúng cùng 1 bản ghi.
+  status      String    @default("AVAILABLE")
+  orderItemId String?
+  orderItem   OrderItem? @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  soldAt      DateTime?
+
+  @@index([productId, variantId, status])
 }
 
 model Order {
@@ -363,10 +412,17 @@ model OrderItem {
   price            Int
   status           String   @default("ESCROW")
   escrowReleaseAt  DateTime
+  // Nội dung giao hàng thật — JSON string mảng (1 phần tử / 1 đơn vị đã mua,
+  // khớp `quantity`), lấy từ ProductStockItem.content tại thời điểm checkout
+  // claim được đủ hàng trong kho thật (xem model ProductStockItem). null khi
+  // sản phẩm/biến thể CHƯA từng dùng kho thật (chế độ cũ — stock chỉ là số
+  // seller tự gõ tay, không có nội dung để giao) — giữ nguyên hành vi cũ cho
+  // toàn bộ đơn hàng/sản phẩm có từ trước tính năng này.
   deliveredPayload String?
   createdAt        DateTime @default(now())
 
-  dispute Dispute?
+  dispute    Dispute?
+  stockItems ProductStockItem[]
 }
 
 // Khiếu nại (Trang Bán Hàng > Khiếu nại) — buyer hoặc seller mở trên 1

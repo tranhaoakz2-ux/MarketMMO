@@ -1,6 +1,7 @@
 import { PackageSearch } from "lucide-react";
 import { redirect } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
+import DeliveredPayloadButton from "@/components/DeliveredPayloadButton";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import OpenDisputeButton from "@/components/OpenDisputeButton";
@@ -43,6 +44,7 @@ export default async function OrdersPage() {
       status: item.status as OrderStatus,
       escrowReleaseAt: item.escrowReleaseAt,
       hasDispute: Boolean(item.dispute),
+      deliveredPayload: item.deliveredPayload,
     }))
   );
 
@@ -92,6 +94,9 @@ export default async function OrdersPage() {
                           <p className="truncate font-semibold text-ink">{row.productName}</p>
                           {row.variantLabel && (
                             <p className="truncate text-xs text-brand-dark">{row.variantLabel}</p>
+                          )}
+                          {row.deliveredPayload && (
+                            <DeliveredPayloadButton deliveredPayload={row.deliveredPayload} />
                           )}
                         </td>
                         <td className="px-4 py-3 text-muted">{row.seller}</td>

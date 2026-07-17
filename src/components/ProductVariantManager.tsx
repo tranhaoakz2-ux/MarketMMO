@@ -1,12 +1,115 @@
 "use client";
 
-import { LogIn, Package, Plus, Store, Trash2 } from "lucide-react";
+import { Database, LogIn, Package, Plus, Store, Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatVnd } from "@/lib/format";
 import { PRODUCT_STATUS_LABEL, type ProductStatus } from "@/lib/constants";
 import type { Product } from "@/data/products";
+
+// Seller nhập hàng loạt dữ liệu giao hàng thật (kho — xem model
+// ProductStockItem trong prisma/schema.prisma) cho 1 sản phẩm (chưa có
+// variant) hoặc 1 biến thể cụ thể. Mỗi dòng textarea = 1 đơn vị sẽ giao TỰ
+// ĐỘNG cho đúng 1 khách khi mua (POST /api/checkout tự "claim"). Chưa nhập
+// kho thật thì "Kho" vẫn là con số seller tự gõ tay như trước — hoàn toàn
+// không bắt buộc, chỉ là tính năng thêm cho seller muốn giao hàng tự động.
+function StockEntryPanel({
+  productId,
+  variantId,
+  stockManaged,
+  stockAvailable,
+  onAdded,
+}: {
+  productId: string;
+  variantId?: string;
+  stockManaged?: boolean;
+  stockAvailable?: number;
+  onAdded: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const lineCount = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean).length;
+
+  const handleSubmit = async () => {
+    setError(null);
+    setLoading(true);
+    const res = await fetch(`/api/seller/products/${productId}/stock`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ variantId, items: text }),
+    });
+    const data = await res.json().catch(() => null);
+    setLoading(false);
+    if (!res.ok) {
+      setError(data?.error ?? "Không thể nhập kho.");
+      return;
+    }
+    setText("");
+    setOpen(false);
+    onAdded();
+  };
+
+  return (
+    <div className="mt-1.5">
+      <div className="flex flex-wrap items-center gap-2">
+        {stockManaged ? (
+          <span className="flex items-center gap-1 rounded-full bg-info/10 px-2 py-0.5 text-[11px] font-bold text-info">
+            <Database className="h-3 w-3" /> Kho thật: {stockAvailable ?? 0} còn hàng
+          </span>
+        ) : (
+          <span className="text-[11px] text-muted">
+            Chưa nhập kho dữ liệu giao hàng thật
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="text-[11px] font-bold text-brand-dark hover:underline"
+        >
+          {open ? "Đóng" : "Nhập kho"}
+        </button>
+      </div>
+
+      {open && (
+        <div className="mt-1.5 flex flex-col gap-1.5 rounded-lg border border-dashed border-brand-dark/40 bg-brand-light/10 p-2.5">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={4}
+            placeholder={
+              "Mỗi dòng là 1 sản phẩm sẽ giao cho khách, ví dụ:\nemail1@gmail.com|MatKhau123|MaKhoiPhuc\nemail2@gmail.com|MatKhau456|MaKhoiPhuc"
+            }
+            className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-xs focus:border-brand-dark focus:outline-none"
+          />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] text-muted">{lineCount} dòng hợp lệ</span>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={loading || lineCount === 0}
+              className="shrink-0 rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-ink hover:bg-brand-dark disabled:opacity-60"
+            >
+              {loading ? "Đang lưu..." : "Thêm vào kho"}
+            </button>
+          </div>
+          {error && <p className="text-[11px] font-semibold text-danger">{error}</p>}
+          <p className="text-[11px] leading-relaxed text-ink/70">
+            Mỗi dòng sẽ được giao TỰ ĐỘNG cho đúng 1 khách khi mua — hệ thống
+            tự gán theo thứ tự, không giao trùng. Từ lúc này, &ldquo;Kho&rdquo;
+            tự động đồng bộ theo số lượng còn lại trong kho thật.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const STATUS_STYLE: Record<ProductStatus, string> = {
   PENDING: "bg-brand-light text-brand-dark",
@@ -138,6 +241,14 @@ function ProductCard({ product, onChanged }: { product: Product; onChanged: () =
           <p className="text-xs text-muted">
             Giá mặc định: {formatVnd(product.price)} · Kho mặc định: {product.stock}
           </p>
+          {variants.length === 0 && (
+            <StockEntryPanel
+              productId={product.id}
+              stockManaged={product.stockManaged}
+              stockAvailable={product.stockAvailable}
+              onAdded={onChanged}
+            />
+          )}
         </div>
         <span className="rounded-full bg-surface-alt px-2.5 py-1 text-xs font-bold text-ink">
           {variants.length} biến thể
@@ -149,22 +260,31 @@ function ProductCard({ product, onChanged }: { product: Product; onChanged: () =
           {variants.map((v) => (
             <div
               key={v.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border-c bg-surface-alt px-3 py-2 text-sm"
+              className="rounded-lg border border-border-c bg-surface-alt px-3 py-2 text-sm"
             >
-              <span className="font-semibold text-ink">{v.label}</span>
-              <div className="flex items-center gap-3">
-                <span className="font-bold text-danger">{formatVnd(v.price)}</span>
-                <span className="text-xs text-muted">Kho: {v.stock}</span>
-                <span className="text-xs text-muted">Đã bán: {v.sold}</span>
-                <button
-                  onClick={() => handleDelete(v.id)}
-                  disabled={busyId === v.id}
-                  className="rounded-full p-1.5 text-muted hover:bg-danger/10 hover:text-danger disabled:opacity-50"
-                  aria-label="Xoá biến thể"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-semibold text-ink">{v.label}</span>
+                <div className="flex items-center gap-3">
+                  <span className="font-bold text-danger">{formatVnd(v.price)}</span>
+                  <span className="text-xs text-muted">Kho: {v.stock}</span>
+                  <span className="text-xs text-muted">Đã bán: {v.sold}</span>
+                  <button
+                    onClick={() => handleDelete(v.id)}
+                    disabled={busyId === v.id}
+                    className="rounded-full p-1.5 text-muted hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                    aria-label="Xoá biến thể"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
+              <StockEntryPanel
+                productId={product.id}
+                variantId={v.id}
+                stockManaged={v.stockManaged}
+                stockAvailable={v.stockAvailable}
+                onAdded={onChanged}
+              />
             </div>
           ))}
         </div>
