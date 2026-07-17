@@ -19,6 +19,7 @@ import BuyBox from "@/components/BuyBox";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import ProductCard from "@/components/ProductCard";
+import ProductInfoTabs from "@/components/ProductInfoTabs";
 import RatingStars from "@/components/RatingStars";
 import Reveal from "@/components/Reveal";
 import { getCategoryIcon } from "@/lib/categoryIcons";
@@ -177,55 +178,12 @@ export default async function ProductDetailPage({
 
         <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
           <Reveal>
-            <div className="grid grid-cols-1 overflow-hidden rounded-xl border border-border-c bg-surface shadow-sm sm:grid-cols-3">
-              <div className="flex flex-col border-b border-border-c sm:border-b-0 sm:border-r">
-                <div className="bg-ink px-5 py-4 text-center text-sm font-bold text-white sm:text-base">
-                  MÔ TẢ SẢN PHẨM
-                </div>
-                <div className="flex flex-1 flex-col gap-2 p-6 text-sm leading-relaxed text-ink/80">
-                  {product.description.map((line, i) => (
-                    <p key={i}>{line}</p>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-col border-b border-border-c sm:border-b-0 sm:border-r">
-                <div className="bg-brand px-5 py-4 text-center text-sm font-bold text-ink sm:text-base">
-                  TÍCH HỢP API
-                </div>
-                <div className="flex flex-1 flex-col gap-3 p-6 text-sm leading-relaxed text-ink/80">
-                  <p>
-                    Sản phẩm này hỗ trợ giao hàng/kích hoạt tự động qua hệ thống API của
-                    MarketMMO dành cho đối tác/nhà phát triển.
-                  </p>
-                  <Link
-                    href="/tai-lieu-api"
-                    className="font-semibold text-brand-dark hover:underline"
-                  >
-                    Xem tài liệu tích hợp API →
-                  </Link>
-                </div>
-              </div>
-
-              <div className="flex flex-col">
-                <div className="bg-brand px-5 py-4 text-center text-sm font-bold text-ink sm:text-base">
-                  ĐÁNH GIÁ (REVIEWS)
-                </div>
-                <div className="flex flex-1 flex-col gap-3 p-6 text-sm text-ink/80">
-                  <div className="flex items-center gap-2">
-                    <RatingStars rating={product.rating} />
-                    <span className="font-bold text-ink">{product.rating.toFixed(1)}</span>
-                    <span className="text-muted">({product.reviewCount} đánh giá)</span>
-                  </div>
-                  <Link
-                    href={`/shop/${slugifySeller(product.seller)}`}
-                    className="font-semibold text-brand-dark hover:underline"
-                  >
-                    Xem đánh giá gian hàng →
-                  </Link>
-                </div>
-              </div>
-            </div>
+            <ProductInfoTabs
+              description={product.description}
+              rating={product.rating}
+              reviewCount={product.reviewCount}
+              sellerShopHref={`/shop/${slugifySeller(product.seller)}`}
+            />
           </Reveal>
 
           {related.length > 0 && (
