@@ -22,6 +22,7 @@ datasource db {
 //   SellerVerification.status "PENDING" | "APPROVED" | "REJECTED"
 //   DiscountCode.type         "PERCENT" | "FIXED"
 //   Dispute.status             "OPEN" | "RESOLVED_REFUND" | "RESOLVED_RELEASE"
+//   Product.status             "PENDING" | "APPROVED" | "REJECTED"
 
 model User {
   id            String    @id @default(cuid())
@@ -266,6 +267,21 @@ model Product {
   // sẵn) nhưng POST /api/checkout BỎ QUA kiểm tra tồn kho cho sản phẩm này
   // — stock có thể xuống 0/âm, đó là tín hiệu seller đang "nợ hàng" cần giao.
   preOrder         Boolean  @default(false)
+
+  // Ảnh sản phẩm thật do seller tự upload (Vercel Blob URL hoặc đường dẫn
+  // /uploads/products/... khi chạy dev local không có BLOB_READ_WRITE_TOKEN
+  // — xem saveProductImage() trong src/lib/uploads.ts). null thì UI tự động
+  // fallback về icon theo category như trước (ProductThumbnail.tsx).
+  imageUrl  String?
+  // "PENDING" | "APPROVED" | "REJECTED" — sản phẩm seller tự đăng qua
+  // POST /api/seller/products bắt đầu ở "PENDING", cần admin duyệt
+  // (POST /api/admin/products/[id]) mới hiện công khai. Default "APPROVED"
+  // (không phải "PENDING") để toàn bộ sản phẩm cũ tạo qua prisma/seed.ts
+  // (đã có sẵn từ trước, coi như đã duyệt) không bị ẩn khỏi site khi field
+  // này được thêm vào — API tạo sản phẩm mới set "PENDING" tường minh,
+  // không dựa vào default.
+  status    String   @default("APPROVED")
+  adminNote String?
 
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])

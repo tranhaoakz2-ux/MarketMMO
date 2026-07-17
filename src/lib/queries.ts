@@ -43,6 +43,9 @@ function mapProduct(p: ProductWithRelations): Product {
     sellerLastActiveAt: p.seller.user.lastActiveAt?.toISOString() ?? null,
     sellerInsuranceBalance: p.seller.insuranceBalance,
     sellerId: p.sellerId,
+    imageUrl: p.imageUrl,
+    status: p.status as "PENDING" | "APPROVED" | "REJECTED",
+    adminNote: p.adminNote,
     variants: p.variants.map((v) => ({
       id: v.id,
       label: v.label,
@@ -59,6 +62,7 @@ export async function getAllCategories() {
 
 export async function getAllProducts(): Promise<Product[]> {
   const rows = await prisma.product.findMany({
+    where: { status: "APPROVED" },
     include: productInclude,
     orderBy: { createdAt: "desc" },
   });
@@ -68,6 +72,7 @@ export async function getAllProducts(): Promise<Product[]> {
 export async function getFeaturedProducts(limit = 8): Promise<Product[]> {
   const rows = await prisma.product.findMany({
     where: {
+      status: "APPROVED",
       OR: [{ hot: true }, { featuredUntil: { gt: new Date() } }],
     },
     include: productInclude,
@@ -85,7 +90,7 @@ export async function getProductsByCategory(
   categorySlug: string
 ): Promise<Product[]> {
   const rows = await prisma.product.findMany({
-    where: { category: { slug: categorySlug } },
+    where: { status: "APPROVED", category: { slug: categorySlug } },
     include: productInclude,
     orderBy: { createdAt: "desc" },
   });
@@ -97,6 +102,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
   if (!q) return [];
   const rows = await prisma.product.findMany({
     where: {
+      status: "APPROVED",
       OR: [
         { name: { contains: q, mode: "insensitive" } },
         { shortDescription: { contains: q, mode: "insensitive" } },
@@ -110,11 +116,16 @@ export async function searchProducts(query: string): Promise<Product[]> {
   return rows.map(mapProduct);
 }
 
+// Trang chi tiết sản phẩm CÔNG KHAI — chỉ trả sản phẩm đã duyệt (status
+// APPROVED), sản phẩm đang chờ duyệt/bị từ chối trả về null (404) dù đúng
+// slug, tránh khách hàng xem/mua được sản phẩm chưa qua kiểm duyệt. Seller
+// xem sản phẩm CỦA MÌNH (mọi trạng thái) qua getMySellerProducts() ở trang
+// quản lý riêng, không qua hàm này.
 export async function getProductBySlugDb(
   slug: string
 ): Promise<Product | null> {
   const row = await prisma.product.findUnique({
-    where: { slug },
+    where: { slug, status: "APPROVED" },
     include: productInclude,
   });
   return row ? mapProduct(row) : null;
@@ -126,6 +137,7 @@ export async function getRelatedProductsDb(
 ): Promise<Product[]> {
   const rows = await prisma.product.findMany({
     where: {
+      status: "APPROVED",
       category: { slug: product.categorySlug },
       id: { not: product.id },
     },

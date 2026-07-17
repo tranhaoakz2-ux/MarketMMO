@@ -20,9 +20,9 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import ProductCard from "@/components/ProductCard";
 import ProductInfoTabs from "@/components/ProductInfoTabs";
+import ProductThumbnail from "@/components/ProductThumbnail";
 import RatingStars from "@/components/RatingStars";
 import Reveal from "@/components/Reveal";
-import { getCategoryIcon } from "@/lib/categoryIcons";
 import { formatLastActive, formatVnd } from "@/lib/format";
 import { getRecentForumPosts } from "@/lib/forum";
 import { getProductBySlugDb, getRelatedProductsDb, getSellerReviews } from "@/lib/queries";
@@ -38,8 +38,6 @@ export default async function ProductDetailPage({
   const { slug } = await params;
   const product = await getProductBySlugDb(slug);
   if (!product) notFound();
-
-  const CategoryIcon = getCategoryIcon(product.categorySlug);
 
   const related = await getRelatedProductsDb(product);
   const referencePosts = await getRecentForumPosts(4);
@@ -72,9 +70,13 @@ export default async function ProductDetailPage({
                 >
                   <Heart className="h-4 w-4 text-danger" />
                 </button>
-                <div className="grid h-[294px] place-items-center rounded-xl border-2 border-brand bg-surface-alt">
-                  <CategoryIcon className="h-[92px] w-[92px] text-ink/70" strokeWidth={1.5} />
-                </div>
+                <ProductThumbnail
+                  imageUrl={product.imageUrl}
+                  categorySlug={product.categorySlug}
+                  boxClassName="h-[294px] w-full rounded-xl border-2 border-brand bg-surface-alt"
+                  iconClassName="h-[92px] w-[92px] text-ink/70"
+                  sizes="380px"
+                />
               </div>
 
               <div className="mt-3 grid grid-cols-2 gap-2">

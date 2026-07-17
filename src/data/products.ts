@@ -38,6 +38,11 @@ export type Product = {
   preOrder?: boolean;
   /** ID thật của Seller (DB) — chỉ có khi fetch qua getProductBySlugDb, dùng để tải/gửi đánh giá gian hàng ngay trong tab "Đánh giá" ở trang chi tiết sản phẩm. */
   sellerId?: string;
+  /** Ảnh thật do seller upload lúc đăng sản phẩm — null/undefined thì UI fallback về icon category (xem ProductThumbnail.tsx). */
+  imageUrl?: string | null;
+  /** "PENDING" | "APPROVED" | "REJECTED" — chỉ có khi fetch qua getMySellerProducts (trang quản lý sản phẩm của seller); các trang public chỉ trả sản phẩm APPROVED nên field này luôn ngầm định "APPROVED" ở đó, không cần set. */
+  status?: "PENDING" | "APPROVED" | "REJECTED";
+  adminNote?: string | null;
 };
 
 export const products: Product[] = [

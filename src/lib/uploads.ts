@@ -69,6 +69,45 @@ async function saveBuffer(
   return relativePath;
 }
 
+/**
+ * Lưu ảnh sản phẩm — khác CCCD/chat ở chỗ đây là ảnh CÔNG KHAI (ai cũng xem
+ * được, hiển thị ngay trên thẻ sản phẩm/trang chi tiết), không qua route bảo
+ * vệ nào. Có Blob thì URL trả về đã public sẵn, dùng thẳng được trong
+ * `<Image src=...>`. Thiếu Blob (dev local) thì ghi thẳng vào
+ * `public/uploads/products/` (khác thư mục `/uploads` ở root dùng cho CCCD/
+ * chat — thư mục đó NGOÀI `/public`, không ai xem trực tiếp được) để Next.js
+ * tự phục vụ như 1 static asset bình thường, trả về đường dẫn `/uploads/
+ * products/<uuid>.<ext>` dùng thẳng luôn, không cần đọc lại qua
+ * readUploadedFile()/route bảo vệ.
+ */
+export async function saveProductImage(file: File): Promise<string> {
+  const ext = ALLOWED_TYPES[file.type];
+  if (!ext) {
+    throw new Error("Chỉ chấp nhận ảnh JPEG, PNG hoặc WebP.");
+  }
+  if (file.size > MAX_UPLOAD_SIZE) {
+    throw new Error("Ảnh vượt quá 5MB.");
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const filename = `${randomUUID()}.${ext}`;
+
+  if (isBlobConfigured()) {
+    const blob = await put(path.join("products", filename), buffer, {
+      access: "public",
+      contentType: file.type,
+      addRandomSuffix: true,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+    return blob.url;
+  }
+
+  const absolutePath = path.join(process.cwd(), "public", "uploads", "products", filename);
+  await mkdir(path.dirname(absolutePath), { recursive: true });
+  await writeFile(absolutePath, buffer);
+  return `/uploads/products/${filename}`;
+}
+
 /** Lưu file CCCD, trả về giá trị lưu vào DB (URL Blob hoặc đường dẫn tương đối). */
 export async function saveVerificationImage(
   sellerId: string,

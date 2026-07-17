@@ -17,6 +17,14 @@ export type DisputeStatus = "OPEN" | "RESOLVED_REFUND" | "RESOLVED_RELEASE";
 
 export type VerificationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
+export type ProductStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {
+  PENDING: "Chờ duyệt",
+  APPROVED: "Đã duyệt",
+  REJECTED: "Bị từ chối",
+};
+
 export type DiscountType = "PERCENT" | "FIXED";
 
 // Khoảng ngày lọc doanh thu ở Quản Lý Bán Hàng (Tổng quan).

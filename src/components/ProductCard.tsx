@@ -1,13 +1,11 @@
 import { BadgeCheck, Clock, Eye, Flame, PackageCheck } from "lucide-react";
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
+import ProductThumbnail from "@/components/ProductThumbnail";
 import type { Product } from "@/data/products";
 import { formatVnd } from "@/lib/format";
-import { getCategoryIcon } from "@/lib/categoryIcons";
 
 export default function ProductCard({ product }: { product: Product }) {
-  const CategoryIcon = getCategoryIcon(product.categorySlug);
-
   return (
     <Link
       href={`/san-pham/${product.slug}`}
@@ -15,9 +13,13 @@ export default function ProductCard({ product }: { product: Product }) {
     >
       <div className="flex gap-[15px] p-[15px]">
         <div className="relative shrink-0">
-          <span className="grid h-24 w-24 place-items-center rounded-md bg-surface-alt ring-1 ring-border-c sm:h-[120px] sm:w-[120px]">
-            <CategoryIcon className="h-10 w-10 text-ink/70 sm:h-12 sm:w-12" strokeWidth={1.5} />
-          </span>
+          <ProductThumbnail
+            imageUrl={product.imageUrl}
+            categorySlug={product.categorySlug}
+            boxClassName="h-24 w-24 rounded-md bg-surface-alt ring-1 ring-border-c sm:h-[120px] sm:w-[120px]"
+            iconClassName="h-10 w-10 text-ink/70 sm:h-12 sm:w-12"
+            sizes="120px"
+          />
           <span className="absolute left-0 top-0 rounded-br-lg bg-brand px-2.5 py-1 text-[11px] font-black text-ink">
             {product.categoryLabel}
           </span>

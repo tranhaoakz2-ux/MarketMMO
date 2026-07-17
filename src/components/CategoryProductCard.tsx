@@ -1,8 +1,8 @@
 import { BadgeCheck, Crown, Star } from "lucide-react";
 import Link from "next/link";
+import ProductThumbnail from "@/components/ProductThumbnail";
 import type { Product } from "@/data/products";
 import { formatVnd } from "@/lib/format";
-import { getCategoryIcon } from "@/lib/categoryIcons";
 
 // Đồng bộ với phân loại "Dịch vụ" ở CategoryTabs.tsx/Header.tsx: schema chưa
 // tách bảng dịch vụ khỏi sản phẩm, nên coi 3 category liên quan tới cày
@@ -10,7 +10,6 @@ import { getCategoryIcon } from "@/lib/categoryIcons";
 const serviceCategorySlugs = new Set(["boosting", "chatgpt", "youtube"]);
 
 export default function CategoryProductCard({ product }: { product: Product }) {
-  const CategoryIcon = getCategoryIcon(product.categorySlug);
   const typeLabel = serviceCategorySlugs.has(product.categorySlug) ? "Dịch vụ" : "Sản phẩm";
   const filledStars = Math.round(product.rating);
 
@@ -21,9 +20,13 @@ export default function CategoryProductCard({ product }: { product: Product }) {
     >
       <div className="flex flex-row items-center gap-4 border-b border-dashed border-border-c p-4 sm:w-[220px] sm:shrink-0 sm:flex-col sm:border-b-0 sm:border-r">
         <div className="relative h-[100px] w-[100px] shrink-0 sm:h-[170px] sm:w-[170px]">
-          <span className="grid h-full w-full place-items-center rounded bg-surface-alt ring-1 ring-border-c">
-            <CategoryIcon className="h-12 w-12 text-ink/70 sm:h-16 sm:w-16" strokeWidth={1.5} />
-          </span>
+          <ProductThumbnail
+            imageUrl={product.imageUrl}
+            categorySlug={product.categorySlug}
+            boxClassName="h-full w-full rounded bg-surface-alt ring-1 ring-border-c"
+            iconClassName="h-12 w-12 text-ink/70 sm:h-16 sm:w-16"
+            sizes="170px"
+          />
           <span className="absolute left-0 top-0 rounded bg-brand px-1.5 py-[3px] text-[10px] font-extrabold uppercase text-ink">
             Không trùng
           </span>

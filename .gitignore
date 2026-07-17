@@ -49,6 +49,11 @@ next-env.d.ts
 # lưu ngoài /public để không bị truy cập công khai
 /uploads/
 
+# ảnh sản phẩm upload khi chạy dev local không cấu hình Vercel Blob (xem
+# saveProductImage() trong src/lib/uploads.ts) — dữ liệu người dùng tải lên
+# lúc chạy thử, không phải asset của dự án, KHÔNG commit
+/public/uploads/
+
 # cấu hình cục bộ Claude Code (không phải asset của dự án)
 /.claude/settings.local.json
 /.claude/scheduled_tasks.lock

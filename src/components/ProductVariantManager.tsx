@@ -5,7 +5,14 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatVnd } from "@/lib/format";
+import { PRODUCT_STATUS_LABEL, type ProductStatus } from "@/lib/constants";
 import type { Product } from "@/data/products";
+
+const STATUS_STYLE: Record<ProductStatus, string> = {
+  PENDING: "bg-brand-light text-brand-dark",
+  APPROVED: "bg-success/10 text-success",
+  REJECTED: "bg-danger/10 text-danger",
+};
 
 function AddVariantForm({
   productId,
@@ -102,17 +109,32 @@ function ProductCard({ product, onChanged }: { product: Product; onChanged: () =
   };
 
   const variants = product.variants ?? [];
+  const status = product.status ?? "APPROVED";
 
   return (
     <div className="rounded-2xl border border-border-c bg-surface p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <Link
-            href={`/san-pham/${product.slug}`}
-            className="font-bold text-ink hover:text-brand-dark"
-          >
-            {product.name}
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {status === "APPROVED" ? (
+              <Link
+                href={`/san-pham/${product.slug}`}
+                className="font-bold text-ink hover:text-brand-dark"
+              >
+                {product.name}
+              </Link>
+            ) : (
+              <span className="font-bold text-ink">{product.name}</span>
+            )}
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${STATUS_STYLE[status]}`}>
+              {PRODUCT_STATUS_LABEL[status]}
+            </span>
+          </div>
+          {status === "REJECTED" && product.adminNote && (
+            <p className="mt-1 text-xs font-semibold text-danger">
+              Lý do từ chối: {product.adminNote}
+            </p>
+          )}
           <p className="text-xs text-muted">
             Giá mặc định: {formatVnd(product.price)} · Kho mặc định: {product.stock}
           </p>

@@ -1,22 +1,24 @@
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import Avatar from "@/components/Avatar";
+import ProductThumbnail from "@/components/ProductThumbnail";
 import { formatVnd } from "@/lib/format";
 import type { Product } from "@/data/products";
-import { getCategoryIcon } from "@/lib/categoryIcons";
 
 function FeaturedCard({ product }: { product: Product }) {
-  const CategoryIcon = getCategoryIcon(product.categorySlug);
-
   return (
     <Link
       href={`/san-pham/${product.slug}`}
       className="w-[187px] shrink-0 rounded-xl p-[5px] transition hover:-translate-y-0.5 sm:w-[204px]"
     >
       <div className="relative">
-        <span className="grid h-[253px] w-full place-items-center rounded-lg border-2 border-brand bg-surface-alt">
-          <CategoryIcon className="h-16 w-16 text-ink/70" strokeWidth={1.5} />
-        </span>
+        <ProductThumbnail
+          imageUrl={product.imageUrl}
+          categorySlug={product.categorySlug}
+          boxClassName="h-[253px] w-full rounded-lg border-2 border-brand bg-surface-alt"
+          iconClassName="h-16 w-16 text-ink/70"
+          sizes="204px"
+        />
         <span
           className={`absolute right-1 top-1 rounded px-2 py-1 text-[11px] font-bold ${
             product.featuredViaAuction ? "bg-ink text-white" : "bg-brand text-ink"

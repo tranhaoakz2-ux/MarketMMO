@@ -6,6 +6,7 @@ import {
   Check,
   ExternalLink,
   Gavel,
+  Package,
   PackageCheck,
   RefreshCcw,
   ShieldCheck,
@@ -59,6 +60,21 @@ type Verification = {
   seller: { shopName: string; slug: string };
 };
 
+type PendingProduct = {
+  id: string;
+  slug: string;
+  name: string;
+  shortDescription: string;
+  price: number;
+  stock: number;
+  imageUrl: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  adminNote: string | null;
+  createdAt: string;
+  categoryName: string;
+  seller: { shopName: string; slug: string };
+};
+
 const statusStyle: Record<WalletTxStatus, string> = {
   PENDING: "bg-brand-light text-brand-dark",
   CONFIRMED: "bg-success/10 text-success",
@@ -70,6 +86,7 @@ export default function AdminDashboard() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [verifications, setVerifications] = useState<Verification[]>([]);
+  const [pendingProducts, setPendingProducts] = useState<PendingProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [releaseMsg, setReleaseMsg] = useState<string | null>(null);
@@ -79,12 +96,14 @@ export default function AdminDashboard() {
 
   const load = async () => {
     setLoading(true);
-    const [depositsRes, withdrawalsRes, disputesRes, verificationsRes] = await Promise.all([
-      fetch("/api/admin/deposits"),
-      fetch("/api/admin/withdrawals"),
-      fetch("/api/admin/disputes"),
-      fetch("/api/admin/verifications"),
-    ]);
+    const [depositsRes, withdrawalsRes, disputesRes, verificationsRes, productsRes] =
+      await Promise.all([
+        fetch("/api/admin/deposits"),
+        fetch("/api/admin/withdrawals"),
+        fetch("/api/admin/disputes"),
+        fetch("/api/admin/verifications"),
+        fetch("/api/admin/products"),
+      ]);
     if (depositsRes.ok) {
       const data = await depositsRes.json();
       setDeposits(data.deposits);
@@ -100,6 +119,10 @@ export default function AdminDashboard() {
     if (verificationsRes.ok) {
       const data = await verificationsRes.json();
       setVerifications(data.verifications);
+    }
+    if (productsRes.ok) {
+      const data = await productsRes.json();
+      setPendingProducts(data.products);
     }
     setLoading(false);
   };
@@ -152,6 +175,17 @@ export default function AdminDashboard() {
     load();
   };
 
+  const handleProductAction = async (id: string, action: "approve" | "reject") => {
+    setBusyId(id);
+    await fetch(`/api/admin/products/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    setBusyId(null);
+    load();
+  };
+
   const handleReleaseEscrow = async () => {
     setReleasing(true);
     setReleaseMsg(null);
@@ -184,6 +218,7 @@ export default function AdminDashboard() {
   const processedWithdrawals = withdrawals.filter((w) => w.status !== "PENDING");
   const openDisputes = disputes.filter((d) => d.status === "OPEN");
   const pendingVerifications = verifications.filter((v) => v.status === "PENDING");
+  const pendingProductsOnly = pendingProducts.filter((p) => p.status === "PENDING");
 
   return (
     <div className="flex flex-col gap-8">
@@ -355,6 +390,67 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => handleVerificationAction(v.id, "reject")}
                     disabled={busyId === v.id}
+                    className="flex items-center gap-1 rounded-full bg-danger px-3 py-1.5 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    <X className="h-3.5 w-3.5" /> Từ chối
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+            <Package className="h-4 w-4" /> Sản phẩm chờ duyệt (
+            {pendingProductsOnly.length})
+          </h2>
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-muted">Đang tải...</p>
+        ) : pendingProductsOnly.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border-c bg-surface p-8 text-center text-sm text-muted">
+            Không có sản phẩm nào đang chờ duyệt.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {pendingProductsOnly.map((p) => (
+              <div
+                key={p.id}
+                className="flex flex-col gap-3 rounded-xl border border-border-c bg-surface p-4 shadow-sm sm:flex-row sm:items-center"
+              >
+                {p.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- ảnh Blob/local công khai, xem nhanh trong bảng admin không cần next/image tối ưu
+                  <img
+                    src={p.imageUrl}
+                    alt=""
+                    className="h-16 w-16 shrink-0 rounded-lg object-cover ring-1 ring-border-c"
+                  />
+                ) : (
+                  <div className="h-16 w-16 shrink-0 rounded-lg bg-surface-alt ring-1 ring-border-c" />
+                )}
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-ink">{p.name}</p>
+                  <p className="text-xs text-muted">
+                    {p.seller.shopName} · {p.categoryName} · {formatVnd(p.price)} · Kho{" "}
+                    {p.stock} · {new Date(p.createdAt).toLocaleString("vi-VN")}
+                  </p>
+                  <p className="mt-1 text-xs text-ink/70">{p.shortDescription}</p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    onClick={() => handleProductAction(p.id, "approve")}
+                    disabled={busyId === p.id}
+                    className="flex items-center gap-1 rounded-full bg-success px-3 py-1.5 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    <Check className="h-3.5 w-3.5" /> Duyệt
+                  </button>
+                  <button
+                    onClick={() => handleProductAction(p.id, "reject")}
+                    disabled={busyId === p.id}
                     className="flex items-center gap-1 rounded-full bg-danger px-3 py-1.5 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
                   >
                     <X className="h-3.5 w-3.5" /> Từ chối
