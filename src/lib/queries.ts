@@ -42,6 +42,7 @@ function mapProduct(p: ProductWithRelations): Product {
     featuredViaAuction: Boolean(p.featuredUntil && p.featuredUntil > new Date()),
     sellerLastActiveAt: p.seller.user.lastActiveAt?.toISOString() ?? null,
     sellerInsuranceBalance: p.seller.insuranceBalance,
+    sellerId: p.sellerId,
     variants: p.variants.map((v) => ({
       id: v.id,
       label: v.label,

@@ -574,7 +574,19 @@ thật — không dùng dữ liệu giả:
 - **ĐÁNH GIÁ (REVIEWS)**: `RatingStars` + `product.rating`/`reviewCount`
   (số tĩnh từ seed, xem ghi chú ở mục "Domain" cuối file, prop `rating`/
   `reviewCount`) + link `sellerShopHref` (`/shop/[seller]`) xem đánh giá đầy
-  đủ của gian hàng.
+  đủ của gian hàng, **và bên dưới là danh sách bình luận thật + form gửi
+  đánh giá** — tái dùng nguyên `ReviewForm.tsx`/`GET getSellerReviews()`/
+  `POST /api/reviews` đã có sẵn từ trang shop (`/shop/[seller]`), KHÔNG xây
+  hệ thống review theo từng sản phẩm riêng. Nghĩa là bình luận hiện ở đây là
+  đánh giá **theo cả gian hàng** (mọi sản phẩm của seller đó dùng chung 1
+  danh sách bình luận), không phải riêng cho sản phẩm đang xem — cùng giới
+  hạn nghiệp vụ đã ghi ở mục "Domain" (`Product.rating`/`reviewCount` tĩnh
+  và hệ thống Review thật vẫn tách theo Seller). `Product.sellerId` (field
+  mới thêm vào type `Product` + `mapProduct()`, chỉ có khi fetch qua
+  `getProductBySlugDb`) dùng để gọi `getSellerReviews(sellerId)` và truyền
+  `sellerId` cho `<ReviewForm>` biết gửi đánh giá vào đúng seller nào. Điều
+  kiện gửi được bình luận giữ nguyên như trang shop: phải đăng nhập **và**
+  đã từng mua hàng từ seller đó (không cứ phải mua đúng sản phẩm này).
 
 ### Thẻ sản phẩm (`ProductCard`)
 

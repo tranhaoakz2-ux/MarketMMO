@@ -36,6 +36,8 @@ export type Product = {
   variants?: ProductVariant[];
   /** Seller đánh dấu "sắp có hàng" — checkout bỏ qua kiểm tra tồn kho cho sản phẩm này. */
   preOrder?: boolean;
+  /** ID thật của Seller (DB) — chỉ có khi fetch qua getProductBySlugDb, dùng để tải/gửi đánh giá gian hàng ngay trong tab "Đánh giá" ở trang chi tiết sản phẩm. */
+  sellerId?: string;
 };
 
 export const products: Product[] = [

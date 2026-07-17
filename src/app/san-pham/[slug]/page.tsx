@@ -25,7 +25,7 @@ import Reveal from "@/components/Reveal";
 import { getCategoryIcon } from "@/lib/categoryIcons";
 import { formatLastActive, formatVnd } from "@/lib/format";
 import { getRecentForumPosts } from "@/lib/forum";
-import { getProductBySlugDb, getRelatedProductsDb } from "@/lib/queries";
+import { getProductBySlugDb, getRelatedProductsDb, getSellerReviews } from "@/lib/queries";
 import { slugifySeller } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +43,7 @@ export default async function ProductDetailPage({
 
   const related = await getRelatedProductsDb(product);
   const referencePosts = await getRecentForumPosts(4);
+  const sellerReviews = product.sellerId ? await getSellerReviews(product.sellerId) : [];
 
   return (
     <>
@@ -183,6 +184,8 @@ export default async function ProductDetailPage({
               rating={product.rating}
               reviewCount={product.reviewCount}
               sellerShopHref={`/shop/${slugifySeller(product.seller)}`}
+              sellerId={product.sellerId ?? null}
+              sellerReviews={sellerReviews}
             />
           </Reveal>
 

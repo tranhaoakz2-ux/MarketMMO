@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import Avatar from "@/components/Avatar";
 import RatingStars from "@/components/RatingStars";
+import ReviewForm from "@/components/ReviewForm";
 
 type TabKey = "description" | "api" | "reviews";
 
@@ -12,16 +14,28 @@ const TAB_LABELS: Record<TabKey, string> = {
   reviews: "ĐÁNH GIÁ (REVIEWS)",
 };
 
+type SellerReview = {
+  id: string;
+  authorName: string;
+  rating: number;
+  comment: string;
+  createdAt: Date;
+};
+
 export default function ProductInfoTabs({
   description,
   rating,
   reviewCount,
   sellerShopHref,
+  sellerId,
+  sellerReviews,
 }: {
   description: string[];
   rating: number;
   reviewCount: number;
   sellerShopHref: string;
+  sellerId: string | null;
+  sellerReviews: SellerReview[];
 }) {
   const [tab, setTab] = useState<TabKey>("description");
 
@@ -63,15 +77,50 @@ export default function ProductInfoTabs({
       )}
 
       {tab === "reviews" && (
-        <div className="flex flex-col gap-3 p-6 text-sm text-ink/80">
+        <div className="flex flex-col gap-4 p-6 text-sm text-ink/80">
           <div className="flex items-center gap-2">
             <RatingStars rating={rating} />
             <span className="font-bold text-ink">{rating.toFixed(1)}</span>
             <span className="text-muted">({reviewCount} đánh giá)</span>
+            <Link
+              href={sellerShopHref}
+              className="ml-auto text-xs font-semibold text-brand-dark hover:underline"
+            >
+              Xem gian hàng →
+            </Link>
           </div>
-          <Link href={sellerShopHref} className="font-semibold text-brand-dark hover:underline">
-            Xem đánh giá gian hàng →
-          </Link>
+
+          <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+            <div className="flex flex-col gap-3">
+              {sellerReviews.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border-c bg-surface-alt p-6 text-center text-sm text-muted">
+                  Chưa có bình luận nào — hãy là người đầu tiên chia sẻ trải
+                  nghiệm về chất lượng sản phẩm này.
+                </div>
+              ) : (
+                sellerReviews.map((review) => (
+                  <div
+                    key={review.id}
+                    className="rounded-xl border border-border-c bg-surface-alt p-4"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Avatar size={28} />
+                      <span className="text-sm font-bold text-ink">{review.authorName}</span>
+                      <RatingStars rating={review.rating} />
+                      <span className="ml-auto text-xs text-muted">
+                        {review.createdAt.toLocaleDateString("vi-VN")}
+                      </span>
+                    </div>
+                    {review.comment && (
+                      <p className="mt-2 text-sm text-ink/80">{review.comment}</p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {sellerId && <ReviewForm sellerId={sellerId} />}
+          </div>
         </div>
       )}
     </div>
