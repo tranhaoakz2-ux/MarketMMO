@@ -390,7 +390,7 @@ export default function AddProductForm({
                   setAddingCategory(true);
                   setCategoryNotice(null);
                 }}
-                className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-brand-dark hover:underline"
+                className="mt-1.5 flex items-center gap-1 text-xs font-bold text-yellow-700 hover:text-yellow-800 hover:underline"
               >
                 <Plus className="h-3 w-3" /> Thêm danh mục mới chưa có
               </button>
@@ -485,7 +485,7 @@ export default function AddProductForm({
           <button
             type="button"
             onClick={addVariantRow}
-            className="flex shrink-0 items-center gap-1 rounded-full bg-surface px-3 py-1.5 text-xs font-bold text-brand-dark ring-1 ring-brand-dark/30 hover:bg-brand-light/20"
+            className="flex shrink-0 items-center gap-1 rounded-full bg-surface px-3 py-1.5 text-xs font-bold text-yellow-700 ring-1 ring-yellow-700/40 hover:bg-brand-light/20 hover:text-yellow-800"
           >
             <Plus className="h-3.5 w-3.5" /> Thêm phiên bản
           </button>
