@@ -309,7 +309,7 @@ export default function AddProductForm({
       className="flex flex-col gap-4 rounded-2xl border border-border-c bg-surface p-5 shadow-sm"
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-black text-ink">Đăng sản phẩm mới</h3>
+        <h3 className="text-base font-black text-ink">Đăng sản phẩm mới</h3>
         <button
           type="button"
           onClick={() => setOpen(false)}
@@ -322,7 +322,7 @@ export default function AddProductForm({
 
       <div className="grid gap-4 sm:grid-cols-[160px_1fr]">
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-ink">Ảnh sản phẩm</label>
+          <label className="mb-1.5 block text-sm font-semibold text-ink">Ảnh sản phẩm</label>
           <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-border-c bg-surface-alt text-muted hover:border-brand-dark hover:text-brand-dark">
             {previewUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- xem trước ảnh cục bộ trước khi upload (object URL, không phải asset)
@@ -344,7 +344,7 @@ export default function AddProductForm({
 
         <div className="flex flex-col gap-3">
           <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">Tên sản phẩm</label>
+            <label className="mb-1 block text-sm font-semibold text-ink">Tên sản phẩm</label>
             <input
               type="text"
               required
@@ -358,7 +358,7 @@ export default function AddProductForm({
           </div>
 
           <div>
-            <label className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-ink">
+            <label className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-ink">
               Danh mục
               {!categoryTouched && categoryId && (
                 <span className="rounded-full bg-brand-light px-1.5 py-0.5 text-[10px] font-bold text-brand-dark">
@@ -442,7 +442,7 @@ export default function AddProductForm({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Giá (đ)</label>
+              <label className="mb-1 block text-sm font-semibold text-ink">Giá (đ)</label>
               <input
                 type="number"
                 required
@@ -455,7 +455,7 @@ export default function AddProductForm({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Kho</label>
+              <label className="mb-1 block text-sm font-semibold text-ink">Kho</label>
               <input
                 type="number"
                 required={!baseStockItems.trim()}
@@ -476,7 +476,7 @@ export default function AddProductForm({
       <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-xs font-bold text-ink">Phiên bản / Gói (tuỳ chọn)</p>
+            <p className="text-sm font-bold text-ink">Phiên bản / Gói (tuỳ chọn)</p>
             <p className="text-[11px] text-muted">
               Chỉ điền nếu sản phẩm có nhiều loại/gói giá khác nhau. Bỏ qua
               nếu chỉ bán 1 loại duy nhất.
@@ -547,7 +547,7 @@ export default function AddProductForm({
 
         {variants.length === 0 && (
           <div className="mt-3">
-            <label className="mb-1 block text-xs font-semibold text-ink">
+            <label className="mb-1 block text-sm font-semibold text-ink">
               Kho dữ liệu giao hàng thật (tuỳ chọn)
             </label>
             <textarea
@@ -569,7 +569,7 @@ export default function AddProductForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-semibold text-ink">Mô tả ngắn</label>
+        <label className="mb-1 block text-sm font-semibold text-ink">Mô tả ngắn</label>
         <input
           type="text"
           required
@@ -583,7 +583,7 @@ export default function AddProductForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-semibold text-ink">Mô tả chi tiết</label>
+        <label className="mb-1 block text-sm font-semibold text-ink">Mô tả chi tiết</label>
         <textarea
           required
           minLength={20}
