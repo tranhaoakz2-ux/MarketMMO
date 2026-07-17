@@ -1116,6 +1116,22 @@ userBId])` + `prisma.conversation.upsert` đảm bảo 1 cặp user chỉ có đ
     load lại danh sách ngay sau khi đăng sản phẩm mới thành công, không chia
     sẻ state trực tiếp giữa 2 component.
 
+    **Gợi ý tự động danh mục theo tên sản phẩm** (`detectCategorySlug()`
+    trong `AddProductForm.tsx`): gõ tên có chứa từ khoá khớp danh mục (vd
+    "Gmail", "Facebook"/"FB", "Discord", "Tiktok", "Outlook"/"Hotmail",
+    "ChatGPT"/"GPT"/"OpenAI", "Steam", "Twitter"/"X", "Boost"/"Boosting"/
+    "cày thuê"/"leveling"/"rank" — bảng `CATEGORY_KEYWORDS`) thì dropdown
+    danh mục **tự điền sẵn**, kèm badge nhỏ "Tự động gợi ý" — chỉ là GỢI Ý,
+    seller tự bấm chọn lại được bất kỳ lúc nào (bấm 1 lần vào dropdown là
+    tắt hẳn auto-suggest cho lần đăng sản phẩm đó, tránh ghi đè lựa chọn cố
+    ý của seller). So khớp theo *từ nguyên vẹn* (`\btừ\b`) trên chuỗi đã bỏ
+    dấu tiếng Việt (`normalizeVietnamese()`) — quan trọng với từ khoá ngắn
+    như "x" (Twitter/X) hay "fb", tránh khớp nhầm vào giữa 1 từ khác (vd
+    "x" không khớp vào "Extension"). Đã test 15 kịch bản qua script độc lập
+    (trùng khớp đúng từng category + 2 trường hợp không khớp gì, bao gồm
+    đúng edge case "x" kể trên) — không cần đăng nhập vì đây là hàm thuần,
+    không phụ thuộc DOM/API.
+
     **Ảnh sản phẩm — công khai, khác hẳn ảnh CCCD/chat**: `saveProductImage()`
     (`src/lib/uploads.ts`) dùng Vercel Blob `access: "public"` giống các
     upload khác, nhưng KHÔNG qua route bảo vệ nào — URL Blob trả về dùng

@@ -4,7 +4,7 @@ import { useState } from "react";
 import AddProductForm from "@/components/AddProductForm";
 import ProductVariantManager from "@/components/ProductVariantManager";
 
-type Category = { id: string; name: string; emoji: string };
+type Category = { id: string; slug: string; name: string; emoji: string };
 
 export default function SellerProductsPanel({ categories }: { categories: Category[] }) {
   // Đổi key để buộc ProductVariantManager unmount/remount (tự fetch lại danh

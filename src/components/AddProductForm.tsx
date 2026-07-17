@@ -1,9 +1,49 @@
 "use client";
 
 import { Check, ImagePlus, Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-type Category = { id: string; name: string; emoji: string };
+type Category = { id: string; slug: string; name: string; emoji: string };
+
+// Từ khoá gợi ý danh mục theo tên sản phẩm — chỉ GỢI Ý (tự điền sẵn dropdown),
+// seller vẫn tự chọn lại được nếu đoán sai, không khoá cứng. So khớp theo
+// "từ nguyên vẹn" (word boundary) trên chuỗi đã bỏ dấu tiếng Việt, tránh
+// khớp nhầm vào giữa 1 từ khác (vd "x" không khớp vào "explorer").
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  gmail: ["gmail"],
+  facebook: ["facebook", "fb"],
+  youtube: ["youtube", "yt"],
+  discord: ["discord"],
+  tiktok: ["tiktok", "tik tok"],
+  outlook: ["outlook", "hotmail"],
+  chatgpt: ["chatgpt", "chat gpt", "gpt", "openai"],
+  steam: ["steam"],
+  twitter: ["twitter", "x"],
+  boosting: ["boost", "boosting", "cay thue", "leveling", "rank"],
+};
+
+function normalizeVietnamese(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/đ/g, "d");
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function detectCategorySlug(productName: string): string | null {
+  const normalized = normalizeVietnamese(productName);
+  for (const [slug, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    for (const keyword of keywords) {
+      const pattern = new RegExp(`\\b${escapeRegExp(keyword)}\\b`, "i");
+      if (pattern.test(normalized)) return slug;
+    }
+  }
+  return null;
+}
 
 export default function AddProductForm({
   categories,
@@ -15,6 +55,9 @@ export default function AddProductForm({
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  // Seller tự bấm chọn 1 lần trong dropdown thì không tự động ghi đè gợi ý
+  // nữa, kể cả khi họ gõ tiếp tên sản phẩm — chỉ gợi ý khi field còn "trinh".
+  const [categoryTouched, setCategoryTouched] = useState(false);
   const [shortDescription, setShortDescription] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -24,6 +67,14 @@ export default function AddProductForm({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (categoryTouched) return;
+    const slug = detectCategorySlug(name);
+    if (!slug) return;
+    const match = categories.find((c) => c.slug === slug);
+    if (match) setCategoryId(match.id);
+  }, [name, categoryTouched, categories]);
 
   const handlePickImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -42,6 +93,7 @@ export default function AddProductForm({
   const resetForm = () => {
     setName("");
     setCategoryId("");
+    setCategoryTouched(false);
     setShortDescription("");
     setDescription("");
     setPrice("");
@@ -152,11 +204,21 @@ export default function AddProductForm({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">Danh mục</label>
+            <label className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-ink">
+              Danh mục
+              {!categoryTouched && categoryId && (
+                <span className="rounded-full bg-brand-light px-1.5 py-0.5 text-[10px] font-bold text-brand-dark">
+                  Tự động gợi ý
+                </span>
+              )}
+            </label>
             <select
               required
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+              onChange={(e) => {
+                setCategoryId(e.target.value);
+                setCategoryTouched(true);
+              }}
               className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
             >
               <option value="">-- Chọn danh mục --</option>
