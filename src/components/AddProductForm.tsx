@@ -1,9 +1,21 @@
 "use client";
 
-import { Check, ImagePlus, Plus, X } from "lucide-react";
+import { Check, ImagePlus, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type Category = { id: string; slug: string; name: string; emoji: string };
+
+// Biến thể nháp — seller điền ngay trong lúc đăng sản phẩm (thay vì phải
+// quay lại sau qua ProductVariantManager). `stockItems` là nội dung kho
+// dữ liệu giao hàng thật (mỗi dòng = 1 đơn vị) dán kèm luôn cho biến thể
+// này — không bắt buộc, seller vẫn có thể "Nhập kho" sau ở trang quản lý.
+type DraftVariant = {
+  key: string;
+  label: string;
+  price: string;
+  stock: string;
+  stockItems: string;
+};
 
 // Từ khoá gợi ý danh mục theo tên sản phẩm — chỉ GỢI Ý (tự điền sẵn dropdown),
 // seller vẫn tự chọn lại được nếu đoán sai, không khoá cứng. So khớp theo
@@ -73,9 +85,27 @@ export default function AddProductForm({
   const [stock, setStock] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // Kho dữ liệu giao hàng thật cho SẢN PHẨM GỐC — chỉ dùng khi không thêm
+  // biến thể nào bên dưới (khớp đúng quy tắc "Product.stock chỉ thật sự
+  // dùng khi sản phẩm chưa có variant" đã có sẵn trong hệ thống).
+  const [baseStockItems, setBaseStockItems] = useState("");
+  const [variants, setVariants] = useState<DraftVariant[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const addVariantRow = () => {
+    setVariants((prev) => [
+      ...prev,
+      { key: crypto.randomUUID(), label: "", price: "", stock: "", stockItems: "" },
+    ]);
+  };
+  const removeVariantRow = (key: string) => {
+    setVariants((prev) => prev.filter((v) => v.key !== key));
+  };
+  const updateVariant = (key: string, field: keyof DraftVariant, value: string) => {
+    setVariants((prev) => prev.map((v) => (v.key === key ? { ...v, [field]: value } : v)));
+  };
 
   useEffect(() => {
     if (categoryTouched) return;
@@ -153,8 +183,17 @@ export default function AddProductForm({
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setImage(null);
     setPreviewUrl(null);
+    setBaseStockItems("");
+    setVariants([]);
   };
 
+  // Đăng sản phẩm + biến thể + nhập kho TRONG CÙNG 1 LẦN GỬI — thay vì phải
+  // tạo sản phẩm xong mới quay lại trang quản lý để thêm biến thể/nhập kho
+  // riêng từng bước như trước. Vẫn gọi tuần tự 3 API có sẵn (products →
+  // variants → stock, không gộp thành 1 transaction backend) vì đây là thao
+  // tác quản trị của seller (không đụng tiền/tồn kho của buyer) — lỡ 1 bước
+  // sau lỗi thì sản phẩm/biến thể đã tạo vẫn còn nguyên, seller sửa tiếp
+  // được ngay tại ProductVariantManager bên dưới, không mất dữ liệu đã nhập.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -164,6 +203,12 @@ export default function AddProductForm({
       setError("Vui lòng chọn ảnh sản phẩm.");
       return;
     }
+    for (const v of variants) {
+      if (!v.label.trim() || !v.price) {
+        setError("Vui lòng điền đủ tên và giá cho mọi biến thể đã thêm.");
+        return;
+      }
+    }
 
     setLoading(true);
     const form = new FormData();
@@ -172,19 +217,76 @@ export default function AddProductForm({
     form.append("shortDescription", shortDescription);
     form.append("description", description);
     form.append("price", price);
-    form.append("stock", stock);
+    // Nếu sẽ dán kho ngay cho sản phẩm gốc (không có biến thể), gửi stock=0
+    // và để bước "nhập kho" bên dưới tự cộng đúng theo số dòng — tránh cộng
+    // trùng nếu seller lỡ điền cả 2 nơi.
+    form.append("stock", variants.length === 0 && baseStockItems.trim() ? "0" : stock);
     form.append("image", image);
 
     const res = await fetch("/api/seller/products", { method: "POST", body: form });
     const data = await res.json().catch(() => null);
-    setLoading(false);
 
     if (!res.ok) {
+      setLoading(false);
       setError(data?.error ?? "Không thể đăng sản phẩm, vui lòng thử lại.");
       return;
     }
 
-    setSuccess("Đã gửi sản phẩm — chờ admin duyệt trước khi hiện công khai trên site.");
+    const productId: string = data.id;
+    const stepErrors: string[] = [];
+
+    if (variants.length === 0) {
+      if (baseStockItems.trim()) {
+        const stockRes = await fetch(`/api/seller/products/${productId}/stock`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: baseStockItems }),
+        });
+        if (!stockRes.ok) {
+          const stockData = await stockRes.json().catch(() => null);
+          stepErrors.push(`Nhập kho sản phẩm: ${stockData?.error ?? "thất bại"}`);
+        }
+      }
+    } else {
+      for (const v of variants) {
+        const variantRes = await fetch(`/api/seller/products/${productId}/variants`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            label: v.label.trim(),
+            price: Number(v.price),
+            // Cùng logic tránh cộng trùng như sản phẩm gốc ở trên.
+            stock: v.stockItems.trim() ? 0 : Number(v.stock || 0),
+          }),
+        });
+        const variantData = await variantRes.json().catch(() => null);
+        if (!variantRes.ok) {
+          stepErrors.push(`Biến thể "${v.label}": ${variantData?.error ?? "thất bại"}`);
+          continue;
+        }
+        if (v.stockItems.trim()) {
+          const stockRes = await fetch(`/api/seller/products/${productId}/stock`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ variantId: variantData.variant.id, items: v.stockItems }),
+          });
+          if (!stockRes.ok) {
+            const stockData = await stockRes.json().catch(() => null);
+            stepErrors.push(`Nhập kho biến thể "${v.label}": ${stockData?.error ?? "thất bại"}`);
+          }
+        }
+      }
+    }
+
+    setLoading(false);
+
+    if (stepErrors.length > 0) {
+      setError(
+        `Đã tạo sản phẩm nhưng có lỗi ở vài bước sau — vào phần "Sản phẩm" bên dưới để bổ sung: ${stepErrors.join(" | ")}`
+      );
+    } else {
+      setSuccess("Đã gửi sản phẩm (kèm biến thể/kho nếu có) — chờ admin duyệt trước khi hiện công khai trên site.");
+    }
     resetForm();
     onCreated();
   };
@@ -356,12 +458,15 @@ export default function AddProductForm({
               <label className="mb-1 block text-xs font-semibold text-ink">Kho</label>
               <input
                 type="number"
-                required
+                required={!baseStockItems.trim()}
                 min={0}
-                value={stock}
+                disabled={variants.length === 0 && Boolean(baseStockItems.trim())}
+                value={variants.length === 0 && baseStockItems.trim() ? "" : stock}
                 onChange={(e) => setStock(e.target.value)}
-                placeholder="VD: 50"
-                className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+                placeholder={
+                  variants.length === 0 && baseStockItems.trim() ? "Tự tính theo kho" : "VD: 50"
+                }
+                className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none disabled:bg-surface-alt disabled:text-muted"
               />
             </div>
           </div>
@@ -393,6 +498,101 @@ export default function AddProductForm({
           placeholder={"Mỗi dòng là 1 đoạn mô tả, ví dụ:\nTài khoản chính chủ, đã xác minh 2 lớp.\nBảo hành 7 ngày lỗi 1 đổi 1.\nGiao hàng tự động ngay sau khi thanh toán."}
           className="w-full rounded-lg border border-border-c px-3 py-2.5 text-sm focus:border-brand-dark focus:outline-none"
         />
+      </div>
+
+      <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-xs font-bold text-ink">Biến thể / Gói (tuỳ chọn)</p>
+            <p className="text-[11px] text-muted">
+              Chỉ điền nếu sản phẩm có nhiều loại/gói giá khác nhau. Bỏ qua
+              nếu chỉ bán 1 loại duy nhất.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={addVariantRow}
+            className="flex shrink-0 items-center gap-1 rounded-full bg-surface px-3 py-1.5 text-xs font-bold text-brand-dark ring-1 ring-brand-dark/30 hover:bg-brand-light/20"
+          >
+            <Plus className="h-3.5 w-3.5" /> Thêm biến thể
+          </button>
+        </div>
+
+        {variants.length > 0 && (
+          <div className="mt-3 flex flex-col gap-3">
+            {variants.map((v) => (
+              <div key={v.key} className="rounded-lg border border-border-c bg-surface p-2.5">
+                <div className="grid gap-2 sm:grid-cols-[1fr_120px_100px_auto]">
+                  <input
+                    type="text"
+                    required
+                    minLength={3}
+                    value={v.label}
+                    onChange={(e) => updateVariant(v.key, "label", e.target.value)}
+                    placeholder="Tên biến thể (VD: Domain .US - Thuê 24h)"
+                    className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs focus:border-brand-dark focus:outline-none"
+                  />
+                  <input
+                    type="number"
+                    required
+                    min={1000}
+                    step={1000}
+                    value={v.price}
+                    onChange={(e) => updateVariant(v.key, "price", e.target.value)}
+                    placeholder="Giá (đ)"
+                    className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs focus:border-brand-dark focus:outline-none"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    disabled={Boolean(v.stockItems.trim())}
+                    value={v.stockItems.trim() ? "" : v.stock}
+                    onChange={(e) => updateVariant(v.key, "stock", e.target.value)}
+                    placeholder={v.stockItems.trim() ? "Tự tính theo kho" : "Kho"}
+                    className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs focus:border-brand-dark focus:outline-none disabled:bg-surface-alt disabled:text-muted"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeVariantRow(v.key)}
+                    className="flex shrink-0 items-center justify-center rounded-lg p-1.5 text-muted hover:bg-danger/10 hover:text-danger"
+                    aria-label="Xoá biến thể"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <textarea
+                  value={v.stockItems}
+                  onChange={(e) => updateVariant(v.key, "stockItems", e.target.value)}
+                  rows={2}
+                  placeholder="Kho dữ liệu giao hàng thật cho biến thể này (tuỳ chọn) — mỗi dòng 1 sản phẩm sẽ giao cho khách"
+                  className="mt-2 w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-[11px] focus:border-brand-dark focus:outline-none"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {variants.length === 0 && (
+          <div className="mt-3">
+            <label className="mb-1 block text-xs font-semibold text-ink">
+              Kho dữ liệu giao hàng thật (tuỳ chọn)
+            </label>
+            <textarea
+              value={baseStockItems}
+              onChange={(e) => setBaseStockItems(e.target.value)}
+              rows={3}
+              placeholder={"Mỗi dòng là 1 sản phẩm sẽ giao TỰ ĐỘNG cho khách, ví dụ:\nemail1@gmail.com|MatKhau123|MaKhoiPhuc\nemail2@gmail.com|MatKhau456|MaKhoiPhuc"}
+              className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-xs focus:border-brand-dark focus:outline-none"
+            />
+            <p className="mt-1 text-[11px] leading-relaxed text-ink/70">
+              Có dán dữ liệu ở đây thì ô &ldquo;Kho&rdquo; phía trên sẽ tự
+              động tính theo số dòng, không cần tự gõ số nữa. Bỏ trống thì
+              &ldquo;Kho&rdquo; hoạt động như số đếm thông thường (chưa giao
+              hàng tự động), có thể nhập kho sau tại mục &ldquo;Sản
+              phẩm&rdquo; bên dưới.
+            </p>
+          </div>
+        )}
       </div>
 
       {error && (

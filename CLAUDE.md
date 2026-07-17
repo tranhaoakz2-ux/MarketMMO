@@ -1152,6 +1152,44 @@ userBId])` + `prisma.conversation.upsert` đảm bảo 1 cặp user chỉ có đ
     load lại danh sách ngay sau khi đăng sản phẩm mới thành công, không chia
     sẻ state trực tiếp giữa 2 component.
 
+    **Đăng biến thể + nhập kho ngay trong cùng 1 lần đăng sản phẩm** (theo
+    yêu cầu người dùng, tránh seller phải làm 3 bước tách rời: tạo sản
+    phẩm → quay lại thêm biến thể → quay lại nhập kho): `AddProductForm.tsx`
+    có thêm khối "Biến thể / Gói (tuỳ chọn)" ngay trong form tạo sản phẩm —
+    nút "+ Thêm biến thể" thêm 1 dòng nháp (tên/giá/kho, state cục bộ
+    `DraftVariant[]`, chưa gọi API), mỗi dòng biến thể có sẵn 1 ô textarea
+    "Kho dữ liệu giao hàng thật" riêng. Khi bấm "Gửi để duyệt", client gọi
+    **tuần tự** 3 API có sẵn (không gộp thành 1 transaction backend mới, vì
+    đây là thao tác quản trị của seller — không đụng tiền/tồn kho buyer nên
+    không cần tính nguyên tử tuyệt đối như checkout): `POST
+/api/seller/products` tạo sản phẩm gốc → với mỗi biến thể nháp, `POST
+.../variants` tạo biến thể → nếu biến thể đó có dán kho, `POST .../stock`
+    nhập kho luôn cho đúng `variantId` vừa tạo. Sản phẩm KHÔNG có biến thể
+    nào thì hiện 1 ô "Kho dữ liệu giao hàng thật" ở cấp sản phẩm gốc thay
+    vào đó (gọi `POST .../stock` không kèm `variantId`).
+
+    **Tránh cộng trùng kho**: nếu seller vừa gõ tay số vào ô "Kho" vừa dán
+    dữ liệu kho thật cho cùng 1 biến thể/sản phẩm, số gõ tay sẽ bị **bỏ qua
+    hoàn toàn** — request tạo biến thể/sản phẩm luôn gửi `stock: 0` khi có
+    kho thật kèm theo, để bước `POST .../stock` (tự `increment` theo đúng số
+    dòng) là nguồn duy nhất quyết định con số cuối cùng. UI phản ánh đúng
+    quy tắc này: ô "Kho" tự chuyển sang `disabled`, hiện placeholder "Tự
+    tính theo kho" ngay khi seller gõ vào ô kho thật tương ứng.
+
+    Lỡ 1 bước giữa chừng thất bại (vd biến thể thứ 2 lỗi tên trùng ký tự
+    tối thiểu) thì sản phẩm + các biến thể/kho đã tạo thành công trước đó
+    **vẫn giữ nguyên** — form hiện thông báo lỗi liệt kê đúng bước nào thất
+    bại, seller bổ sung tiếp ngay tại `ProductVariantManager` (mục "Sản
+    phẩm" bên dưới, nơi vẫn có đầy đủ nút "Nhập kho"/"+ Thêm biến thể" như
+    luồng cũ) — không mất dữ liệu, không cần đăng lại từ đầu.
+
+    Đã test qua Playwright thật (điền cả 2 trường hợp: có 2 biến thể kèm
+    kho riêng từng biến thể; và không có biến thể nào, dán kho thẳng vào
+    sản phẩm gốc) xác nhận: sản phẩm/biến thể tạo đúng, `stock` tự tính
+    đúng theo số dòng kho dán vào (không lấy số gõ tay cố tình điền sai để
+    kiểm chứng), số bản ghi `ProductStockItem` đúng và đều ở trạng thái
+    `AVAILABLE`.
+
     **Gợi ý tự động danh mục theo tên sản phẩm** (`detectCategorySlug()`
     trong `AddProductForm.tsx`): gõ tên có chứa từ khoá khớp danh mục (vd
     "Gmail", "Facebook"/"FB", "Discord", "Tiktok", "Outlook"/"Hotmail",
