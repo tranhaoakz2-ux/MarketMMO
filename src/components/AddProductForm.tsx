@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 
 type Category = { id: string; slug: string; name: string; emoji: string };
 
-// Biến thể nháp — seller điền ngay trong lúc đăng sản phẩm (thay vì phải
+// Phiên bản nháp — seller điền ngay trong lúc đăng sản phẩm (thay vì phải
 // quay lại sau qua ProductVariantManager). `stockItems` là nội dung kho
-// dữ liệu giao hàng thật (mỗi dòng = 1 đơn vị) dán kèm luôn cho biến thể
+// dữ liệu giao hàng thật (mỗi dòng = 1 đơn vị) dán kèm luôn cho phiên bản
 // này — không bắt buộc, seller vẫn có thể "Nhập kho" sau ở trang quản lý.
 type DraftVariant = {
   key: string;
@@ -86,7 +86,7 @@ export default function AddProductForm({
   const [image, setImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   // Kho dữ liệu giao hàng thật cho SẢN PHẨM GỐC — chỉ dùng khi không thêm
-  // biến thể nào bên dưới (khớp đúng quy tắc "Product.stock chỉ thật sự
+  // phiên bản nào bên dưới (khớp đúng quy tắc "Product.stock chỉ thật sự
   // dùng khi sản phẩm chưa có variant" đã có sẵn trong hệ thống).
   const [baseStockItems, setBaseStockItems] = useState("");
   const [variants, setVariants] = useState<DraftVariant[]>([]);
@@ -187,12 +187,12 @@ export default function AddProductForm({
     setVariants([]);
   };
 
-  // Đăng sản phẩm + biến thể + nhập kho TRONG CÙNG 1 LẦN GỬI — thay vì phải
-  // tạo sản phẩm xong mới quay lại trang quản lý để thêm biến thể/nhập kho
+  // Đăng sản phẩm + phiên bản + nhập kho TRONG CÙNG 1 LẦN GỬI — thay vì phải
+  // tạo sản phẩm xong mới quay lại trang quản lý để thêm phiên bản/nhập kho
   // riêng từng bước như trước. Vẫn gọi tuần tự 3 API có sẵn (products →
   // variants → stock, không gộp thành 1 transaction backend) vì đây là thao
   // tác quản trị của seller (không đụng tiền/tồn kho của buyer) — lỡ 1 bước
-  // sau lỗi thì sản phẩm/biến thể đã tạo vẫn còn nguyên, seller sửa tiếp
+  // sau lỗi thì sản phẩm/phiên bản đã tạo vẫn còn nguyên, seller sửa tiếp
   // được ngay tại ProductVariantManager bên dưới, không mất dữ liệu đã nhập.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,7 +205,7 @@ export default function AddProductForm({
     }
     for (const v of variants) {
       if (!v.label.trim() || !v.price) {
-        setError("Vui lòng điền đủ tên và giá cho mọi biến thể đã thêm.");
+        setError("Vui lòng điền đủ tên và giá cho mọi phiên bản đã thêm.");
         return;
       }
     }
@@ -217,7 +217,7 @@ export default function AddProductForm({
     form.append("shortDescription", shortDescription);
     form.append("description", description);
     form.append("price", price);
-    // Nếu sẽ dán kho ngay cho sản phẩm gốc (không có biến thể), gửi stock=0
+    // Nếu sẽ dán kho ngay cho sản phẩm gốc (không có phiên bản), gửi stock=0
     // và để bước "nhập kho" bên dưới tự cộng đúng theo số dòng — tránh cộng
     // trùng nếu seller lỡ điền cả 2 nơi.
     form.append("stock", variants.length === 0 && baseStockItems.trim() ? "0" : stock);
@@ -261,7 +261,7 @@ export default function AddProductForm({
         });
         const variantData = await variantRes.json().catch(() => null);
         if (!variantRes.ok) {
-          stepErrors.push(`Biến thể "${v.label}": ${variantData?.error ?? "thất bại"}`);
+          stepErrors.push(`Phiên bản "${v.label}": ${variantData?.error ?? "thất bại"}`);
           continue;
         }
         if (v.stockItems.trim()) {
@@ -272,7 +272,7 @@ export default function AddProductForm({
           });
           if (!stockRes.ok) {
             const stockData = await stockRes.json().catch(() => null);
-            stepErrors.push(`Nhập kho biến thể "${v.label}": ${stockData?.error ?? "thất bại"}`);
+            stepErrors.push(`Nhập kho phiên bản "${v.label}": ${stockData?.error ?? "thất bại"}`);
           }
         }
       }
@@ -285,7 +285,7 @@ export default function AddProductForm({
         `Đã tạo sản phẩm nhưng có lỗi ở vài bước sau — vào phần "Sản phẩm" bên dưới để bổ sung: ${stepErrors.join(" | ")}`
       );
     } else {
-      setSuccess("Đã gửi sản phẩm (kèm biến thể/kho nếu có) — chờ admin duyệt trước khi hiện công khai trên site.");
+      setSuccess("Đã gửi sản phẩm (kèm phiên bản/kho nếu có) — chờ admin duyệt trước khi hiện công khai trên site.");
     }
     resetForm();
     onCreated();
@@ -503,7 +503,7 @@ export default function AddProductForm({
       <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-xs font-bold text-ink">Biến thể / Gói (tuỳ chọn)</p>
+            <p className="text-xs font-bold text-ink">Phiên bản / Gói (tuỳ chọn)</p>
             <p className="text-[11px] text-muted">
               Chỉ điền nếu sản phẩm có nhiều loại/gói giá khác nhau. Bỏ qua
               nếu chỉ bán 1 loại duy nhất.
@@ -514,7 +514,7 @@ export default function AddProductForm({
             onClick={addVariantRow}
             className="flex shrink-0 items-center gap-1 rounded-full bg-surface px-3 py-1.5 text-xs font-bold text-brand-dark ring-1 ring-brand-dark/30 hover:bg-brand-light/20"
           >
-            <Plus className="h-3.5 w-3.5" /> Thêm biến thể
+            <Plus className="h-3.5 w-3.5" /> Thêm phiên bản
           </button>
         </div>
 
@@ -529,7 +529,7 @@ export default function AddProductForm({
                     minLength={3}
                     value={v.label}
                     onChange={(e) => updateVariant(v.key, "label", e.target.value)}
-                    placeholder="Tên biến thể (VD: Domain .US - Thuê 24h)"
+                    placeholder="Tên phiên bản (VD: Domain .US - Thuê 24h)"
                     className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs focus:border-brand-dark focus:outline-none"
                   />
                   <input
@@ -555,7 +555,7 @@ export default function AddProductForm({
                     type="button"
                     onClick={() => removeVariantRow(v.key)}
                     className="flex shrink-0 items-center justify-center rounded-lg p-1.5 text-muted hover:bg-danger/10 hover:text-danger"
-                    aria-label="Xoá biến thể"
+                    aria-label="Xoá phiên bản"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -564,7 +564,7 @@ export default function AddProductForm({
                   value={v.stockItems}
                   onChange={(e) => updateVariant(v.key, "stockItems", e.target.value)}
                   rows={2}
-                  placeholder="Kho dữ liệu giao hàng thật cho biến thể này (tuỳ chọn) — mỗi dòng 1 sản phẩm sẽ giao cho khách"
+                  placeholder="Kho dữ liệu giao hàng thật cho phiên bản này (tuỳ chọn) — mỗi dòng 1 sản phẩm sẽ giao cho khách"
                   className="mt-2 w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-[11px] focus:border-brand-dark focus:outline-none"
                 />
               </div>

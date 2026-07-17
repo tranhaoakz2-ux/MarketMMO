@@ -9,7 +9,7 @@ export default async function SellerProductsPage() {
       <div>
         <h1 className="text-lg font-black text-ink">Sản phẩm</h1>
         <p className="text-xs text-muted">
-          Đăng sản phẩm mới (cần admin duyệt) hoặc thêm/xoá biến thể (gói) cho
+          Đăng sản phẩm mới (cần admin duyệt) hoặc thêm/xoá phiên bản (gói) cho
           sản phẩm của bạn — giá và kho riêng theo từng gói.
         </p>
       </div>

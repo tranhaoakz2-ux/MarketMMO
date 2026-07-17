@@ -36,7 +36,7 @@ export type Product = {
   sellerInsuranceBalance?: number;
   /** True when currently displayed via a won "vị trí vàng" auction slot (see AuctionSlot/AuctionBid). */
   featuredViaAuction?: boolean;
-  /** Biến thể/gói do seller tự thêm (giá/kho riêng) — rỗng/undefined nếu SP chưa có biến thể nào. Seed data tĩnh không set field này, chỉ query DB (queries.ts) mới trả về đầy đủ. */
+  /** Phiên bản/gói do seller tự thêm (giá/kho riêng) — rỗng/undefined nếu SP chưa có phiên bản nào. Seed data tĩnh không set field này, chỉ query DB (queries.ts) mới trả về đầy đủ. */
   variants?: ProductVariant[];
   /** Seller đánh dấu "sắp có hàng" — checkout bỏ qua kiểm tra tồn kho cho sản phẩm này. */
   preOrder?: boolean;

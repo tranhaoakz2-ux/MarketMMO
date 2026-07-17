@@ -10,7 +10,7 @@ import type { Product } from "@/data/products";
 
 // Seller nhập hàng loạt dữ liệu giao hàng thật (kho — xem model
 // ProductStockItem trong prisma/schema.prisma) cho 1 sản phẩm (chưa có
-// variant) hoặc 1 biến thể cụ thể. Mỗi dòng textarea = 1 đơn vị sẽ giao TỰ
+// variant) hoặc 1 phiên bản cụ thể. Mỗi dòng textarea = 1 đơn vị sẽ giao TỰ
 // ĐỘNG cho đúng 1 khách khi mua (POST /api/checkout tự "claim"). Chưa nhập
 // kho thật thì "Kho" vẫn là con số seller tự gõ tay như trước — hoàn toàn
 // không bắt buộc, chỉ là tính năng thêm cho seller muốn giao hàng tự động.
@@ -142,7 +142,7 @@ function AddVariantForm({
     const data = await res.json();
     setLoading(false);
     if (!res.ok) {
-      setError(data.error ?? "Không thể thêm biến thể.");
+      setError(data.error ?? "Không thể thêm phiên bản.");
       return;
     }
     setLabel("");
@@ -162,7 +162,7 @@ function AddVariantForm({
         minLength={3}
         value={label}
         onChange={(e) => setLabel(e.target.value)}
-        placeholder="Tên biến thể (VD: Domain .US - Thuê 24h - Tên Việt)"
+        placeholder="Tên phiên bản (VD: Domain .US - Thuê 24h - Tên Việt)"
         className="rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
       />
       <input
@@ -202,7 +202,7 @@ function ProductCard({ product, onChanged }: { product: Product; onChanged: () =
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const handleDelete = async (variantId: string) => {
-    if (!confirm("Xoá biến thể này? Đơn hàng cũ vẫn giữ nguyên thông tin.")) return;
+    if (!confirm("Xoá phiên bản này? Đơn hàng cũ vẫn giữ nguyên thông tin.")) return;
     setBusyId(variantId);
     await fetch(`/api/seller/products/${product.id}/variants/${variantId}`, {
       method: "DELETE",
@@ -251,7 +251,7 @@ function ProductCard({ product, onChanged }: { product: Product; onChanged: () =
           )}
         </div>
         <span className="rounded-full bg-surface-alt px-2.5 py-1 text-xs font-bold text-ink">
-          {variants.length} biến thể
+          {variants.length} phiên bản
         </span>
       </div>
 
@@ -272,7 +272,7 @@ function ProductCard({ product, onChanged }: { product: Product; onChanged: () =
                     onClick={() => handleDelete(v.id)}
                     disabled={busyId === v.id}
                     className="rounded-full p-1.5 text-muted hover:bg-danger/10 hover:text-danger disabled:opacity-50"
-                    aria-label="Xoá biến thể"
+                    aria-label="Xoá phiên bản"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -328,7 +328,7 @@ export default function ProductVariantManager() {
     return (
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-border-c bg-surface p-10 text-center shadow-sm">
         <p className="text-sm text-muted">
-          Bạn cần đăng nhập để quản lý sản phẩm/biến thể.
+          Bạn cần đăng nhập để quản lý sản phẩm/phiên bản.
         </p>
         <Link
           href="/dang-nhap?callbackUrl=/quan-ly-san-pham"
@@ -344,7 +344,7 @@ export default function ProductVariantManager() {
     return (
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-border-c bg-surface p-10 text-center shadow-sm">
         <p className="text-sm text-muted">
-          Bạn cần đăng ký bán hàng trước khi quản lý sản phẩm/biến thể.
+          Bạn cần đăng ký bán hàng trước khi quản lý sản phẩm/phiên bản.
         </p>
         <Link
           href="/tro-thanh-nguoi-ban"
@@ -364,7 +364,7 @@ export default function ProductVariantManager() {
     return (
       <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border-c bg-surface p-10 text-center text-sm text-muted">
         <Package className="h-8 w-8 text-muted" />
-        Gian hàng của bạn chưa có sản phẩm nào để thêm biến thể.
+        Gian hàng của bạn chưa có sản phẩm nào để thêm phiên bản.
       </div>
     );
   }

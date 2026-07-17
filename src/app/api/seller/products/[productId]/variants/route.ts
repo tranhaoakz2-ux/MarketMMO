@@ -22,13 +22,13 @@ export async function POST(
 
   if (!label || label.length < 3) {
     return NextResponse.json(
-      { error: "Tên biến thể phải có ít nhất 3 ký tự." },
+      { error: "Tên phiên bản phải có ít nhất 3 ký tự." },
       { status: 400 }
     );
   }
   if (!Number.isFinite(price) || price < 1000) {
     return NextResponse.json(
-      { error: "Giá biến thể phải từ 1.000đ trở lên." },
+      { error: "Giá phiên bản phải từ 1.000đ trở lên." },
       { status: 400 }
     );
   }

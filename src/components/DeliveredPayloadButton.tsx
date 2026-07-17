@@ -6,7 +6,7 @@ import { useState } from "react";
 // Hiện nội dung giao hàng thật (tài khoản/mã kích hoạt...) đã được hệ thống
 // tự động gán cho đơn hàng này lúc checkout — xem model ProductStockItem +
 // OrderItem.deliveredPayload. Chỉ render khi deliveredPayload có giá trị
-// (sản phẩm/biến thể có dùng kho thật); đơn hàng cũ/sản phẩm chưa nhập kho
+// (sản phẩm/phiên bản có dùng kho thật); đơn hàng cũ/sản phẩm chưa nhập kho
 // thật thì không có nút này, giữ nguyên hành vi cũ.
 export default function DeliveredPayloadButton({ deliveredPayload }: { deliveredPayload: string }) {
   const [open, setOpen] = useState(false);

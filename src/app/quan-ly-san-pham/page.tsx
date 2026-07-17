@@ -21,9 +21,9 @@ export default function ManageProductsPage() {
             <div className="mb-6 flex items-center gap-2.5 rounded-2xl bg-ink px-6 py-5 text-white">
               <Layers className="h-6 w-6 text-brand" />
               <div>
-                <h1 className="text-lg font-black">Quản lý sản phẩm &amp; biến thể</h1>
+                <h1 className="text-lg font-black">Quản lý sản phẩm &amp; phiên bản</h1>
                 <p className="text-xs text-white/60">
-                  Thêm các gói/biến thể (VD: theo quốc gia, năm tạo, thời hạn thuê...) để
+                  Thêm các gói/phiên bản (VD: theo quốc gia, năm tạo, thời hạn thuê...) để
                   người mua lựa chọn trước khi thanh toán.
                 </p>
               </div>

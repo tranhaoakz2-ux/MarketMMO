@@ -9,7 +9,7 @@ const MAX_LINES_PER_REQUEST = 500;
 // có thể giao cho 1 buyer, vd 1 dòng "email|password|2fa" của 1 tài khoản
 // Gmail) cho sản phẩm CỦA CHÍNH MÌNH — xem model ProductStockItem trong
 // prisma/schema.prisma. `variantId` optional: có giá trị thì kho gắn vào
-// đúng biến thể đó (phải thuộc product này), không có thì gắn thẳng vào
+// đúng phiên bản đó (phải thuộc product này), không có thì gắn thẳng vào
 // Product gốc (chỉ hợp lệ khi sản phẩm CHƯA có variant nào — nếu đã có
 // variant, mỗi variant phải tự nhập kho riêng, không dùng chung kho gốc).
 export async function POST(
@@ -35,11 +35,11 @@ export async function POST(
   if (variantId) {
     const variant = product.variants.find((v) => v.id === variantId);
     if (!variant) {
-      return NextResponse.json({ error: "Biến thể không hợp lệ." }, { status: 400 });
+      return NextResponse.json({ error: "Phiên bản không hợp lệ." }, { status: 400 });
     }
   } else if (product.variants.length > 0) {
     return NextResponse.json(
-      { error: "Sản phẩm này đã có biến thể — vui lòng nhập kho riêng cho từng biến thể." },
+      { error: "Sản phẩm này đã có phiên bản — vui lòng nhập kho riêng cho từng phiên bản." },
       { status: 400 }
     );
   }

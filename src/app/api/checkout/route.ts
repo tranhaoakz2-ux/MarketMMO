@@ -40,7 +40,7 @@ export async function POST(req: Request) {
         quantity: number;
         price: number;
         // Kho dữ liệu giao hàng thật đã claim được cho dòng hàng này (rỗng =
-        // sản phẩm/biến thể chưa dùng kho thật, xem model ProductStockItem).
+        // sản phẩm/phiên bản chưa dùng kho thật, xem model ProductStockItem).
         claimedStockItemIds: string[];
         deliveredPayload: string | null;
       }[] = [];
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
         if (item.variantId) {
           variant = product.variants.find((v) => v.id === item.variantId);
           if (!variant) {
-            throw new Error(`Biến thể không tồn tại cho sản phẩm "${product.name}".`);
+            throw new Error(`Phiên bản không tồn tại cho sản phẩm "${product.name}".`);
           }
           unitPrice = variant.price;
           variantLabel = variant.label;
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
 
         const displayLabel = variantLabel ? `${product.name} - ${variantLabel}` : product.name;
 
-        // Sản phẩm/biến thể có kho dữ liệu giao hàng thật hay không — kiểm
+        // Sản phẩm/phiên bản có kho dữ liệu giao hàng thật hay không — kiểm
         // tra bằng COUNT (không cần cờ boolean riêng, xem model
         // ProductStockItem). count = 0 nghĩa là seller CHƯA từng nhập kho
         // thật cho SKU này, giữ nguyên hành vi cũ 100% (kiểm tra theo

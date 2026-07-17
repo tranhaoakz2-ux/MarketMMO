@@ -16,7 +16,7 @@ export async function GET() {
 // Seller tự đăng sản phẩm mới — luôn tạo với status "PENDING", cần admin
 // duyệt (POST /api/admin/products/[id]) mới hiện công khai trên site. Đây
 // là lần đầu tiên seller tạo được SẢN PHẨM GỐC mới (trước đây chỉ thêm được
-// biến thể/variant cho sản phẩm có sẵn qua /quan-ly-san-pham).
+// phiên bản/variant cho sản phẩm có sẵn qua /quan-ly-san-pham).
 export async function POST(req: Request) {
   const { seller, error } = await requireSeller();
   if (error) return error;

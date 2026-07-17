@@ -27,7 +27,7 @@ export async function PATCH(
   const { productId, variantId } = await params;
   const variant = await loadOwnedVariant(seller!.id, productId, variantId);
   if (!variant) {
-    return NextResponse.json({ error: "Biến thể không tồn tại." }, { status: 404 });
+    return NextResponse.json({ error: "Phiên bản không tồn tại." }, { status: 404 });
   }
 
   const body = await req.json().catch(() => null);
@@ -37,7 +37,7 @@ export async function PATCH(
     const label = typeof body.label === "string" ? body.label.trim() : "";
     if (!label || label.length < 3) {
       return NextResponse.json(
-        { error: "Tên biến thể phải có ít nhất 3 ký tự." },
+        { error: "Tên phiên bản phải có ít nhất 3 ký tự." },
         { status: 400 }
       );
     }
@@ -47,7 +47,7 @@ export async function PATCH(
     const price = Number(body.price);
     if (!Number.isFinite(price) || price < 1000) {
       return NextResponse.json(
-        { error: "Giá biến thể phải từ 1.000đ trở lên." },
+        { error: "Giá phiên bản phải từ 1.000đ trở lên." },
         { status: 400 }
       );
     }
@@ -82,7 +82,7 @@ export async function DELETE(
   const { productId, variantId } = await params;
   const variant = await loadOwnedVariant(seller!.id, productId, variantId);
   if (!variant) {
-    return NextResponse.json({ error: "Biến thể không tồn tại." }, { status: 404 });
+    return NextResponse.json({ error: "Phiên bản không tồn tại." }, { status: 404 });
   }
 
   // Dọn các bản ghi kho thật CHƯA BÁN của variant này TRƯỚC khi xoá — nếu
