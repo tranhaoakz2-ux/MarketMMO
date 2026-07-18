@@ -1,5 +1,14 @@
 import { getAuthSession, getSellerForUser } from "@/lib/authz";
-import { getSellerRevenueStats, getSellerWalletSummary } from "@/lib/queries";
+import {
+  getSellerAttentionCounts,
+  getSellerOrderStatusBreakdown,
+  getSellerRecentOrders,
+  getSellerRevenueStats,
+  getSellerRevenueTrend,
+  getSellerStoreSnapshot,
+  getSellerTopProducts,
+  getSellerWalletSummary,
+} from "@/lib/queries";
 import { type RangeKey } from "@/lib/constants";
 import SellerOverviewStats from "@/components/SellerOverviewStats";
 
@@ -60,12 +69,36 @@ export default async function SellerOverviewPage({
     : "today";
   const { from, to } = resolveRange(range, params.from, params.to);
 
+  // Kỳ trước liền kề, CÙNG độ dài với khoảng đang chọn — dùng để tính % tăng/
+  // giảm doanh thu hiển thị trên thẻ KPI (vd chọn "7 ngày" thì so với 7 ngày
+  // liền trước đó).
+  const durationMs = to.getTime() - from.getTime();
+  const prevTo = new Date(from.getTime() - 1);
+  const prevFrom = new Date(prevTo.getTime() - durationMs);
+
   const session = await getAuthSession();
   const seller = await getSellerForUser(session!.user!.id);
 
-  const [revenueStats, walletSummary] = await Promise.all([
+  const [
+    revenueStats,
+    previousRevenueStats,
+    walletSummary,
+    revenueTrend,
+    orderStatusBreakdown,
+    topProducts,
+    recentOrders,
+    attentionCounts,
+    storeSnapshot,
+  ] = await Promise.all([
     getSellerRevenueStats(seller!.id, from, to),
+    getSellerRevenueStats(seller!.id, prevFrom, prevTo),
     getSellerWalletSummary(session!.user!.id, seller!.id),
+    getSellerRevenueTrend(seller!.id, from, to),
+    getSellerOrderStatusBreakdown(seller!.id, from, to),
+    getSellerTopProducts(seller!.id, from, to),
+    getSellerRecentOrders(seller!.id),
+    getSellerAttentionCounts(seller!.id),
+    getSellerStoreSnapshot(seller!.id),
   ]);
 
   return (
@@ -74,7 +107,14 @@ export default async function SellerOverviewPage({
       from={params.from}
       to={params.to}
       revenueStats={revenueStats}
+      previousRevenue={previousRevenueStats.releasedRevenue}
       walletSummary={walletSummary}
+      revenueTrend={revenueTrend}
+      orderStatusBreakdown={orderStatusBreakdown}
+      topProducts={topProducts}
+      recentOrders={recentOrders}
+      attentionCounts={attentionCounts}
+      storeSnapshot={storeSnapshot}
     />
   );
 }

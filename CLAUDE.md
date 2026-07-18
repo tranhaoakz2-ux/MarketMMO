@@ -1051,12 +1051,55 @@ sellerId, order: { buyerId } })`) và **không phải chính seller tự đánh
 
     **Tổng quan** (`/trang-ban-hang`, `page.tsx` đọc `searchParams` thay vì
     gọi API riêng — filter khoảng ngày dùng `<Link href="?range=...">`, khớp
-    quy ước server-render sẵn có của dự án): 4 stat card — Doanh thu kỳ này
-    (`OrderItem` status `RELEASED`), Tiền tạm giữ (status `ESCROW`), Số dư
-    ví, Quỹ bảo hiểm. **Khác ảnh tham khảo shopmini.pro**: không có card "Ví
-    khiếu nại" (tính năng Khiếu nại chưa xây, không hiển thị số liệu giả cho
-    tính năng không tồn tại) và không có nút "Yêu cầu Xóa Shop" (hành động
-    khó đảo ngược, không nằm trong yêu cầu ban đầu — cố tình bỏ qua).
+    quy ước server-render sẵn có của dự án): thiết kế lại "hiện đại và đầy đủ
+    tính năng hơn" theo yêu cầu người dùng — trước khi đưa lên site đã dựng
+    demo tĩnh (Artifact) cho người dùng duyệt trước, y hệt quy trình sẽ áp
+    dụng cho các thay đổi UI lớn khác sau này nếu được yêu cầu. Bố cục 2 cột:
+    - **Hàng 4 stat card** (giữ nguyên 4 card gốc, thêm mới): Doanh thu kỳ
+      này (`OrderItem` status `RELEASED`) kèm **% tăng/giảm so với kỳ liền
+      trước cùng độ dài** (badge `TrendingUp`/`TrendingDown`, ẩn hẳn nếu kỳ
+      trước = 0đ để tránh hiện % vô nghĩa — không dùng số giả); Tiền tạm giữ
+      (status `ESCROW`); Số dư ví (kèm link tắt "Rút tiền →"); Quỹ bảo hiểm
+      (kèm % so với `INSURANCE_FUND_TARGET`, hoặc "Đã vượt mức gợi ý" nếu đủ).
+    - **Cột chính (trái)**: biểu đồ "Doanh số theo thời gian"
+      (`RevenueChart.tsx`, client component, SVG — không dùng path tay phức
+      tạp, chỉ rect/line đơn giản nên SVG đủ, không cần Canvas — tô màu thẳng
+      bằng class Tailwind `fill-brand`/`fill-muted` thay vì đọc CSS variable
+      trong JS; hover đổi màu cột + tooltip số tiền theo toạ độ X con trỏ quy
+      đổi theo viewBox, không cần lớp canvas ẩn riêng để bắt sự kiện chuột).
+      Cố tình tính trên **mọi trạng thái trừ CANCELLED** (không chỉ
+      `RELEASED` như stat card) — nếu chỉ tính RELEASED thì `ESCROW_HOLD_DAYS`
+      (3 ngày) gần nhất luôn gần như 0, nhìn như biểu đồ lỗi dù seller vẫn
+      bán đều (`getSellerRevenueTrend`, gộp theo tuần nếu khoảng ngày > 10
+      ngày, tự điền đủ mọi mốc kể cả 0 đơn để cột cách đều). Tiếp theo:
+      "Trạng thái đơn hàng" (thanh tỷ lệ 4 màu RELEASED/ESCROW/DISPUTED/
+      CANCELLED, `getSellerOrderStatusBreakdown`); "Sản phẩm bán chạy" (xếp
+      theo doanh số trong kỳ, `getSellerTopProducts`); "Đơn hàng gần đây" (5
+      đơn mới nhất, **độc lập với bộ lọc ngày** — luôn là feed hoạt động gần
+      nhất, `getSellerRecentOrders`, dùng `formatRelativeTime()` mới thêm
+      trong `src/lib/format.ts`, khác `formatLastActive()` — hàm đó chỉ dành
+      riêng cho "Online X trước" của `User`, không có tiền tố "Online").
+      **Mỗi dòng trong "Sản phẩm bán chạy" và "Đơn hàng gần đây" bấm được**
+      (theo yêu cầu người dùng sau khi duyệt demo) — dẫn tới
+      `/shop/[slug]` (trang gian hàng công khai của chính seller đó, dùng để
+      xem trước gian hàng như buyer nhìn thấy).
+    - **Cột phụ (phải)**: "Cần xử lý" (`getSellerAttentionCounts` — sản phẩm
+      `status: "PENDING"` của chính seller, khiếu nại `status: "OPEN"`, và
+      SKU đã dùng kho thật nhưng `AVAILABLE < 3`; mỗi mục dẫn thẳng tới đúng
+      trang liên quan, ẩn hẳn mục nào = 0, hiện thông báo rỗng vui vẻ nếu cả
+      3 đều = 0 — không hiện danh sách rỗng vô nghĩa) và "Gian hàng của bạn"
+      (`getSellerStoreSnapshot` — level, đã xác thực, rating trung bình tính
+      động giống `getAllSellersWithStats()`, thanh tiến độ quỹ bảo hiểm).
+    - Tất cả số liệu mới đều tính từ dữ liệu **đã có sẵn** (không thêm bảng
+      mới) — chỉ thêm 7 hàm query trong `src/lib/queries.ts`
+      (`getSellerRevenueTrend`, `getSellerOrderStatusBreakdown`,
+      `getSellerTopProducts`, `getSellerRecentOrders`,
+      `getSellerAttentionCounts`, `getSellerStoreSnapshot`, cộng
+      `getSellerRevenueStats` gọi thêm 1 lần cho kỳ trước để tính %).
+    - **Khác ảnh tham khảo shopmini.pro**: không có card "Ví khiếu nại"
+      (tính năng Khiếu nại đã xây nhưng không có khái niệm "ví" riêng cho nó)
+      và không có nút "Yêu cầu Xóa Shop" (hành động khó đảo ngược, không nằm
+      trong yêu cầu ban đầu — cố tình bỏ qua).
 12. **Tin nhắn** (`/tin-nhan`, model `Conversation`/`Message`, dựng theo ảnh
     chụp trang chat thật của shopmini.pro): icon chat trên Header (cạnh icon
     giỏ hàng, `HeaderChatButton.tsx`) hiện badge số tin chưa đọc, chỉ hiện

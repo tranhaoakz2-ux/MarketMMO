@@ -448,3 +448,183 @@ export async function getSellerWalletHistory(userId: string, type: WalletTxType)
     orderBy: { createdAt: "desc" },
   });
 }
+
+// ---- Tổng quan mở rộng (biểu đồ, phân bổ trạng thái, sản phẩm bán chạy,
+// đơn hàng gần đây, cần xử lý, snapshot gian hàng) ----
+
+// Doanh số theo thời gian cho biểu đồ cột — cố tình tính trên MỌI trạng thái
+// trừ CANCELLED (không chỉ RELEASED như card "Doanh thu"), vì nếu chỉ tính
+// RELEASED thì 3 ngày gần nhất luôn gần như bằng 0 (đang trong thời gian ký
+// quỹ ESCROW_HOLD_DAYS) — nhìn như biểu đồ bị lỗi dù seller vẫn bán đều.
+// Gộp theo tuần thay vì theo ngày khi khoảng ngày dài (>10 ngày) để biểu đồ
+// không quá nhiều cột. Điền đủ mọi mốc trong khoảng (kể cả 0 đơn) để các cột
+// cách đều nhau, không bị hụt do thiếu dữ liệu ngày đó.
+export async function getSellerRevenueTrend(sellerId: string, from: Date, to: Date) {
+  const items = await prisma.orderItem.findMany({
+    where: { sellerId, createdAt: { gte: from, lte: to }, status: { not: "CANCELLED" } },
+    select: { price: true, quantity: true, createdAt: true },
+  });
+
+  const spanDays = Math.max(1, Math.round((to.getTime() - from.getTime()) / 86400000) + 1);
+  const bucketByWeek = spanDays > 10;
+  const stepMs = bucketByWeek ? 7 * 86400000 : 86400000;
+
+  const bucketStart = (d: Date) => {
+    const start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (bucketByWeek) start.setDate(start.getDate() - start.getDay());
+    return start.getTime();
+  };
+
+  const buckets = new Map<number, number>();
+  const end = bucketStart(to);
+  for (let cursor = bucketStart(from); cursor <= end; cursor += stepMs) {
+    buckets.set(cursor, 0);
+  }
+
+  for (const item of items) {
+    const key = bucketStart(item.createdAt);
+    buckets.set(key, (buckets.get(key) ?? 0) + item.price * item.quantity);
+  }
+
+  return [...buckets.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([ts, value]) => {
+      const d = new Date(ts);
+      return { label: `${d.getDate()}/${d.getMonth() + 1}`, value };
+    });
+}
+
+export async function getSellerOrderStatusBreakdown(
+  sellerId: string,
+  from: Date,
+  to: Date
+): Promise<Record<OrderStatus, number>> {
+  const counts = await prisma.orderItem.groupBy({
+    by: ["status"],
+    where: { sellerId, createdAt: { gte: from, lte: to } },
+    _count: { _all: true },
+  });
+  const result: Record<OrderStatus, number> = { ESCROW: 0, RELEASED: 0, CANCELLED: 0, DISPUTED: 0 };
+  for (const row of counts) {
+    result[row.status as OrderStatus] = row._count._all;
+  }
+  return result;
+}
+
+// Sản phẩm bán chạy nhất trong khoảng ngày đã chọn — xếp theo doanh số (giá
+// × số lượng), loại CANCELLED (không tính đơn đã huỷ là "bán chạy").
+export async function getSellerTopProducts(
+  sellerId: string,
+  from: Date,
+  to: Date,
+  limit = 4
+) {
+  const items = await prisma.orderItem.findMany({
+    where: { sellerId, createdAt: { gte: from, lte: to }, status: { not: "CANCELLED" } },
+    select: {
+      productId: true,
+      productName: true,
+      price: true,
+      quantity: true,
+      product: { select: { slug: true, category: { select: { name: true } } } },
+    },
+  });
+
+  const map = new Map<
+    string,
+    { productName: string; slug: string; categoryName: string; quantity: number; revenue: number }
+  >();
+  for (const item of items) {
+    const amount = item.price * item.quantity;
+    const existing = map.get(item.productId);
+    if (existing) {
+      existing.quantity += item.quantity;
+      existing.revenue += amount;
+    } else {
+      map.set(item.productId, {
+        productName: item.productName,
+        slug: item.product.slug,
+        categoryName: item.product.category.name,
+        quantity: item.quantity,
+        revenue: amount,
+      });
+    }
+  }
+
+  return [...map.values()].sort((a, b) => b.revenue - a.revenue).slice(0, limit);
+}
+
+// Đơn hàng gần đây — độc lập với khoảng ngày đang lọc (luôn là N đơn mới
+// nhất), giống 1 activity feed.
+export async function getSellerRecentOrders(sellerId: string, limit = 5) {
+  const rows = await prisma.orderItem.findMany({
+    where: { sellerId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    include: {
+      order: { include: { buyer: { select: { name: true, username: true, email: true } } } },
+    },
+  });
+  return rows.map((item) => ({
+    id: item.id,
+    productName: item.productName,
+    buyerName:
+      item.order.buyer.name ?? item.order.buyer.username ?? item.order.buyer.email ?? "Người mua",
+    amount: item.price * item.quantity,
+    status: item.status as OrderStatus,
+    createdAt: item.createdAt,
+  }));
+}
+
+const LOW_STOCK_THRESHOLD = 3;
+
+// Những việc cần seller chú ý ngay: sản phẩm đang chờ admin duyệt, khiếu nại
+// đang mở, và các SKU đã dùng kho thật (ProductStockItem) nhưng số lượng
+// AVAILABLE xuống thấp (< LOW_STOCK_THRESHOLD) — không tính SKU chưa từng
+// dùng kho thật (stock chỉ là số seller tự gõ, không phải tín hiệu thật).
+export async function getSellerAttentionCounts(sellerId: string) {
+  const [pendingProducts, openDisputes, stockRows] = await Promise.all([
+    prisma.product.count({ where: { sellerId, status: "PENDING" } }),
+    prisma.dispute.count({ where: { status: "OPEN", orderItem: { sellerId } } }),
+    prisma.productStockItem.groupBy({
+      by: ["productId", "variantId", "status"],
+      where: { product: { sellerId } },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const availableMap = new Map<string, number>();
+  const totalMap = new Map<string, number>();
+  for (const row of stockRows) {
+    const key = `${row.productId}|${row.variantId ?? ""}`;
+    totalMap.set(key, (totalMap.get(key) ?? 0) + row._count._all);
+    if (row.status === "AVAILABLE") {
+      availableMap.set(key, (availableMap.get(key) ?? 0) + row._count._all);
+    }
+  }
+  let lowStock = 0;
+  for (const [key, total] of totalMap) {
+    if (total === 0) continue;
+    if ((availableMap.get(key) ?? 0) < LOW_STOCK_THRESHOLD) lowStock++;
+  }
+
+  return { pendingProducts, openDisputes, lowStock };
+}
+
+// Snapshot gian hàng cho card "Gian hàng của bạn" — rating tính động giống
+// getAllSellersWithStats(), không lưu cache trên Seller.
+export async function getSellerStoreSnapshot(sellerId: string) {
+  const seller = await prisma.seller.findUnique({
+    where: { id: sellerId },
+    include: { reviews: { select: { rating: true } } },
+  });
+  if (!seller) return null;
+  return {
+    shopName: seller.shopName,
+    slug: seller.slug,
+    level: seller.level,
+    verified: seller.verified,
+    insuranceBalance: seller.insuranceBalance,
+    ...ratingStats(seller.reviews),
+  };
+}
