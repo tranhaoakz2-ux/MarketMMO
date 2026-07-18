@@ -107,38 +107,36 @@ export default function SellerOverviewStats({
   }));
   const statusTotal = statusEntries.reduce((s, e) => s + e.count, 0);
 
+  // Luôn hiện đủ 3 mục (khác bản demo hiển thị tĩnh) — kể cả khi count = 0,
+  // để seller biết đây là 3 nhóm hệ thống LUÔN theo dõi, không phải chỉ xuất
+  // hiện khi có việc. count = 0 đổi sang huy hiệu màu success (an tâm) thay
+  // vì màu đỏ cảnh báo.
   const attentionItems = [
-    attentionCounts.pendingProducts > 0
-      ? {
-          href: "/trang-ban-hang/san-pham",
-          icon: Package,
-          iconClass: "bg-brand-light text-brand-dark",
-          title: "Sản phẩm chờ duyệt",
-          sub: "Admin chưa duyệt xong",
-          count: attentionCounts.pendingProducts,
-        }
-      : null,
-    attentionCounts.openDisputes > 0
-      ? {
-          href: "/trang-ban-hang/khieu-nai",
-          icon: AlertTriangle,
-          iconClass: "bg-danger/10 text-danger",
-          title: "Khiếu nại đang mở",
-          sub: "Cần bạn phản hồi buyer",
-          count: attentionCounts.openDisputes,
-        }
-      : null,
-    attentionCounts.lowStock > 0
-      ? {
-          href: "/trang-ban-hang/san-pham",
-          icon: TrendingDown,
-          iconClass: "bg-info/10 text-info",
-          title: "Sắp hết hàng",
-          sub: "Kho thật còn dưới 3 đơn vị",
-          count: attentionCounts.lowStock,
-        }
-      : null,
-  ].filter((x): x is NonNullable<typeof x> => x !== null);
+    {
+      href: "/trang-ban-hang/san-pham",
+      icon: Package,
+      iconClass: "bg-brand-light text-brand-dark",
+      title: "Sản phẩm chờ duyệt",
+      sub: "Admin chưa duyệt xong",
+      count: attentionCounts.pendingProducts,
+    },
+    {
+      href: "/trang-ban-hang/khieu-nai",
+      icon: AlertTriangle,
+      iconClass: "bg-danger/10 text-danger",
+      title: "Khiếu nại đang mở",
+      sub: "Cần bạn phản hồi buyer",
+      count: attentionCounts.openDisputes,
+    },
+    {
+      href: "/trang-ban-hang/san-pham",
+      icon: TrendingDown,
+      iconClass: "bg-info/10 text-info",
+      title: "Sắp hết hàng",
+      sub: "Kho thật còn dưới 3 đơn vị",
+      count: attentionCounts.lowStock,
+    },
+  ];
 
   const insurancePct = Math.min(
     100,
@@ -374,32 +372,30 @@ export default function SellerOverviewStats({
         <div className="flex flex-col gap-4">
           <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-black text-ink">Cần xử lý</h2>
-            {attentionItems.length === 0 ? (
-              <p className="py-3 text-center text-xs text-muted">
-                Không có việc gì cần xử lý ngay lúc này 🎉
-              </p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {attentionItems.map((item) => (
-                  <Link
-                    key={item.title}
-                    href={item.href}
-                    className="flex items-center gap-3 rounded-xl bg-surface-alt p-3 transition hover:bg-border-c"
+            <div className="flex flex-col gap-2">
+              {attentionItems.map((item) => (
+                <Link
+                  key={item.title}
+                  href={item.href}
+                  className="flex items-center gap-3 rounded-xl bg-surface-alt p-3 transition hover:bg-border-c"
+                >
+                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${item.iconClass}`}>
+                    <item.icon className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-ink">{item.title}</p>
+                    <p className="text-[10.5px] text-muted">{item.sub}</p>
+                  </div>
+                  <span
+                    className={`grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1.5 text-xs font-black ${
+                      item.count > 0 ? "bg-danger text-white" : "bg-success/10 text-success"
+                    }`}
                   >
-                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${item.iconClass}`}>
-                      <item.icon className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-ink">{item.title}</p>
-                      <p className="text-[10.5px] text-muted">{item.sub}</p>
-                    </div>
-                    <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-danger px-1.5 text-xs font-black text-white">
-                      {item.count}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
+                    {item.count}
+                  </span>
+                </Link>
+              ))}
+            </div>
           </div>
 
           {storeSnapshot && (
