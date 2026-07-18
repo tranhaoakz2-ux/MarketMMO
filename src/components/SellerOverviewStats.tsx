@@ -472,7 +472,7 @@ function StatCard({
   linkLabel?: string;
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-border-c bg-surface p-4 shadow-sm">
+    <div className="flex flex-col gap-2 rounded-2xl border-2 border-brand bg-surface p-4 shadow-sm transition hover:border-brand-dark">
       <div className="flex items-start justify-between gap-2">
         <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${iconClass}`}>
           <Icon className="h-4.5 w-4.5" />
