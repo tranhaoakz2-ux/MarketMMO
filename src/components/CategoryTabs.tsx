@@ -2,7 +2,7 @@
 
 import { LayoutGrid, Lock, Wrench } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { createElement, useState } from "react";
 import { getCategoryIcon } from "@/lib/categoryIcons";
 
 const tabs = ["Tất cả", "Sản phẩm", "Dịch vụ"] as const;
@@ -20,13 +20,12 @@ export type CategoryWithCount = {
 };
 
 function CategoryChip({ slug, name, count }: CategoryWithCount) {
-  const CategoryIcon = getCategoryIcon(slug);
   return (
     <Link
       href={`/danh-muc/${slug}`}
       className="flex items-center gap-1.5 rounded-full bg-surface-alt px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-brand-light"
     >
-      <CategoryIcon className="h-3.5 w-3.5" strokeWidth={1.75} />
+      {createElement(getCategoryIcon(slug), { className: "h-3.5 w-3.5", strokeWidth: 1.75 })}
       {name}
       <span className="text-muted">({count})</span>
     </Link>

@@ -103,7 +103,10 @@ export default function DepositPanel({
   };
 
   useEffect(() => {
-    if (session) loadTransactions();
+    if (!session) return;
+    (async () => {
+      await loadTransactions();
+    })();
   }, [session]);
 
   if (status === "loading") return null;

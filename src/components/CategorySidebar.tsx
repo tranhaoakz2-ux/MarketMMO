@@ -36,7 +36,7 @@ export default function CategorySidebar({
 
         <ul className="flex flex-col gap-2.5">
           <li>
-            <a href="/" className="flex items-center justify-between gap-2">
+            <Link href="/" className="flex items-center justify-between gap-2">
               <span
                 className={`flex items-center gap-2.5 text-sm ${
                   !activeSlug ? "font-semibold text-ink" : "text-muted"
@@ -51,7 +51,7 @@ export default function CategorySidebar({
                 </span>
                 Tất cả
               </span>
-            </a>
+            </Link>
           </li>
           {categories.map((cat) => {
             const active = cat.slug === activeSlug;
@@ -143,12 +143,12 @@ export default function CategorySidebar({
           )}
         </ul>
 
-        <a
+        <Link
           href="/dien-dan"
           className="mt-3 flex items-center justify-center gap-1 rounded-lg border border-border-c py-2 text-sm font-semibold text-ink transition hover:bg-surface-alt"
         >
           Tất cả bài viết <ChevronRight className="h-3.5 w-3.5" />
-        </a>
+        </Link>
       </div>
     </aside>
   );

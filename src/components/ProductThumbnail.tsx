@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import Image from "next/image";
 import { getCategoryIcon } from "@/lib/categoryIcons";
 
@@ -30,10 +31,9 @@ export default function ProductThumbnail({
     );
   }
 
-  const CategoryIcon = getCategoryIcon(categorySlug);
   return (
     <span className={`grid place-items-center ${boxClassName}`}>
-      <CategoryIcon className={iconClassName} strokeWidth={1.5} />
+      {createElement(getCategoryIcon(categorySlug), { className: iconClassName, strokeWidth: 1.5 })}
     </span>
   );
 }

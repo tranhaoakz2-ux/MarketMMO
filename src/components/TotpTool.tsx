@@ -14,7 +14,9 @@ export default function TotpTool() {
 
   useEffect(() => {
     if (!activeSecret) {
-      setCode(null);
+      (async () => {
+        setCode(null);
+      })();
       return;
     }
 

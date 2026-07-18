@@ -112,7 +112,10 @@ export default function AddProductForm({
     const slug = detectCategorySlug(name);
     if (!slug) return;
     const match = localCategories.find((c) => c.slug === slug);
-    if (match) setCategoryId(match.id);
+    if (!match) return;
+    (async () => {
+      setCategoryId(match.id);
+    })();
   }, [name, categoryTouched, localCategories]);
 
   const handleProposeCategory = async () => {

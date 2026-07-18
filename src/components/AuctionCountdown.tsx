@@ -28,7 +28,9 @@ export default function AuctionCountdown({
   );
 
   useEffect(() => {
-    setRemaining(formatRemaining(target - Date.now()));
+    (async () => {
+      setRemaining(formatRemaining(target - Date.now()));
+    })();
     const interval = setInterval(() => {
       setRemaining(formatRemaining(target - Date.now()));
     }, 1000);

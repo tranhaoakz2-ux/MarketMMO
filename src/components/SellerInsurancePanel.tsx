@@ -38,7 +38,9 @@ export default function SellerInsurancePanel({
   };
 
   useEffect(() => {
-    loadDeposits();
+    (async () => {
+      await loadDeposits();
+    })();
   }, []);
 
   const handleSubmit = async () => {

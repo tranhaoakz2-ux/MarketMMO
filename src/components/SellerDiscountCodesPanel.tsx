@@ -39,7 +39,9 @@ export default function SellerDiscountCodesPanel() {
   };
 
   useEffect(() => {
-    load();
+    (async () => {
+      await load();
+    })();
   }, []);
 
   const handleCreate = async () => {

@@ -24,7 +24,9 @@ export default function SellerTelegramPanel() {
   };
 
   useEffect(() => {
-    load();
+    (async () => {
+      await load();
+    })();
   }, []);
 
   const call = async (action: string, extra: Record<string, string> = {}) => {

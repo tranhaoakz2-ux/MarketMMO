@@ -111,13 +111,17 @@ export default function ChatInbox() {
   // Load + poll tin nhắn của hội thoại đang mở.
   useEffect(() => {
     if (!selectedId) {
-      setMessages(null);
+      (async () => {
+        setMessages(null);
+      })();
       return;
     }
     // Reset để lần load đầu của hội thoại mới luôn cuộn xuống đáy (xem effect
     // cuộn bên dưới).
     prevMessageCountRef.current = 0;
-    loadMessages(selectedId);
+    (async () => {
+      await loadMessages(selectedId);
+    })();
     const interval = setInterval(() => loadMessages(selectedId), 7000);
     return () => clearInterval(interval);
   }, [selectedId, loadMessages]);
@@ -140,9 +144,11 @@ export default function ChatInbox() {
   // sách bên trái ngay (không cần chờ lần poll tiếp theo).
   useEffect(() => {
     if (!selectedId) return;
-    setConversations((prev) =>
-      prev ? prev.map((c) => (c.id === selectedId ? { ...c, unreadCount: 0 } : c)) : prev
-    );
+    (async () => {
+      setConversations((prev) =>
+        prev ? prev.map((c) => (c.id === selectedId ? { ...c, unreadCount: 0 } : c)) : prev
+      );
+    })();
   }, [selectedId, messages]);
 
   const clearPendingFile = useCallback(() => {

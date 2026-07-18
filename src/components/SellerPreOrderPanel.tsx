@@ -20,7 +20,9 @@ export default function SellerPreOrderPanel() {
   };
 
   useEffect(() => {
-    load();
+    (async () => {
+      await load();
+    })();
   }, []);
 
   const handleToggle = async (productId: string, next: boolean) => {

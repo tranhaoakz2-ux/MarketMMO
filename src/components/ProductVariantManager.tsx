@@ -319,7 +319,10 @@ export default function ProductVariantManager() {
   };
 
   useEffect(() => {
-    if (session) load();
+    if (!session) return;
+    (async () => {
+      await load();
+    })();
   }, [session]);
 
   if (status === "loading") return null;

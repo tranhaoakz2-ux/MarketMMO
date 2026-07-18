@@ -144,7 +144,9 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    load();
+    (async () => {
+      await load();
+    })();
   }, []);
 
   const handleAction = async (id: string, action: "approve" | "reject") => {

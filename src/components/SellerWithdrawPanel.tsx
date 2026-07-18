@@ -41,7 +41,9 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
   };
 
   useEffect(() => {
-    loadWithdrawals();
+    (async () => {
+      await loadWithdrawals();
+    })();
   }, []);
 
   const handleSubmit = async () => {

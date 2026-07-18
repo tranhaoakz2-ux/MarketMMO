@@ -39,7 +39,9 @@ export default function SellerVerificationPanel() {
   };
 
   useEffect(() => {
-    load();
+    (async () => {
+      await load();
+    })();
   }, []);
 
   const handleSubmit = async () => {

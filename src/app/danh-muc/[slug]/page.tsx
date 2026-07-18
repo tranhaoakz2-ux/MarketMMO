@@ -1,5 +1,6 @@
 import { Info, ListFilter } from "lucide-react";
 import { notFound } from "next/navigation";
+import { createElement } from "react";
 import Breadcrumb from "@/components/Breadcrumb";
 import CategoryProductCard from "@/components/CategoryProductCard";
 import CategorySidebar from "@/components/CategorySidebar";
@@ -31,7 +32,6 @@ export default async function CategoryPage({
   const category = categories.find((c) => c.slug === slug);
   if (!category) notFound();
 
-  const CategoryIcon = getCategoryIcon(slug);
   const items = await getProductsByCategory(slug);
   const recentPosts = await getRecentForumPosts(6);
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
@@ -56,7 +56,10 @@ export default async function CategoryPage({
           <div className="min-w-0 flex-1">
             <Reveal>
               <h1 className="mb-4 flex items-center gap-2 text-2xl font-black text-ink">
-                <CategoryIcon className="h-6 w-6 text-brand-dark" strokeWidth={1.75} />
+                {createElement(getCategoryIcon(slug), {
+                  className: "h-6 w-6 text-brand-dark",
+                  strokeWidth: 1.75,
+                })}
                 {category.name}
               </h1>
             </Reveal>

@@ -42,13 +42,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setLines(JSON.parse(raw));
-    } catch {
-      // ignore malformed storage
-    }
-    setHydrated(true);
+    (async () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) setLines(JSON.parse(raw));
+      } catch {
+        // ignore malformed storage
+      }
+      setHydrated(true);
+    })();
   }, []);
 
   useEffect(() => {
