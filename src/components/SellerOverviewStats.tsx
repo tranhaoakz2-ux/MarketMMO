@@ -2,11 +2,11 @@ import {
   AlertTriangle,
   BadgeCheck,
   ChevronRight,
-  Coins,
   Info,
   Lock,
   Package,
   PackageX,
+  PiggyBank,
   ShieldCheck,
   Star,
   TrendingDown,
@@ -217,7 +217,7 @@ export default function SellerOverviewStats({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          icon={Coins}
+          icon={PiggyBank}
           iconClass="bg-brand text-ink"
           label={`Doanh thu (${revenueStats.orderCount} đơn)`}
           value={formatVnd(revenueStats.releasedRevenue)}
@@ -458,7 +458,7 @@ function StatCard({
   linkHref,
   linkLabel,
 }: {
-  icon: typeof Coins;
+  icon: typeof PiggyBank;
   iconClass: string;
   label: string;
   value: string;
