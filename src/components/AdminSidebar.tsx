@@ -50,6 +50,7 @@ export default function AdminSidebar({
         { href: "/admin/nap-tien", icon: "⬇️", label: "Nạp tiền", count: counts.pendingDeposits },
         { href: "/admin/rut-tien", icon: "⬆️", label: "Rút tiền", count: counts.pendingWithdrawals },
         { href: "/admin/hoa-hong", icon: "🎁", label: "Hoa hồng", count: counts.eligibleCommissions },
+        { href: "/admin/phi-san", icon: "🏦", label: "Phí sàn" },
         { href: "/admin/tai-chinh", icon: "📊", label: "Sức khoẻ tài chính" },
       ],
     },

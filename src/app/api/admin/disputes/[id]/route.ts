@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { logAdminAction } from "@/lib/audit";
-import { finalizeOrderCommission, marginFeeOf } from "@/lib/commission";
+import { finalizeOrderCommission } from "@/lib/commission";
 
 export async function POST(
   req: Request,
@@ -76,14 +76,8 @@ export async function POST(
 
   if (action === "release_seller") {
     const seller = await prisma.seller.findUniqueOrThrow({ where: { id: item.sellerId } });
-    // Thu phí margin sàn nếu đơn có giới thiệu (nhất quán với escrow release).
-    const commission = await prisma.referralCommission.findUnique({
-      where: { orderId: item.orderId },
-      select: { status: true, marginPercentApplied: true },
-    });
-    const takeFee =
-      commission && (commission.status === "PENDING" || commission.status === "ELIGIBLE");
-    const platformFee = takeFee ? marginFeeOf(amount, commission!.marginPercentApplied) : 0;
+    // Phí sàn ĐÃ FREEZE trên OrderItem (áp cho mọi đơn) — nhất quán escrow release.
+    const platformFee = item.platformFeeAmount;
     const sellerCredit = amount - platformFee;
     // Gate NGUYÊN TỬ trên trạng thái khiếu nại (bug B6): chỉ khi chuyển được
     // OPEN→RESOLVED_RELEASE (count===1) mới giải ngân — chặn giải ngân 2 lần.

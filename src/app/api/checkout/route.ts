@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authz";
 import { ESCROW_HOLD_DAYS } from "@/lib/constants";
 import { accrueCommission } from "@/lib/commission";
+import { feeAmountOf, getEffectiveFeePercent } from "@/lib/platform-fee";
 import { computeDiscountAmount, distributeDiscount, isDiscountCodeUsable } from "@/lib/discount";
 import { prisma } from "@/lib/prisma";
 
@@ -221,12 +222,21 @@ export async function POST(req: Request) {
         },
       });
 
+      // Phí sàn: % HIỆU LỰC tại thời điểm đặt đơn (lịch phí đang áp, else mặc
+      // định) — tính hoàn toàn ở server, freeze vào từng OrderItem (không hồi
+      // tố khi admin đổi % sau). Áp cho MỌI đơn/mọi seller.
+      const feePercent = await getEffectiveFeePercent(tx);
+
       // Tạo từng OrderItem TUẦN TỰ (không dùng nested `items: { create: [...] }`
       // như trước) để lấy được đúng id của từng OrderItem ngay sau khi tạo —
       // cần thiết để gắn orderItemId cho đúng lô ProductStockItem đã claim ở
       // trên (thứ tự trả về của include:{items:true} không đảm bảo khớp thứ
       // tự mảng gốc, không thể tin tưởng để ghép cặp chính xác).
       for (const item of itemsToCreate) {
+        // Phí sàn tính trên giá SAU giảm giá (item.price đã là đơn giá sau khi
+        // áp mã giảm giá) × quantity.
+        const lineBase = item.price * item.quantity;
+        const platformFeeAmount = feeAmountOf(lineBase, feePercent);
         const orderItem = await tx.orderItem.create({
           data: {
             orderId: createdOrder.id,
@@ -240,6 +250,8 @@ export async function POST(req: Request) {
             status: "ESCROW",
             escrowReleaseAt,
             deliveredPayload: item.deliveredPayload,
+            platformFeePercent: feePercent,
+            platformFeeAmount,
           },
         });
 
@@ -322,6 +334,7 @@ export async function POST(req: Request) {
           buyerId: buyer.id,
           referrerId: buyer.referredById,
           orderTotal: total,
+          feePercent,
         });
       }
 

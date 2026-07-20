@@ -22,8 +22,8 @@ type Row = {
   referredName: string;
 };
 type Summary = Record<string, { count: number; total: number }>;
-type Setting = { commissionPercent: number; platformMarginPercent: number; perReferrerCap: number; capPeriodDays: number };
-type Hist = { id: string; by: string; oldCommissionPercent: number; newCommissionPercent: number; oldMarginPercent: number; newMarginPercent: number; createdAt: string };
+type Setting = { commissionPercent: number; perReferrerCap: number; capPeriodDays: number; enabled: boolean };
+type Hist = { id: string; by: string; oldCommissionPercent: number; newCommissionPercent: number; createdAt: string };
 
 const FILTERS: { key: string; label: string }[] = [
   { key: "ALL", label: "Tất cả" },
@@ -207,12 +207,14 @@ function ListTab() {
 
 function SettingsTab() {
   const [setting, setSetting] = useState<Setting | null>(null);
+  const [feeDefault, setFeeDefault] = useState(0);
+  const [maxCommission, setMaxCommission] = useState(0);
   const [history, setHistory] = useState<Hist[]>([]);
   const [commission, setCommission] = useState("");
-  const [margin, setMargin] = useState("");
   const [cap, setCap] = useState("");
   const [period, setPeriod] = useState("");
   const [busy, setBusy] = useState(false);
+  const [toggling, setToggling] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = async () => {
@@ -220,9 +222,10 @@ function SettingsTab() {
     if (res.ok) {
       const d = await res.json();
       setSetting(d.setting);
+      setFeeDefault(d.platformFeeDefault);
+      setMaxCommission(d.maxCommissionPercent);
       setHistory(d.history);
       setCommission(String(d.setting.commissionPercent));
-      setMargin(String(d.setting.platformMarginPercent));
       setCap(String(d.setting.perReferrerCap));
       setPeriod(String(d.setting.capPeriodDays));
     }
@@ -239,7 +242,6 @@ function SettingsTab() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         commissionPercent: Number(commission),
-        platformMarginPercent: Number(margin),
         perReferrerCap: Number(cap),
         capPeriodDays: Number(period),
       }),
@@ -250,58 +252,93 @@ function SettingsTab() {
     if (res.ok) load();
   };
 
+  const toggleEnabled = async () => {
+    if (!setting) return;
+    const next = !setting.enabled;
+    if (!next && !confirm("Tắt hoa hồng giới thiệu? Hoa hồng MỚI sẽ ngừng phát sinh từ giờ. Hoa hồng đã ghi nhận trước đó KHÔNG bị huỷ và vẫn được giải ngân bình thường.")) return;
+    setToggling(true);
+    const res = await fetch("/api/admin/commissions/toggle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: next }),
+    });
+    setToggling(false);
+    if (res.ok) load();
+  };
+
   if (!setting) return <p className="text-sm text-[var(--adm-muted)]">Đang tải...</p>;
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[380px_1fr]">
-      <AdminCard>
-        <h3 className="mb-1 text-sm font-black text-[var(--adm-text)]">Cấu hình %</h3>
-        <p className="mb-3 text-[11px] text-[var(--adm-muted)]">
-          Ràng buộc: % hoa hồng phải NHỎ HƠN ngưỡng margin. % mới chỉ áp dụng cho hoa hồng phát sinh sau, không hồi tố.
-        </p>
-        <label className="mb-1 block text-xs font-semibold text-[var(--adm-muted)]">% hoa hồng</label>
-        <input type="number" step="0.1" value={commission} onChange={(e) => setCommission(e.target.value)} className="mb-3 w-full rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-2 text-sm text-[var(--adm-text)] outline-none" />
-        <label className="mb-1 block text-xs font-semibold text-[var(--adm-muted)]">Ngưỡng margin sàn (%) — trần cho % hoa hồng</label>
-        <input type="number" step="0.1" value={margin} onChange={(e) => setMargin(e.target.value)} className="mb-3 w-full rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-2 text-sm text-[var(--adm-text)] outline-none" />
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-[var(--adm-muted)]">Trần/kỳ (đ, 0=∞)</label>
-            <input type="number" value={cap} onChange={(e) => setCap(e.target.value)} className="w-full rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-2 text-sm text-[var(--adm-text)] outline-none" />
+    <div className="flex flex-col gap-4">
+      {/* Kill switch bật/tắt hoa hồng */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 shadow-sm">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-black text-[var(--adm-text)]">Tính năng hoa hồng giới thiệu</h3>
+            <AdminBadge variant={setting.enabled ? "success" : "neutral"}>
+              {setting.enabled ? "ĐANG BẬT" : "ĐÃ TẮT"}
+            </AdminBadge>
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-[var(--adm-muted)]">Kỳ (ngày)</label>
-            <input type="number" value={period} onChange={(e) => setPeriod(e.target.value)} className="w-full rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-2 text-sm text-[var(--adm-text)] outline-none" />
-          </div>
-        </div>
-        {msg && (
-          <p className={`mt-3 rounded-lg px-3 py-2 text-xs font-semibold ${msg.ok ? "bg-[var(--adm-success-bg)] text-[var(--adm-success)]" : "bg-[var(--adm-danger-bg)] text-[var(--adm-danger)]"}`}>
-            {msg.text}
+          <p className="mt-1 max-w-xl text-[11px] text-[var(--adm-muted)]">
+            Tắt sẽ ngừng phát sinh hoa hồng MỚI kể từ thời điểm tắt. Hoa hồng đã ghi nhận (đủ điều kiện/đã giải ngân) KHÔNG bị huỷ và vẫn hiển thị + giải ngân bình thường. Bật lại chỉ áp dụng cho hoa hồng phát sinh sau đó.
           </p>
-        )}
-        <div className="mt-4">
-          <AdminButton variant="brand" disabled={busy} onClick={save}>
-            <Save className="h-3.5 w-3.5" /> Lưu cấu hình
-          </AdminButton>
         </div>
-      </AdminCard>
+        <AdminButton variant={setting.enabled ? "danger" : "brand"} disabled={toggling} onClick={toggleEnabled}>
+          {setting.enabled ? "Tắt hoa hồng" : "Bật hoa hồng"}
+        </AdminButton>
+      </div>
 
-      <AdminCard>
-        <h3 className="mb-3 text-sm font-black text-[var(--adm-text)]">Lịch sử đổi %</h3>
-        {history.length === 0 ? (
-          <p className="text-xs text-[var(--adm-muted)]">Chưa có thay đổi nào.</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {history.map((h) => (
-              <div key={h.id} className="rounded-lg bg-[var(--adm-surface-2)] px-3 py-2 text-xs">
-                <p className="text-[var(--adm-text)]">
-                  Hoa hồng {h.oldCommissionPercent}% → <b>{h.newCommissionPercent}%</b> · margin {h.oldMarginPercent}% → <b>{h.newMarginPercent}%</b>
-                </p>
-                <p className="text-[11px] text-[var(--adm-muted)]">{h.by} · {new Date(h.createdAt).toLocaleString("vi-VN")}</p>
-              </div>
-            ))}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[380px_1fr]">
+        <AdminCard>
+          <h3 className="mb-1 text-sm font-black text-[var(--adm-text)]">Cấu hình %</h3>
+          <p className="mb-3 text-[11px] text-[var(--adm-muted)]">
+            Ràng buộc: % hoa hồng phải NHỎ HƠN phí sàn / 2 = <b className="text-[var(--adm-text)]">{maxCommission}%</b> (phí sàn hiện tại {feeDefault}%). % mới chỉ áp dụng cho hoa hồng phát sinh sau, không hồi tố.
+          </p>
+          <label className="mb-1 block text-xs font-semibold text-[var(--adm-muted)]">% hoa hồng</label>
+          <input type="number" step="0.1" value={commission} onChange={(e) => setCommission(e.target.value)} className="mb-1 w-full rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-2 text-sm text-[var(--adm-text)] outline-none" />
+          <p className="mb-3 text-[11px] text-[var(--adm-muted)]">
+            Phí sàn ({feeDefault}%) chỉnh riêng ở mục <b className="text-[var(--adm-text)]">Phí sàn</b>. Phần sàn thực thu ròng = phí sàn − hoa hồng.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-[var(--adm-muted)]">Trần/kỳ (đ, 0=∞)</label>
+              <input type="number" value={cap} onChange={(e) => setCap(e.target.value)} className="w-full rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-2 text-sm text-[var(--adm-text)] outline-none" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-[var(--adm-muted)]">Kỳ (ngày)</label>
+              <input type="number" value={period} onChange={(e) => setPeriod(e.target.value)} className="w-full rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-2 text-sm text-[var(--adm-text)] outline-none" />
+            </div>
           </div>
-        )}
-      </AdminCard>
+          {msg && (
+            <p className={`mt-3 rounded-lg px-3 py-2 text-xs font-semibold ${msg.ok ? "bg-[var(--adm-success-bg)] text-[var(--adm-success)]" : "bg-[var(--adm-danger-bg)] text-[var(--adm-danger)]"}`}>
+              {msg.text}
+            </p>
+          )}
+          <div className="mt-4">
+            <AdminButton variant="brand" disabled={busy} onClick={save}>
+              <Save className="h-3.5 w-3.5" /> Lưu cấu hình
+            </AdminButton>
+          </div>
+        </AdminCard>
+
+        <AdminCard>
+          <h3 className="mb-3 text-sm font-black text-[var(--adm-text)]">Lịch sử đổi %</h3>
+          {history.length === 0 ? (
+            <p className="text-xs text-[var(--adm-muted)]">Chưa có thay đổi nào.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {history.map((h) => (
+                <div key={h.id} className="rounded-lg bg-[var(--adm-surface-2)] px-3 py-2 text-xs">
+                  <p className="text-[var(--adm-text)]">
+                    Hoa hồng {h.oldCommissionPercent}% → <b>{h.newCommissionPercent}%</b>
+                  </p>
+                  <p className="text-[11px] text-[var(--adm-muted)]">{h.by} · {new Date(h.createdAt).toLocaleString("vi-VN")}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </AdminCard>
+      </div>
     </div>
   );
 }

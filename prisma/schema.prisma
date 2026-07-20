@@ -92,6 +92,8 @@ model User {
   commissionsGenerated ReferralCommission[] @relation("CommissionReferred")
   commissionsDisbursed ReferralCommission[] @relation("CommissionDisbursedBy")
   commissionRateChanges CommissionRateChange[]
+  feeSchedulesCreated  PlatformFeeSchedule[] @relation("FeeScheduleCreatedBy")
+  feeChanges           PlatformFeeChange[]   @relation("FeeChangedBy")
 }
 
 // Quên mật khẩu: token lưu dạng SHA-256 hash (không lưu token gốc) để dữ
@@ -437,6 +439,13 @@ model OrderItem {
   // seller tự gõ tay, không có nội dung để giao) — giữ nguyên hành vi cũ cho
   // toàn bộ đơn hàng/sản phẩm có từ trước tính năng này.
   deliveredPayload String?
+  // PHÍ SÀN — snapshot FREEZE tại thời điểm đặt đơn (tính hoàn toàn ở server
+  // trên giá SAU giảm giá của dòng hàng này). Đổi % phí về sau KHÔNG hồi tố
+  // đơn cũ vì đã lưu cứng ở đây. Giải ngân cho seller = price*quantity −
+  // platformFeeAmount (xem escrow/release + disputes). Áp cho MỌI đơn/mọi
+  // seller, không phụ thuộc có giới thiệu hay không.
+  platformFeePercent Float @default(0)
+  platformFeeAmount  Int   @default(0)
   createdAt        DateTime @default(now())
 
   dispute    Dispute?
@@ -635,16 +644,62 @@ model ReferralCommission {
 }
 
 // Cấu hình hoa hồng (singleton, id cố định "singleton") — admin sửa qua UI
-// (Admin > Hoa hồng > Cài đặt), KHÔNG hardcode trong env. Ràng buộc bắt buộc
-// ở server: commissionPercent < platformMarginPercent.
+// (Admin > Hoa hồng > Cài đặt), KHÔNG hardcode trong env.
+// Ràng buộc bắt buộc ở server (mục #8): commissionPercent < phí_sàn / 2 —
+// để "phần sàn thực thu ròng" (= phí sàn − hoa hồng) luôn LỚN HƠN hoa hồng.
+// platformMarginPercent giữ lại cho tương thích ngược (không còn dùng làm trần
+// — trần giờ suy từ PlatformFeeSetting).
 model CommissionSetting {
   id                   String   @id
-  commissionPercent    Float    // vd 5 = 5%
-  platformMarginPercent Float   // "phần sàn thực thu ròng" — trần cho commissionPercent
+  commissionPercent    Float    // vd 4 = 4%
+  platformMarginPercent Float   // (deprecated — xem PlatformFeeSetting)
   perReferrerCap       Int      @default(0) // 0 = không giới hạn (VNĐ / kỳ)
   capPeriodDays        Int      @default(30)
+  // Kill switch (mục #9B) — TẮT thì NGỪNG phát sinh hoa hồng MỚI kể từ thời
+  // điểm tắt; KHÔNG đụng các khoản đã kiếm hợp lệ (vẫn ELIGIBLE/PAID/giải ngân
+  // được). Kiểm tra cờ này ở server (accrueCommission) trước khi tạo commission.
+  enabled              Boolean  @default(true)
   updatedAt            DateTime @updatedAt
   updatedById          String?
+}
+
+// PHÍ SÀN — % chung cho MỌI seller/mọi đơn. Singleton (id "singleton") lưu %
+// MẶC ĐỊNH; các mốc theo thời gian (PlatformFeeSchedule) ghi đè trong khoảng
+// hiệu lực. Admin sửa qua UI (Admin > Phí sàn), KHÔNG hardcode env. % mới chỉ
+// áp cho đơn phát sinh SAU (đơn cũ freeze snapshot ở OrderItem, không hồi tố).
+model PlatformFeeSetting {
+  id                String   @id
+  defaultFeePercent Float
+  updatedAt         DateTime @updatedAt
+  updatedById       String?
+}
+
+// Lịch phí theo thời gian (mục #9A) — trong [startAt, endAt] áp feePercent, hết
+// kỳ tự về defaultFeePercent. Server chọn đúng % hiệu lực tại thời điểm đặt đơn.
+// KHÔNG cho khoảng chồng lấn (validate server). Xoá/sửa được, ghi audit log.
+model PlatformFeeSchedule {
+  id          String   @id @default(cuid())
+  feePercent  Float
+  startAt     DateTime
+  endAt       DateTime
+  createdById String
+  createdBy   User     @relation("FeeScheduleCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([startAt, endAt])
+}
+
+// Lịch sử đổi % phí sàn MẶC ĐỊNH — ai đổi, từ bao nhiêu sang bao nhiêu, lúc nào
+// (thay đổi mốc lịch phí ghi qua AdminAuditLog).
+model PlatformFeeChange {
+  id          String   @id @default(cuid())
+  changedById String
+  changedBy   User     @relation("FeeChangedBy", fields: [changedById], references: [id])
+  oldPercent  Float
+  newPercent  Float
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 // Lịch sử đổi % hoa hồng/margin — ai đổi, từ bao nhiêu sang bao nhiêu, lúc nào.

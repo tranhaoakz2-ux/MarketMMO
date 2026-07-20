@@ -71,3 +71,6 @@ next-env.d.ts
 /CCCD_REMOVAL.md
 /PROJECT_MAP.md
 
+
+# Local-only SQL previews (project uses prisma db push, no migrations)
+/migrations-preview/

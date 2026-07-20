@@ -33,21 +33,21 @@ export function commissionOf(amount: number, percent: number): number {
   return Math.round((amount * percent) / 100);
 }
 
-// Phí margin sàn thu trên 1 khoản (percent dạng 10 = 10%).
-export function marginFeeOf(amount: number, percent: number): number {
-  return Math.round((amount * percent) / 100);
-}
-
 // Ghi nhận hoa hồng PENDING lúc checkout (KHÔNG cộng ví — chỉ tạo bản ghi).
 // Điều kiện: buyer có người giới thiệu, KHÔNG tự giới thiệu mình, và đã từng
 // nạp tiền thật (>=1 DEPOSIT CONFIRMED). Gắn cờ nếu referrer & referred trùng
 // signupIp (không chặn — chỉ để admin review). Chạy TRONG transaction checkout.
 export async function accrueCommission(
   tx: Prisma.TransactionClient,
-  params: { orderId: string; buyerId: string; referrerId: string; orderTotal: number }
+  params: { orderId: string; buyerId: string; referrerId: string; orderTotal: number; feePercent: number }
 ): Promise<void> {
-  const { orderId, buyerId, referrerId, orderTotal } = params;
+  const { orderId, buyerId, referrerId, orderTotal, feePercent } = params;
   if (referrerId === buyerId) return;
+
+  const setting = await getCommissionSetting(tx);
+  // Kill switch (mục #9B): TẮT thì KHÔNG phát sinh hoa hồng MỚI (không đụng
+  // khoản đã kiếm — chúng vẫn ELIGIBLE/PAID/giải ngân được).
+  if (!setting.enabled) return;
 
   const hasDeposit = await tx.walletTransaction.findFirst({
     where: { userId: buyerId, type: "DEPOSIT", status: "CONFIRMED" },
@@ -55,7 +55,6 @@ export async function accrueCommission(
   });
   if (!hasDeposit) return;
 
-  const setting = await getCommissionSetting(tx);
   const amount = commissionOf(orderTotal, setting.commissionPercent);
   if (amount <= 0) return;
 
@@ -73,7 +72,9 @@ export async function accrueCommission(
       orderAmount: orderTotal,
       commissionAmount: amount,
       percentApplied: setting.commissionPercent,
-      marginPercentApplied: setting.platformMarginPercent,
+      // Lưu % phí sàn HIỆU LỰC của đơn (nguồn cấp hoa hồng) — freeze để tính
+      // "phần sàn thực thu ròng" (phí − hoa hồng) không đổi khi admin sửa % sau.
+      marginPercentApplied: feePercent,
       status: "PENDING",
       flagged: sameIp,
       flaggedReason: sameIp ? "Referrer và referred trùng IP đăng ký" : null,
@@ -100,9 +101,12 @@ export async function finalizeOrderCommission(
 
   const releasedItems = await tx.orderItem.findMany({
     where: { orderId, status: "RELEASED" },
-    select: { price: true, quantity: true },
+    select: { price: true, quantity: true, platformFeeAmount: true },
   });
   const releasedTotal = releasedItems.reduce((s, i) => s + i.price * i.quantity, 0);
+  // Phí sàn THỰC THU trên phần released (đã freeze ở OrderItem lúc đặt đơn) —
+  // đây là nguồn cấp hoa hồng.
+  const feeCollected = releasedItems.reduce((s, i) => s + i.platformFeeAmount, 0);
 
   if (releasedTotal <= 0) {
     await tx.referralCommission.updateMany({
@@ -114,9 +118,11 @@ export async function finalizeOrderCommission(
 
   // Hoa hồng trên phần released, chốt bằng % đã lock lúc tạo (không hồi tố).
   let amount = commissionOf(releasedTotal, commission.percentApplied);
-  // Ràng buộc: commission ≤ phần margin sàn thu trên chính giao dịch này.
-  const marginCollected = marginFeeOf(releasedTotal, commission.marginPercentApplied);
-  if (amount > marginCollected) amount = marginCollected;
+  // Ràng buộc mục #8: hoa hồng < "phần sàn thực thu ròng" = feeCollected − hoa
+  // hồng → 2·hoa hồng < feeCollected. Nếu vượt (vd rounding / lịch phí thấp),
+  // cắt về mức lớn nhất còn thoả (giữ net > commission).
+  const maxByNet = Math.floor((feeCollected - 1) / 2);
+  if (amount > maxByNet) amount = Math.max(0, maxByNet);
 
   // Trần theo kỳ (nếu bật) — chỉ tính các khoản ELIGIBLE/PAID trong kỳ.
   const setting = await getCommissionSetting(tx);

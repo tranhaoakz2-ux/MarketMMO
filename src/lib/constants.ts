@@ -75,10 +75,18 @@ export const PASSWORD_RESET_TOKEN_EXPIRY_MINUTES = 60;
 //   - Hoa hồng khởi tạo 5% = nửa ngưỡng margin → luôn < margin, an toàn.
 //   - Cap 0 = không giới hạn/kỳ (theo lựa chọn; bật sau bằng cách set > 0).
 export const COMMISSION_SETTING_ID = "singleton";
-export const DEFAULT_COMMISSION_PERCENT = 5;
+// Hoa hồng 4% < phí sàn 10% / 2 = 5% → "phần sàn thực thu ròng" (phí − hoa
+// hồng = 6%) luôn LỚN HƠN hoa hồng (4%). Xem ràng buộc ở settings.
+export const DEFAULT_COMMISSION_PERCENT = 4;
 export const DEFAULT_PLATFORM_MARGIN_PERCENT = 10;
 export const DEFAULT_PER_REFERRER_CAP = 0;
 export const DEFAULT_CAP_PERIOD_DAYS = 30;
+
+// ── Phí sàn (platform fee) — % chung cho MỌI seller/mọi đơn (xem
+// src/lib/platform-fee.ts + model PlatformFeeSetting/Schedule). Hằng dưới CHỈ
+// là giá trị KHỞI TẠO singleton lần đầu; admin sửa qua Admin > Phí sàn.
+export const PLATFORM_FEE_SETTING_ID = "singleton";
+export const DEFAULT_PLATFORM_FEE_PERCENT = 10;
 
 export type CommissionStatus = "PENDING" | "ELIGIBLE" | "PAID" | "CANCELLED";
 

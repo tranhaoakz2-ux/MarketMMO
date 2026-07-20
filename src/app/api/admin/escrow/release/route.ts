@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { logAdminAction } from "@/lib/audit";
-import { finalizeOrderCommission, marginFeeOf } from "@/lib/commission";
+import { finalizeOrderCommission } from "@/lib/commission";
 
 export async function POST() {
   const { session, error } = await requireAdmin();
@@ -18,18 +18,12 @@ export async function POST() {
     const seller = await prisma.seller.findUnique({ where: { id: item.sellerId } });
     if (!seller) continue;
 
-    // Chỉ đơn CÓ giới thiệu (có ReferralCommission active) mới bị sàn thu phí
-    // margin — seller nhận (giá trị item − phí). Phần phí giữ lại làm nguồn trả
-    // hoa hồng (thu phí thật, xem mô hình đã chốt). Đơn không giới thiệu: seller
-    // nhận 100% như cũ (không đụng).
-    const commission = await prisma.referralCommission.findUnique({
-      where: { orderId: item.orderId },
-      select: { status: true, marginPercentApplied: true },
-    });
+    // PHÍ SÀN áp cho MỌI đơn — dùng số ĐÃ FREEZE trên OrderItem lúc đặt đơn
+    // (không tính lại theo % hiện tại → không hồi tố). Seller nhận (giá trị
+    // item − phí sàn). Phần phí giữ lại là doanh thu sàn (nguồn trả hoa hồng
+    // nếu đơn có giới thiệu).
     const itemValue = item.price * item.quantity;
-    const takeFee =
-      commission && (commission.status === "PENDING" || commission.status === "ELIGIBLE");
-    const platformFee = takeFee ? marginFeeOf(itemValue, commission!.marginPercentApplied) : 0;
+    const platformFee = item.platformFeeAmount;
     const sellerCredit = itemValue - platformFee;
 
     // Gate NGUYÊN TỬ trên từng OrderItem (bug B6): chỉ khi chuyển được
