@@ -67,13 +67,27 @@ export const ESCROW_HOLD_DAYS = 3;
 // Quên mật khẩu: link reset hết hạn sau ngần này phút kể từ lúc yêu cầu.
 export const PASSWORD_RESET_TOKEN_EXPIRY_MINUTES = 60;
 
-// Hoa hồng affiliate: tính theo % giá trị MỖI đơn hàng mà người được mời mua
-// (áp dụng liên tục, không chỉ đơn đầu tiên), cộng thẳng vào ví người giới
-// thiệu ngay khi đơn được tạo — miễn người được mời đã từng NẠP TIỀN thật
-// (>=1 WalletTransaction DEPOSIT CONFIRMED) để tránh lạm dụng bằng số dư ảo.
-// Kiểm tra trong POST /api/checkout, không phải lúc đăng ký.
-// TODO: đây là giá trị % tạm thời (placeholder) — sẽ được cập nhật sau.
-export const REFERRAL_COMMISSION_PERCENT = 0.1;
+// ── Hoa hồng affiliate (xem src/lib/commission.ts + model ReferralCommission) ──
+// % hoa hồng + margin sàn KHÔNG còn hardcode — lưu trong DB (CommissionSetting,
+// admin sửa qua UI). Các hằng dưới CHỈ là giá trị KHỞI TẠO khi tạo singleton
+// lần đầu.
+//   - Margin 10% ("phần sàn thực thu ròng") = trần cho %hoa hồng (chốt cùng user).
+//   - Hoa hồng khởi tạo 5% = nửa ngưỡng margin → luôn < margin, an toàn.
+//   - Cap 0 = không giới hạn/kỳ (theo lựa chọn; bật sau bằng cách set > 0).
+export const COMMISSION_SETTING_ID = "singleton";
+export const DEFAULT_COMMISSION_PERCENT = 5;
+export const DEFAULT_PLATFORM_MARGIN_PERCENT = 10;
+export const DEFAULT_PER_REFERRER_CAP = 0;
+export const DEFAULT_CAP_PERIOD_DAYS = 30;
+
+export type CommissionStatus = "PENDING" | "ELIGIBLE" | "PAID" | "CANCELLED";
+
+export const commissionStatusLabel: Record<CommissionStatus, string> = {
+  PENDING: "Chờ đủ điều kiện",
+  ELIGIBLE: "Đủ điều kiện — chờ giải ngân",
+  PAID: "Đã giải ngân",
+  CANCELLED: "Đã huỷ (đơn hoàn/huỷ)",
+};
 
 export const orderStatusLabel: Record<OrderStatus, string> = {
   ESCROW: "Đang ký quỹ",

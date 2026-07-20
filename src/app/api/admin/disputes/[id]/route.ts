@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { logAdminAction } from "@/lib/audit";
+import { finalizeOrderCommission, marginFeeOf } from "@/lib/commission";
 
 export async function POST(
   req: Request,
@@ -60,6 +61,9 @@ export async function POST(
     if (!done) {
       return NextResponse.json({ error: "Khiếu nại này đã được xử lý." }, { status: 400 });
     }
+    // Đơn có thể đã settle xong sau khi huỷ item này → chốt lại hoa hồng
+    // (tính trên phần RELEASED còn lại; nếu không còn gì → huỷ hoa hồng).
+    await prisma.$transaction((t) => finalizeOrderCommission(t, item.orderId));
     await logAdminAction({
       adminId: session!.user!.id,
       action: "Hoàn tiền khiếu nại cho buyer",
@@ -72,6 +76,15 @@ export async function POST(
 
   if (action === "release_seller") {
     const seller = await prisma.seller.findUniqueOrThrow({ where: { id: item.sellerId } });
+    // Thu phí margin sàn nếu đơn có giới thiệu (nhất quán với escrow release).
+    const commission = await prisma.referralCommission.findUnique({
+      where: { orderId: item.orderId },
+      select: { status: true, marginPercentApplied: true },
+    });
+    const takeFee =
+      commission && (commission.status === "PENDING" || commission.status === "ELIGIBLE");
+    const platformFee = takeFee ? marginFeeOf(amount, commission!.marginPercentApplied) : 0;
+    const sellerCredit = amount - platformFee;
     // Gate NGUYÊN TỬ trên trạng thái khiếu nại (bug B6): chỉ khi chuyển được
     // OPEN→RESOLVED_RELEASE (count===1) mới giải ngân — chặn giải ngân 2 lần.
     const done = await prisma.$transaction(async (t) => {
@@ -83,15 +96,18 @@ export async function POST(
       await t.orderItem.update({ where: { id: item.id }, data: { status: "RELEASED" } });
       await t.user.update({
         where: { id: seller.userId },
-        data: { walletBalance: { increment: amount } },
+        data: { walletBalance: { increment: sellerCredit } },
       });
       await t.walletTransaction.create({
         data: {
           userId: seller.userId,
           type: "PAYOUT",
-          amount,
+          amount: sellerCredit,
           status: "CONFIRMED",
-          note: `Giải ngân sau khiếu nại đơn #${item.orderId} — ${item.productName}`,
+          note:
+            platformFee > 0
+              ? `Giải ngân sau khiếu nại đơn #${item.orderId} — ${item.productName} (đã trừ phí sàn ${platformFee}đ)`
+              : `Giải ngân sau khiếu nại đơn #${item.orderId} — ${item.productName}`,
           confirmedAt: new Date(),
         },
       });
@@ -107,6 +123,7 @@ export async function POST(
     if (remaining === 0) {
       await prisma.order.update({ where: { id: item.orderId }, data: { status: "RELEASED" } });
     }
+    await prisma.$transaction((t) => finalizeOrderCommission(t, item.orderId));
     await logAdminAction({
       adminId: session!.user!.id,
       action: "Giải ngân khiếu nại cho seller",

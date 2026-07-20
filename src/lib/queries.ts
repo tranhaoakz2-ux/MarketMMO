@@ -665,6 +665,7 @@ export async function getAdminSidebarCounts() {
     pendingDeposits,
     pendingWithdrawals,
     openDisputes,
+    eligibleCommissions,
   ] = await Promise.all([
     prisma.product.count({ where: { status: "PENDING" } }),
     prisma.category.count({ where: { status: "PENDING" } }),
@@ -672,6 +673,7 @@ export async function getAdminSidebarCounts() {
     prisma.walletTransaction.count({ where: { type: "DEPOSIT", status: "PENDING" } }),
     prisma.walletTransaction.count({ where: { type: "WITHDRAW", status: "PENDING" } }),
     prisma.dispute.count({ where: { status: "OPEN" } }),
+    prisma.referralCommission.count({ where: { status: "ELIGIBLE" } }),
   ]);
   return {
     pendingProducts,
@@ -680,6 +682,7 @@ export async function getAdminSidebarCounts() {
     pendingDeposits,
     pendingWithdrawals,
     openDisputes,
+    eligibleCommissions,
   };
 }
 

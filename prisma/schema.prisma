@@ -67,6 +67,11 @@ model User {
   bannedReason String?
   bannedAt     DateTime?
 
+  // IP lúc đăng ký — dùng để GẮN CỜ (không chặn cứng) cặp referrer–referred
+  // trùng IP để admin review (chống farming hoa hồng đa tài khoản). Xem
+  // ReferralCommission.flagged + src/lib/commission.ts.
+  signupIp String?
+
   accounts      Account[]
   sessions      Session[]
   seller        Seller?
@@ -83,6 +88,10 @@ model User {
   sentMessages         Message[]
   passwordResetTokens  PasswordResetToken[]
   adminAuditLogs       AdminAuditLog[]
+  commissionsEarned    ReferralCommission[] @relation("CommissionReferrer")
+  commissionsGenerated ReferralCommission[] @relation("CommissionReferred")
+  commissionsDisbursed ReferralCommission[] @relation("CommissionDisbursedBy")
+  commissionRateChanges CommissionRateChange[]
 }
 
 // Quên mật khẩu: token lưu dạng SHA-256 hash (không lưu token gốc) để dữ
@@ -397,6 +406,10 @@ model Order {
   discountAmount Int      @default(0)
 
   items    OrderItem[]
+  // Hoa hồng affiliate của đơn này (nếu buyer được giới thiệu) — 1-1, tạo ở
+  // POST /api/checkout với status PENDING, chốt (ELIGIBLE/CANCELLED) khi đơn
+  // giải ngân xong (xem src/lib/commission.ts).
+  referralCommission ReferralCommission?
 }
 
 model OrderItem {
@@ -580,4 +593,70 @@ model Message {
   attachmentType String?
   readAt         DateTime?
   createdAt      DateTime     @default(now())
+}
+
+// Hoa hồng affiliate — GHI NHẬN khi buyer (được giới thiệu) đặt đơn, nhưng
+// chỉ ĐỦ ĐIỀU KIỆN giải ngân sau khi đơn RELEASED (đã qua cửa sổ ký quỹ =
+// qua cửa sổ hoàn tiền/khiếu nại). Tiền hoa hồng lấy từ PHÍ MARGIN sàn thu
+// trên chính giao dịch đó (chỉ thu phí ở đơn có giới thiệu — xem
+// src/lib/commission.ts + escrow release), và server đảm bảo commissionAmount
+// ≤ phần margin thu được (commissionPercent < marginPercent, chốt ở settings).
+//   status: "PENDING"  = chờ đủ điều kiện (đơn chưa giải ngân xong)
+//           "ELIGIBLE" = đủ điều kiện, chờ admin giải ngân
+//           "PAID"     = đã giải ngân vào ví người giới thiệu
+//           "CANCELLED"= đơn bị hoàn/huỷ hết → hoa hồng bị huỷ
+model ReferralCommission {
+  id             String    @id @default(cuid())
+  referrerId     String
+  referrer       User      @relation("CommissionReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUserId String
+  referredUser   User      @relation("CommissionReferred", fields: [referredUserId], references: [id], onDelete: Cascade)
+  orderId        String    @unique
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  // Giá trị đơn dùng để tính (chốt lúc tạo; cập nhật lại theo phần RELEASED
+  // thực tế khi finalize nếu có item bị huỷ).
+  orderAmount    Int
+  commissionAmount Int
+  // % chốt tại thời điểm phát sinh (KHÔNG hồi tố khi admin đổi % sau này).
+  percentApplied       Float
+  marginPercentApplied Float
+  status         String    @default("PENDING")
+  // Cờ đáng ngờ (không chặn cứng) — vd referrer & referred trùng signupIp.
+  flagged        Boolean   @default(false)
+  flaggedReason  String?
+  eligibleAt     DateTime?
+  paidAt         DateTime?
+  disbursedById  String?
+  disbursedBy    User?     @relation("CommissionDisbursedBy", fields: [disbursedById], references: [id])
+  createdAt      DateTime  @default(now())
+
+  @@index([referrerId, status])
+  @@index([status])
+}
+
+// Cấu hình hoa hồng (singleton, id cố định "singleton") — admin sửa qua UI
+// (Admin > Hoa hồng > Cài đặt), KHÔNG hardcode trong env. Ràng buộc bắt buộc
+// ở server: commissionPercent < platformMarginPercent.
+model CommissionSetting {
+  id                   String   @id
+  commissionPercent    Float    // vd 5 = 5%
+  platformMarginPercent Float   // "phần sàn thực thu ròng" — trần cho commissionPercent
+  perReferrerCap       Int      @default(0) // 0 = không giới hạn (VNĐ / kỳ)
+  capPeriodDays        Int      @default(30)
+  updatedAt            DateTime @updatedAt
+  updatedById          String?
+}
+
+// Lịch sử đổi % hoa hồng/margin — ai đổi, từ bao nhiêu sang bao nhiêu, lúc nào.
+model CommissionRateChange {
+  id                   String   @id @default(cuid())
+  changedById          String
+  changedBy            User     @relation(fields: [changedById], references: [id])
+  oldCommissionPercent Float
+  newCommissionPercent Float
+  oldMarginPercent     Float
+  newMarginPercent     Float
+  createdAt            DateTime @default(now())
+
+  @@index([createdAt])
 }

@@ -18,6 +18,7 @@ export default function AdminSidebar({
     pendingDeposits: number;
     pendingWithdrawals: number;
     openDisputes: number;
+    eligibleCommissions: number;
   };
 }) {
   const pathname = usePathname();
@@ -48,6 +49,7 @@ export default function AdminSidebar({
       items: [
         { href: "/admin/nap-tien", icon: "⬇️", label: "Nạp tiền", count: counts.pendingDeposits },
         { href: "/admin/rut-tien", icon: "⬆️", label: "Rút tiền", count: counts.pendingWithdrawals },
+        { href: "/admin/hoa-hong", icon: "🎁", label: "Hoa hồng", count: counts.eligibleCommissions },
         { href: "/admin/tai-chinh", icon: "📊", label: "Sức khoẻ tài chính" },
       ],
     },

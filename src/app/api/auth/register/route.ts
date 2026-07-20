@@ -65,6 +65,13 @@ export async function POST(req: Request) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
+  // IP đăng ký — dùng để GẮN CỜ (không chặn) cặp referrer–referred trùng IP,
+  // giúp admin review farming hoa hồng (xem src/lib/commission.ts).
+  const signupIp =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip")?.trim() ||
+    null;
+
   // Sinh mã giới thiệu riêng cho user mới ngay lúc tạo — retry vài lần nếu
   // va trùng unique constraint (xác suất rất thấp, xem src/lib/referral.ts).
   // Lưu ý: đăng ký chỉ gắn quan hệ referredById, KHÔNG cộng hoa hồng ở đây —
@@ -84,6 +91,7 @@ export async function POST(req: Request) {
           walletBalance: 0,
           referralCode: generateReferralCode(),
           referredById: referrer?.id,
+          signupIp,
         },
       });
     } catch {

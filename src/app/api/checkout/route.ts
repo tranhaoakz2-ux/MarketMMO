@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authz";
-import { ESCROW_HOLD_DAYS, REFERRAL_COMMISSION_PERCENT } from "@/lib/constants";
+import { ESCROW_HOLD_DAYS } from "@/lib/constants";
+import { accrueCommission } from "@/lib/commission";
 import { computeDiscountAmount, distributeDiscount, isDiscountCodeUsable } from "@/lib/discount";
 import { prisma } from "@/lib/prisma";
 
@@ -310,38 +311,18 @@ export async function POST(req: Request) {
         },
       });
 
-      // Hoa hồng affiliate: tính theo % giá trị đơn hàng này (áp dụng cho MỌI
-      // đơn, không chỉ đơn đầu tiên), cộng thẳng vào ví người giới thiệu —
-      // miễn buyer được giới thiệu bởi ai đó và đã từng nạp tiền thật (không
-      // chỉ nhờ số dư có sẵn từ nơi khác).
-      // Bug B7 (phần an toàn): chặn tự giới thiệu chính mình (referredById ===
-      // buyer.id) — defense-in-depth, không để 1 user tự cộng hoa hồng cho ví
-      // của chính mình. LƯU Ý: đây CHƯA chặn được farming đa tài khoản
-      // (A giới thiệu B, cùng 1 người) — việc đó cần quyết định nghiệp vụ
-      // (đặt trần hoa hồng / chỉ trả khi đơn RELEASED). Xem AUDIT.md B7.
-      if (buyer.referredById && buyer.referredById !== buyer.id) {
-        const hasDeposit = await tx.walletTransaction.findFirst({
-          where: { userId: buyer.id, type: "DEPOSIT", status: "CONFIRMED" },
+      // Hoa hồng affiliate (B7 làm lại): CHỈ GHI NHẬN (PENDING), KHÔNG cộng ví
+      // lúc tạo đơn. Chỉ đủ điều kiện giải ngân khi đơn RELEASED (qua cửa sổ ký
+      // quỹ/khiếu nại) — xem finalizeOrderCommission() gọi ở escrow release/
+      // dispute, và admin giải ngân thủ công tại Admin > Hoa hồng. accrueCommission
+      // tự chặn self-referral, yêu cầu đã nạp tiền thật, và gắn cờ trùng IP.
+      if (buyer.referredById) {
+        await accrueCommission(tx, {
+          orderId: createdOrder.id,
+          buyerId: buyer.id,
+          referrerId: buyer.referredById,
+          orderTotal: total,
         });
-        if (hasDeposit) {
-          const commission = Math.round(total * REFERRAL_COMMISSION_PERCENT);
-          if (commission > 0) {
-            await tx.user.update({
-              where: { id: buyer.referredById },
-              data: { walletBalance: { increment: commission } },
-            });
-            await tx.walletTransaction.create({
-              data: {
-                userId: buyer.referredById,
-                type: "REFERRAL_BONUS",
-                amount: commission,
-                status: "CONFIRMED",
-                note: `Hoa hồng ${(REFERRAL_COMMISSION_PERCENT * 100).toFixed(0)}% — ${buyer.username ?? buyer.email} mua đơn #${createdOrder.id}`,
-                confirmedAt: new Date(),
-              },
-            });
-          }
-        }
       }
 
       return createdOrder;

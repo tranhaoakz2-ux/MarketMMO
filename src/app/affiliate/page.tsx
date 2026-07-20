@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Reveal from "@/components/Reveal";
 import { auth } from "@/auth";
-import { REFERRAL_COMMISSION_PERCENT } from "@/lib/constants";
+import { getCommissionSetting } from "@/lib/commission";
 import { prisma } from "@/lib/prisma";
 import { ensureReferralCode } from "@/lib/referral";
 
@@ -17,6 +17,9 @@ export default async function AffiliatePage() {
   if (!session?.user) redirect("/dang-nhap?callbackUrl=/affiliate");
 
   const referralCode = await ensureReferralCode(session.user.id);
+  // % hoa hồng lấy từ cấu hình DB (admin chỉnh được) — AffiliatePanel dùng
+  // dạng phân số (0.05 = 5%), nên chia 100.
+  const commissionSetting = await getCommissionSetting();
 
   const [referrals, commissionAgg, bonusTransactions] = await Promise.all([
     prisma.user.findMany({
@@ -74,7 +77,7 @@ export default async function AffiliatePage() {
             <AffiliatePanel
               referralLink={referralLink}
               totalCommission={commissionAgg._sum.amount ?? 0}
-              commissionPercent={REFERRAL_COMMISSION_PERCENT}
+              commissionPercent={commissionSetting.commissionPercent / 100}
               referredUsers={referrals.map((u) => ({
                 id: u.id,
                 name: u.name ?? u.username ?? "Người dùng",
