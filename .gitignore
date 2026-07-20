@@ -62,3 +62,11 @@ next-env.d.ts
 # ảnh hưởng vì pattern có "/" ở đầu chỉ khớp file ngay tại thư mục gốc)
 /*.png
 
+# tài liệu audit/rà soát bảo mật — chứa chi tiết lỗ hổng/khai thác của hệ
+# thống production, CHỈ giữ ở local, TUYỆT ĐỐI không đưa lên remote (repo có
+# thể public; GitHub cache/index kể cả sau khi xoá).
+/AUDIT.md
+/SECURITY_AUDIT.md
+/*_AUDIT.md
+/CCCD_REMOVAL.md
+
