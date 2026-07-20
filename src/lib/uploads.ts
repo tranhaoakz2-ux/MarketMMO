@@ -3,10 +3,10 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { put } from "@vercel/blob";
 
-// Thư mục lưu ảnh CCCD / đính kèm chat khi chạy ở chế độ ổ đĩa cục bộ (dev
-// hoặc host có filesystem lâu dài) — NGOÀI /public (không public như logo/
-// ảnh sản phẩm), chỉ đọc được qua route được bảo vệ (xác thực quyền xem
-// trước khi trả file). Xem .gitignore — thư mục này không commit.
+// Thư mục lưu file đính kèm chat khi chạy ở chế độ ổ đĩa cục bộ (dev hoặc
+// host có filesystem lâu dài) — NGOÀI /public (không public như logo/ảnh sản
+// phẩm), chỉ đọc được qua route được bảo vệ (xác thực quyền xem trước khi
+// trả file). Xem .gitignore — thư mục này không commit.
 const UPLOAD_ROOT = path.join(process.cwd(), "uploads");
 
 const ALLOWED_TYPES: Record<string, string> = {
@@ -29,7 +29,7 @@ const ALLOWED_DOC_TYPES: Record<string, string> = {
   "text/plain": "txt",
 };
 
-export const MAX_UPLOAD_SIZE = 5 * 1024 * 1024; // 5MB — ảnh (CCCD, chat)
+export const MAX_UPLOAD_SIZE = 5 * 1024 * 1024; // 5MB — ảnh (sản phẩm, chat)
 export const MAX_CHAT_FILE_SIZE = 10 * 1024 * 1024; // 10MB — file đính kèm chat
 
 export function isAllowedImageType(mimeType: string): boolean {
@@ -70,13 +70,13 @@ async function saveBuffer(
 }
 
 /**
- * Lưu ảnh sản phẩm — khác CCCD/chat ở chỗ đây là ảnh CÔNG KHAI (ai cũng xem
- * được, hiển thị ngay trên thẻ sản phẩm/trang chi tiết), không qua route bảo
- * vệ nào. Có Blob thì URL trả về đã public sẵn, dùng thẳng được trong
- * `<Image src=...>`. Thiếu Blob (dev local) thì ghi thẳng vào
- * `public/uploads/products/` (khác thư mục `/uploads` ở root dùng cho CCCD/
- * chat — thư mục đó NGOÀI `/public`, không ai xem trực tiếp được) để Next.js
- * tự phục vụ như 1 static asset bình thường, trả về đường dẫn `/uploads/
+ * Lưu ảnh sản phẩm — khác ảnh đính kèm chat ở chỗ đây là ảnh CÔNG KHAI (ai
+ * cũng xem được, hiển thị ngay trên thẻ sản phẩm/trang chi tiết), không qua
+ * route bảo vệ nào. Có Blob thì URL trả về đã public sẵn, dùng thẳng được
+ * trong `<Image src=...>`. Thiếu Blob (dev local) thì ghi thẳng vào
+ * `public/uploads/products/` (khác thư mục `/uploads` ở root dùng cho chat —
+ * thư mục đó NGOÀI `/public`, không ai xem trực tiếp được) để Next.js tự
+ * phục vụ như 1 static asset bình thường, trả về đường dẫn `/uploads/
  * products/<uuid>.<ext>` dùng thẳng luôn, không cần đọc lại qua
  * readUploadedFile()/route bảo vệ.
  */
@@ -106,25 +106,6 @@ export async function saveProductImage(file: File): Promise<string> {
   await mkdir(path.dirname(absolutePath), { recursive: true });
   await writeFile(absolutePath, buffer);
   return `/uploads/products/${filename}`;
-}
-
-/** Lưu file CCCD, trả về giá trị lưu vào DB (URL Blob hoặc đường dẫn tương đối). */
-export async function saveVerificationImage(
-  sellerId: string,
-  side: "front" | "back",
-  file: File
-): Promise<string> {
-  const ext = ALLOWED_TYPES[file.type];
-  if (!ext) {
-    throw new Error("Chỉ chấp nhận ảnh JPEG, PNG hoặc WebP.");
-  }
-  if (file.size > MAX_UPLOAD_SIZE) {
-    throw new Error("Ảnh vượt quá 5MB.");
-  }
-
-  const relativePath = path.join("cccd", sellerId, `${side}.${ext}`);
-  const buffer = Buffer.from(await file.arrayBuffer());
-  return saveBuffer(relativePath, buffer, file.type);
 }
 
 /**

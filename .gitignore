@@ -45,8 +45,7 @@ next-env.d.ts
 /prisma/*.db
 /prisma/*.db-journal
 
-# ảnh CCCD upload (xác thực người bán) — dữ liệu cá nhân nhạy cảm, KHÔNG commit,
-# lưu ngoài /public để không bị truy cập công khai
+# file đính kèm chat — KHÔNG commit, lưu ngoài /public để không bị truy cập công khai
 /uploads/
 
 # ảnh sản phẩm upload khi chạy dev local không cấu hình Vercel Blob (xem

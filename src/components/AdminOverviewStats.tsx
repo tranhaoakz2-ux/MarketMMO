@@ -68,7 +68,6 @@ export default function AdminOverviewStats({
   counts: {
     pendingProducts: number;
     pendingCategories: number;
-    pendingVerifications: number;
     pendingForumReports: number;
     pendingDeposits: number;
     pendingWithdrawals: number;
@@ -82,7 +81,6 @@ export default function AdminOverviewStats({
     { label: "Khiếu nại đang mở", count: counts.openDisputes, href: "/admin/khieu-nai" },
     { label: "Sản phẩm chờ duyệt", count: counts.pendingProducts, href: "/admin/san-pham" },
     { label: "Danh mục mới chờ duyệt", count: counts.pendingCategories, href: "/admin/danh-muc" },
-    { label: "Xác thực CCCD chờ duyệt", count: counts.pendingVerifications, href: "/admin/xac-thuc" },
     { label: "Báo cáo diễn đàn chờ xử lý", count: counts.pendingForumReports, href: "/admin/dien-dan" },
     { label: "Yêu cầu nạp tiền chờ duyệt", count: counts.pendingDeposits, href: "/admin/nap-tien" },
     { label: "Yêu cầu rút tiền chờ duyệt", count: counts.pendingWithdrawals, href: "/admin/rut-tien" },

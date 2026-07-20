@@ -19,7 +19,6 @@ datasource db {
 //   WalletTransaction.type   "DEPOSIT" | "PURCHASE" | "PAYOUT" | "REFUND" |
 //                            "REFERRAL_BONUS" | "WITHDRAW" | "INSURANCE_DEPOSIT"
 //   WalletTransaction.status "PENDING" | "CONFIRMED" | "REJECTED"
-//   SellerVerification.status "PENDING" | "APPROVED" | "REJECTED"
 //   DiscountCode.type         "PERCENT" | "FIXED"
 //   Dispute.status             "OPEN" | "RESOLVED_REFUND" | "RESOLVED_RELEASE"
 //   Product.status             "PENDING" | "APPROVED" | "REJECTED"
@@ -145,6 +144,12 @@ model Seller {
   phone        String?
   facebookLink String?
   level       Int      @default(1)
+  // Badge "Đã xác thực" hiển thị công khai trên gian hàng — TRƯỚC ĐÂY được
+  // set tự động khi admin duyệt xác thực CCCD (model SellerVerification, đã
+  // xoá bỏ hoàn toàn do liên quan dữ liệu cá nhân nhạy cảm). Giờ là cờ admin
+  // TỰ BẬT/TẮT thủ công (Admin > Người bán, PATCH /api/admin/sellers/[id]
+  // {action:"verify"|"unverify"}) theo đánh giá riêng — không còn quy trình
+  // upload/duyệt giấy tờ nào đứng sau field này.
   verified    Boolean  @default(false)
   createdAt   DateTime @default(now())
   // Số dư quỹ bảo hiểm seller đã đóng lên sàn (hiển thị ở trang chi tiết sản
@@ -172,28 +177,10 @@ model Seller {
   reviews        Review[]
   auctionBids    AuctionBid[]
   discountCodes  DiscountCode[]
-  verification   SellerVerification?
   // Danh mục do chính seller này đề xuất (nút "+ Thêm danh mục mới" trong
   // form đăng sản phẩm) — chỉ để admin biết ai đã đề xuất, KHÔNG có UI riêng
   // cho seller theo dõi danh sách này (ngoài phạm vi, xem CLAUDE.md).
   proposedCategories Category[]
-}
-
-// Xác thực CCCD người bán (Trang Bán Hàng > Xác thực CCCD). Ảnh lưu NGOÀI
-// /public (thư mục /uploads ở root, xem .gitignore) — chỉ phục vụ qua route
-// được bảo vệ (chính seller đó hoặc admin), KHÔNG public như ảnh sản phẩm/logo.
-model SellerVerification {
-  id            String    @id @default(cuid())
-  sellerId      String    @unique
-  seller        Seller    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  fullName      String
-  idNumber      String
-  frontImagePath String
-  backImagePath  String
-  status        String    @default("PENDING")
-  adminNote     String?
-  createdAt     DateTime  @default(now())
-  reviewedAt    DateTime?
 }
 
 // Mã giảm giá do seller tự tạo, áp dụng cho TOÀN BỘ sản phẩm của chính họ
@@ -584,8 +571,8 @@ model Message {
   senderId       String
   sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
   content        String
-  // Ảnh/file đính kèm (tuỳ chọn) — lưu ngoài /public giống ảnh CCCD (xem
-  // src/lib/uploads.ts), chỉ đọc qua GET /api/messages/attachments/[messageId]
+  // Ảnh/file đính kèm (tuỳ chọn) — lưu ngoài /public (xem src/lib/uploads.ts),
+  // chỉ đọc qua GET /api/messages/attachments/[messageId]
   // (verify người gọi là 1 trong 2 người tham gia hội thoại). attachmentType:
   // "IMAGE" | "FILE". content có thể rỗng nếu tin chỉ có đính kèm.
   attachmentPath String?

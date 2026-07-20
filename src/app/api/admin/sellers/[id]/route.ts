@@ -50,5 +50,31 @@ export async function PATCH(
     return NextResponse.json({ ok: true });
   }
 
+  // Bật/tắt badge "Đã xác thực" thủ công — không còn quy trình duyệt giấy
+  // tờ nào đứng sau (xem comment field Seller.verified trong schema.prisma).
+  if (action === "verify") {
+    await prisma.seller.update({ where: { id }, data: { verified: true } });
+    await logAdminAction({
+      adminId: session!.user!.id,
+      action: "Đánh dấu gian hàng đã xác thực",
+      targetType: "Seller",
+      targetId: id,
+      detail: seller.shopName,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (action === "unverify") {
+    await prisma.seller.update({ where: { id }, data: { verified: false } });
+    await logAdminAction({
+      adminId: session!.user!.id,
+      action: "Bỏ đánh dấu gian hàng đã xác thực",
+      targetType: "Seller",
+      targetId: id,
+      detail: seller.shopName,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: "Hành động không hợp lệ." }, { status: 400 });
 }

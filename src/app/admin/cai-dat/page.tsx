@@ -33,7 +33,7 @@ const integrations = [
   {
     name: "Vercel Blob (lưu trữ file)",
     configured: !!process.env.BLOB_READ_WRITE_TOKEN,
-    note: "Thiếu token thì ảnh CCCD/chat/sản phẩm ghi vào ổ đĩa cục bộ — KHÔNG lưu trữ lâu dài trên Vercel serverless.",
+    note: "Thiếu token thì ảnh chat/sản phẩm ghi vào ổ đĩa cục bộ — KHÔNG lưu trữ lâu dài trên Vercel serverless.",
   },
   {
     name: "USDT TRC20 (nạp tiền)",

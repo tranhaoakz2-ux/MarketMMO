@@ -2,7 +2,6 @@
 
 import {
   AlertTriangle,
-  BadgeCheck,
   Clock,
   Gavel,
   LayoutGrid,
@@ -39,7 +38,6 @@ const navItems: NavItem[] = [
   { label: "Quỹ Bảo Hiểm", href: "/trang-ban-hang/quy-bao-hiem", icon: ShieldCheck },
   { label: "Đánh giá", href: "/trang-ban-hang/danh-gia", icon: Star },
   { label: "Telegram Bot", href: "/trang-ban-hang/telegram-bot", icon: Send },
-  { label: "Xác thực CCCD", href: "/trang-ban-hang/xac-thuc-cccd", icon: BadgeCheck },
 ];
 
 export default function SellerSidebar({

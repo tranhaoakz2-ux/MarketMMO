@@ -14,7 +14,6 @@ export default function AdminSidebar({
   counts: {
     pendingProducts: number;
     pendingCategories: number;
-    pendingVerifications: number;
     pendingForumReports: number;
     pendingDeposits: number;
     pendingWithdrawals: number;
@@ -23,7 +22,7 @@ export default function AdminSidebar({
 }) {
   const pathname = usePathname();
   const moderationTotal =
-    counts.pendingProducts + counts.pendingCategories + counts.pendingVerifications + counts.pendingForumReports;
+    counts.pendingProducts + counts.pendingCategories + counts.pendingForumReports;
 
   const groups: NavGroup[] = [
     { label: "Tổng quan", items: [{ href: "/admin", icon: "🏠", label: "Tổng quan" }] },
@@ -41,7 +40,6 @@ export default function AdminSidebar({
       items: [
         { href: "/admin/san-pham", icon: "🗂️", label: "Sản phẩm chờ duyệt", count: counts.pendingProducts },
         { href: "/admin/danh-muc", icon: "🏷️", label: "Danh mục mới", count: counts.pendingCategories },
-        { href: "/admin/xac-thuc", icon: "🪪", label: "Xác thực CCCD", count: counts.pendingVerifications },
         { href: "/admin/dien-dan", icon: "💬", label: "Diễn đàn", count: counts.pendingForumReports },
       ],
     },

@@ -21,8 +21,6 @@ export type WalletTxStatus = "PENDING" | "CONFIRMED" | "REJECTED";
 
 export type DisputeStatus = "OPEN" | "RESOLVED_REFUND" | "RESOLVED_RELEASE";
 
-export type VerificationStatus = "PENDING" | "APPROVED" | "REJECTED";
-
 export type ProductStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {
@@ -113,12 +111,6 @@ export const disputeStatusLabel: Record<DisputeStatus, string> = {
   OPEN: "Đang chờ xử lý",
   RESOLVED_REFUND: "Đã hoàn tiền người mua",
   RESOLVED_RELEASE: "Đã giải ngân người bán",
-};
-
-export const verificationStatusLabel: Record<VerificationStatus, string> = {
-  PENDING: "Đang chờ duyệt",
-  APPROVED: "Đã xác thực",
-  REJECTED: "Bị từ chối",
 };
 
 // Số tiền tối thiểu 1 mã giảm giá được phép giảm về — không cho phép giảm

@@ -74,6 +74,17 @@ export default function AdminSellersPanel() {
     load(q);
   };
 
+  const handleToggleVerified = async (seller: AdminSeller) => {
+    setBusyId(seller.id);
+    await fetch(`/api/admin/sellers/${seller.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: seller.verified ? "unverify" : "verify" }),
+    });
+    setBusyId(null);
+    load(q);
+  };
+
   return (
     <div>
       <form onSubmit={handleSearch} className="mb-4 flex items-center gap-2">
@@ -97,18 +108,19 @@ export default function AdminSellersPanel() {
         <AdminEmptyState>Không tìm thấy gian hàng nào.</AdminEmptyState>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)]">
-          <div className="grid grid-cols-[1fr_90px_110px_120px_100px_150px] gap-2 border-b border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-4 py-2.5 text-xs font-bold text-[var(--adm-muted)]">
+          <div className="grid grid-cols-[1fr_70px_100px_110px_90px_130px_140px] gap-2 border-b border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-4 py-2.5 text-xs font-bold text-[var(--adm-muted)]">
             <span>Gian hàng</span>
             <span>Sản phẩm</span>
             <span>Số dư ví</span>
             <span>Quỹ bảo hiểm</span>
             <span>Trạng thái</span>
+            <span>Xác thực</span>
             <span>Hành động</span>
           </div>
           {sellers.map((s) => (
             <div
               key={s.id}
-              className="grid grid-cols-[1fr_90px_110px_120px_100px_150px] items-center gap-2 border-b border-[var(--adm-border)] px-4 py-3 text-sm last:border-0"
+              className="grid grid-cols-[1fr_70px_100px_110px_90px_130px_140px] items-center gap-2 border-b border-[var(--adm-border)] px-4 py-3 text-sm last:border-0"
             >
               <div className="min-w-0">
                 <Link
@@ -131,6 +143,13 @@ export default function AdminSellersPanel() {
               ) : (
                 <AdminBadge variant="success">Hoạt động</AdminBadge>
               )}
+              <AdminButton
+                variant={s.verified ? "success" : "neutral"}
+                disabled={busyId === s.id}
+                onClick={() => handleToggleVerified(s)}
+              >
+                <BadgeCheck className="h-3.5 w-3.5" /> {s.verified ? "Đã xác thực" : "Đánh dấu"}
+              </AdminButton>
               {s.suspended ? (
                 <AdminButton variant="success" disabled={busyId === s.id} onClick={() => handleUnsuspend(s.id)}>
                   <Unlock className="h-3.5 w-3.5" /> Mở khoá
