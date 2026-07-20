@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireUser } from "@/lib/authz";
 import { ESCROW_HOLD_DAYS, REFERRAL_COMMISSION_PERCENT } from "@/lib/constants";
 import { computeDiscountAmount, distributeDiscount, isDiscountCodeUsable } from "@/lib/discount";
 import { prisma } from "@/lib/prisma";
@@ -7,10 +7,10 @@ import { prisma } from "@/lib/prisma";
 type CheckoutItem = { productId: string; variantId?: string; quantity: number };
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Bạn cần đăng nhập." }, { status: 401 });
-  }
+  // Dùng requireUser() (không phải await auth() trực tiếp) để cùng chặn tài
+  // khoản bị khoá (banned) như mọi route khác — user bị ban không được checkout.
+  const { session, error } = await requireUser();
+  if (error) return error;
 
   const body = await req.json().catch(() => null);
   const items: CheckoutItem[] = Array.isArray(body?.items) ? body.items : [];
@@ -181,7 +181,7 @@ export async function POST(req: Request) {
       }
 
       const buyer = await tx.user.findUniqueOrThrow({
-        where: { id: session.user.id },
+        where: { id: session!.user.id },
       });
       if (buyer.walletBalance < total) {
         throw new Error("Số dư ví không đủ để thanh toán đơn hàng này.");

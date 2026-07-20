@@ -21,6 +21,13 @@ export default async function SellerDashboardLayout({
       <Header />
       <main className="flex-1 bg-background">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          {seller.suspended && (
+            <div className="mb-4 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+              <b>Gian hàng của bạn đang bị tạm khoá.</b> Sản phẩm đã bị ẩn khỏi
+              trang công khai và bạn tạm thời không thể đăng sản phẩm, rút tiền
+              hay thao tác bán hàng. Vui lòng liên hệ quản trị viên để được hỗ trợ.
+            </div>
+          )}
           <Reveal>
             <div className="flex flex-col gap-6 lg:flex-row">
               <SellerSidebar
