@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { logAdminAction } from "@/lib/audit";
 
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requireAdmin();
+  const { session, error } = await requireAdmin();
   if (error) return error;
 
   const { id } = await params;
@@ -27,6 +28,13 @@ export async function POST(
       where: { id },
       data: { status: "APPROVED", adminNote },
     });
+    await logAdminAction({
+      adminId: session!.user!.id,
+      action: "Duyệt danh mục mới",
+      targetType: "Category",
+      targetId: id,
+      detail: category.name,
+    });
     return NextResponse.json({ ok: true });
   }
 
@@ -34,6 +42,13 @@ export async function POST(
     await prisma.category.update({
       where: { id },
       data: { status: "REJECTED", adminNote },
+    });
+    await logAdminAction({
+      adminId: session!.user!.id,
+      action: "Từ chối danh mục mới",
+      targetType: "Category",
+      targetId: id,
+      detail: adminNote ?? category.name,
     });
     return NextResponse.json({ ok: true });
   }

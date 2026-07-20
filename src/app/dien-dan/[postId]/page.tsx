@@ -4,6 +4,7 @@ import Avatar from "@/components/Avatar";
 import Breadcrumb from "@/components/Breadcrumb";
 import ForumCommentForm from "@/components/ForumCommentForm";
 import ForumLikeButton from "@/components/ForumLikeButton";
+import ForumReportButton from "@/components/ForumReportButton";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Reveal from "@/components/Reveal";
@@ -81,6 +82,9 @@ export default async function ForumPostPage({
                 <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
                   <MessageSquare className="h-3.5 w-3.5" /> {post.commentCount} bình luận
                 </span>
+                <span className="ml-auto">
+                  <ForumReportButton postId={post.id} />
+                </span>
               </div>
             </article>
           </Reveal>
@@ -100,6 +104,9 @@ export default async function ForumPostPage({
                     <span className="font-semibold text-ink">{comment.authorName}</span>
                     <span className="text-muted">
                       {comment.createdAt.toLocaleDateString("vi-VN")}
+                    </span>
+                    <span className="ml-auto">
+                      <ForumReportButton commentId={comment.id} />
                     </span>
                   </div>
                   <p className="mt-2 whitespace-pre-line text-sm text-ink/90">

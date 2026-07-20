@@ -128,3 +128,35 @@ body {
     animation: none;
   }
 }
+
+/* Admin Control Center (/admin) — bảng màu tối riêng, cố tình KHÁC hẳn
+   vàng-trắng của trang mua sắm để phân biệt rõ "đây là khu vực quản trị"
+   (yêu cầu thiết kế "sang trọng", đối chiếu bản demo Artifact đã duyệt).
+   Khai báo dưới dạng biến CSS thường (không đăng ký vào @theme inline phía
+   trên) để KHÔNG ảnh hưởng bảng màu chung toàn site — chỉ dùng qua cú pháp
+   Tailwind arbitrary value (vd bg-[var(--adm-surface)]) bên trong các
+   component thuộc /admin. */
+.admin-shell {
+  --adm-bg: #0b0b10;
+  --adm-sidebar: #121218;
+  --adm-surface: #17171f;
+  --adm-surface-2: #1d1d28;
+  --adm-border: #2a2a36;
+  --adm-text: #f2f2f6;
+  --adm-muted: #8f8fa3;
+  --adm-brand: #ffe600;
+  --adm-brand-dark: #e0c400;
+  --adm-brand-dim: rgba(255, 230, 0, 0.12);
+  --adm-success: #34d488;
+  --adm-success-bg: rgba(52, 212, 136, 0.12);
+  --adm-danger: #ff6b62;
+  --adm-danger-bg: rgba(255, 107, 98, 0.13);
+  --adm-info: #6d9bff;
+  --adm-info-bg: rgba(109, 155, 255, 0.13);
+  --adm-warn: #ffb020;
+  --adm-warn-bg: rgba(255, 176, 32, 0.13);
+
+  background: var(--adm-bg);
+  color: var(--adm-text);
+  min-height: 100vh;
+}

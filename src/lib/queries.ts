@@ -80,7 +80,7 @@ export async function getSellerVisibleCategories() {
 
 export async function getAllProducts(): Promise<Product[]> {
   const rows = await prisma.product.findMany({
-    where: { status: "APPROVED" },
+    where: { status: "APPROVED", seller: { suspended: false } },
     include: productInclude,
     orderBy: { createdAt: "desc" },
   });
@@ -91,6 +91,7 @@ export async function getFeaturedProducts(limit = 8): Promise<Product[]> {
   const rows = await prisma.product.findMany({
     where: {
       status: "APPROVED",
+      seller: { suspended: false },
       OR: [{ hot: true }, { featuredUntil: { gt: new Date() } }],
     },
     include: productInclude,
@@ -108,7 +109,7 @@ export async function getProductsByCategory(
   categorySlug: string
 ): Promise<Product[]> {
   const rows = await prisma.product.findMany({
-    where: { status: "APPROVED", category: { slug: categorySlug } },
+    where: { status: "APPROVED", seller: { suspended: false }, category: { slug: categorySlug } },
     include: productInclude,
     orderBy: { createdAt: "desc" },
   });
@@ -121,6 +122,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
   const rows = await prisma.product.findMany({
     where: {
       status: "APPROVED",
+      seller: { suspended: false },
       OR: [
         { name: { contains: q, mode: "insensitive" } },
         { shortDescription: { contains: q, mode: "insensitive" } },
@@ -143,7 +145,7 @@ export async function getProductBySlugDb(
   slug: string
 ): Promise<Product | null> {
   const row = await prisma.product.findUnique({
-    where: { slug, status: "APPROVED" },
+    where: { slug, status: "APPROVED", seller: { suspended: false } },
     include: productInclude,
   });
   return row ? mapProduct(row) : null;
@@ -156,6 +158,7 @@ export async function getRelatedProductsDb(
   const rows = await prisma.product.findMany({
     where: {
       status: "APPROVED",
+      seller: { suspended: false },
       category: { slug: product.categorySlug },
       id: { not: product.id },
     },
@@ -177,7 +180,14 @@ export async function getSellerBySlug(slug: string) {
   const seller = await prisma.seller.findUnique({
     where: { slug },
     include: {
-      products: { include: productInclude, orderBy: { createdAt: "desc" } },
+      // status: "APPROVED" — sản phẩm PENDING/REJECTED của seller (từ tính
+      // năng "Đăng sản phẩm mới") không được lộ ra trang gian hàng công khai,
+      // cùng quy tắc đã áp dụng cho mọi query công khai khác trong file này.
+      products: {
+        where: { status: "APPROVED" },
+        include: productInclude,
+        orderBy: { createdAt: "desc" },
+      },
       reviews: {
         include: { user: { select: { name: true, username: true } } },
         orderBy: { createdAt: "desc" },
@@ -194,6 +204,7 @@ export async function getSellerBySlug(slug: string) {
     description: seller.description,
     level: seller.level,
     verified: seller.verified,
+    suspended: seller.suspended,
     createdAt: seller.createdAt,
     products: seller.products.map(mapProduct),
     reviews: seller.reviews.map((r) => ({
@@ -296,6 +307,7 @@ export async function getMySellerProducts(userId: string): Promise<Product[]> {
 
 export async function getAllSellersWithStats() {
   const sellers = await prisma.seller.findMany({
+    where: { suspended: false },
     include: {
       products: { select: { id: true } },
       reviews: { select: { rating: true } },
@@ -459,12 +471,16 @@ export async function getSellerWalletHistory(userId: string, type: WalletTxType)
 // Gộp theo tuần thay vì theo ngày khi khoảng ngày dài (>10 ngày) để biểu đồ
 // không quá nhiều cột. Điền đủ mọi mốc trong khoảng (kể cả 0 đơn) để các cột
 // cách đều nhau, không bị hụt do thiếu dữ liệu ngày đó.
-export async function getSellerRevenueTrend(sellerId: string, from: Date, to: Date) {
-  const items = await prisma.orderItem.findMany({
-    where: { sellerId, createdAt: { gte: from, lte: to }, status: { not: "CANCELLED" } },
-    select: { price: true, quantity: true, createdAt: true },
-  });
-
+// Gộp danh sách OrderItem (price/quantity/createdAt) thành các cột theo
+// ngày (hoặc theo tuần nếu khoảng ngày > 10 ngày) — dùng chung cho biểu đồ
+// doanh số của cả seller (getSellerRevenueTrend) lẫn toàn nền tảng
+// (getPlatformRevenueTrend). Tự điền đủ mọi mốc trong khoảng (kể cả 0) để
+// các cột cách đều nhau.
+function bucketRevenue(
+  items: { price: number; quantity: number; createdAt: Date }[],
+  from: Date,
+  to: Date
+) {
   const spanDays = Math.max(1, Math.round((to.getTime() - from.getTime()) / 86400000) + 1);
   const bucketByWeek = spanDays > 10;
   const stepMs = bucketByWeek ? 7 * 86400000 : 86400000;
@@ -492,6 +508,14 @@ export async function getSellerRevenueTrend(sellerId: string, from: Date, to: Da
       const d = new Date(ts);
       return { label: `${d.getDate()}/${d.getMonth() + 1}`, value };
     });
+}
+
+export async function getSellerRevenueTrend(sellerId: string, from: Date, to: Date) {
+  const items = await prisma.orderItem.findMany({
+    where: { sellerId, createdAt: { gte: from, lte: to }, status: { not: "CANCELLED" } },
+    select: { price: true, quantity: true, createdAt: true },
+  });
+  return bucketRevenue(items, from, to);
 }
 
 export async function getSellerOrderStatusBreakdown(
@@ -626,5 +650,342 @@ export async function getSellerStoreSnapshot(sellerId: string) {
     verified: seller.verified,
     insuranceBalance: seller.insuranceBalance,
     ...ratingStats(seller.reviews),
+  };
+}
+
+// ---- Admin Control Center (/admin) ----
+
+// Số đếm cho badge sidebar admin — 1 query gộp (Promise.all) chạy trong
+// layout.tsx, dùng chung cho mọi trang con thay vì mỗi trang tự đếm lại.
+export async function getAdminSidebarCounts() {
+  const [
+    pendingProducts,
+    pendingCategories,
+    pendingVerifications,
+    pendingForumReports,
+    pendingDeposits,
+    pendingWithdrawals,
+    openDisputes,
+  ] = await Promise.all([
+    prisma.product.count({ where: { status: "PENDING" } }),
+    prisma.category.count({ where: { status: "PENDING" } }),
+    prisma.sellerVerification.count({ where: { status: "PENDING" } }),
+    prisma.forumReport.count({ where: { status: "OPEN" } }),
+    prisma.walletTransaction.count({ where: { type: "DEPOSIT", status: "PENDING" } }),
+    prisma.walletTransaction.count({ where: { type: "WITHDRAW", status: "PENDING" } }),
+    prisma.dispute.count({ where: { status: "OPEN" } }),
+  ]);
+  return {
+    pendingProducts,
+    pendingCategories,
+    pendingVerifications,
+    pendingForumReports,
+    pendingDeposits,
+    pendingWithdrawals,
+    openDisputes,
+  };
+}
+
+// KPI trang Tổng quan admin: tổng giá trị giao dịch (GMV) trong khoảng ngày
+// đã chọn, số user/seller mới trong khoảng đó, và số tiền đang ký quỹ (snapshot
+// TOÀN hệ thống tại thời điểm gọi — không lọc theo khoảng ngày, vì đây là số
+// dư hiện tại chứ không phải phát sinh trong kỳ).
+export async function getAdminOverviewStats(from: Date, to: Date) {
+  const [gmvItems, newUsers, newSellers, escrowItems] = await Promise.all([
+    prisma.orderItem.findMany({
+      where: { createdAt: { gte: from, lte: to }, status: { not: "CANCELLED" } },
+      select: { price: true, quantity: true },
+    }),
+    prisma.user.count({ where: { createdAt: { gte: from, lte: to } } }),
+    prisma.seller.count({ where: { createdAt: { gte: from, lte: to } } }),
+    prisma.orderItem.findMany({
+      where: { status: "ESCROW" },
+      select: { price: true, quantity: true },
+    }),
+  ]);
+
+  const gmv = gmvItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const escrowTotal = escrowItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+  return { gmv, orderCount: gmvItems.length, newUsers, newSellers, escrowTotal };
+}
+
+// Biểu đồ GMV toàn nền tảng — dùng lại đúng logic gộp cột theo ngày/tuần của
+// getSellerRevenueTrend (xem bucketRevenue) nhưng KHÔNG lọc theo sellerId.
+export async function getPlatformRevenueTrend(from: Date, to: Date) {
+  const items = await prisma.orderItem.findMany({
+    where: { createdAt: { gte: from, lte: to }, status: { not: "CANCELLED" } },
+    select: { price: true, quantity: true, createdAt: true },
+  });
+  return bucketRevenue(items, from, to);
+}
+
+export type AdminActivityItem = {
+  id: string;
+  type: "USER_JOINED" | "SELLER_JOINED" | "DISPUTE_OPENED" | "PRODUCT_PENDING" | "AUDIT";
+  title: string;
+  sub: string;
+  createdAt: Date;
+  href: string;
+  detail?: string;
+};
+
+// Dòng thời gian "Hoạt động gần đây" trang Tổng quan admin — gộp 5 nguồn dữ
+// liệu thật khác nhau (không có bảng "activity" riêng), sort theo createdAt
+// rồi cắt lấy `limit` dòng mới nhất. Mỗi loại có href trỏ thẳng tới trang chi
+// tiết tương ứng để admin bấm vào xem ngay.
+export async function getAdminActivityFeed(limit = 15): Promise<AdminActivityItem[]> {
+  const take = Math.min(limit, 10);
+  const [users, sellers, disputes, pendingProducts, auditLogs] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      take,
+      select: { id: true, email: true, username: true, createdAt: true },
+    }),
+    prisma.seller.findMany({
+      orderBy: { createdAt: "desc" },
+      take,
+      select: { id: true, shopName: true, slug: true, createdAt: true },
+    }),
+    prisma.dispute.findMany({
+      where: { status: "OPEN" },
+      orderBy: { createdAt: "desc" },
+      take,
+      select: {
+        id: true,
+        reason: true,
+        createdAt: true,
+        orderItem: { select: { productName: true } },
+      },
+    }),
+    prisma.product.findMany({
+      where: { status: "PENDING" },
+      orderBy: { createdAt: "desc" },
+      take,
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        seller: { select: { shopName: true } },
+      },
+    }),
+    prisma.adminAuditLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take,
+      select: {
+        id: true,
+        action: true,
+        targetType: true,
+        detail: true,
+        createdAt: true,
+        admin: { select: { email: true, username: true } },
+      },
+    }),
+  ]);
+
+  const items: AdminActivityItem[] = [
+    ...users.map((u) => ({
+      id: `user-${u.id}`,
+      type: "USER_JOINED" as const,
+      title: "Tài khoản mới đăng ký",
+      sub: u.username ?? u.email ?? u.id,
+      createdAt: u.createdAt,
+      href: "/admin/nguoi-dung",
+    })),
+    ...sellers.map((s) => ({
+      id: `seller-${s.id}`,
+      type: "SELLER_JOINED" as const,
+      title: "Gian hàng mới kích hoạt",
+      sub: s.shopName,
+      createdAt: s.createdAt,
+      href: `/shop/${s.slug}`,
+    })),
+    ...disputes.map((d) => ({
+      id: `dispute-${d.id}`,
+      type: "DISPUTE_OPENED" as const,
+      title: "Khiếu nại mới được mở",
+      sub: d.orderItem.productName,
+      createdAt: d.createdAt,
+      href: `/admin/khieu-nai?open=${d.id}`,
+      detail: d.reason,
+    })),
+    ...pendingProducts.map((p) => ({
+      id: `product-${p.id}`,
+      type: "PRODUCT_PENDING" as const,
+      title: "Sản phẩm mới chờ duyệt",
+      sub: `${p.name} · ${p.seller.shopName}`,
+      createdAt: p.createdAt,
+      href: "/admin/san-pham",
+    })),
+    ...auditLogs.map((a) => ({
+      id: `audit-${a.id}`,
+      type: "AUDIT" as const,
+      title: a.action,
+      sub: `${a.admin.username ?? a.admin.email ?? "admin"} · ${a.targetType}`,
+      createdAt: a.createdAt,
+      href: "/admin/nhat-ky",
+      detail: a.detail ?? undefined,
+    })),
+  ];
+
+  return items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, limit);
+}
+
+const ORDERS_PAGE_SIZE = 30;
+
+// Trang Admin > Đơn hàng & Ký quỹ — duyệt TOÀN BỘ OrderItem trên nền tảng
+// (không giới hạn theo seller như trang seller dashboard), lọc theo status
+// tuỳ chọn, phân trang đơn giản (page 1-based).
+export async function getAdminOrderItems(status: OrderStatus | "ALL", page: number) {
+  const where = status === "ALL" ? {} : { status };
+  const [items, total] = await Promise.all([
+    prisma.orderItem.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * ORDERS_PAGE_SIZE,
+      take: ORDERS_PAGE_SIZE,
+      include: {
+        order: { include: { buyer: { select: { name: true, username: true, email: true } } } },
+        product: { include: { seller: { select: { shopName: true, slug: true } } } },
+      },
+    }),
+    prisma.orderItem.count({ where }),
+  ]);
+
+  return {
+    items: items.map((i) => ({
+      id: i.id,
+      orderId: i.orderId,
+      productName: i.productName,
+      variantLabel: i.variantLabel,
+      quantity: i.quantity,
+      price: i.price,
+      status: i.status as OrderStatus,
+      escrowReleaseAt: i.escrowReleaseAt,
+      createdAt: i.createdAt,
+      buyerName: i.order.buyer.name ?? i.order.buyer.username ?? i.order.buyer.email ?? "—",
+      sellerName: i.product?.seller.shopName ?? "—",
+      sellerSlug: i.product?.seller.slug ?? null,
+    })),
+    total,
+    pageSize: ORDERS_PAGE_SIZE,
+    page,
+    totalPages: Math.max(1, Math.ceil(total / ORDERS_PAGE_SIZE)),
+  };
+}
+
+const AUDIT_LOG_PAGE_SIZE = 40;
+
+export async function getAdminAuditLogPage(page: number) {
+  const [entries, total] = await Promise.all([
+    prisma.adminAuditLog.findMany({
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * AUDIT_LOG_PAGE_SIZE,
+      take: AUDIT_LOG_PAGE_SIZE,
+      include: { admin: { select: { email: true, username: true, name: true } } },
+    }),
+    prisma.adminAuditLog.count(),
+  ]);
+
+  return {
+    entries: entries.map((e) => ({
+      id: e.id,
+      action: e.action,
+      targetType: e.targetType,
+      targetId: e.targetId,
+      detail: e.detail,
+      createdAt: e.createdAt,
+      adminName: e.admin.name ?? e.admin.username ?? e.admin.email ?? "admin",
+    })),
+    total,
+    pageSize: AUDIT_LOG_PAGE_SIZE,
+    page,
+    totalPages: Math.max(1, Math.ceil(total / AUDIT_LOG_PAGE_SIZE)),
+  };
+}
+
+// Trang Admin > Đấu giá vị trí vàng — TOÀN BỘ slot (không lọc status như
+// getAuctionSlots() dùng cho trang /dau-gia công khai), kèm đủ lịch sử bid
+// (không chỉ top 1) để admin xem toàn cảnh trước khi gán thủ công/huỷ.
+export async function getAdminAuctionSlots() {
+  const slots = await prisma.auctionSlot.findMany({
+    orderBy: [{ position: "asc" }, { createdAt: "desc" }],
+    include: {
+      bids: {
+        orderBy: { amount: "desc" },
+        include: {
+          seller: { select: { shopName: true, slug: true } },
+          product: { select: { name: true, slug: true } },
+        },
+      },
+    },
+  });
+
+  // Chỉ giữ slot OPEN mới nhất + 1 vài slot CLOSED gần nhất mỗi vị trí, tránh
+  // trả về toàn bộ lịch sử vô hạn khi hệ thống đã xoay vòng nhiều lần.
+  const byPosition = new Map<number, typeof slots>();
+  for (const s of slots) {
+    const arr = byPosition.get(s.position) ?? [];
+    if (arr.length < 3) arr.push(s);
+    byPosition.set(s.position, arr);
+  }
+
+  return [...byPosition.values()]
+    .flat()
+    .sort((a, b) => a.position - b.position || b.createdAt.getTime() - a.createdAt.getTime())
+    .map((slot) => ({
+      id: slot.id,
+      position: slot.position,
+      period: slot.period as "DAILY" | "WEEKLY",
+      floorPrice: slot.floorPrice,
+      startAt: slot.startAt,
+      endAt: slot.endAt,
+      status: slot.status as "OPEN" | "CLOSED",
+      bids: slot.bids.map((b) => ({
+        id: b.id,
+        amount: b.amount,
+        createdAt: b.createdAt,
+        sellerName: b.seller.shopName,
+        sellerSlug: b.seller.slug,
+        productName: b.product.name,
+        productSlug: b.product.slug,
+      })),
+    }));
+}
+
+// Trang Admin > Sức khoẻ tài chính — tổng hợp số dư toàn hệ thống tại thời
+// điểm hiện tại (snapshot, không lọc theo khoảng ngày như Tổng quan).
+export async function getAdminFinancialHealth() {
+  const [walletAgg, insuranceAgg, escrowItems, releasedAgg, referralAgg, depositAgg, withdrawAgg] =
+    await Promise.all([
+      prisma.user.aggregate({ _sum: { walletBalance: true } }),
+      prisma.seller.aggregate({ _sum: { insuranceBalance: true } }),
+      prisma.orderItem.findMany({ where: { status: "ESCROW" }, select: { price: true, quantity: true } }),
+      prisma.orderItem.findMany({ where: { status: "RELEASED" }, select: { price: true, quantity: true } }),
+      prisma.walletTransaction.aggregate({
+        _sum: { amount: true },
+        where: { type: "REFERRAL_BONUS", status: "CONFIRMED" },
+      }),
+      prisma.walletTransaction.aggregate({
+        _sum: { amount: true },
+        where: { type: "DEPOSIT", status: "CONFIRMED" },
+      }),
+      prisma.walletTransaction.aggregate({
+        _sum: { amount: true },
+        where: { type: "WITHDRAW", status: "CONFIRMED" },
+      }),
+    ]);
+
+  const escrowTotal = escrowItems.reduce((s, i) => s + i.price * i.quantity, 0);
+  const releasedTotal = releasedAgg.reduce((s, i) => s + i.price * i.quantity, 0);
+
+  return {
+    totalWalletBalance: walletAgg._sum.walletBalance ?? 0,
+    totalInsuranceBalance: insuranceAgg._sum.insuranceBalance ?? 0,
+    escrowTotal,
+    releasedTotal,
+    totalReferralPaid: referralAgg._sum.amount ?? 0,
+    totalDeposited: depositAgg._sum.amount ?? 0,
+    totalWithdrawn: Math.abs(withdrawAgg._sum.amount ?? 0),
   };
 }

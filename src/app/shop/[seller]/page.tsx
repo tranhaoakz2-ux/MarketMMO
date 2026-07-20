@@ -34,10 +34,14 @@ export default async function ShopPage({
   const [shop, session] = await Promise.all([getSellerBySlug(sellerSlug), getAuthSession()]);
   if (!shop) notFound();
 
+  const isOwnShop = session?.user?.id === shop.userId;
+  // Gian hàng bị admin khoá (Admin > Người bán) biến mất khỏi site công khai
+  // — trừ chính seller đó vẫn xem được gian hàng của mình để biết lý do.
+  if (shop.suspended && !isOwnShop) notFound();
+
   const seller = shop.shopName;
   const items = shop.products;
   const sellerLevel = shop.level;
-  const isOwnShop = session?.user?.id === shop.userId;
 
   return (
     <>

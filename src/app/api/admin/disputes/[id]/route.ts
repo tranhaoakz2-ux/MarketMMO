@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { logAdminAction } from "@/lib/audit";
 
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requireAdmin();
+  const { session, error } = await requireAdmin();
   if (error) return error;
 
   const { id } = await params;
@@ -51,6 +52,13 @@ export async function POST(
         },
       }),
     ]);
+    await logAdminAction({
+      adminId: session!.user!.id,
+      action: "Hoàn tiền khiếu nại cho buyer",
+      targetType: "Dispute",
+      targetId: id,
+      detail: `${amount}đ — ${item.productName}`,
+    });
     return NextResponse.json({ ok: true });
   }
 
@@ -84,6 +92,13 @@ export async function POST(
     if (remaining === 0) {
       await prisma.order.update({ where: { id: item.orderId }, data: { status: "RELEASED" } });
     }
+    await logAdminAction({
+      adminId: session!.user!.id,
+      action: "Giải ngân khiếu nại cho seller",
+      targetType: "Dispute",
+      targetId: id,
+      detail: `${amount}đ — ${item.productName}`,
+    });
     return NextResponse.json({ ok: true });
   }
 

@@ -11,6 +11,10 @@ class TurnstileSignin extends CredentialsSignin {
   code = "turnstile";
 }
 
+class BannedSignin extends CredentialsSignin {
+  code = "banned";
+}
+
 const providers: NextAuthConfig["providers"] = [
   Credentials({
     name: "credentials",
@@ -40,6 +44,12 @@ const providers: NextAuthConfig["providers"] = [
       const valid = await bcrypt.compare(password, user.passwordHash);
       if (!valid) return null;
 
+      // Tài khoản bị admin khoá (Admin > Người dùng) không đăng nhập được —
+      // chặn ngay ở bước authorize() thay vì để lọt vào session rồi mới kiểm
+      // tra rải rác ở từng route (xem requireUser() trong src/lib/authz.ts
+      // cho các phiên ĐANG hoạt động khi bị khoá giữa chừng).
+      if (user.banned) throw new BannedSignin();
+
       return {
         id: user.id,
         email: user.email,
@@ -47,6 +57,7 @@ const providers: NextAuthConfig["providers"] = [
         image: user.image,
         role: user.role as Role,
         walletBalance: user.walletBalance,
+        banned: user.banned,
       };
     },
   }),
@@ -74,6 +85,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id;
         token.role = (user as { role?: Role }).role ?? "BUYER";
         token.walletBalance = (user as { walletBalance?: number }).walletBalance ?? 0;
+        token.banned = (user as { banned?: boolean }).banned ?? false;
         await prisma.user
           .update({ where: { id: user.id }, data: { lastActiveAt: new Date() } })
           .catch(() => {});
@@ -88,6 +100,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (dbUser) {
           token.role = dbUser.role as Role;
           token.walletBalance = dbUser.walletBalance;
+          // Đọc lại mỗi request refresh — nếu admin khoá tài khoản GIỮA
+          // phiên đang hoạt động, session hiện tại nhận cờ banned=true ngay
+          // trong vài phút (JWT refresh của Auth.js), requireUser() chặn
+          // mọi hành động tiếp theo dù chưa đăng xuất/đăng nhập lại.
+          token.banned = dbUser.banned;
           const staleMs = 2 * 60 * 1000;
           if (!dbUser.lastActiveAt || Date.now() - dbUser.lastActiveAt.getTime() > staleMs) {
             await prisma.user
@@ -103,6 +120,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
         session.user.role = (token.role as Role) ?? "BUYER";
         session.user.walletBalance = (token.walletBalance as number) ?? 0;
+        session.user.banned = (token.banned as boolean) ?? false;
       }
       return session;
     },

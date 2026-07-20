@@ -20,6 +20,12 @@ export async function requireUser() {
   if (!session?.user) {
     return { session: null, error: NextResponse.json({ error: "Bạn cần đăng nhập." }, { status: 401 }) };
   }
+  if (session.user.banned) {
+    return {
+      session: null,
+      error: NextResponse.json({ error: "Tài khoản của bạn đã bị khoá." }, { status: 403 }),
+    };
+  }
   return { session, error: null };
 }
 
@@ -30,6 +36,13 @@ export async function requireSeller() {
       session: null,
       seller: null,
       error: NextResponse.json({ error: "Bạn cần đăng nhập." }, { status: 401 }),
+    };
+  }
+  if (session.user.banned) {
+    return {
+      session: null,
+      seller: null,
+      error: NextResponse.json({ error: "Tài khoản của bạn đã bị khoá." }, { status: 403 }),
     };
   }
   const seller = await prisma.seller.findUnique({ where: { userId: session.user.id } });

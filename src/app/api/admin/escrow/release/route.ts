@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { logAdminAction } from "@/lib/audit";
 
 export async function POST() {
-  const { error } = await requireAdmin();
+  const { session, error } = await requireAdmin();
   if (error) return error;
 
   const dueItems = await prisma.orderItem.findMany({
@@ -47,6 +48,15 @@ export async function POST() {
         data: { status: "RELEASED" },
       });
     }
+  }
+
+  if (released > 0) {
+    await logAdminAction({
+      adminId: session!.user!.id,
+      action: "Chạy giải ngân ký quỹ",
+      targetType: "OrderItem",
+      detail: `Đã giải ngân ${released} mục đơn hàng`,
+    });
   }
 
   return NextResponse.json({ released });

@@ -11,6 +11,7 @@ function excerpt(content: string, length = 140): string {
 
 export async function getForumPosts() {
   const posts = await prisma.forumPost.findMany({
+    where: { hidden: false },
     orderBy: { createdAt: "desc" },
     include: {
       author: { select: { name: true, username: true } },
@@ -42,13 +43,17 @@ export async function getForumPostById(id: string, currentUserId?: string) {
       author: { select: { name: true, username: true } },
       likes: currentUserId ? { where: { userId: currentUserId } } : false,
       comments: {
+        where: { hidden: false },
         orderBy: { createdAt: "asc" },
         include: { author: { select: { name: true, username: true } } },
       },
-      _count: { select: { comments: true, likes: true } },
+      _count: { select: { comments: { where: { hidden: false } }, likes: true } },
     },
   });
-  if (!post) return null;
+  // Bài viết bị admin ẩn sau khi xử lý báo cáo (Admin > Diễn đàn) coi như
+  // không tồn tại với người dùng thường — chỉ khác PENDING sản phẩm/danh mục
+  // ở chỗ không có trạng thái "chờ duyệt", chỉ có hiện/ẩn.
+  if (!post || post.hidden) return null;
 
   return {
     id: post.id,

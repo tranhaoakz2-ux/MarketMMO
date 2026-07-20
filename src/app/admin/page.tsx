@@ -1,49 +1,97 @@
-import { ShieldAlert } from "lucide-react";
-import { redirect } from "next/navigation";
-import Breadcrumb from "@/components/Breadcrumb";
-import AdminDashboard from "@/components/AdminDashboard";
-import Footer from "@/components/Footer";
-import Header from "@/components/Header";
-import Reveal from "@/components/Reveal";
 import { auth } from "@/auth";
+import {
+  getAdminActivityFeed,
+  getAdminOverviewStats,
+  getAdminSidebarCounts,
+  getPlatformRevenueTrend,
+} from "@/lib/queries";
+import { type RangeKey } from "@/lib/constants";
+import AdminOverviewStats from "@/components/AdminOverviewStats";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPage() {
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+}
+function endOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+}
+
+function resolveRange(
+  range: RangeKey,
+  fromParam?: string,
+  toParam?: string
+): { from: Date; to: Date } {
+  const now = new Date();
+  switch (range) {
+    case "yesterday": {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      return { from: startOfDay(y), to: endOfDay(y) };
+    }
+    case "7d": {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 6);
+      return { from: startOfDay(from), to: endOfDay(now) };
+    }
+    case "month": {
+      return { from: startOfDay(new Date(now.getFullYear(), now.getMonth(), 1)), to: endOfDay(now) };
+    }
+    case "last_month": {
+      const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const to = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { from: startOfDay(from), to: endOfDay(to) };
+    }
+    case "custom": {
+      const from = fromParam && !Number.isNaN(Date.parse(fromParam)) ? new Date(fromParam) : now;
+      const to = toParam && !Number.isNaN(Date.parse(toParam)) ? new Date(toParam) : now;
+      return { from: startOfDay(from), to: endOfDay(to) };
+    }
+    default:
+      return { from: startOfDay(now), to: endOfDay(now) };
+  }
+}
+
+export default async function AdminOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
+  const params = await searchParams;
+  const range = (["today", "yesterday", "7d", "month", "last_month", "custom"] as const).includes(
+    params.range as RangeKey
+  )
+    ? (params.range as RangeKey)
+    : "7d";
+  const { from, to } = resolveRange(range, params.from, params.to);
+
+  const durationMs = to.getTime() - from.getTime();
+  const prevTo = new Date(from.getTime() - 1);
+  const prevFrom = new Date(prevTo.getTime() - durationMs);
+
   const session = await auth();
-  if (!session?.user) redirect("/dang-nhap?callbackUrl=/admin");
-  if (session.user.role !== "ADMIN") redirect("/");
+
+  const [stats, previousStats, revenueTrend, activity, counts] = await Promise.all([
+    getAdminOverviewStats(from, to),
+    getAdminOverviewStats(prevFrom, prevTo),
+    getPlatformRevenueTrend(from, to),
+    getAdminActivityFeed(15),
+    getAdminSidebarCounts(),
+  ]);
 
   return (
-    <>
-      <Header />
-      <main className="flex-1 bg-background">
-        <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 lg:px-8">
-          <Breadcrumb items={[{ label: "Trang chủ", href: "/" }, { label: "Quản trị" }]} />
-        </div>
-
-        <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6 lg:px-8">
-          <Reveal>
-            <h1 className="mb-1 flex items-center gap-2 text-xl font-black text-ink">
-              <ShieldAlert className="h-5 w-5 text-brand-dark" /> Bảng điều
-              khiển quản trị
-            </h1>
-            <p className="mb-6 text-sm text-muted">
-              Duyệt yêu cầu nạp tiền thủ công và giải ngân ký quỹ cho người
-              bán.
-            </p>
-          </Reveal>
-
-          <Reveal delay={0.05}>
-            <AdminDashboard />
-          </Reveal>
-        </div>
-      </main>
-      <Footer />
-    </>
+    <AdminOverviewStats
+      adminName={session?.user?.name ?? session?.user?.email ?? "Admin"}
+      range={range}
+      from={params.from}
+      to={params.to}
+      stats={stats}
+      previousGmv={previousStats.gmv}
+      revenueTrend={revenueTrend}
+      activity={activity}
+      counts={counts}
+    />
   );
 }
 
-export const metadata = {
-  title: "Quản trị — MarketMMO",
-};
+export const metadata = { title: "Tổng quan — Admin Control Center — MarketMMO" };

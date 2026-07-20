@@ -89,7 +89,9 @@ export default function AuthForms({
       setLoginError(
         res.code === "turnstile"
           ? "Xác minh chống spam thất bại, vui lòng thử lại."
-          : "Email hoặc mật khẩu không đúng."
+          : res.code === "banned"
+            ? "Tài khoản của bạn đã bị khoá. Liên hệ hỗ trợ nếu bạn cho rằng đây là nhầm lẫn."
+            : "Email hoặc mật khẩu không đúng."
       );
       // Token Turnstile vừa dùng đã bị tiêu thụ dù đăng nhập thất bại vì lý
       // do gì đi nữa (kể cả sai mật khẩu) — bắt buộc giải lại captcha mới.

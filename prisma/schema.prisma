@@ -60,6 +60,14 @@ model User {
   // khi đơn hàng đầu tiên của user này đủ điều kiện (xem REFERRAL_MIN_FIRST_ORDER_VND).
   referralRewarded Boolean  @default(false)
 
+  // Khoá tài khoản (Admin > Người dùng) — chặn đăng nhập ngay (kiểm tra
+  // trong Credentials authorize(), xem src/auth.ts), KHÔNG xoá dữ liệu.
+  // Không áp dụng cho tài khoản Google OAuth hiện có (chỉ chặn được ở bước
+  // authorize() của Credentials provider) — ghi rõ trong code phần đó.
+  banned       Boolean   @default(false)
+  bannedReason String?
+  bannedAt     DateTime?
+
   accounts      Account[]
   sessions      Session[]
   seller        Seller?
@@ -69,11 +77,13 @@ model User {
   forumPosts    ForumPost[]
   forumComments ForumComment[]
   forumLikes    ForumLike[]
+  forumReports  ForumReport[]
   disputesOpened Dispute[]
   conversationsAsUserA Conversation[] @relation("ConversationsAsUserA")
   conversationsAsUserB Conversation[] @relation("ConversationsAsUserB")
   sentMessages         Message[]
   passwordResetTokens  PasswordResetToken[]
+  adminAuditLogs       AdminAuditLog[]
 }
 
 // Quên mật khẩu: token lưu dạng SHA-256 hash (không lưu token gốc) để dữ
@@ -149,6 +159,14 @@ model Seller {
   // chưa liên kết, không gửi thông báo.
   telegramChatId   String?
   telegramLinkCode String?
+
+  // Khoá gian hàng (Admin > Người bán) — sản phẩm của seller vẫn còn trong
+  // DB nhưng public query lọc thêm điều kiện seller.suspended=false nên
+  // biến mất khỏi site (xem src/lib/queries.ts). Seller vẫn đăng nhập được
+  // bình thường (không dùng User.banned) — chỉ gian hàng ngừng hoạt động.
+  suspended       Boolean   @default(false)
+  suspendedReason String?
+  suspendedAt     DateTime?
 
   products       Product[]
   reviews        Review[]
@@ -452,12 +470,16 @@ model ForumPost {
   content   String
   category  String   @default("Chia sẻ")
   createdAt DateTime @default(now())
+  // Admin ẩn bài vi phạm sau khi xử lý báo cáo (Admin > Diễn đàn) — ẩn khỏi
+  // mọi query công khai, KHÔNG xoá cứng để giữ lịch sử kiểm duyệt.
+  hidden    Boolean  @default(false)
 
   authorId String
   author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   comments ForumComment[]
   likes    ForumLike[]
+  reports  ForumReport[]
 }
 
 model ForumComment {
@@ -468,6 +490,44 @@ model ForumComment {
   author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   content   String
   createdAt DateTime  @default(now())
+  hidden    Boolean   @default(false)
+
+  reports ForumReport[]
+}
+
+// Báo cáo bài viết/bình luận vi phạm (nút "Báo cáo" trên Diễn đàn) — đúng 1
+// trong 2 khoá postId/commentId có giá trị, khoá còn lại null. Admin xử lý
+// tại Admin > Diễn đàn: ẩn nội dung (set hidden=true) hoặc bỏ qua báo cáo.
+model ForumReport {
+  id         String        @id @default(cuid())
+  postId     String?
+  post       ForumPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  commentId  String?
+  comment    ForumComment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reporterId String
+  reporter   User          @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reason     String
+  status     String        @default("OPEN") // "OPEN" | "RESOLVED_HIDDEN" | "RESOLVED_DISMISSED"
+  createdAt  DateTime      @default(now())
+}
+
+// Nhật ký thao tác quản trị (Admin > Nhật ký hoạt động) — ghi lại MỌI hành
+// động duyệt/từ chối/giải ngân/khoá tài khoản... kèm admin thực hiện, phục
+// vụ đối soát và trách nhiệm giải trình khi xử lý tiền/tài khoản người dùng.
+// Ghi qua src/lib/audit.ts, gọi thêm 1 dòng ở cuối mỗi route admin hiện có
+// — không throw nếu ghi log lỗi (không được để lỗi audit làm hỏng thao tác
+// chính đã thành công).
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  admin      User     @relation(fields: [adminId], references: [id])
+  action     String
+  targetType String
+  targetId   String?
+  detail     String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 // Mỗi user chỉ thả tim 1 lần/bài viết — bấm lại để bỏ thích (toggle qua

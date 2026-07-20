@@ -1,5 +1,11 @@
 export type Role = "BUYER" | "SELLER" | "ADMIN";
 
+export const roleLabel: Record<Role, string> = {
+  BUYER: "Người mua",
+  SELLER: "Người bán",
+  ADMIN: "Quản trị viên",
+};
+
 export type OrderStatus = "ESCROW" | "RELEASED" | "CANCELLED" | "DISPUTED";
 
 export type WalletTxType =

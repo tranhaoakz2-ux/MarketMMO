@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { logAdminAction } from "@/lib/audit";
 
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requireAdmin();
+  const { session, error } = await requireAdmin();
   if (error) return error;
 
   const { id } = await params;
@@ -32,6 +33,13 @@ export async function POST(
         data: { walletBalance: { increment: tx.amount } },
       }),
     ]);
+    await logAdminAction({
+      adminId: session!.user!.id,
+      action: "Duyệt nạp tiền",
+      targetType: "WalletTransaction",
+      targetId: id,
+      detail: `+${tx.amount}đ cho user ${tx.userId}`,
+    });
     return NextResponse.json({ ok: true });
   }
 
@@ -40,6 +48,13 @@ export async function POST(
     await prisma.walletTransaction.update({
       where: { id },
       data: { status: "REJECTED", adminNote, confirmedAt: new Date() },
+    });
+    await logAdminAction({
+      adminId: session!.user!.id,
+      action: "Từ chối nạp tiền",
+      targetType: "WalletTransaction",
+      targetId: id,
+      detail: adminNote ?? undefined,
     });
     return NextResponse.json({ ok: true });
   }
