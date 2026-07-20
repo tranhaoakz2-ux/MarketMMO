@@ -19,9 +19,17 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null);
   const amount = Number(body?.amount);
-  if (!Number.isFinite(amount) || amount < 10000) {
+  // Bug B10: ép số nguyên + đặt trần (đồng bộ với validate nạp thủ công/rút) —
+  // tránh số lẻ VNĐ và giá trị vô lý.
+  if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount < 10000) {
     return NextResponse.json(
-      { error: "Số tiền nạp tối thiểu là 10.000đ." },
+      { error: "Số tiền nạp tối thiểu là 10.000đ (số nguyên)." },
+      { status: 400 }
+    );
+  }
+  if (amount > 200_000_000) {
+    return NextResponse.json(
+      { error: "Số tiền nạp mỗi lần tối đa là 200.000.000đ." },
       { status: 400 }
     );
   }

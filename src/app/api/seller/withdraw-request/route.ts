@@ -36,19 +36,20 @@ export async function POST(req: Request) {
     // (đặt giá đấu, mua hàng) trong lúc chờ admin duyệt. Nếu admin từ chối, số
     // tiền được hoàn lại ở route duyệt (xem admin/withdrawals/[id]/route.ts).
     const tx = await prisma.$transaction(async (t) => {
-      const user = await t.user.findUniqueOrThrow({ where: { id: session!.user.id } });
-      if (user.walletBalance < amount) {
+      // Trừ ví CÓ ĐIỀU KIỆN + nguyên tử (bug B1): where "walletBalance >= amount"
+      // trong chính lệnh UPDATE → 2 yêu cầu rút song song không thể cùng rút
+      // vượt số dư (lệnh sau count=0). Thay cho cặp findUnique-check-update cũ.
+      const dec = await t.user.updateMany({
+        where: { id: session!.user.id, walletBalance: { gte: amount } },
+        data: { walletBalance: { decrement: amount } },
+      });
+      if (dec.count === 0) {
         throw new Error("Số dư ví không đủ để rút số tiền này.");
       }
 
-      await t.user.update({
-        where: { id: user.id },
-        data: { walletBalance: { decrement: amount } },
-      });
-
       return t.walletTransaction.create({
         data: {
-          userId: user.id,
+          userId: session!.user.id,
           type: "WITHDRAW",
           amount: -amount,
           status: "PENDING",

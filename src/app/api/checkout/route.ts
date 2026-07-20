@@ -43,6 +43,11 @@ export async function POST(req: Request) {
         // sản phẩm/phiên bản chưa dùng kho thật, xem model ProductStockItem).
         claimedStockItemIds: string[];
         deliveredPayload: string | null;
+        // true = dòng hàng dùng "kho số học" (Product.stock/Variant.stock) và
+        // KHÔNG phải preOrder → phải trừ kho CÓ ĐIỀU KIỆN (nguyên tử) để chặn
+        // oversell khi 2 buyer mua song song (bug B3). false = đã claim kho
+        // thật (đã nguyên tử qua FOR UPDATE SKIP LOCKED) hoặc preOrder (cho âm).
+        guardLegacyStock: boolean;
       }[] = [];
 
       for (const item of items) {
@@ -132,6 +137,9 @@ export async function POST(req: Request) {
           price: unitPrice,
           claimedStockItemIds,
           deliveredPayload,
+          // Chỉ cần trừ kho có điều kiện khi dùng kho số học + không preOrder.
+          // Kho thật đã claim nguyên tử ở trên; preOrder cho phép âm.
+          guardLegacyStock: stockItemTotal === 0 && !product.preOrder,
         });
       }
 
@@ -174,10 +182,22 @@ export async function POST(req: Request) {
         discountAmount = actualDiscount;
         total -= actualDiscount;
 
-        await tx.discountCode.update({
-          where: { id: discount.id },
+        // Tăng usedCount CÓ ĐIỀU KIỆN + nguyên tử (bug B5): where lồng điều
+        // kiện "vẫn còn lượt / còn active" vào chính lệnh UPDATE — 2 checkout
+        // song song dùng mã maxUses=1 thì chỉ đúng 1 lệnh khớp where (count=1),
+        // lệnh kia count=0 → throw. isDiscountCodeUsable() ở trên chỉ là
+        // fast-fail UX, KHÔNG còn là chốt chặn maxUses.
+        const bumped = await tx.discountCode.updateMany({
+          where: {
+            id: discount.id,
+            active: true,
+            OR: [{ maxUses: null }, { usedCount: { lt: discount.maxUses ?? 0 } }],
+          },
           data: { usedCount: { increment: 1 } },
         });
+        if (bumped.count === 0) {
+          throw new Error("Mã giảm giá đã hết lượt sử dụng.");
+        }
       }
 
       const buyer = await tx.user.findUniqueOrThrow({
@@ -229,29 +249,55 @@ export async function POST(req: Request) {
           });
         }
 
+        // Trừ kho: dòng "kho số học không preOrder" (guardLegacyStock) phải
+        // trừ CÓ ĐIỀU KIỆN (where stock >= quantity) để chặn oversell khi 2
+        // buyer mua song song đơn vị cuối (bug B3) — updateMany trả count=0
+        // nếu không đủ → throw, rollback cả transaction. Dòng đã claim kho
+        // thật hoặc preOrder thì trừ vô điều kiện như cũ (đã nguyên tử/cho âm).
         if (item.variantId) {
-          await tx.productVariant.update({
-            where: { id: item.variantId },
-            data: {
-              stock: { decrement: item.quantity },
-              sold: { increment: item.quantity },
-            },
-          });
+          if (item.guardLegacyStock) {
+            const dec = await tx.productVariant.updateMany({
+              where: { id: item.variantId, stock: { gte: item.quantity } },
+              data: { stock: { decrement: item.quantity }, sold: { increment: item.quantity } },
+            });
+            if (dec.count === 0) {
+              throw new Error(`"${item.productName}" không đủ tồn kho.`);
+            }
+          } else {
+            await tx.productVariant.update({
+              where: { id: item.variantId },
+              data: { stock: { decrement: item.quantity }, sold: { increment: item.quantity } },
+            });
+          }
         } else {
-          await tx.product.update({
-            where: { id: item.productId },
-            data: {
-              stock: { decrement: item.quantity },
-              sold: { increment: item.quantity },
-            },
-          });
+          if (item.guardLegacyStock) {
+            const dec = await tx.product.updateMany({
+              where: { id: item.productId, stock: { gte: item.quantity } },
+              data: { stock: { decrement: item.quantity }, sold: { increment: item.quantity } },
+            });
+            if (dec.count === 0) {
+              throw new Error(`"${item.productName}" không đủ tồn kho.`);
+            }
+          } else {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { decrement: item.quantity }, sold: { increment: item.quantity } },
+            });
+          }
         }
       }
 
-      await tx.user.update({
-        where: { id: buyer.id },
+      // Trừ ví CÓ ĐIỀU KIỆN + nguyên tử (bug B1): where "walletBalance >= total"
+      // nằm trong chính lệnh UPDATE → 2 checkout song song của cùng 1 user
+      // không thể cùng tiêu vượt số dư (lệnh thứ 2 re-evaluate where trên số dư
+      // đã commit của lệnh 1 → count=0 → throw). Check ở dòng 206 chỉ là fast-fail.
+      const walletDec = await tx.user.updateMany({
+        where: { id: buyer.id, walletBalance: { gte: total } },
         data: { walletBalance: { decrement: total } },
       });
+      if (walletDec.count === 0) {
+        throw new Error("Số dư ví không đủ để thanh toán đơn hàng này.");
+      }
 
       await tx.walletTransaction.create({
         data: {
@@ -268,7 +314,12 @@ export async function POST(req: Request) {
       // đơn, không chỉ đơn đầu tiên), cộng thẳng vào ví người giới thiệu —
       // miễn buyer được giới thiệu bởi ai đó và đã từng nạp tiền thật (không
       // chỉ nhờ số dư có sẵn từ nơi khác).
-      if (buyer.referredById) {
+      // Bug B7 (phần an toàn): chặn tự giới thiệu chính mình (referredById ===
+      // buyer.id) — defense-in-depth, không để 1 user tự cộng hoa hồng cho ví
+      // của chính mình. LƯU Ý: đây CHƯA chặn được farming đa tài khoản
+      // (A giới thiệu B, cùng 1 người) — việc đó cần quyết định nghiệp vụ
+      // (đặt trần hoa hồng / chỉ trả khi đơn RELEASED). Xem AUDIT.md B7.
+      if (buyer.referredById && buyer.referredById !== buyer.id) {
         const hasDeposit = await tx.walletTransaction.findFirst({
           where: { userId: buyer.id, type: "DEPOSIT", status: "CONFIRMED" },
         });

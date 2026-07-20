@@ -23,16 +23,24 @@ export async function POST(
   }
 
   if (action === "approve") {
-    await prisma.$transaction([
-      prisma.walletTransaction.update({
-        where: { id },
+    // Gate NGUYÊN TỬ (bug B6): chỉ khi updateMany chuyển được PENDING→CONFIRMED
+    // (count===1) mới cộng ví — 2 lần bấm "Duyệt" song song thì chỉ 1 lệnh
+    // khớp, lệnh kia count===0 (đã CONFIRMED) → không cộng lần 2.
+    const credited = await prisma.$transaction(async (t) => {
+      const gate = await t.walletTransaction.updateMany({
+        where: { id, type: "DEPOSIT", status: "PENDING" },
         data: { status: "CONFIRMED", confirmedAt: new Date() },
-      }),
-      prisma.user.update({
+      });
+      if (gate.count === 0) return false;
+      await t.user.update({
         where: { id: tx.userId },
         data: { walletBalance: { increment: tx.amount } },
-      }),
-    ]);
+      });
+      return true;
+    });
+    if (!credited) {
+      return NextResponse.json({ error: "Yêu cầu này đã được xử lý." }, { status: 400 });
+    }
     await logAdminAction({
       adminId: session!.user!.id,
       action: "Duyệt nạp tiền",
@@ -45,10 +53,15 @@ export async function POST(
 
   if (action === "reject") {
     const adminNote = typeof body?.adminNote === "string" ? body.adminNote : null;
-    await prisma.walletTransaction.update({
-      where: { id },
+    // Chỉ từ chối được yêu cầu CÒN PENDING (bug B6): tránh đua với "approve"
+    // — nếu đã CONFIRMED (đã cộng ví) thì không được đè thành REJECTED.
+    const rejected = await prisma.walletTransaction.updateMany({
+      where: { id, type: "DEPOSIT", status: "PENDING" },
       data: { status: "REJECTED", adminNote, confirmedAt: new Date() },
     });
+    if (rejected.count === 0) {
+      return NextResponse.json({ error: "Yêu cầu này đã được xử lý." }, { status: 400 });
+    }
     await logAdminAction({
       adminId: session!.user!.id,
       action: "Từ chối nạp tiền",

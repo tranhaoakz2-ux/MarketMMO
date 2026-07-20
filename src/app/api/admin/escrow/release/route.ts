@@ -17,16 +17,21 @@ export async function POST() {
     const seller = await prisma.seller.findUnique({ where: { id: item.sellerId } });
     if (!seller) continue;
 
-    await prisma.$transaction([
-      prisma.orderItem.update({
-        where: { id: item.id },
+    // Gate NGUYÊN TỬ trên từng OrderItem (bug B6): chỉ khi chuyển được
+    // ESCROW→RELEASED (count===1) mới cộng ví seller — chặn 2 lần chạy giải
+    // ngân song song (double-click / cron chồng nhau) trả tiền 2 lần cho cùng
+    // 1 mục đơn hàng.
+    const paid = await prisma.$transaction(async (t) => {
+      const gate = await t.orderItem.updateMany({
+        where: { id: item.id, status: "ESCROW" },
         data: { status: "RELEASED" },
-      }),
-      prisma.user.update({
+      });
+      if (gate.count === 0) return false;
+      await t.user.update({
         where: { id: seller.userId },
         data: { walletBalance: { increment: item.price * item.quantity } },
-      }),
-      prisma.walletTransaction.create({
+      });
+      await t.walletTransaction.create({
         data: {
           userId: seller.userId,
           type: "PAYOUT",
@@ -35,8 +40,10 @@ export async function POST() {
           note: `Giải ngân đơn hàng #${item.orderId} — ${item.productName}`,
           confirmedAt: new Date(),
         },
-      }),
-    ]);
+      });
+      return true;
+    });
+    if (!paid) continue;
     released++;
 
     const remaining = await prisma.orderItem.count({

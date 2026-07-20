@@ -31,17 +31,21 @@ export async function POST(
 
   if (action === "refund_buyer") {
     const order = await prisma.order.findUniqueOrThrow({ where: { id: item.orderId } });
-    await prisma.$transaction([
-      prisma.orderItem.update({ where: { id: item.id }, data: { status: "CANCELLED" } }),
-      prisma.dispute.update({
-        where: { id },
+    // Gate NGUYÊN TỬ trên trạng thái khiếu nại (bug B6): chỉ khi chuyển được
+    // OPEN→RESOLVED_REFUND (count===1) mới hoàn tiền — chặn hoàn 2 lần khi
+    // bấm song song / đua giữa refund và release.
+    const done = await prisma.$transaction(async (t) => {
+      const gate = await t.dispute.updateMany({
+        where: { id, status: "OPEN" },
         data: { status: "RESOLVED_REFUND", adminNote, resolvedAt: new Date() },
-      }),
-      prisma.user.update({
+      });
+      if (gate.count === 0) return false;
+      await t.orderItem.update({ where: { id: item.id }, data: { status: "CANCELLED" } });
+      await t.user.update({
         where: { id: order.buyerId },
         data: { walletBalance: { increment: amount } },
-      }),
-      prisma.walletTransaction.create({
+      });
+      await t.walletTransaction.create({
         data: {
           userId: order.buyerId,
           type: "REFUND",
@@ -50,8 +54,12 @@ export async function POST(
           note: `Hoàn tiền khiếu nại đơn #${item.orderId} — ${item.productName}`,
           confirmedAt: new Date(),
         },
-      }),
-    ]);
+      });
+      return true;
+    });
+    if (!done) {
+      return NextResponse.json({ error: "Khiếu nại này đã được xử lý." }, { status: 400 });
+    }
     await logAdminAction({
       adminId: session!.user!.id,
       action: "Hoàn tiền khiếu nại cho buyer",
@@ -64,17 +72,20 @@ export async function POST(
 
   if (action === "release_seller") {
     const seller = await prisma.seller.findUniqueOrThrow({ where: { id: item.sellerId } });
-    await prisma.$transaction([
-      prisma.orderItem.update({ where: { id: item.id }, data: { status: "RELEASED" } }),
-      prisma.dispute.update({
-        where: { id },
+    // Gate NGUYÊN TỬ trên trạng thái khiếu nại (bug B6): chỉ khi chuyển được
+    // OPEN→RESOLVED_RELEASE (count===1) mới giải ngân — chặn giải ngân 2 lần.
+    const done = await prisma.$transaction(async (t) => {
+      const gate = await t.dispute.updateMany({
+        where: { id, status: "OPEN" },
         data: { status: "RESOLVED_RELEASE", adminNote, resolvedAt: new Date() },
-      }),
-      prisma.user.update({
+      });
+      if (gate.count === 0) return false;
+      await t.orderItem.update({ where: { id: item.id }, data: { status: "RELEASED" } });
+      await t.user.update({
         where: { id: seller.userId },
         data: { walletBalance: { increment: amount } },
-      }),
-      prisma.walletTransaction.create({
+      });
+      await t.walletTransaction.create({
         data: {
           userId: seller.userId,
           type: "PAYOUT",
@@ -83,8 +94,12 @@ export async function POST(
           note: `Giải ngân sau khiếu nại đơn #${item.orderId} — ${item.productName}`,
           confirmedAt: new Date(),
         },
-      }),
-    ]);
+      });
+      return true;
+    });
+    if (!done) {
+      return NextResponse.json({ error: "Khiếu nại này đã được xử lý." }, { status: 400 });
+    }
 
     const remaining = await prisma.orderItem.count({
       where: { orderId: item.orderId, status: { not: "RELEASED" } },

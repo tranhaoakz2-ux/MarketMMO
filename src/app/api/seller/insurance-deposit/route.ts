@@ -24,22 +24,23 @@ export async function POST(req: Request) {
     // thống (ví chính -> quỹ bảo hiểm), không phải tiền từ/đến ngân hàng ngoài —
     // an toàn hơn rút tiền nhiều nên tự động duyệt ngay, không cần admin.
     await prisma.$transaction(async (t) => {
-      const user = await t.user.findUniqueOrThrow({ where: { id: session!.user.id } });
-      if (user.walletBalance < amount) {
+      // Trừ ví CÓ ĐIỀU KIỆN + nguyên tử (bug B1): chặn 2 lần nạp quỹ song song
+      // cùng tiêu vượt số dư. count=0 → throw, rollback.
+      const dec = await t.user.updateMany({
+        where: { id: session!.user.id, walletBalance: { gte: amount } },
+        data: { walletBalance: { decrement: amount } },
+      });
+      if (dec.count === 0) {
         throw new Error("Số dư ví không đủ để nạp số tiền này.");
       }
 
-      await t.user.update({
-        where: { id: user.id },
-        data: { walletBalance: { decrement: amount } },
-      });
       await t.seller.update({
         where: { id: seller!.id },
         data: { insuranceBalance: { increment: amount } },
       });
       await t.walletTransaction.create({
         data: {
-          userId: user.id,
+          userId: session!.user.id,
           type: "INSURANCE_DEPOSIT",
           amount: -amount,
           status: "CONFIRMED",
