@@ -45,8 +45,15 @@ export default function CartPage() {
     });
     const data = await res.json();
     setApplyingDiscount(false);
+    // Preview trả phản hồi ĐỒNG NHẤT (status 200) để chống oracle dò mã: mã
+    // không hợp lệ/không áp dụng đều là { valid:false }. 429 khi vượt rate-limit.
     if (!res.ok) {
-      setDiscountError(data.error ?? "Mã giảm giá không hợp lệ.");
+      setDiscountError(data.error ?? "Bạn thử quá nhiều lần, vui lòng chờ giây lát.");
+      setAppliedDiscount(null);
+      return;
+    }
+    if (!data.valid) {
+      setDiscountError("Mã giảm giá không hợp lệ hoặc không áp dụng cho giỏ hàng này.");
       setAppliedDiscount(null);
       return;
     }

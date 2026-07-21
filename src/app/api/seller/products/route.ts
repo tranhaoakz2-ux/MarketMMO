@@ -70,8 +70,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Vui lòng chọn ảnh sản phẩm." }, { status: 400 });
   }
 
+  // Chỉ cho gán vào danh mục APPROVED hoặc PENDING (đang chờ duyệt) — chặn hẳn
+  // category REJECTED (hoặc không tồn tại) để sản phẩm không treo ở danh mục đã
+  // bị từ chối/ẩn. Nhất quán với getSellerVisibleCategories() dùng cho dropdown.
   const category = await prisma.category.findUnique({ where: { id: categoryId } });
-  if (!category) {
+  if (!category || category.status === "REJECTED") {
     return NextResponse.json({ error: "Danh mục không hợp lệ." }, { status: 400 });
   }
 

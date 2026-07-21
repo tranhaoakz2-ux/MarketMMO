@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
@@ -29,9 +30,21 @@ export async function POST(req: Request) {
     if (!comment) return NextResponse.json({ error: "Không tìm thấy bình luận." }, { status: 404 });
   }
 
-  await prisma.forumReport.create({
-    data: { postId, commentId, reporterId: session!.user!.id, reason },
-  });
+  try {
+    await prisma.forumReport.create({
+      data: { postId, commentId, reporterId: session!.user!.id, reason },
+    });
+  } catch (err) {
+    // Unique (reporterId, postId/commentId): user đã báo cáo mục này rồi. Chống
+    // spam ngập hàng chờ kiểm duyệt — trả 409 thân thiện thay vì 500 (AUDIT.md #4).
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return NextResponse.json(
+        { error: "Bạn đã báo cáo nội dung này rồi. Cảm ơn bạn!" },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
 
   return NextResponse.json({ ok: true });
 }

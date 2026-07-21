@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSeller } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rate-limit";
 import { generateLinkCode, isTelegramConfigured, sendTelegramMessage } from "@/lib/telegram";
 
 export async function GET() {
@@ -28,6 +29,19 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null);
   const action = body?.action;
+
+  // Rate-limit các hành động GỬI tin ra Telegram (link/test) — chặn seller spam
+  // tin nhắn tới chatId tuỳ ý (xem AUDIT.md #5). Không giới hạn confirm/unlink
+  // (chỉ đọc/ghi DB, không gửi ra ngoài).
+  if (action === "link" || action === "test") {
+    const rl = rateLimit(`telegram-send:${seller!.id}`, 5, 60_000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: `Bạn gửi quá nhiều lần. Vui lòng thử lại sau ${rl.retryAfterSec} giây.` },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+      );
+    }
+  }
 
   if (action === "link") {
     const chatId = typeof body?.chatId === "string" ? body.chatId.trim() : "";

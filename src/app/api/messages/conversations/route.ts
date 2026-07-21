@@ -60,7 +60,9 @@ export async function GET() {
       id: conv.id,
       otherUser: {
         id: other.id,
-        name: other.name ?? other.username ?? other.email ?? "Người dùng",
+        // KHÔNG bao giờ fallback về email (lộ PII). name -> username -> mã user
+        // rút gọn (6 ký tự cuối id) để vẫn phân biệt được người dùng ẩn tên.
+        name: other.name ?? other.username ?? `Người dùng #${other.id.slice(-6)}`,
         isSystemBot: other.id === bot.id,
         sellerSlug: sellerSlugMap.get(other.id) ?? null,
       },

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rate-limit";
 
 // Dùng cho Server Component (page/layout), KHÔNG dùng cho API route (dùng
 // requireUser/requireSeller/requireAdmin bên dưới thay vào đó). Bọc bằng
@@ -38,6 +39,30 @@ export async function requireUser() {
     return {
       session: null,
       error: NextResponse.json({ error: "Tài khoản của bạn đã bị khoá." }, { status: 403 }),
+    };
+  }
+  return { session, error: null };
+}
+
+// Bắt buộc đăng nhập + rate-limit theo user cho các route dễ bị lạm dụng (gọi
+// mạng ngoài, oracle dò mã...). `routeKey` để tách bucket giữa các route. Trả
+// 429 kèm Retry-After khi vượt ngưỡng. Dùng cho tools/check-*, discount preview,
+// telegram — xem AUDIT.md nhóm 1/3.
+export async function requireUserRateLimited(
+  routeKey: string,
+  limit: number,
+  windowMs: number
+) {
+  const { session, error } = await requireUser();
+  if (error) return { session: null, error };
+  const rl = rateLimit(`${routeKey}:${session!.user.id}`, limit, windowMs);
+  if (!rl.ok) {
+    return {
+      session: null,
+      error: NextResponse.json(
+        { error: `Bạn thao tác quá nhanh. Vui lòng thử lại sau ${rl.retryAfterSec} giây.` },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+      ),
     };
   }
   return { session, error: null };

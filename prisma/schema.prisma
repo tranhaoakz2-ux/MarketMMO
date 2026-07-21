@@ -518,6 +518,13 @@ model ForumReport {
   reason     String
   status     String        @default("OPEN") // "OPEN" | "RESOLVED_HIDDEN" | "RESOLVED_DISMISSED"
   createdAt  DateTime      @default(now())
+
+  // Mỗi user chỉ báo cáo 1 lần cho cùng 1 bài viết / 1 bình luận (chống spam
+  // ngập hàng chờ kiểm duyệt — AUDIT.md #4). postId/commentId nullable: Postgres
+  // coi NULL là KHÁC NHAU trong unique index, nên report bài viết (commentId=NULL)
+  // và report bình luận (postId=NULL) không đụng nhau — đúng ý muốn.
+  @@unique([reporterId, postId])
+  @@unique([reporterId, commentId])
 }
 
 // Nhật ký thao tác quản trị (Admin > Nhật ký hoạt động) — ghi lại MỌI hành

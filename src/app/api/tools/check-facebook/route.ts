@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireUserRateLimited } from "@/lib/authz";
 
 const MAX_TARGETS = 10;
 const FETCH_TIMEOUT_MS = 8000;
@@ -126,6 +127,11 @@ async function checkProfile(url: URL): Promise<{ status: CheckStatus; detail: st
 }
 
 export async function POST(request: Request) {
+  // Phải đăng nhập + rate-limit — chặn ẩn danh dùng server làm proxy scrape
+  // Facebook (mỗi request tới 10 fetch ra ngoài) — xem AUDIT.md #3.
+  const { error } = await requireUserRateLimited("check-facebook", 6, 60_000);
+  if (error) return error;
+
   const body = await request.json().catch(() => null);
   const targets = body?.targets;
 

@@ -1,5 +1,6 @@
 import net from "node:net";
 import { NextResponse } from "next/server";
+import { requireUserRateLimited } from "@/lib/authz";
 
 const MAX_PROXIES = 20;
 const CONNECT_TIMEOUT_MS = 4000;
@@ -50,6 +51,11 @@ function checkProxy(
 }
 
 export async function POST(request: Request) {
+  // Phải đăng nhập + rate-limit chặt (mỗi request đã mở tới 20 kết nối TCP ra
+  // ngoài) — chặn ẩn danh dùng server làm công cụ quét cổng (xem AUDIT.md #2).
+  const { error } = await requireUserRateLimited("check-proxy", 6, 60_000);
+  if (error) return error;
+
   const body = await request.json().catch(() => null);
   const proxies = body?.proxies;
 
