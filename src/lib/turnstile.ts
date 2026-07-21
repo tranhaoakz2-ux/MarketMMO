@@ -1,11 +1,15 @@
 const VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
-// Xác minh Turnstile chỉ thực sự bắt buộc khi đã cấu hình TURNSTILE_SECRET_KEY —
-// nếu chưa có key (môi trường dev chưa đăng ký Cloudflare), luôn trả về hợp lệ
-// để không chặn đăng nhập/đăng ký, giống quy ước AUTH_GOOGLE_ID/SECRET.
+// FAIL-CLOSED: thiếu key hoặc verify lỗi -> TỪ CHỐI (không cho qua). Chỉ môi
+// trường KHÔNG phải production (dev/test chưa đăng ký Cloudflare) mới được bỏ
+// qua khi thiếu key — production BẮT BUỘC có TURNSTILE_SECRET_KEY, nếu không mọi
+// đăng nhập/đăng ký sẽ bị chặn (đúng chủ ý: buộc cấu hình chống bot ở prod).
 export async function verifyTurnstileToken(token: string | undefined): Promise<boolean> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) return true;
+  if (!secret) {
+    // Prod thiếu key -> false (fail-closed). Dev/test -> true (không chặn dev).
+    return process.env.NODE_ENV !== "production";
+  }
   if (!token) return false;
 
   try {

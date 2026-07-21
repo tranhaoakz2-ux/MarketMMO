@@ -6,6 +6,7 @@ import Google from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@/lib/constants";
 import { verifyTurnstileToken } from "@/lib/turnstile";
+import { rateLimit } from "@/lib/rate-limit";
 
 class TurnstileSignin extends CredentialsSignin {
   code = "turnstile";
@@ -15,6 +16,26 @@ class BannedSignin extends CredentialsSignin {
   code = "banned";
 }
 
+class RateLimitSignin extends CredentialsSignin {
+  code = "ratelimit";
+}
+
+// IP client (sau Vercel/proxy) từ header chuyển tiếp — dùng cho rate-limit login.
+function ipFromRequest(request: Request | undefined): string {
+  const xff = request?.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0]!.trim();
+  return request?.headers.get("x-real-ip")?.trim() || "unknown";
+}
+
+// Ngưỡng brute-force đăng nhập trong cửa sổ 15 phút. Rate-limit LƯU TRONG BỘ NHỚ
+// (per-instance trên serverless) — chống-abuse mềm, không tuyệt đối toàn cục.
+// Đếm MỌI lần thử: bucket theo IP là lớp chính; bucket theo tài khoản chặn tấn
+// công phân tán 1 account (đánh đổi: kẻ xấu spam email nạn nhân có thể tạm khoá
+// login của họ ~15 phút — chấp nhận, ngưỡng để rộng).
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_PER_IP = 30;
+const LOGIN_MAX_PER_ACCOUNT = 10;
+
 const providers: NextAuthConfig["providers"] = [
   Credentials({
     name: "credentials",
@@ -23,7 +44,7 @@ const providers: NextAuthConfig["providers"] = [
       password: { label: "Mật khẩu", type: "password" },
       turnstileToken: { label: "Turnstile", type: "text" },
     },
-    async authorize(credentials) {
+    async authorize(credentials, request) {
       // Trường "email" thực chất nhận cả email lẫn username — form đăng
       // nhập cho phép người dùng gõ 1 trong 2 (xem AuthForms.tsx, nhãn
       // "Email hoặc Username"). Giữ nguyên tên field "email" trên wire để
@@ -32,6 +53,18 @@ const providers: NextAuthConfig["providers"] = [
       const password = credentials?.password as string | undefined;
       const turnstileToken = credentials?.turnstileToken as string | undefined;
       if (!identifier || !password) return null;
+
+      // Rate-limit brute-force: theo IP (lớp chính) + theo tài khoản. Vượt ->
+      // ném RateLimitSignin (client phân biệt qua code "ratelimit"). Kiểm TRƯỚC
+      // khi truy DB/so bcrypt để không tốn tài nguyên cho request bị chặn.
+      const ip = ipFromRequest(request as Request | undefined);
+      const ipOk = rateLimit(`login-ip:${ip}`, LOGIN_MAX_PER_IP, LOGIN_WINDOW_MS).ok;
+      const acctOk = rateLimit(
+        `login-acct:${identifier.toLowerCase()}`,
+        LOGIN_MAX_PER_ACCOUNT,
+        LOGIN_WINDOW_MS
+      ).ok;
+      if (!ipOk || !acctOk) throw new RateLimitSignin();
 
       const turnstileOk = await verifyTurnstileToken(turnstileToken);
       if (!turnstileOk) throw new TurnstileSignin();

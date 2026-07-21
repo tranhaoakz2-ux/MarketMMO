@@ -2,12 +2,27 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateReferralCode } from "@/lib/referral";
+import { rateLimit } from "@/lib/rate-limit";
 import { sendSystemMessage } from "@/lib/system-bot";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const USERNAME_RE = /^[a-zA-Z0-9]{3,20}$/;
 
 export async function POST(req: Request) {
+  // Rate-limit đăng ký theo IP — giữ NGUYÊN thông báo rõ ("email/username đã
+  // dùng") để UX không bối rối, nhưng throttle để không thể dò email hàng loạt
+  // (chống enumeration bằng cách làm chậm, xem SECURITY_AUDIT.md #4). 10/giờ.
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip")?.trim() ||
+    "unknown";
+  if (!rateLimit(`register-ip:${ip}`, 10, 60 * 60 * 1000).ok) {
+    return NextResponse.json(
+      { error: "Bạn đã thử đăng ký quá nhiều lần. Vui lòng thử lại sau." },
+      { status: 429 }
+    );
+  }
+
   const body = await req.json().catch(() => null);
   const username = typeof body?.username === "string" ? body.username.trim() : "";
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";

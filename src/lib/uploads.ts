@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { put } from "@vercel/blob";
+import { get, put } from "@vercel/blob";
 
 // Thư mục lưu file đính kèm chat khi chạy ở chế độ ổ đĩa cục bộ (dev hoặc
 // host có filesystem lâu dài) — NGOÀI /public (không public như logo/ảnh sản
@@ -36,6 +36,55 @@ export function isAllowedImageType(mimeType: string): boolean {
   return mimeType in ALLOWED_TYPES;
 }
 
+// Nhận diện loại file THẬT theo magic-byte (chữ ký ở đầu file) — KHÔNG tin
+// file.type client gửi (client có thể khai gian image/png cho 1 file HTML/thực
+// thi). Trả "family" để đối chiếu với loại khai báo. txt không có magic đáng
+// tin cậy nên xử lý riêng (bỏ qua kiểm, chỉ là text thuần, phục vụ text/plain).
+type FileFamily = "jpg" | "png" | "webp" | "pdf" | "zip" | "ole";
+
+function startsWith(buf: Uint8Array, sig: number[], offset = 0): boolean {
+  if (buf.length < offset + sig.length) return false;
+  for (let i = 0; i < sig.length; i++) if (buf[offset + i] !== sig[i]) return false;
+  return true;
+}
+
+function detectFamily(buf: Uint8Array): FileFamily | null {
+  if (startsWith(buf, [0xff, 0xd8, 0xff])) return "jpg";
+  if (startsWith(buf, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "png";
+  // WebP: "RIFF"....(4 byte size)...."WEBP"
+  if (startsWith(buf, [0x52, 0x49, 0x46, 0x46]) && startsWith(buf, [0x57, 0x45, 0x42, 0x50], 8)) return "webp";
+  if (startsWith(buf, [0x25, 0x50, 0x44, 0x46])) return "pdf"; // %PDF
+  if (startsWith(buf, [0x50, 0x4b, 0x03, 0x04])) return "zip"; // PK.. (docx/xlsx/zip)
+  if (startsWith(buf, [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])) return "ole"; // doc/xls cũ
+  return null;
+}
+
+// Loại MIME khai báo -> family magic-byte hợp lệ (txt = bỏ qua kiểm magic).
+const EXPECTED_FAMILY: Record<string, FileFamily | "text"> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "application/pdf": "pdf",
+  "application/msword": "ole",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "zip",
+  "application/vnd.ms-excel": "ole",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "zip",
+  "application/zip": "zip",
+  "application/x-zip-compressed": "zip",
+  "text/plain": "text",
+};
+
+// Ném lỗi nếu nội dung THẬT không khớp loại khai báo (chống upload polyglot/
+// giả mạo Content-Type). Gọi sau khi đã đọc buffer.
+function assertMagicMatches(mimeType: string, buf: Uint8Array): void {
+  const expected = EXPECTED_FAMILY[mimeType];
+  if (!expected) throw new Error("Định dạng file không được hỗ trợ.");
+  if (expected === "text") return; // txt: không có magic-byte, chấp nhận
+  if (detectFamily(buf) !== expected) {
+    throw new Error("Nội dung file không khớp định dạng khai báo (nghi giả mạo).");
+  }
+}
+
 function isBlobConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
@@ -48,6 +97,11 @@ function isBlobConfigured(): boolean {
 // dùng cho VNPay/Telegram/Resend trong dự án. Trả về giá trị lưu vào DB:
 // URL đầy đủ (Blob) hoặc đường dẫn tương đối (ổ đĩa), phân biệt bằng tiền tố
 // "http" khi đọc lại (xem readUploadedFile()).
+// Lưu file đính kèm CHAT — RIÊNG TƯ. Khi có Blob: dùng access "private" (chỉ đọc
+// được qua get() kèm token phía server), giá trị lưu DB có tiền tố "blob:" +
+// pathname để readUploadedFile() biết đọc bằng get() thay vì fetch công khai.
+// Khi không có Blob (dev local): ghi ổ đĩa NGOÀI /public, trả đường dẫn tương đối.
+// (Ảnh SẢN PHẨM công khai KHÔNG đi qua đây — xem saveProductImage.)
 async function saveBuffer(
   relativePath: string,
   buffer: Buffer,
@@ -55,12 +109,13 @@ async function saveBuffer(
 ): Promise<string> {
   if (isBlobConfigured()) {
     const blob = await put(relativePath, buffer, {
-      access: "public",
+      access: "private",
       contentType,
       addRandomSuffix: true,
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
-    return blob.url;
+    // Lưu pathname (không phải URL public) — đọc lại bằng get({access:"private"}).
+    return `blob:${blob.pathname}`;
   }
 
   const absolutePath = path.join(UPLOAD_ROOT, relativePath);
@@ -90,6 +145,7 @@ export async function saveProductImage(file: File): Promise<string> {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  assertMagicMatches(file.type, buffer); // chống giả mạo Content-Type
   const filename = `${randomUUID()}.${ext}`;
 
   if (isBlobConfigured()) {
@@ -134,6 +190,7 @@ export async function saveChatAttachment(
   const ext = isImage ? ALLOWED_TYPES[file.type] : ALLOWED_DOC_TYPES[file.type];
   const relativePath = path.join("chat", conversationId, `${randomUUID()}.${ext}`);
   const buffer = Buffer.from(await file.arrayBuffer());
+  assertMagicMatches(file.type, buffer); // chống giả mạo Content-Type (polyglot/exe)
   const storedPath = await saveBuffer(relativePath, buffer, file.type);
 
   return { path: storedPath, type: isImage ? "IMAGE" : "FILE", name: file.name.slice(0, 200) };
@@ -149,6 +206,19 @@ export async function saveChatAttachment(
  * không cần đụng vào cấu hình global type.
  */
 export async function readUploadedFile(storedPath: string): Promise<Uint8Array> {
+  // Blob RIÊNG TƯ (mới): tiền tố "blob:" + pathname — đọc bằng get() kèm token,
+  // KHÔNG lộ URL ra ngoài. Chỉ route đã kiểm quyền mới gọi hàm này.
+  if (storedPath.startsWith("blob:")) {
+    const pathname = storedPath.slice("blob:".length);
+    const result = await get(pathname, {
+      access: "private",
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+    if (!result || !result.stream) throw new Error("Không tìm thấy file.");
+    return new Uint8Array(await new Response(result.stream).arrayBuffer());
+  }
+  // Blob CÔNG KHAI cũ (dữ liệu chat lưu trước khi chuyển sang private) — vẫn
+  // đọc được qua URL để không mất lịch sử; route vẫn kiểm quyền trước khi gọi.
   if (storedPath.startsWith("http://") || storedPath.startsWith("https://")) {
     const res = await fetch(storedPath);
     if (!res.ok) throw new Error("Không tìm thấy file.");
