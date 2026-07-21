@@ -35,13 +35,13 @@ export default function Footer() {
           <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-3 lg:px-8">
             <div>
               <div className="flex items-center gap-2">
-                <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-black/40">
+                <span className="flex h-9 shrink-0 items-center">
                   <Image
                     src="/logo-mark.png"
                     alt="MarketMMO"
-                    width={36}
+                    width={45}
                     height={36}
-                    className="h-full w-full object-cover"
+                    className="h-full w-auto object-contain"
                   />
                 </span>
                 <h3 className="text-lg font-black">

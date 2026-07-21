@@ -138,13 +138,13 @@ export default function Header() {
           </button>
 
           <Link href="/" className="flex shrink-0 items-center gap-2">
-            <span className="grid h-[54px] w-[54px] place-items-center overflow-hidden rounded-lg bg-ink shadow sm:h-[60px] sm:w-[60px]">
+            <span className="flex h-[54px] items-center sm:h-[60px]">
               <Image
                 src="/logo-mark.png"
                 alt="MarketMMO"
-                width={60}
+                width={75}
                 height={60}
-                className="h-full w-full object-cover"
+                className="h-full w-auto object-contain"
                 priority
               />
             </span>
