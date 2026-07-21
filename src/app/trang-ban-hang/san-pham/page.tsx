@@ -7,7 +7,7 @@ export default async function SellerProductsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-lg font-black text-ink">Sản phẩm</h1>
+        <h1 className="text-lg font-black text-foreground">Sản phẩm</h1>
         <p className="text-xs text-muted">
           Đăng sản phẩm mới (cần admin duyệt) hoặc thêm/xoá phiên bản (gói) cho
           sản phẩm của bạn — giá và kho riêng theo từng gói.

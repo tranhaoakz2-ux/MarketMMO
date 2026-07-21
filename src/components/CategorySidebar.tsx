@@ -29,8 +29,8 @@ export default function CategorySidebar({
     <aside className="flex w-full flex-col gap-4 lg:w-64 lg:shrink-0">
       <div className="rounded-xl border-2 border-brand bg-surface p-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-ink">Bộ lọc</h3>
-          <ChevronDown className="h-[18px] w-[18px] text-ink" />
+          <h3 className="text-lg font-bold text-foreground">Bộ lọc</h3>
+          <ChevronDown className="h-[18px] w-[18px] text-foreground" />
         </div>
         <p className="mb-3 mt-1 text-sm font-medium text-brand-dark">Chọn danh mục</p>
 
@@ -39,7 +39,7 @@ export default function CategorySidebar({
             <Link href="/" className="flex items-center justify-between gap-2">
               <span
                 className={`flex items-center gap-2.5 text-sm ${
-                  !activeSlug ? "font-semibold text-ink" : "text-muted"
+                  !activeSlug ? "font-semibold text-foreground" : "text-muted"
                 }`}
               >
                 <span
@@ -47,7 +47,7 @@ export default function CategorySidebar({
                     !activeSlug ? "border-brand bg-brand" : "border-border-c"
                   }`}
                 >
-                  {!activeSlug && <Check className="h-3 w-3 text-ink" strokeWidth={3} />}
+                  {!activeSlug && <Check className="h-3 w-3 text-foreground" strokeWidth={3} />}
                 </span>
                 Tất cả
               </span>
@@ -63,7 +63,7 @@ export default function CategorySidebar({
                 >
                   <span
                     className={`flex items-center gap-2.5 text-sm ${
-                      active ? "font-semibold text-ink" : "text-muted"
+                      active ? "font-semibold text-foreground" : "text-muted"
                     }`}
                   >
                     <span
@@ -71,7 +71,7 @@ export default function CategorySidebar({
                         active ? "border-brand bg-brand" : "border-border-c"
                       }`}
                     >
-                      {active && <Check className="h-3 w-3 text-ink" strokeWidth={3} />}
+                      {active && <Check className="h-3 w-3 text-foreground" strokeWidth={3} />}
                     </span>
                     {cat.name}
                   </span>
@@ -88,8 +88,8 @@ export default function CategorySidebar({
       </div>
 
       <div className="rounded-xl border-2 border-brand bg-surface p-4 shadow-sm">
-        <h3 className="mb-3 text-lg font-bold text-ink">Tình trạng kho</h3>
-        <div className="flex flex-col gap-2 text-base text-ink">
+        <h3 className="mb-3 text-lg font-bold text-foreground">Tình trạng kho</h3>
+        <div className="flex flex-col gap-2 text-base text-foreground">
           <label className="flex items-center gap-2">
             <input
               type="radio"
@@ -114,7 +114,7 @@ export default function CategorySidebar({
       </div>
 
       <div className="rounded-xl border-2 border-brand bg-surface p-4 shadow-sm">
-        <h3 className="mb-3 text-lg font-bold text-ink">Bài viết tham khảo</h3>
+        <h3 className="mb-3 text-lg font-bold text-foreground">Bài viết tham khảo</h3>
         <ul className="flex flex-col">
           {posts.map((post) => (
             <li key={post.id} className="border-b border-dashed border-border-c last:border-b-0">
@@ -122,7 +122,7 @@ export default function CategorySidebar({
                 href={`/dien-dan/${post.id}`}
                 className="block rounded-lg px-3 py-3 transition-all duration-200 hover:translate-x-1 hover:bg-surface-alt"
               >
-                <p className="text-sm font-medium leading-snug text-ink">{post.title}</p>
+                <p className="text-sm font-medium leading-snug text-foreground">{post.title}</p>
                 <div className="mt-1.5 flex min-w-0 items-center gap-2 text-xs text-muted">
                   <span className="flex shrink-0 items-center gap-1">
                     <MessageSquare className="h-3 w-3" /> {post.commentCount}
@@ -145,7 +145,7 @@ export default function CategorySidebar({
 
         <Link
           href="/dien-dan"
-          className="mt-3 flex items-center justify-center gap-1 rounded-lg border border-border-c py-2 text-sm font-semibold text-ink transition hover:bg-surface-alt"
+          className="mt-3 flex items-center justify-center gap-1 rounded-lg border border-border-c py-2 text-sm font-semibold text-foreground transition hover:bg-surface-alt"
         >
           Tất cả bài viết <ChevronRight className="h-3.5 w-3.5" />
         </Link>

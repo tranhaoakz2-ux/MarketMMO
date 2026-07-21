@@ -148,7 +148,7 @@ export default function SellerOverviewStats({
       <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-lg font-black text-ink">Tổng quan</h1>
+            <h1 className="text-lg font-black text-foreground">Tổng quan</h1>
             <p className="text-xs text-muted">
               Theo dõi dòng tiền, đơn hàng và những việc cần xử lý cho gian hàng của bạn.
             </p>
@@ -201,8 +201,8 @@ export default function SellerOverviewStats({
         </form>
       </div>
 
-      <div className="rounded-2xl border border-border-c bg-surface-alt p-4 text-xs text-ink/80">
-        <p className="flex items-center gap-1.5 font-bold text-ink">
+      <div className="rounded-2xl border border-border-c bg-surface-alt p-4 text-xs text-foreground/80">
+        <p className="flex items-center gap-1.5 font-bold text-foreground">
           <Info className="h-3.5 w-3.5 text-info" /> Quy định giao dịch
         </p>
         <p className="mt-1.5">
@@ -255,7 +255,7 @@ export default function SellerOverviewStats({
         <div className="flex flex-col gap-4 min-w-0">
           <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
             <div className="mb-3 flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-black text-ink">Doanh số theo thời gian</h2>
+              <h2 className="text-sm font-black text-foreground">Doanh số theo thời gian</h2>
               <span className="text-[11px] text-muted">
                 {revenueTrend.length > 10 ? "Gộp theo tuần" : "Theo ngày"}
               </span>
@@ -265,7 +265,7 @@ export default function SellerOverviewStats({
 
           <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
             <div className="mb-3 flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-black text-ink">Trạng thái đơn hàng</h2>
+              <h2 className="text-sm font-black text-foreground">Trạng thái đơn hàng</h2>
               <span className="text-[11px] text-muted">{statusTotal} đơn trong kỳ</span>
             </div>
             {statusTotal === 0 ? (
@@ -286,10 +286,10 @@ export default function SellerOverviewStats({
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
                   {statusEntries.map((e) => (
-                    <div key={e.key} className="flex items-center gap-2 text-xs text-ink/80">
+                    <div key={e.key} className="flex items-center gap-2 text-xs text-foreground/80">
                       <span className={`h-2 w-2 shrink-0 rounded-full ${statusDotClass[e.key]}`} />
                       {orderStatusLabel[e.key]}
-                      <span className="ml-auto font-bold text-ink">{e.count}</span>
+                      <span className="ml-auto font-bold text-foreground">{e.count}</span>
                     </div>
                   ))}
                 </div>
@@ -299,7 +299,7 @@ export default function SellerOverviewStats({
 
           <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
             <div className="mb-2 flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-black text-ink">Sản phẩm bán chạy</h2>
+              <h2 className="text-sm font-black text-foreground">Sản phẩm bán chạy</h2>
               <span className="text-[11px] text-muted">Bấm để xem gian hàng</span>
             </div>
             {topProducts.length === 0 ? (
@@ -319,12 +319,12 @@ export default function SellerOverviewStats({
                     {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-bold text-ink">{p.productName}</p>
+                    <p className="truncate text-[13px] font-bold text-foreground">{p.productName}</p>
                     <p className="truncate text-[11px] text-muted">
                       {p.categoryName} · đã bán {p.quantity}
                     </p>
                   </div>
-                  <span className="shrink-0 text-[13px] font-black text-ink">{formatVnd(p.revenue)}</span>
+                  <span className="shrink-0 text-[13px] font-black text-foreground">{formatVnd(p.revenue)}</span>
                   <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
                 </Link>
               ))
@@ -333,7 +333,7 @@ export default function SellerOverviewStats({
 
           <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
             <div className="mb-2 flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-black text-ink">Đơn hàng gần đây</h2>
+              <h2 className="text-sm font-black text-foreground">Đơn hàng gần đây</h2>
               <Link
                 href="/trang-ban-hang/don-san-pham"
                 className="text-[11px] font-bold text-info hover:underline"
@@ -355,13 +355,13 @@ export default function SellerOverviewStats({
                 >
                   <span className={`h-2 w-2 shrink-0 rounded-full ${statusDotClass[o.status]}`} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-bold text-ink">{o.productName}</p>
+                    <p className="truncate text-[13px] font-bold text-foreground">{o.productName}</p>
                     <p className="truncate text-[11px] text-muted">
                       {o.buyerName} ·{" "}
                       {o.status === "DISPUTED" ? "đang tranh chấp" : formatRelativeTime(o.createdAt)}
                     </p>
                   </div>
-                  <span className="shrink-0 text-xs font-black text-ink">{formatVnd(o.amount)}</span>
+                  <span className="shrink-0 text-xs font-black text-foreground">{formatVnd(o.amount)}</span>
                   <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
                 </Link>
               ))
@@ -371,7 +371,7 @@ export default function SellerOverviewStats({
 
         <div className="flex flex-col gap-4">
           <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-            <h2 className="mb-3 text-sm font-black text-ink">Cần xử lý</h2>
+            <h2 className="mb-3 text-sm font-black text-foreground">Cần xử lý</h2>
             <div className="flex flex-col gap-2">
               {attentionItems.map((item) => (
                 <Link
@@ -383,7 +383,7 @@ export default function SellerOverviewStats({
                     <item.icon className="h-4 w-4" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-ink">{item.title}</p>
+                    <p className="text-xs font-bold text-foreground">{item.title}</p>
                     <p className="text-[10.5px] text-muted">{item.sub}</p>
                   </div>
                   <span
@@ -400,13 +400,13 @@ export default function SellerOverviewStats({
 
           {storeSnapshot && (
             <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-              <h2 className="mb-3 text-sm font-black text-ink">Gian hàng của bạn</h2>
+              <h2 className="mb-3 text-sm font-black text-foreground">Gian hàng của bạn</h2>
               <div className="flex items-center gap-3">
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-base font-black text-brand">
                   {storeSnapshot.shopName.charAt(0).toUpperCase()}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-ink">{storeSnapshot.shopName}</p>
+                  <p className="truncate text-sm font-black text-foreground">{storeSnapshot.shopName}</p>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {storeSnapshot.verified && (
                       <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold text-success">
@@ -422,14 +422,14 @@ export default function SellerOverviewStats({
 
               <div className="mt-3 flex items-center gap-1.5 text-xs">
                 <Star className="h-3.5 w-3.5 fill-brand-dark text-brand-dark" />
-                <b className="text-ink">{storeSnapshot.avgRating.toFixed(1)}</b>
+                <b className="text-foreground">{storeSnapshot.avgRating.toFixed(1)}</b>
                 <span className="text-muted">({storeSnapshot.reviewCount} đánh giá)</span>
               </div>
 
               <div className="mt-4">
                 <div className="mb-1.5 flex items-center justify-between text-[11px]">
                   <span className="text-muted">Quỹ bảo hiểm</span>
-                  <b className="text-ink">
+                  <b className="text-foreground">
                     {formatVnd(storeSnapshot.insuranceBalance)} / {formatVnd(INSURANCE_FUND_TARGET)}
                   </b>
                 </div>
@@ -486,7 +486,7 @@ function StatCard({
       </div>
       <div>
         <p className="text-xs font-semibold text-muted">{label}</p>
-        <p className="mt-0.5 text-lg font-black text-ink">{value}</p>
+        <p className="mt-0.5 text-lg font-black text-foreground">{value}</p>
       </div>
       {sub && !linkHref && <p className="text-[11px] text-muted">{sub}</p>}
       {linkHref && (

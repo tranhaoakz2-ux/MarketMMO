@@ -34,7 +34,7 @@ export default function ApiDocsPage() {
       </p>
 
       <section>
-        <h2 className="mb-2 text-base font-bold text-ink">Xác thực</h2>
+        <h2 className="mb-2 text-base font-bold text-foreground">Xác thực</h2>
         <p>
           Mọi request cần đính kèm header{" "}
           <code className="rounded bg-surface-alt px-1.5 py-0.5 text-xs">
@@ -46,7 +46,7 @@ export default function ApiDocsPage() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-base font-bold text-ink">Endpoint chính</h2>
+        <h2 className="mb-3 text-base font-bold text-foreground">Endpoint chính</h2>
         <div className="overflow-x-auto rounded-xl border border-border-c">
           <table className="w-full min-w-[560px] text-left text-sm">
             <thead>
@@ -62,10 +62,10 @@ export default function ApiDocsPage() {
                   <td className="px-4 py-2.5 font-mono text-xs font-bold text-success">
                     {e.method}
                   </td>
-                  <td className="px-4 py-2.5 font-mono text-xs text-ink">
+                  <td className="px-4 py-2.5 font-mono text-xs text-foreground">
                     {e.path}
                   </td>
-                  <td className="px-4 py-2.5 text-ink/70">{e.desc}</td>
+                  <td className="px-4 py-2.5 text-foreground/70">{e.desc}</td>
                 </tr>
               ))}
             </tbody>

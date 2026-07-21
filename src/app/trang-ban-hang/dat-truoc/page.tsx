@@ -14,7 +14,7 @@ export default async function SellerPreOrdersPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="flex items-center gap-2 text-lg font-black text-ink">
+        <h1 className="flex items-center gap-2 text-lg font-black text-foreground">
           <Clock className="h-5 w-5 text-brand-dark" /> Đặt trước
         </h1>
         <p className="text-xs text-muted">
@@ -25,7 +25,7 @@ export default async function SellerPreOrdersPage() {
       <SellerPreOrderPanel />
 
       <div>
-        <h2 className="mb-3 text-sm font-bold text-ink">Đơn đặt trước đang chờ giao</h2>
+        <h2 className="mb-3 text-sm font-bold text-foreground">Đơn đặt trước đang chờ giao</h2>
         <SellerOrdersTable items={items} emptyLabel="Chưa có đơn đặt trước nào." />
       </div>
     </div>

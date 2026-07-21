@@ -57,7 +57,7 @@ export default function ProductInfoTabs({
       </div>
 
       {tab === "description" && (
-        <div className="flex flex-col gap-2 p-6 text-sm leading-relaxed text-ink/80">
+        <div className="flex flex-col gap-2 p-6 text-sm leading-relaxed text-foreground/80">
           {description.map((line, i) => (
             <p key={i}>{line}</p>
           ))}
@@ -65,7 +65,7 @@ export default function ProductInfoTabs({
       )}
 
       {tab === "api" && (
-        <div className="flex flex-col gap-3 p-6 text-sm leading-relaxed text-ink/80">
+        <div className="flex flex-col gap-3 p-6 text-sm leading-relaxed text-foreground/80">
           <p>
             Sản phẩm này hỗ trợ giao hàng/kích hoạt tự động qua hệ thống API của
             MarketMMO dành cho đối tác/nhà phát triển.
@@ -77,10 +77,10 @@ export default function ProductInfoTabs({
       )}
 
       {tab === "reviews" && (
-        <div className="flex flex-col gap-4 p-6 text-sm text-ink/80">
+        <div className="flex flex-col gap-4 p-6 text-sm text-foreground/80">
           <div className="flex items-center gap-2">
             <RatingStars rating={rating} />
-            <span className="font-bold text-ink">{rating.toFixed(1)}</span>
+            <span className="font-bold text-foreground">{rating.toFixed(1)}</span>
             <span className="text-muted">({reviewCount} đánh giá)</span>
             <Link
               href={sellerShopHref}
@@ -105,14 +105,14 @@ export default function ProductInfoTabs({
                   >
                     <div className="flex items-center gap-2">
                       <Avatar size={28} />
-                      <span className="text-sm font-bold text-ink">{review.authorName}</span>
+                      <span className="text-sm font-bold text-foreground">{review.authorName}</span>
                       <RatingStars rating={review.rating} />
                       <span className="ml-auto text-xs text-muted">
                         {review.createdAt.toLocaleDateString("vi-VN")}
                       </span>
                     </div>
                     {review.comment && (
-                      <p className="mt-2 text-sm text-ink/80">{review.comment}</p>
+                      <p className="mt-2 text-sm text-foreground/80">{review.comment}</p>
                     )}
                   </div>
                 ))

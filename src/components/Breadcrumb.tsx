@@ -14,7 +14,7 @@ export default function Breadcrumb({ items }: { items: Crumb[] }) {
               {item.label}
             </Link>
           ) : (
-            <span className="font-semibold text-ink">{item.label}</span>
+            <span className="font-semibold text-foreground">{item.label}</span>
           )}
         </span>
       ))}

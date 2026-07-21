@@ -65,7 +65,7 @@ export default function OpenDisputeButton({ orderItemId }: { orderItemId: string
         </button>
         <button
           onClick={() => setOpen(false)}
-          className="rounded bg-surface-alt px-2 py-1 text-[10px] font-bold text-ink"
+          className="rounded bg-surface-alt px-2 py-1 text-[10px] font-bold text-foreground"
         >
           Huỷ
         </button>

@@ -36,7 +36,7 @@ export default function ProductCard({ product }: { product: Product }) {
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <h3 className="line-clamp-2 text-base font-bold leading-snug text-ink group-hover:text-brand-dark">
+          <h3 className="line-clamp-2 text-base font-bold leading-snug text-foreground group-hover:text-brand-dark">
             {product.name}
           </h3>
 

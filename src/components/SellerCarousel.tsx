@@ -19,7 +19,7 @@ function SellerCard({ seller }: { seller: SellerListItem }) {
       className="w-[187px] shrink-0 rounded-xl p-[5px] transition hover:-translate-y-0.5 sm:w-[204px]"
     >
       <div className="relative">
-        <span className="grid h-[253px] w-full place-items-center rounded-lg border-2 border-brand bg-surface-alt text-6xl font-black text-ink/70">
+        <span className="grid h-[253px] w-full place-items-center rounded-lg border-2 border-brand bg-surface-alt text-6xl font-black text-foreground/70">
           {seller.shopName.charAt(0).toUpperCase()}
         </span>
         <span
@@ -33,7 +33,7 @@ function SellerCard({ seller }: { seller: SellerListItem }) {
           {seller.level}
         </span>
       </div>
-      <h3 className="mt-[13px] line-clamp-2 text-[15px] font-bold leading-snug text-ink">
+      <h3 className="mt-[13px] line-clamp-2 text-[15px] font-bold leading-snug text-foreground">
         {seller.shopName}
       </h3>
       <div className="mt-1.5 flex items-center justify-between">

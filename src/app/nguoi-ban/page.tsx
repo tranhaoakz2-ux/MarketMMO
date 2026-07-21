@@ -24,7 +24,7 @@ export default async function SellerDirectoryPage() {
           <Reveal>
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h1 className="flex items-center gap-2 text-xl font-black text-ink">
+                <h1 className="flex items-center gap-2 text-xl font-black text-foreground">
                   <Store className="h-5 w-5 text-brand-dark" /> Người bán trên
                   MarketMMO
                 </h1>
@@ -67,7 +67,7 @@ export default async function SellerDirectoryPage() {
                         )}
                       </span>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-ink">
+                        <p className="truncate text-sm font-bold text-foreground">
                           {seller.shopName}
                         </p>
                         <span className="mt-0.5 inline-block rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-brand">
@@ -81,12 +81,12 @@ export default async function SellerDirectoryPage() {
                     </p>
 
                     <div className="mt-auto flex items-center justify-between border-t border-border-c pt-3 text-xs">
-                      <span className="flex items-center gap-1 font-semibold text-ink">
+                      <span className="flex items-center gap-1 font-semibold text-foreground">
                         <Package className="h-3.5 w-3.5" /> {seller.productCount} sản phẩm
                       </span>
                       <span className="flex items-center gap-1.5">
                         <RatingStars rating={seller.avgRating} />
-                        <span className="font-bold text-ink">
+                        <span className="font-bold text-foreground">
                           {seller.reviewCount > 0 ? seller.avgRating.toFixed(1) : "—"}
                         </span>
                         <span className="text-muted">({seller.reviewCount})</span>

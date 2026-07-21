@@ -89,7 +89,7 @@ export default async function AuctionPage() {
           </Reveal>
 
           <Reveal delay={0.05}>
-            <h2 className="mt-8 mb-4 text-center text-lg font-black uppercase tracking-wide text-ink">
+            <h2 className="mt-8 mb-4 text-center text-lg font-black uppercase tracking-wide text-foreground">
               Lịch đấu giá sắp tới
               <span className="mx-auto mt-1.5 block h-1 w-16 rounded-full bg-brand" />
             </h2>
@@ -138,13 +138,13 @@ export default async function AuctionPage() {
           </Reveal>
 
           <Reveal delay={0.1}>
-            <p className="mt-6 text-center text-sm font-semibold text-ink">
+            <p className="mt-6 text-center text-sm font-semibold text-foreground">
               🏆 Hãy chuẩn bị sẵn sàng để chiếm vị trí TOP 1!
             </p>
           </Reveal>
 
           <Reveal delay={0.1}>
-            <div className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-surface-alt py-3 text-sm font-bold text-ink">
+            <div className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-surface-alt py-3 text-sm font-bold text-foreground">
               <Clock className="h-4 w-4" />
               {hasAnyBid ? "PHIÊN ĐANG DIỄN RA — CÓ NGƯỜI ĐẶT GIÁ" : "ĐANG CHỜ LƯỢT ĐẤU GIÁ ĐẦU TIÊN"}
             </div>
@@ -171,7 +171,7 @@ export default async function AuctionPage() {
                   <div className="rounded-lg bg-surface-alt p-2.5 text-xs">
                     {slot.topBid ? (
                       <>
-                        <p className="font-bold text-ink">
+                        <p className="font-bold text-foreground">
                           {formatVnd(slot.topBid.amount)}{" "}
                           <span className="font-normal text-muted">
                             ({slot.bidCount} lượt đấu)
@@ -205,7 +205,7 @@ export default async function AuctionPage() {
                 <div className="flex items-center gap-2 bg-brand px-4 py-2.5 text-sm font-black text-ink">
                   <Megaphone className="h-4 w-4" /> ĐƯA SẢN PHẨM LÊN VỊ TRÍ VÀNG
                 </div>
-                <ul className="flex flex-col gap-2 bg-surface p-4 text-sm text-ink/80">
+                <ul className="flex flex-col gap-2 bg-surface p-4 text-sm text-foreground/80">
                   {benefits.map((b) => (
                     <li key={b} className="flex items-start gap-2">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
@@ -219,7 +219,7 @@ export default async function AuctionPage() {
                 <div className="flex items-center gap-2 bg-brand px-4 py-2.5 text-sm font-black text-ink">
                   <Info className="h-4 w-4" /> HƯỚNG DẪN THAM GIA
                 </div>
-                <ul className="flex flex-col gap-3 bg-surface p-4 text-sm text-ink/80">
+                <ul className="flex flex-col gap-3 bg-surface p-4 text-sm text-foreground/80">
                   {guideSteps.map((step, i) => (
                     <li key={step} className="flex items-start gap-2.5">
                       <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-ink text-[11px] font-bold text-white">

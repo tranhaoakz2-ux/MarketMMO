@@ -34,7 +34,7 @@ export default function SellerDisputesList({ disputes }: { disputes: Dispute[] }
       {disputes.map((d) => (
         <div key={d.id} className="rounded-xl border border-border-c bg-surface p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-bold text-ink">{d.productName}</p>
+            <p className="text-sm font-bold text-foreground">{d.productName}</p>
             <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${statusStyle[d.status]}`}>
               {disputeStatusLabel[d.status]}
             </span>
@@ -43,7 +43,7 @@ export default function SellerDisputesList({ disputes }: { disputes: Dispute[] }
             Mở bởi {d.openedByName} · {d.createdAt.toLocaleString("vi-VN")} ·{" "}
             {formatVnd(d.amount)}
           </p>
-          <p className="mt-2 text-sm text-ink/80">{d.reason}</p>
+          <p className="mt-2 text-sm text-foreground/80">{d.reason}</p>
           {d.status !== "OPEN" && (
             <p className="mt-2 text-xs text-muted">
               Admin đã xử lý lúc {d.resolvedAt?.toLocaleString("vi-VN")}

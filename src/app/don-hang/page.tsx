@@ -58,7 +58,7 @@ export default async function OrdersPage() {
 
         <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6 lg:px-8">
           <Reveal>
-            <h1 className="mb-4 flex items-center gap-2 text-xl font-black text-ink">
+            <h1 className="mb-4 flex items-center gap-2 text-xl font-black text-foreground">
               <PackageSearch className="h-5 w-5" /> Lịch sử đơn hàng
             </h1>
           </Reveal>
@@ -91,7 +91,7 @@ export default async function OrdersPage() {
                           {row.orderId.slice(-8).toUpperCase()}
                         </td>
                         <td className="max-w-[220px] px-4 py-3">
-                          <p className="truncate font-semibold text-ink">{row.productName}</p>
+                          <p className="truncate font-semibold text-foreground">{row.productName}</p>
                           {row.variantLabel && (
                             <p className="truncate text-xs text-brand-dark">{row.variantLabel}</p>
                           )}

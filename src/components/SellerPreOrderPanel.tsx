@@ -46,7 +46,7 @@ export default function SellerPreOrderPanel() {
 
   return (
     <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-      <h2 className="mb-1 text-sm font-bold text-ink">Đánh dấu sản phẩm &quot;Đặt trước&quot;</h2>
+      <h2 className="mb-1 text-sm font-bold text-foreground">Đánh dấu sản phẩm &quot;Đặt trước&quot;</h2>
       <p className="mb-4 text-xs text-muted">
         Bật cho sản phẩm chưa có sẵn hàng — người mua vẫn thanh toán trước bình thường (tiền
         vào ký quỹ như đơn thường), hệ thống bỏ qua kiểm tra tồn kho cho sản phẩm này.
@@ -67,7 +67,7 @@ export default function SellerPreOrderPanel() {
               className="flex items-center justify-between gap-3 rounded-lg border border-border-c px-3 py-2.5"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-ink">{p.name}</p>
+                <p className="truncate text-sm font-semibold text-foreground">{p.name}</p>
                 <p className="text-xs text-muted">{p.categoryLabel}</p>
               </div>
               <button

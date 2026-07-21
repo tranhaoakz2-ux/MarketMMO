@@ -31,7 +31,7 @@ export default function ForgotPasswordForm() {
     return (
       <div className="flex flex-col items-center gap-3 py-6 text-center">
         <CheckCircle2 className="h-10 w-10 text-success" />
-        <p className="text-sm text-ink">{message}</p>
+        <p className="text-sm text-foreground">{message}</p>
       </div>
     );
   }
@@ -42,7 +42,7 @@ export default function ForgotPasswordForm() {
         Nhập email đã dùng để đăng ký, chúng tôi sẽ gửi link đặt lại mật khẩu cho bạn.
       </p>
       <div>
-        <label className="mb-1.5 block text-sm font-semibold text-ink">Email</label>
+        <label className="mb-1.5 block text-sm font-semibold text-foreground">Email</label>
         <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
           <Mail className="h-4 w-4 text-muted" />
           <input

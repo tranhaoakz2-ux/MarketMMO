@@ -65,7 +65,7 @@ export default async function ProductDetailPage({
                   KHO MARKETMMO
                 </span>
                 <button
-                  className="absolute right-0 top-0 z-10 grid h-9 w-9 place-items-center rounded-full bg-white shadow"
+                  className="absolute right-0 top-0 z-10 grid h-9 w-9 place-items-center rounded-full bg-surface shadow"
                   aria-label="Thêm vào yêu thích"
                 >
                   <Heart className="h-4 w-4 text-danger" />
@@ -80,12 +80,12 @@ export default async function ProductDetailPage({
               </div>
 
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <button className="flex items-center justify-center gap-1.5 rounded-lg border border-border-c py-2 text-xs font-semibold text-ink hover:bg-surface-alt">
+                <button className="flex items-center justify-center gap-1.5 rounded-lg border border-border-c py-2 text-xs font-semibold text-foreground hover:bg-surface-alt">
                   <Heart className="h-3.5 w-3.5" /> Thêm sản phẩm Yêu thích
                 </button>
                 <Link
                   href={`/shop/${slugifySeller(product.seller)}`}
-                  className="flex items-center justify-center gap-1.5 rounded-lg border border-border-c py-2 text-xs font-semibold text-ink hover:bg-surface-alt"
+                  className="flex items-center justify-center gap-1.5 rounded-lg border border-border-c py-2 text-xs font-semibold text-foreground hover:bg-surface-alt"
                 >
                   <Store className="h-3.5 w-3.5" /> Xem Shop
                 </Link>
@@ -93,10 +93,10 @@ export default async function ProductDetailPage({
 
               <div className="mt-3 flex gap-2 rounded-lg border-l-4 border-brand-dark bg-brand-light/25 p-2.5">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-brand-dark" />
-                <p className="text-[11px] leading-relaxed text-ink/80">
-                  <strong className="text-ink">Lưu ý:</strong> Khách hàng nên
-                  xem kỹ <strong className="text-ink">chế độ bảo hành</strong>{" "}
-                  hoặc <strong className="text-ink">nhắn tin cho người bán</strong>{" "}
+                <p className="text-[11px] leading-relaxed text-foreground/80">
+                  <strong className="text-foreground">Lưu ý:</strong> Khách hàng nên
+                  xem kỹ <strong className="text-foreground">chế độ bảo hành</strong>{" "}
+                  hoặc <strong className="text-foreground">nhắn tin cho người bán</strong>{" "}
                   trước khi mua để đảm bảo quyền lợi.
                 </p>
               </div>
@@ -215,7 +215,7 @@ export default async function ProductDetailPage({
                   href={`/dien-dan/${post.id}`}
                   className="rounded-xl border border-border-c bg-surface p-3 shadow-sm transition hover:border-brand"
                 >
-                  <p className="line-clamp-2 text-sm font-bold text-ink">
+                  <p className="line-clamp-2 text-sm font-bold text-foreground">
                     {post.title}
                   </p>
                   <div className="mt-2 flex items-center gap-2 text-xs text-muted">

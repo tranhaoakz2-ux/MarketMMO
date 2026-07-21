@@ -75,7 +75,7 @@ export default function RevenueChart({ bars }: { bars: Bar[] }) {
             y1={padT + (plotH / 3) * i}
             y2={padT + (plotH / 3) * i}
             stroke="currentColor"
-            className="text-ink/5"
+            className="text-foreground/5"
             strokeWidth={1}
           />
         ))}

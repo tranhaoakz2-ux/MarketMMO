@@ -31,7 +31,7 @@ export default function NavMegaMenu({
       </Link>
 
       <div className="invisible absolute left-0 top-full z-50 translate-y-1 opacity-0 transition duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-        <div className="mt-1 overflow-hidden rounded-xl border border-border-c bg-white py-2 shadow-xl">
+        <div className="mt-1 overflow-hidden rounded-xl border border-border-c bg-surface py-2 shadow-xl">
           <div
             className={`grid gap-x-4 gap-y-0.5 px-2 ${
               columns === 2 ? "grid-cols-2 w-72" : "w-52"
@@ -41,7 +41,7 @@ export default function NavMegaMenu({
               <Link
                 key={item.href + item.label}
                 href={item.href}
-                className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-ink/80 transition hover:bg-surface-alt hover:text-brand-dark"
+                className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-foreground/80 transition hover:bg-surface-alt hover:text-brand-dark"
               >
                 <span className="flex items-center gap-2">
                   {item.icon}

@@ -58,8 +58,8 @@ export default function CategoryTabs({
                 onClick={() => setTab(t)}
                 className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-black uppercase tracking-tight transition ${
                   tab === t
-                    ? "bg-surface text-ink shadow-sm ring-1 ring-border-c"
-                    : "text-muted hover:text-ink"
+                    ? "bg-surface text-foreground shadow-sm ring-1 ring-border-c"
+                    : "text-muted hover:text-foreground"
                 }`}
               >
                 {t}
@@ -68,7 +68,7 @@ export default function CategoryTabs({
           </div>
           <label className="flex items-center gap-1.5 text-xs font-medium text-muted">
             Sắp xếp:
-            <select className="flex-1 rounded-lg border border-border-c bg-surface px-2 py-1 text-xs font-semibold text-ink focus:outline-none">
+            <select className="flex-1 rounded-lg border border-border-c bg-surface px-2 py-1 text-xs font-semibold text-foreground focus:outline-none">
               <option>Mặc định</option>
               <option>Mới nhất</option>
               <option>Giá thấp</option>

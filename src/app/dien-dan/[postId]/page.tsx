@@ -60,16 +60,16 @@ export default async function ForumPostPage({
                 </span>
               </div>
 
-              <h1 className="mt-2 text-xl font-black text-ink">{post.title}</h1>
+              <h1 className="mt-2 text-xl font-black text-foreground">{post.title}</h1>
 
               <div className="mt-2 flex items-center gap-2 text-xs text-muted">
-                <span className="flex items-center gap-1.5 font-semibold text-ink">
+                <span className="flex items-center gap-1.5 font-semibold text-foreground">
                   <Avatar size={20} />
                   {post.authorName}
                 </span>
               </div>
 
-              <div className="mt-4 whitespace-pre-line text-sm leading-relaxed text-ink/90">
+              <div className="mt-4 whitespace-pre-line text-sm leading-relaxed text-foreground/90">
                 {post.content}
               </div>
 
@@ -90,7 +90,7 @@ export default async function ForumPostPage({
           </Reveal>
 
           <Reveal delay={0.05} className="mt-6">
-            <h2 className="mb-3 text-base font-bold text-ink">
+            <h2 className="mb-3 text-base font-bold text-foreground">
               Bình luận ({post.commentCount})
             </h2>
             <div className="flex flex-col gap-3">
@@ -101,7 +101,7 @@ export default async function ForumPostPage({
                 >
                   <div className="flex items-center gap-2 text-xs">
                     <Avatar size={20} />
-                    <span className="font-semibold text-ink">{comment.authorName}</span>
+                    <span className="font-semibold text-foreground">{comment.authorName}</span>
                     <span className="text-muted">
                       {comment.createdAt.toLocaleDateString("vi-VN")}
                     </span>
@@ -109,7 +109,7 @@ export default async function ForumPostPage({
                       <ForumReportButton commentId={comment.id} />
                     </span>
                   </div>
-                  <p className="mt-2 whitespace-pre-line text-sm text-ink/90">
+                  <p className="mt-2 whitespace-pre-line text-sm text-foreground/90">
                     {comment.content}
                   </p>
                 </div>

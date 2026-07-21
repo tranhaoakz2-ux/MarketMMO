@@ -32,7 +32,7 @@ export default function TermsOfServicePage() {
     <LegalPageLayout title="Điều khoản dịch vụ" updatedAt="09/07/2026">
       {sections.map((s) => (
         <section key={s.title}>
-          <h2 className="mb-2 text-base font-bold text-ink">{s.title}</h2>
+          <h2 className="mb-2 text-base font-bold text-foreground">{s.title}</h2>
           <p>{s.body}</p>
         </section>
       ))}

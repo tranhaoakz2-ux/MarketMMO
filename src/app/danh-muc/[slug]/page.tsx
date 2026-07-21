@@ -55,7 +55,7 @@ export default async function CategoryPage({
 
           <div className="min-w-0 flex-1">
             <Reveal>
-              <h1 className="mb-4 flex items-center gap-2 text-2xl font-black text-ink">
+              <h1 className="mb-4 flex items-center gap-2 text-2xl font-black text-foreground">
                 {createElement(getCategoryIcon(slug), {
                   className: "h-6 w-6 text-brand-dark",
                   strokeWidth: 1.75,
@@ -88,7 +88,7 @@ export default async function CategoryPage({
                     className={`-mb-px cursor-pointer border-b-2 pb-3 text-[15px] font-semibold transition ${
                       i === 0
                         ? "border-brand text-brand-dark"
-                        : "border-transparent text-muted hover:text-ink"
+                        : "border-transparent text-muted hover:text-foreground"
                     }`}
                   >
                     {option}
@@ -135,7 +135,7 @@ export default async function CategoryPage({
 
             <Reveal delay={0.1}>
               <p className="mt-6 text-sm leading-relaxed text-muted">
-                <strong className="text-ink">{category.name}</strong> là danh
+                <strong className="text-foreground">{category.name}</strong> là danh
                 mục sản phẩm số được giao dịch phổ biến trên MarketMMO — hỗ trợ
                 đầy đủ các phương thức kiếm tiền online. Mọi giao dịch đều
                 được ký quỹ an toàn và giao hàng tự động ngay sau khi thanh

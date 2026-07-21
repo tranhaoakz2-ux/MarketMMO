@@ -74,7 +74,7 @@ export default function ProxyCheckerTool() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-ink">
+        <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-foreground">
           <Network className="h-4 w-4" /> Danh sách Proxy
         </label>
         <p className="mb-1.5 text-xs text-muted">
@@ -127,7 +127,7 @@ export default function ProxyCheckerTool() {
               }`}
             >
               <div className="min-w-0">
-                <p className="truncate font-semibold text-ink">{r.label}</p>
+                <p className="truncate font-semibold text-foreground">{r.label}</p>
                 <p className="truncate text-xs text-muted">
                   {r.host}:{r.port}
                 </p>

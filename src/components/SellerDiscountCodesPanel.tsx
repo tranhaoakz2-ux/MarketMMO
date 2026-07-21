@@ -93,10 +93,10 @@ export default function SellerDiscountCodesPanel() {
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-2xl border border-dashed border-brand-dark/40 bg-brand-light/15 p-4">
-        <h2 className="mb-3 text-sm font-bold text-ink">Tạo mã giảm giá mới</h2>
+        <h2 className="mb-3 text-sm font-bold text-foreground">Tạo mã giảm giá mới</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">Mã (VD: SALE10)</label>
+            <label className="mb-1 block text-xs font-semibold text-foreground">Mã (VD: SALE10)</label>
             <input
               type="text"
               value={code}
@@ -106,7 +106,7 @@ export default function SellerDiscountCodesPanel() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">Loại giảm giá</label>
+            <label className="mb-1 block text-xs font-semibold text-foreground">Loại giảm giá</label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as "PERCENT" | "FIXED")}
@@ -117,7 +117,7 @@ export default function SellerDiscountCodesPanel() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">
+            <label className="mb-1 block text-xs font-semibold text-foreground">
               Giá trị {type === "PERCENT" ? "(%)" : "(VNĐ)"}
             </label>
             <input
@@ -129,7 +129,7 @@ export default function SellerDiscountCodesPanel() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">
+            <label className="mb-1 block text-xs font-semibold text-foreground">
               Số lần dùng tối đa (bỏ trống = không giới hạn)
             </label>
             <input
@@ -142,7 +142,7 @@ export default function SellerDiscountCodesPanel() {
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-semibold text-ink">
+            <label className="mb-1 block text-xs font-semibold text-foreground">
               Ngày hết hạn (bỏ trống = không hết hạn)
             </label>
             <input
@@ -171,7 +171,7 @@ export default function SellerDiscountCodesPanel() {
       </div>
 
       <div>
-        <h2 className="mb-3 text-sm font-bold text-ink">Danh sách mã giảm giá</h2>
+        <h2 className="mb-3 text-sm font-bold text-foreground">Danh sách mã giảm giá</h2>
         {loading ? (
           <p className="text-sm text-muted">Đang tải...</p>
         ) : codes.length === 0 ? (
@@ -186,7 +186,7 @@ export default function SellerDiscountCodesPanel() {
                 className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-c bg-surface p-4 shadow-sm"
               >
                 <div>
-                  <p className="font-mono text-sm font-black text-ink">{c.code}</p>
+                  <p className="font-mono text-sm font-black text-foreground">{c.code}</p>
                   <p className="text-xs text-muted">
                     {c.type === "PERCENT" ? `Giảm ${c.value}%` : `Giảm ${formatVnd(c.value)}`} · Đã
                     dùng {c.usedCount}

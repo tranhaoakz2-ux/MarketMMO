@@ -100,7 +100,7 @@ function StockEntryPanel({
             </button>
           </div>
           {error && <p className="text-[11px] font-semibold text-danger">{error}</p>}
-          <p className="text-[11px] leading-relaxed text-ink/70">
+          <p className="text-[11px] leading-relaxed text-foreground/70">
             Mỗi dòng sẽ được giao TỰ ĐỘNG cho đúng 1 khách khi mua — hệ thống
             tự gán theo thứ tự, không giao trùng. Từ lúc này, &ldquo;Kho&rdquo;
             tự động đồng bộ theo số lượng còn lại trong kho thật.
@@ -222,12 +222,12 @@ function ProductCard({ product, onChanged }: { product: Product; onChanged: () =
             {status === "APPROVED" ? (
               <Link
                 href={`/san-pham/${product.slug}`}
-                className="font-bold text-ink hover:text-brand-dark"
+                className="font-bold text-foreground hover:text-brand-dark"
               >
                 {product.name}
               </Link>
             ) : (
-              <span className="font-bold text-ink">{product.name}</span>
+              <span className="font-bold text-foreground">{product.name}</span>
             )}
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${STATUS_STYLE[status]}`}>
               {PRODUCT_STATUS_LABEL[status]}
@@ -250,7 +250,7 @@ function ProductCard({ product, onChanged }: { product: Product; onChanged: () =
             />
           )}
         </div>
-        <span className="rounded-full bg-surface-alt px-2.5 py-1 text-xs font-bold text-ink">
+        <span className="rounded-full bg-surface-alt px-2.5 py-1 text-xs font-bold text-foreground">
           {variants.length} phiên bản
         </span>
       </div>
@@ -263,7 +263,7 @@ function ProductCard({ product, onChanged }: { product: Product; onChanged: () =
               className="rounded-lg border border-border-c bg-surface-alt px-3 py-2 text-sm"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-semibold text-ink">{v.label}</span>
+                <span className="font-semibold text-foreground">{v.label}</span>
                 <div className="flex items-center gap-3">
                   <span className="font-bold text-danger">{formatVnd(v.price)}</span>
                   <span className="text-xs text-muted">Kho: {v.stock}</span>

@@ -54,15 +54,15 @@ export default function SellerOrdersTable({
           className="grid min-w-[720px] grid-cols-6 gap-2 border-b border-border-c px-4 py-3 text-sm last:border-0"
         >
           <div className="col-span-2 min-w-0">
-            <p className="truncate font-semibold text-ink">{item.productName}</p>
+            <p className="truncate font-semibold text-foreground">{item.productName}</p>
             <p className="truncate text-xs text-muted">
               {item.variantLabel ? `${item.variantLabel} · ` : ""}
               {item.categoryName} · SL {item.quantity}
             </p>
           </div>
-          <span className="truncate text-ink">{item.buyerName}</span>
+          <span className="truncate text-foreground">{item.buyerName}</span>
           <span className="text-muted">{item.createdAt.toLocaleDateString("vi-VN")}</span>
-          <span className="font-bold text-ink">{formatVnd(item.price * item.quantity)}</span>
+          <span className="font-bold text-foreground">{formatVnd(item.price * item.quantity)}</span>
           <span>
             <span
               className={`w-fit rounded-full px-2 py-0.5 text-xs font-bold ${statusStyle[item.status]}`}

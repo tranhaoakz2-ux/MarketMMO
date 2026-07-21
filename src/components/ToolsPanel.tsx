@@ -68,7 +68,7 @@ export default function ToolsPanel() {
 
         <div className="bg-surface p-4 sm:p-6">
           <div className="rounded-xl border border-border-c bg-surface-alt p-4 sm:p-6">
-            <h2 className="mb-4 text-lg font-black text-ink">
+            <h2 className="mb-4 text-lg font-black text-foreground">
               {active === "2fa"
                 ? "Trình Bóc Mã 2FA (TOTP)"
                 : active === "proxy"
@@ -87,10 +87,10 @@ export default function ToolsPanel() {
       </div>
 
       <div className="mt-6 rounded-2xl border border-border-c bg-surface p-6 shadow-sm">
-        <h2 className="mb-3 flex items-center gap-2 text-base font-bold text-ink">
+        <h2 className="mb-3 flex items-center gap-2 text-base font-bold text-foreground">
           <Info className="h-4 w-4 text-brand-dark" /> Hướng dẫn sử dụng
         </h2>
-        <ol className="flex flex-col gap-1.5 text-sm text-ink/80">
+        <ol className="flex flex-col gap-1.5 text-sm text-foreground/80">
           {instructions[active].map((step, i) => (
             <li key={i} className="flex gap-2">
               <span className="font-bold text-muted">{i + 1}.</span>

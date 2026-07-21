@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
+/* Dark mode kiểu SELECTOR (Tailwind v4) — biến thể `dark:` kích hoạt theo
+   attribute [data-theme="dark"] trên <html>, KHÔNG dùng prefers-color-scheme
+   (người dùng tự bật/tắt qua ThemeToggle). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
+  color-scheme: light;
   --background: #f4f5f7;
   --foreground: #16161f;
 
@@ -21,6 +27,24 @@
   --color-danger: #e6483f;
   --color-info: #2563eb;
   --color-info-light: #dbeafe;
+}
+
+/* CHẾ ĐỘ TỐI — chỉ ghi đè các biến "đổi theo nền" (surface/border/text/muted/
+   background). GIỮ NGUYÊN các màu thương hiệu/cố định: brand*, ink*, success/
+   danger/info — vì thanh header vàng, nút bg-ink, badge... phải giống nhau ở cả
+   2 chế độ. Nhờ @theme inline resolve var() lúc chạy, mọi utility bg-surface/
+   border-border-c/text-muted/text-foreground... tự đổi màu, không cần sửa
+   component. Bảng màu chọn để đủ tương phản đọc (WCAG AA cho chữ chính). */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0e0f16;
+  --foreground: #e9e9f2;
+  --color-surface: #171821;
+  --color-surface-alt: #1f2030;
+  --color-border: #2c2e3f;
+  --color-text: #e9e9f2;
+  --color-muted: #a3a3b4;
+  --color-info-light: rgba(37, 99, 235, 0.22);
 }
 
 @theme inline {

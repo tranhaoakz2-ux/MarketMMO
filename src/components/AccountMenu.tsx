@@ -24,19 +24,19 @@ export default function AccountMenu({ name, role }: { name: string; role: Role }
     <div className="group relative flex h-full items-center">
       <Link
         href="/don-hang"
-        className="flex h-10 items-center gap-2.5 overflow-hidden rounded-full border-2 border-ink bg-white pr-4 text-sm font-bold text-ink transition hover:bg-surface-alt"
+        className="flex h-10 items-center gap-2.5 overflow-hidden rounded-full border-2 border-ink bg-ink pr-4 text-sm font-bold text-white transition hover:bg-ink-soft"
       >
         <Avatar size={40} />
         {name}
       </Link>
 
       <div className="invisible absolute right-0 top-full z-50 w-56 translate-y-1 opacity-0 transition duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-        <div className="mt-2 overflow-hidden rounded-xl border border-border-c bg-white py-2 shadow-xl">
+        <div className="mt-2 overflow-hidden rounded-xl border border-border-c bg-surface py-2 shadow-xl">
           {items.map((item) => (
             <Link
               key={item.label}
               href={item.href}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-ink/80 transition hover:bg-surface-alt hover:text-brand-dark"
+              className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-foreground/80 transition hover:bg-surface-alt hover:text-brand-dark"
             >
               <item.icon className="h-[18px] w-[18px] text-brand-dark" strokeWidth={2.5} />
               {item.label}

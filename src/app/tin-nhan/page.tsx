@@ -24,7 +24,7 @@ export default async function ChatPage() {
 
         <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
           <Reveal>
-            <h1 className="mb-4 flex items-center gap-2 text-xl font-black text-ink">
+            <h1 className="mb-4 flex items-center gap-2 text-xl font-black text-foreground">
               <MessageCircle className="h-5 w-5" /> Tin nhắn
             </h1>
             <Suspense fallback={<p className="text-sm text-muted">Đang tải...</p>}>

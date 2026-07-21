@@ -66,21 +66,21 @@ export default function SellerRegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <div className="rounded-xl border-l-4 border-brand-dark bg-brand-light/25 p-5 sm:p-6">
-        <h2 className="mb-3 flex items-center gap-2 text-lg font-bold text-ink">
+        <h2 className="mb-3 flex items-center gap-2 text-lg font-bold text-foreground">
           <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-dark text-white">
             <Info className="h-3 w-3" />
           </span>
           Thông tin quan trọng
         </h2>
-        <p className="mb-2.5 text-[15px] font-semibold text-ink">
+        <p className="mb-2.5 text-[15px] font-semibold text-foreground">
           Khi đăng ký làm người bán:
         </p>
-        <ul className="flex flex-col gap-2.5 text-[15px] leading-relaxed text-ink/80">
+        <ul className="flex flex-col gap-2.5 text-[15px] leading-relaxed text-foreground/80">
           <li className="flex gap-2.5">
             <span className="mt-[9px] h-2 w-2 shrink-0 rounded-full bg-brand-dark" />
             <span>
               Tài khoản của bạn sẽ được nâng cấp lên{" "}
-              <strong className="text-ink">Người bán</strong> ngay sau khi đăng ký thành
+              <strong className="text-foreground">Người bán</strong> ngay sau khi đăng ký thành
               công.
             </span>
           </li>
@@ -88,7 +88,7 @@ export default function SellerRegisterForm() {
             <span className="mt-[9px] h-2 w-2 shrink-0 rounded-full bg-brand-dark" />
             <span>
               Gian hàng của bạn có trang riêng công khai{" "}
-              <strong className="text-ink">ngay lập tức</strong> tại địa chỉ
+              <strong className="text-foreground">ngay lập tức</strong> tại địa chỉ
               marketmmo.pro/shop/tên-gian-hàng.
             </span>
           </li>
@@ -96,15 +96,15 @@ export default function SellerRegisterForm() {
             <span className="mt-[9px] h-2 w-2 shrink-0 rounded-full bg-brand-dark" />
             <span>
               Doanh thu từ mỗi đơn hàng được giữ{" "}
-              <strong className="text-ink">ký quỹ (escrow)</strong> rồi cộng thẳng vào ví
+              <strong className="text-foreground">ký quỹ (escrow)</strong> rồi cộng thẳng vào ví
               của bạn sau khi hết hạn ký quỹ — hiện{" "}
-              <strong className="text-ink">không thu phí sàn/hoa hồng</strong>.
+              <strong className="text-foreground">không thu phí sàn/hoa hồng</strong>.
             </span>
           </li>
           <li className="flex gap-2.5">
             <AlertTriangle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-danger" />
             <span>
-              <strong className="text-ink">Cung cấp thông tin chính xác và trung thực.</strong>{" "}
+              <strong className="text-foreground">Cung cấp thông tin chính xác và trung thực.</strong>{" "}
               Thông tin sai lệch hoặc gian lận có thể dẫn đến{" "}
               <strong className="text-danger">khóa gian hàng</strong>.
             </span>
@@ -113,7 +113,7 @@ export default function SellerRegisterForm() {
       </div>
 
       <div>
-        <label className="mb-1.5 block text-[15px] font-bold text-ink">
+        <label className="mb-1.5 block text-[15px] font-bold text-foreground">
           Tên gian hàng <span className="text-danger">*</span>
         </label>
         <input
@@ -132,7 +132,7 @@ export default function SellerRegisterForm() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1.5 block text-[15px] font-bold text-ink">
+          <label className="mb-1.5 block text-[15px] font-bold text-foreground">
             Số điện thoại <span className="text-danger">*</span>
           </label>
           <input
@@ -148,7 +148,7 @@ export default function SellerRegisterForm() {
           </p>
         </div>
         <div>
-          <label className="mb-1.5 block text-[15px] font-bold text-ink">Link Facebook</label>
+          <label className="mb-1.5 block text-[15px] font-bold text-foreground">Link Facebook</label>
           <input
             type="url"
             value={facebookLink}
@@ -163,7 +163,7 @@ export default function SellerRegisterForm() {
       </div>
 
       <div>
-        <label className="mb-1.5 block text-[15px] font-bold text-ink">Giới thiệu bản thân</label>
+        <label className="mb-1.5 block text-[15px] font-bold text-foreground">Giới thiệu bản thân</label>
         <textarea
           rows={4}
           value={description}
@@ -204,7 +204,7 @@ export default function SellerRegisterForm() {
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-c pt-5">
         <Link
           href="/"
-          className="text-[15px] font-semibold text-muted transition hover:text-ink"
+          className="text-[15px] font-semibold text-muted transition hover:text-foreground"
         >
           ← Quay lại trang chủ
         </Link>

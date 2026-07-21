@@ -62,7 +62,7 @@ export default function SellerSidebar({
             {shopName.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-ink">{shopName}</p>
+            <p className="truncate text-sm font-bold text-foreground">{shopName}</p>
             <p className="text-xs text-muted">
               {verified ? "Người bán đã xác thực" : "Người bán"}
             </p>
@@ -73,10 +73,10 @@ export default function SellerSidebar({
           href="/trang-ban-hang/quy-bao-hiem"
           className="mb-3 block rounded-xl border border-dashed border-brand-dark/40 bg-brand-light/25 p-3 text-xs transition hover:bg-brand-light/40"
         >
-          <p className="flex items-center gap-1.5 font-bold text-ink">
+          <p className="flex items-center gap-1.5 font-bold text-foreground">
             <ShieldCheck className="h-3.5 w-3.5 text-brand-dark" /> Quỹ bảo hiểm
           </p>
-          <p className="mt-1 text-ink/80">
+          <p className="mt-1 text-foreground/80">
             {formatVnd(insuranceBalance)} / {formatVnd(INSURANCE_FUND_TARGET)} — không bắt buộc,
             tăng độ tin cậy gian hàng.
           </p>

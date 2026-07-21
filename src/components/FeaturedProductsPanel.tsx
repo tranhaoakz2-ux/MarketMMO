@@ -15,7 +15,7 @@ export default function FeaturedProductsPanel({
   return (
     <div className="rounded-[10px] border border-border-c bg-surface p-4 shadow-sm sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b-2 border-brand pb-3">
-        <h2 className="flex items-center gap-2 text-[14.4px] font-black text-ink">
+        <h2 className="flex items-center gap-2 text-[14.4px] font-black text-foreground">
           <Image src="/fire-icon.png" alt="" width={30} height={30} className="h-[30px] w-[30px]" />
           <span className="rounded-full bg-brand px-2.5 py-1 text-ink">Sản Phẩm Nổi Bật</span>
         </h2>

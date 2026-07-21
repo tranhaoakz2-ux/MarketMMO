@@ -5,7 +5,7 @@ export default function SellerDiscountCodesPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="flex items-center gap-2 text-lg font-black text-ink">
+        <h1 className="flex items-center gap-2 text-lg font-black text-foreground">
           <Tag className="h-5 w-5 text-brand-dark" /> Mã giảm giá
         </h1>
         <p className="text-xs text-muted">

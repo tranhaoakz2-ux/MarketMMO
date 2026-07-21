@@ -33,7 +33,7 @@ export default async function ForumPage() {
         <div className="mx-auto max-w-4xl px-4 pb-12 sm:px-6 lg:px-8">
           <Reveal>
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-              <h1 className="text-xl font-black text-ink">
+              <h1 className="text-xl font-black text-foreground">
                 Diễn đàn cộng đồng MarketMMO
               </h1>
               <ForumNewPostPanel />
@@ -58,12 +58,12 @@ export default async function ForumPage() {
                       {post.createdAt.toLocaleDateString("vi-VN")}
                     </span>
                   </div>
-                  <h2 className="mt-2 text-base font-bold text-ink">
+                  <h2 className="mt-2 text-base font-bold text-foreground">
                     {post.title}
                   </h2>
                   <p className="mt-1 text-sm text-muted">{post.excerpt}</p>
                   <div className="mt-3 flex items-center gap-3 text-xs text-muted">
-                    <span className="flex items-center gap-1.5 font-semibold text-ink">
+                    <span className="flex items-center gap-1.5 font-semibold text-foreground">
                       <Avatar size={20} />
                       {post.authorName}
                     </span>

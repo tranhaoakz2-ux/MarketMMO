@@ -181,7 +181,7 @@ export default function AuthForms({
       {tab === "login" ? (
       <form onSubmit={handleLogin} className="flex flex-col gap-4 p-6 sm:p-8">
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-ink">
+          <label className="mb-1.5 block text-sm font-semibold text-foreground">
             Email hoặc Username
           </label>
           <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
@@ -198,7 +198,7 @@ export default function AuthForms({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-ink">
+          <label className="mb-1.5 block text-sm font-semibold text-foreground">
             Mật khẩu
           </label>
           <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
@@ -254,7 +254,7 @@ export default function AuthForms({
             <button
               type="button"
               onClick={() => signIn("google", { callbackUrl })}
-              className="flex cursor-pointer items-center justify-center gap-2 rounded-full border-2 border-border-c py-3 text-sm font-semibold text-ink transition hover:border-brand-dark hover:bg-surface-alt"
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-full border-2 border-border-c py-3 text-sm font-semibold text-foreground transition hover:border-brand-dark hover:bg-surface-alt"
             >
               <GoogleIcon />
               Đăng nhập với Google
@@ -269,7 +269,7 @@ export default function AuthForms({
       ) : (
       <form onSubmit={handleRegister} className="flex flex-col gap-4 p-6 sm:p-8">
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-ink">
+          <label className="mb-1.5 block text-sm font-semibold text-foreground">
             Username
           </label>
           <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
@@ -289,7 +289,7 @@ export default function AuthForms({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-ink">
+          <label className="mb-1.5 block text-sm font-semibold text-foreground">
             Email
           </label>
           <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
@@ -306,7 +306,7 @@ export default function AuthForms({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-ink">
+          <label className="mb-1.5 block text-sm font-semibold text-foreground">
             Mật khẩu
           </label>
           <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
@@ -323,7 +323,7 @@ export default function AuthForms({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-ink">
+          <label className="mb-1.5 block text-sm font-semibold text-foreground">
             Xác nhận mật khẩu
           </label>
           <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
@@ -340,7 +340,7 @@ export default function AuthForms({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-ink">
+          <label className="mb-1.5 block text-sm font-semibold text-foreground">
             Mã mời (không bắt buộc)
           </label>
           <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">

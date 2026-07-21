@@ -69,7 +69,7 @@ export default function TotpTool() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-ink">
+        <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-foreground">
           <KeyRound className="h-4 w-4" /> Chuỗi mã 2FA (Secret Key)
         </label>
         <textarea
@@ -106,13 +106,13 @@ export default function TotpTool() {
         <div className="flex flex-col items-center gap-2 pt-2 text-center">
           <p className="text-sm text-muted">Mã xác thực của bạn là:</p>
           <div className="flex items-center gap-3">
-            <p className="font-mono text-[56px] font-black leading-none tracking-tight text-ink sm:text-[80px]">
+            <p className="font-mono text-[56px] font-black leading-none tracking-tight text-foreground sm:text-[80px]">
               {code}
             </p>
             <button
               onClick={handleCopy}
               aria-label="Sao chép"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border-c text-ink transition hover:bg-surface-alt"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border-c text-foreground transition hover:bg-surface-alt"
             >
               {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
             </button>

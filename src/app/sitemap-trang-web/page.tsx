@@ -42,13 +42,13 @@ export default function SitemapPage() {
       <div className="grid gap-6 sm:grid-cols-3">
         {groups.map((group) => (
           <div key={group.title}>
-            <h2 className="mb-2 text-sm font-bold text-ink">{group.title}</h2>
+            <h2 className="mb-2 text-sm font-bold text-foreground">{group.title}</h2>
             <ul className="flex flex-col gap-1.5">
               {group.links.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-ink/70 hover:text-brand-dark hover:underline"
+                    className="text-sm text-foreground/70 hover:text-brand-dark hover:underline"
                   >
                     {link.label}
                   </Link>

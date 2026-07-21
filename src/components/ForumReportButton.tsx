@@ -64,13 +64,13 @@ export default function ForumReportButton({
           onSubmit={handleSubmit}
           className="absolute right-0 top-6 z-20 w-64 rounded-xl border border-border-c bg-surface p-3 shadow-lg"
         >
-          <p className="mb-1.5 text-xs font-bold text-ink">Báo cáo nội dung này</p>
+          <p className="mb-1.5 text-xs font-bold text-foreground">Báo cáo nội dung này</p>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Lý do báo cáo..."
             rows={2}
-            className="w-full rounded-lg border border-border-c px-2 py-1.5 text-xs text-ink outline-none focus:border-brand-dark"
+            className="w-full rounded-lg border border-border-c px-2 py-1.5 text-xs text-foreground outline-none focus:border-brand-dark"
           />
           <div className="mt-2 flex justify-end gap-1.5">
             <button

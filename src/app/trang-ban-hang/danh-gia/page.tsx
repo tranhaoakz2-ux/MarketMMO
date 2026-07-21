@@ -12,7 +12,7 @@ export default async function SellerReviewsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-lg font-black text-ink">Đánh giá</h1>
+        <h1 className="text-lg font-black text-foreground">Đánh giá</h1>
         <p className="text-xs text-muted">
           Đánh giá của người mua dành cho gian hàng của bạn (không thể chỉnh sửa/xoá).
         </p>

@@ -9,6 +9,7 @@ import { useState } from "react";
 import AccountMenu from "@/components/AccountMenu";
 import HeaderChatButton from "@/components/HeaderChatButton";
 import NavMegaMenu, { type MegaMenuItem } from "@/components/NavMegaMenu";
+import ThemeToggle from "@/components/ThemeToggle";
 import { categories } from "@/data/categories";
 import { useCart } from "@/context/CartContext";
 import { getCategoryIcon, getCategoryIconColor } from "@/lib/categoryIcons";
@@ -157,14 +158,14 @@ export default function Header() {
             onSubmit={handleSearch}
             className="hidden flex-1 items-center justify-center sm:flex"
           >
-            <div className="flex h-10 w-full items-center overflow-hidden rounded-full bg-white shadow-inner sm:max-w-[468px] lg:max-w-[528px]">
-              <Search className="ml-3.5 h-4 w-4 shrink-0 text-ink/40" />
+            <div className="flex h-10 w-full items-center overflow-hidden rounded-full bg-ink shadow-inner sm:max-w-[468px] lg:max-w-[528px]">
+              <Search className="ml-3.5 h-4 w-4 shrink-0 text-white/50" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Tìm sản phẩm hoặc người bán..."
-                className="h-full w-full bg-transparent px-2.5 text-sm text-ink placeholder:text-ink/40 focus:outline-none"
+                className="h-full w-full bg-transparent px-2.5 text-sm text-white placeholder:text-white/50 focus:outline-none"
               />
               <button
                 type="submit"
@@ -177,13 +178,14 @@ export default function Header() {
           </form>
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
+            <ThemeToggle />
             {status === "authenticated" && <HeaderChatButton />}
             <Link
               href="/gio-hang"
-              className="relative flex items-center justify-center rounded-full border-2 border-ink bg-white px-4 py-2 transition hover:bg-surface-alt"
+              className="relative flex items-center justify-center rounded-full border-2 border-ink bg-ink px-4 py-2 transition hover:bg-ink-soft"
               aria-label="Giỏ hàng"
             >
-              <ShoppingBag className="h-5 w-5 text-ink" />
+              <ShoppingBag className="h-5 w-5 text-white" />
               {totalCount > 0 && (
                 <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
                   {totalCount}
@@ -197,9 +199,9 @@ export default function Header() {
               <>
                 <Link
                   href="/nap-tien"
-                  className="flex items-center gap-2 rounded-full border-2 border-ink bg-white px-4 py-2 text-sm font-bold text-ink transition hover:bg-surface-alt"
+                  className="flex items-center gap-2 rounded-full border-2 border-ink bg-ink px-4 py-2 text-sm font-bold text-white transition hover:bg-ink-soft"
                 >
-                  <Wallet className="h-4 w-4 text-ink" />
+                  <Wallet className="h-4 w-4 text-white" />
                   {formatVnd(session.user.walletBalance)}
                 </Link>
                 <AccountMenu
@@ -224,7 +226,7 @@ export default function Header() {
                 </Link>
                 <Link
                   href="/dang-nhap?tab=register"
-                  className="rounded-full border-2 border-ink bg-white px-4 py-2 text-sm font-bold text-ink transition hover:bg-surface-alt"
+                  className="rounded-full border-2 border-ink bg-ink px-4 py-2 text-sm font-bold text-white transition hover:bg-ink-soft"
                 >
                   Đăng ký
                 </Link>
@@ -234,25 +236,25 @@ export default function Header() {
 
           <form
             onSubmit={handleSearch}
-            className="order-last flex h-10 w-full items-center overflow-hidden rounded-full bg-white shadow-inner sm:hidden"
+            className="order-last flex h-10 w-full items-center overflow-hidden rounded-full bg-ink shadow-inner sm:hidden"
           >
-            <Search className="ml-3.5 h-4 w-4 shrink-0 text-ink/40" />
+            <Search className="ml-3.5 h-4 w-4 shrink-0 text-white/50" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Tìm sản phẩm hoặc người bán..."
-              className="h-full w-full bg-transparent px-2.5 text-sm text-ink placeholder:text-ink/40 focus:outline-none"
+              className="h-full w-full bg-transparent px-2.5 text-sm text-white placeholder:text-white/50 focus:outline-none"
             />
-            <button type="submit" className="mr-3.5 shrink-0 text-ink/40" aria-label="Tìm kiếm">
+            <button type="submit" className="mr-3.5 shrink-0 text-white/50" aria-label="Tìm kiếm">
               <Search className="h-4 w-4" />
             </button>
           </form>
         </div>
       </div>
 
-      <div className="hidden border-b border-border-c bg-white lg:block">
-        <nav className="mx-auto flex h-[50px] max-w-7xl items-center gap-6 px-4 text-base font-semibold text-ink/80 sm:px-6 lg:px-8">
+      <div className="hidden border-b border-border-c bg-surface lg:block">
+        <nav className="mx-auto flex h-[50px] max-w-7xl items-center gap-6 px-4 text-base font-semibold text-foreground/80 sm:px-6 lg:px-8">
           <Link href="/" className="whitespace-nowrap transition hover:text-brand-dark">
             Trang chủ
           </Link>
@@ -293,8 +295,8 @@ export default function Header() {
       </div>
 
       {menuOpen && (
-        <div className="border-b border-border-c bg-white px-4 py-3 shadow-lg lg:hidden">
-          <nav className="flex flex-col gap-1 text-sm font-semibold text-ink/80">
+        <div className="border-b border-border-c bg-surface px-4 py-3 shadow-lg lg:hidden">
+          <nav className="flex flex-col gap-1 text-sm font-semibold text-foreground/80">
             {mobileNavLinks.map((link) => (
               <Link
                 key={link.label}

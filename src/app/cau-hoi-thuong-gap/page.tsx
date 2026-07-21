@@ -36,10 +36,10 @@ export default function FaqPage() {
             key={item.q}
             className="group rounded-xl border border-border-c bg-surface-alt p-4 open:bg-brand-light/30"
           >
-            <summary className="cursor-pointer list-none text-sm font-bold text-ink marker:content-none">
+            <summary className="cursor-pointer list-none text-sm font-bold text-foreground marker:content-none">
               {item.q}
             </summary>
-            <p className="mt-2 text-sm text-ink/70">{item.a}</p>
+            <p className="mt-2 text-sm text-foreground/70">{item.a}</p>
           </details>
         ))}
       </div>

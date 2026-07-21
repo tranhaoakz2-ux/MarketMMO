@@ -44,7 +44,7 @@ export default function AuctionCountdown({
 
   if (!remaining) {
     return (
-      <span className={`font-medium tracking-wide tabular-nums text-ink/30 ${textSize}`}>
+      <span className={`font-medium tracking-wide tabular-nums text-foreground/30 ${textSize}`}>
         --g --p --s
       </span>
     );
@@ -55,7 +55,7 @@ export default function AuctionCountdown({
   }
 
   return (
-    <span className={`font-medium tracking-wide tabular-nums text-ink ${textSize}`}>
+    <span className={`font-medium tracking-wide tabular-nums text-foreground ${textSize}`}>
       {remaining.d > 0 && <span className="text-danger">{remaining.d}n </span>}
       {String(remaining.h).padStart(2, "0")}g {String(remaining.m).padStart(2, "0")}p{" "}
       {String(remaining.s).padStart(2, "0")}s

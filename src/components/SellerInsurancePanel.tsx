@@ -74,7 +74,7 @@ export default function SellerInsurancePanel({
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-        <h1 className="flex items-center gap-2 text-lg font-black text-ink">
+        <h1 className="flex items-center gap-2 text-lg font-black text-foreground">
           <ShieldCheck className="h-5 w-5 text-brand-dark" /> Quỹ bảo hiểm
         </h1>
         <p className="mt-1 text-xs text-muted">
@@ -84,7 +84,7 @@ export default function SellerInsurancePanel({
 
         <div className="mt-4 rounded-xl border border-border-c bg-surface-alt p-4">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-semibold text-ink">
+            <span className="font-semibold text-foreground">
               {formatVnd(insurance)} / {formatVnd(INSURANCE_FUND_TARGET)}
             </span>
             <span className="text-xs text-muted">{progress}%</span>
@@ -95,7 +95,7 @@ export default function SellerInsurancePanel({
         </div>
 
         <p className="mt-4 text-xs text-muted">
-          Số dư ví khả dụng: <span className="font-bold text-ink">{formatVnd(balance)}</span>
+          Số dư ví khả dụng: <span className="font-bold text-foreground">{formatVnd(balance)}</span>
         </p>
 
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -114,7 +114,7 @@ export default function SellerInsurancePanel({
           ))}
         </div>
         <div className="mt-3">
-          <label className="mb-1.5 block text-sm font-semibold text-ink">
+          <label className="mb-1.5 block text-sm font-semibold text-foreground">
             Hoặc nhập số tiền khác
           </label>
           <input
@@ -155,7 +155,7 @@ export default function SellerInsurancePanel({
       </div>
 
       <div>
-        <h2 className="mb-3 text-sm font-bold text-ink">Lịch sử nạp quỹ</h2>
+        <h2 className="mb-3 text-sm font-bold text-foreground">Lịch sử nạp quỹ</h2>
         <div className="overflow-hidden rounded-xl border border-border-c bg-surface shadow-sm">
           <div className="grid grid-cols-3 gap-2 border-b border-border-c bg-surface-alt px-4 py-2.5 text-xs font-bold text-muted">
             <span>Thời gian</span>
@@ -173,7 +173,7 @@ export default function SellerInsurancePanel({
                 <span className="text-muted">
                   {new Date(d.createdAt).toLocaleString("vi-VN")}
                 </span>
-                <span className="font-bold text-ink">{formatVnd(Math.abs(d.amount))}</span>
+                <span className="font-bold text-foreground">{formatVnd(Math.abs(d.amount))}</span>
                 <span className="w-fit rounded-full bg-success/10 px-2 py-0.5 text-xs font-bold text-success">
                   {walletTxStatusLabel[d.status]}
                 </span>

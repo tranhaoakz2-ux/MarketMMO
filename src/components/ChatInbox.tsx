@@ -275,7 +275,7 @@ export default function ChatInbox() {
                 <Avatar size={48} className="shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-[15px] font-bold text-ink">{c.otherUser.name}</p>
+                    <p className="truncate text-[15px] font-bold text-foreground">{c.otherUser.name}</p>
                     <span className="shrink-0 text-xs text-muted">
                       {timeLabel(c.lastMessageAt)}
                     </span>
@@ -322,7 +322,7 @@ export default function ChatInbox() {
                     className="shrink-0 transition group-hover:ring-2 group-hover:ring-brand-dark"
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-base font-bold text-ink group-hover:underline">
+                    <p className="truncate text-base font-bold text-foreground group-hover:underline">
                       {selectedConv.otherUser.name}
                     </p>
                     <p className="text-xs text-success">Đang online</p>
@@ -332,7 +332,7 @@ export default function ChatInbox() {
                 <div className="flex min-w-0 items-center gap-3">
                   <Avatar size={44} className="shrink-0" />
                   <div className="min-w-0">
-                    <p className="truncate text-base font-bold text-ink">
+                    <p className="truncate text-base font-bold text-foreground">
                       {selectedConv.otherUser.name}
                     </p>
                     <p className="text-xs text-success">Đang online</p>
@@ -373,7 +373,7 @@ export default function ChatInbox() {
                             href={m.attachment.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`flex items-center gap-2 rounded-lg bg-surface px-3 py-2 text-sm font-semibold text-ink hover:underline ${m.content ? "mb-2" : ""}`}
+                            className={`flex items-center gap-2 rounded-lg bg-surface px-3 py-2 text-sm font-semibold text-foreground hover:underline ${m.content ? "mb-2" : ""}`}
                           >
                             <FileText className="h-4 w-4 shrink-0" />
                             <span className="truncate">{m.attachment.name ?? "Tệp đính kèm"}</span>
@@ -381,7 +381,7 @@ export default function ChatInbox() {
                         )}
                         {m.content}
                         <p
-                          className={`mt-1 text-[11px] ${m.isMine ? "text-ink/60" : "text-muted"}`}
+                          className={`mt-1 text-[11px] ${m.isMine ? "text-foreground/60" : "text-muted"}`}
                         >
                           {new Date(m.createdAt).toLocaleTimeString("vi-VN", {
                             hour: "2-digit",
@@ -411,7 +411,7 @@ export default function ChatInbox() {
                   ) : (
                     <FileText className="h-5 w-5 shrink-0 text-muted" />
                   )}
-                  <span className="min-w-0 flex-1 truncate text-xs font-semibold text-ink">
+                  <span className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground">
                     {pendingFile.name}
                   </span>
                   <button

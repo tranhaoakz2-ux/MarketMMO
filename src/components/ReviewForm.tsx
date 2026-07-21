@@ -68,7 +68,7 @@ export default function ReviewForm({ sellerId }: { sellerId: string }) {
       onSubmit={handleSubmit}
       className="rounded-xl border border-border-c bg-surface p-4 shadow-sm"
     >
-      <p className="mb-2 text-sm font-bold text-ink">Đánh giá gian hàng này</p>
+      <p className="mb-2 text-sm font-bold text-foreground">Đánh giá gian hàng này</p>
 
       <div className="mb-3 flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((star) => (

@@ -312,11 +312,11 @@ export default function AddProductForm({
       className="flex flex-col gap-4 rounded-2xl border border-border-c bg-surface p-5 shadow-sm"
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-black text-ink">Đăng sản phẩm mới</h3>
+        <h3 className="text-base font-black text-foreground">Đăng sản phẩm mới</h3>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-full p-1.5 text-muted hover:bg-surface-alt hover:text-ink"
+          className="rounded-full p-1.5 text-muted hover:bg-surface-alt hover:text-foreground"
           aria-label="Đóng"
         >
           <X className="h-4 w-4" />
@@ -325,7 +325,7 @@ export default function AddProductForm({
 
       <div className="grid gap-4 sm:grid-cols-[160px_1fr]">
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-ink">Ảnh sản phẩm</label>
+          <label className="mb-1.5 block text-sm font-semibold text-foreground">Ảnh sản phẩm</label>
           <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-border-c bg-surface-alt text-muted hover:border-brand-dark hover:text-brand-dark">
             {previewUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- xem trước ảnh cục bộ trước khi upload (object URL, không phải asset)
@@ -347,7 +347,7 @@ export default function AddProductForm({
 
         <div className="flex flex-col gap-3">
           <div>
-            <label className="mb-1 block text-sm font-semibold text-ink">Tên sản phẩm</label>
+            <label className="mb-1 block text-sm font-semibold text-foreground">Tên sản phẩm</label>
             <input
               type="text"
               required
@@ -361,7 +361,7 @@ export default function AddProductForm({
           </div>
 
           <div>
-            <label className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-ink">
+            <label className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-foreground">
               Danh mục
               {!categoryTouched && categoryId && (
                 <span className="rounded-full bg-brand-light px-1.5 py-0.5 text-[10px] font-bold text-brand-dark">
@@ -428,7 +428,7 @@ export default function AddProductForm({
                     Huỷ
                   </button>
                 </div>
-                <p className="text-[11px] leading-relaxed text-ink/70">
+                <p className="text-[11px] leading-relaxed text-foreground/70">
                   Danh mục mới sẽ được gửi để admin duyệt trước khi hiện công
                   khai trên site — bạn vẫn có thể chọn ngay danh mục này cho
                   sản phẩm đang đăng.
@@ -445,7 +445,7 @@ export default function AddProductForm({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-sm font-semibold text-ink">Giá (đ)</label>
+              <label className="mb-1 block text-sm font-semibold text-foreground">Giá (đ)</label>
               <input
                 type="number"
                 required
@@ -458,7 +458,7 @@ export default function AddProductForm({
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-semibold text-ink">Kho</label>
+              <label className="mb-1 block text-sm font-semibold text-foreground">Kho</label>
               <input
                 type="number"
                 required={!baseStockItems.trim()}
@@ -479,7 +479,7 @@ export default function AddProductForm({
       <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-bold text-ink">Phiên bản / Gói (tuỳ chọn)</p>
+            <p className="text-sm font-bold text-foreground">Phiên bản / Gói (tuỳ chọn)</p>
             <p className="text-[11px] text-muted">
               Chỉ điền nếu sản phẩm có nhiều loại/gói giá khác nhau. Bỏ qua
               nếu chỉ bán 1 loại duy nhất.
@@ -550,7 +550,7 @@ export default function AddProductForm({
 
         {variants.length === 0 && (
           <div className="mt-3">
-            <label className="mb-1 block text-sm font-semibold text-ink">
+            <label className="mb-1 block text-sm font-semibold text-foreground">
               Kho dữ liệu giao hàng thật (tuỳ chọn)
             </label>
             <textarea
@@ -560,7 +560,7 @@ export default function AddProductForm({
               placeholder={"Mỗi dòng là 1 sản phẩm sẽ giao TỰ ĐỘNG cho khách, ví dụ:\nemail1@gmail.com|MatKhau123|MaKhoiPhuc\nemail2@gmail.com|MatKhau456|MaKhoiPhuc"}
               className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-xs focus:border-brand-dark focus:outline-none"
             />
-            <p className="mt-1 text-[11px] leading-relaxed text-ink/70">
+            <p className="mt-1 text-[11px] leading-relaxed text-foreground/70">
               Có dán dữ liệu ở đây thì ô &ldquo;Kho&rdquo; phía trên sẽ tự
               động tính theo số dòng, không cần tự gõ số nữa. Bỏ trống thì
               &ldquo;Kho&rdquo; hoạt động như số đếm thông thường (chưa giao
@@ -572,7 +572,7 @@ export default function AddProductForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-semibold text-ink">Mô tả ngắn</label>
+        <label className="mb-1 block text-sm font-semibold text-foreground">Mô tả ngắn</label>
         <input
           type="text"
           required
@@ -586,7 +586,7 @@ export default function AddProductForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-semibold text-ink">Mô tả chi tiết</label>
+        <label className="mb-1 block text-sm font-semibold text-foreground">Mô tả chi tiết</label>
         <textarea
           required
           minLength={20}

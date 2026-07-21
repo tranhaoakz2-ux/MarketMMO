@@ -48,12 +48,12 @@ function CopyField({ label, value }: { label: string; value: string }) {
     <div className="flex items-center justify-between gap-3 rounded-lg border border-border-c bg-surface px-3 py-2">
       <div className="min-w-0">
         <p className="text-[11px] font-semibold uppercase text-muted">{label}</p>
-        <p className="truncate text-sm font-bold text-ink">{value}</p>
+        <p className="truncate text-sm font-bold text-foreground">{value}</p>
       </div>
       <button
         type="button"
         onClick={handleCopy}
-        className="flex shrink-0 items-center gap-1 rounded-full bg-surface-alt px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-border-c"
+        className="flex shrink-0 items-center gap-1 rounded-full bg-surface-alt px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-border-c"
       >
         {copied ? (
           <>
@@ -211,7 +211,7 @@ export default function DepositPanel({
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
         <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-ink">
+          <h2 className="mb-3 text-sm font-bold text-foreground">
             Chọn phương thức nạp tiền
           </h2>
           <div className="flex flex-col gap-2">
@@ -230,9 +230,9 @@ export default function DepositPanel({
                 onChange={() => setMethod("vnpay")}
                 className="accent-brand"
               />
-              <QrCode className="h-5 w-5 text-ink/70" />
+              <QrCode className="h-5 w-5 text-foreground/70" />
               <div>
-                <p className="text-sm font-semibold text-ink">
+                <p className="text-sm font-semibold text-foreground">
                   VNPay — tự động cộng tiền
                 </p>
                 <p className="text-xs text-muted">
@@ -257,9 +257,9 @@ export default function DepositPanel({
                 onChange={() => setMethod("bank")}
                 className="accent-brand"
               />
-              <Building2 className="h-5 w-5 text-ink/70" />
+              <Building2 className="h-5 w-5 text-foreground/70" />
               <div>
-                <p className="text-sm font-semibold text-ink">
+                <p className="text-sm font-semibold text-foreground">
                   Chuyển khoản ngân hàng
                 </p>
                 <p className="text-xs text-muted">
@@ -287,7 +287,7 @@ export default function DepositPanel({
                 $
               </span>
               <div>
-                <p className="text-sm font-semibold text-ink">USDT (mạng TRC20)</p>
+                <p className="text-sm font-semibold text-foreground">USDT (mạng TRC20)</p>
                 <p className="text-xs text-muted">
                   {usdtInfo
                     ? `Quy đổi theo tỷ giá 1 USDT ≈ ${usdtInfo.rate.toLocaleString("vi-VN")}đ`
@@ -299,7 +299,7 @@ export default function DepositPanel({
         </div>
 
         <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-ink">Số tiền nạp</h2>
+          <h2 className="mb-3 text-sm font-bold text-foreground">Số tiền nạp</h2>
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-3 gap-2">
               {quickAmounts.map((value) => (
@@ -317,7 +317,7 @@ export default function DepositPanel({
               ))}
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-ink">
+              <label className="mb-1.5 block text-sm font-semibold text-foreground">
                 Hoặc nhập số tiền khác
               </label>
               <input
@@ -333,7 +333,7 @@ export default function DepositPanel({
 
             {method === "bank" && (
               <div className="flex flex-col gap-2 rounded-xl border border-dashed border-brand-dark/40 bg-brand-light/20 p-3">
-                <p className="text-xs font-bold text-ink">
+                <p className="text-xs font-bold text-foreground">
                   Thông tin chuyển khoản
                 </p>
                 {bankInfo ? (
@@ -369,11 +369,11 @@ export default function DepositPanel({
 
             {method === "usdt" && usdtInfo && (
               <div className="flex flex-col gap-2 rounded-xl border border-dashed border-emerald-500/50 bg-emerald-500/5 p-3">
-                <p className="text-xs font-bold text-ink">
+                <p className="text-xs font-bold text-foreground">
                   Gửi USDT đến địa chỉ ví (mạng TRC20)
                 </p>
                 <CopyField label="Địa chỉ ví USDT-TRC20" value={usdtInfo.address} />
-                <p className="text-sm font-bold text-ink">
+                <p className="text-sm font-bold text-foreground">
                   Số USDT cần gửi: ≈{" "}
                   <span className="text-emerald-600">{usdtAmount?.toFixed(2)} USDT</span>
                 </p>
@@ -382,7 +382,7 @@ export default function DepositPanel({
                   mất tiền. Sau khi chuyển, dán mã giao dịch (TxID) bên dưới.
                 </p>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-ink">
+                  <label className="mb-1 block text-xs font-semibold text-foreground">
                     Mã giao dịch (TxID)
                   </label>
                   <input
@@ -425,7 +425,7 @@ export default function DepositPanel({
       </div>
 
       <div className="mt-8">
-        <h2 className="mb-3 text-sm font-bold text-ink">Lịch sử nạp tiền</h2>
+        <h2 className="mb-3 text-sm font-bold text-foreground">Lịch sử nạp tiền</h2>
         <div className="overflow-hidden rounded-xl border border-border-c bg-surface shadow-sm">
           <div className="grid grid-cols-4 gap-2 border-b border-border-c bg-surface-alt px-4 py-2.5 text-xs font-bold text-muted">
             <span>Thời gian</span>
@@ -446,10 +446,10 @@ export default function DepositPanel({
                 <span className="text-muted">
                   {new Date(tx.createdAt).toLocaleString("vi-VN")}
                 </span>
-                <span className="text-ink">
+                <span className="text-foreground">
                   {walletMethodLabel[tx.method ?? ""] ?? tx.method ?? "—"}
                 </span>
-                <span className="font-bold text-ink">{formatVnd(tx.amount)}</span>
+                <span className="font-bold text-foreground">{formatVnd(tx.amount)}</span>
                 <span>
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-bold ${statusStyle[tx.status]}`}

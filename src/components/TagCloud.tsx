@@ -22,7 +22,7 @@ export default function TagCloud() {
           <a
             key={tag}
             href="#"
-            className="rounded-full bg-surface-alt px-3 py-1.5 text-xs font-medium text-muted transition hover:bg-surface hover:text-ink hover:ring-1 hover:ring-border-c"
+            className="rounded-full bg-surface-alt px-3 py-1.5 text-xs font-medium text-muted transition hover:bg-surface hover:text-foreground hover:ring-1 hover:ring-border-c"
           >
             {tag}
           </a>

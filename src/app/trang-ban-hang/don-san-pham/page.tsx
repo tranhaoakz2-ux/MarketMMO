@@ -12,7 +12,7 @@ export default async function SellerProductOrdersPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-lg font-black text-ink">Đơn sản phẩm</h1>
+        <h1 className="text-lg font-black text-foreground">Đơn sản phẩm</h1>
         <p className="text-xs text-muted">
           Danh sách đơn hàng thuộc các danh mục sản phẩm (tài khoản số, Steam Key...).
         </p>

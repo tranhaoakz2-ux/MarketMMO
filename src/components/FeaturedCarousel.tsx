@@ -30,7 +30,7 @@ function FeaturedCard({ product }: { product: Product }) {
           <Avatar size={25} />
         </div>
       </div>
-      <h3 className="mt-[13px] line-clamp-2 text-[15px] font-bold leading-snug text-ink">
+      <h3 className="mt-[13px] line-clamp-2 text-[15px] font-bold leading-snug text-foreground">
         {product.name}
       </h3>
       <div className="mt-1.5 flex items-center justify-between">

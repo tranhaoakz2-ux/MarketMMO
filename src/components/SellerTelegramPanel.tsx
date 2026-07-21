@@ -76,7 +76,7 @@ export default function SellerTelegramPanel() {
 
       {status.linked ? (
         <>
-          <p className="text-sm text-ink">
+          <p className="text-sm text-foreground">
             Đã liên kết với Chat ID <span className="font-mono font-bold">{status.chatId}</span>.
             Bạn sẽ nhận thông báo qua Telegram.
           </p>
@@ -100,7 +100,7 @@ export default function SellerTelegramPanel() {
         </>
       ) : status.pending ? (
         <>
-          <p className="text-sm text-ink">
+          <p className="text-sm text-foreground">
             Đã gửi mã xác nhận tới Chat ID <span className="font-mono font-bold">{status.chatId}</span>.
             Kiểm tra Telegram và nhập mã bên dưới.
           </p>

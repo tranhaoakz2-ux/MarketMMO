@@ -29,7 +29,7 @@ export default async function SearchPage({
 
         <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
           <Reveal>
-            <h1 className="mb-1 text-2xl font-black text-ink">
+            <h1 className="mb-1 text-2xl font-black text-foreground">
               {query ? (
                 <>
                   Kết quả tìm kiếm cho &quot;<span className="text-brand-dark">{query}</span>

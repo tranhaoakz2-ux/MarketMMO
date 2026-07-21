@@ -63,7 +63,7 @@ export default async function ShopPage({
 
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl font-black text-ink">{seller}</h1>
+                  <h1 className="text-xl font-black text-foreground">{seller}</h1>
                   <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-brand">
                     Level {sellerLevel}
                   </span>
@@ -73,7 +73,7 @@ export default async function ShopPage({
                 </div>
                 <div className="mt-1.5 flex items-center gap-1.5">
                   <RatingStars rating={shop.avgRating} />
-                  <span className="text-xs font-bold text-ink">
+                  <span className="text-xs font-bold text-foreground">
                     {shop.reviewCount > 0 ? shop.avgRating.toFixed(1) : "Chưa có"}
                   </span>
                   <span className="text-xs text-muted">
@@ -183,7 +183,7 @@ export default async function ShopPage({
                     >
                       <div className="flex items-center gap-2">
                         <Avatar size={28} />
-                        <span className="text-sm font-bold text-ink">
+                        <span className="text-sm font-bold text-foreground">
                           {review.authorName}
                         </span>
                         <RatingStars rating={review.rating} />
@@ -191,7 +191,7 @@ export default async function ShopPage({
                           {review.createdAt.toLocaleDateString("vi-VN")}
                         </span>
                       </div>
-                      <p className="mt-2 text-sm text-ink/80">{review.comment}</p>
+                      <p className="mt-2 text-sm text-foreground/80">{review.comment}</p>
                     </div>
                   ))
                 )}

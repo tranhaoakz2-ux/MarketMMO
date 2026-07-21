@@ -38,7 +38,7 @@ export default function CategoryProductCard({ product }: { product: Product }) {
         </div>
         <div className="min-w-0 text-left sm:mt-2 sm:w-full sm:text-center">
           <p className="text-sm font-bold text-success">Tồn kho: {product.stock}</p>
-          <p className="mt-1 text-base font-extrabold text-ink">
+          <p className="mt-1 text-base font-extrabold text-foreground">
             {product.priceMax
               ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
               : formatVnd(product.price)}
@@ -51,12 +51,12 @@ export default function CategoryProductCard({ product }: { product: Product }) {
           <span className="mr-1.5 inline-block rounded bg-brand px-2 py-0.5 align-middle text-xs font-bold text-ink">
             {typeLabel}
           </span>
-          <span className="text-lg font-bold text-ink group-hover:text-brand-dark">
+          <span className="text-lg font-bold text-foreground group-hover:text-brand-dark">
             {product.name}
           </span>
         </div>
 
-        <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-sm text-ink/80">
+        <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-sm text-foreground/80">
           <span className="flex items-center gap-0.5">
             {Array.from({ length: 5 }).map((_, i) => (
               <Star

@@ -83,8 +83,8 @@ export default function AffiliatePanel({
 
         <div className="mx-auto mt-6 flex max-w-2xl flex-col items-stretch gap-2 rounded-xl bg-surface p-2 sm:flex-row sm:items-center sm:gap-3 sm:p-2.5">
           <span className="flex min-w-0 flex-1 items-center gap-2 px-2 text-left">
-            <span className="shrink-0 text-sm font-bold text-ink/60">LINK:</span>
-            <span className="truncate font-mono text-sm text-ink sm:text-base">
+            <span className="shrink-0 text-sm font-bold text-foreground/60">LINK:</span>
+            <span className="truncate font-mono text-sm text-foreground sm:text-base">
               {referralLink}
             </span>
           </span>
@@ -108,7 +108,7 @@ export default function AffiliatePanel({
             <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-brand-light/50">
               <step.icon className="h-6 w-6 text-brand-dark" />
             </div>
-            <h3 className="text-lg font-bold text-ink">{step.title}</h3>
+            <h3 className="text-lg font-bold text-foreground">{step.title}</h3>
             <p className="mt-1 text-sm text-muted">{step.desc}</p>
           </div>
         ))}
@@ -116,7 +116,7 @@ export default function AffiliatePanel({
 
       {/* Danh sách giới thiệu */}
       <div className="mt-8">
-        <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-ink">
+        <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-foreground">
           <Users className="h-5 w-5 text-brand-dark" /> Danh sách giới thiệu
         </h2>
 
@@ -144,7 +144,7 @@ export default function AffiliatePanel({
         </div>
 
         <div className="mt-4 overflow-hidden rounded-2xl border border-border-c bg-surface shadow-sm">
-          <div className="hidden grid-cols-4 gap-2 border-b border-border-c px-5 py-3 text-sm font-bold text-ink sm:grid">
+          <div className="hidden grid-cols-4 gap-2 border-b border-border-c px-5 py-3 text-sm font-bold text-foreground sm:grid">
             <span>Tên người dùng</span>
             <span>Ngày tham gia</span>
             <span>Tổng chi tiêu</span>
@@ -154,7 +154,7 @@ export default function AffiliatePanel({
           {referredUsers.length === 0 ? (
             <div className="flex flex-col items-center gap-2 p-10 text-center">
               <Sprout className="h-10 w-10 text-border-c" />
-              <p className="font-semibold text-ink">Bạn chưa giới thiệu được ai.</p>
+              <p className="font-semibold text-foreground">Bạn chưa giới thiệu được ai.</p>
               <p className="text-sm text-muted">
                 Hãy copy link giới thiệu phía trên và gửi cho bạn bè ngay!
               </p>
@@ -166,11 +166,11 @@ export default function AffiliatePanel({
                   key={u.id}
                   className="grid grid-cols-2 gap-2 border-b border-dashed border-border-c px-5 py-3 text-sm last:border-b-0 sm:grid-cols-4"
                 >
-                  <span className="font-semibold text-ink">{u.name}</span>
+                  <span className="font-semibold text-foreground">{u.name}</span>
                   <span className="text-muted">
                     {new Date(u.createdAt).toLocaleDateString("vi-VN")}
                   </span>
-                  <span className="text-ink">{formatVnd(u.totalSpent)}</span>
+                  <span className="text-foreground">{formatVnd(u.totalSpent)}</span>
                   <span>
                     {u.totalSpent > 0 ? (
                       <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-bold text-success">
@@ -191,12 +191,12 @@ export default function AffiliatePanel({
 
       {/* Lịch sử hoa hồng */}
       <div className="mt-8">
-        <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-ink">
+        <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-foreground">
           <History className="h-5 w-5 text-brand-dark" /> Lịch sử hoa hồng
         </h2>
 
         <div className="overflow-hidden rounded-2xl border border-border-c bg-surface shadow-sm">
-          <div className="hidden grid-cols-3 gap-2 border-b border-border-c px-5 py-3 text-sm font-bold text-ink sm:grid">
+          <div className="hidden grid-cols-3 gap-2 border-b border-border-c px-5 py-3 text-sm font-bold text-foreground sm:grid">
             <span>Thời gian</span>
             <span>Số tiền</span>
             <span>Trạng thái</span>

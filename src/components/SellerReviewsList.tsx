@@ -24,7 +24,7 @@ export default function SellerReviewsList({ reviews }: { reviews: Review[] }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3 rounded-2xl border border-border-c bg-surface p-4 shadow-sm">
-        <span className="text-2xl font-black text-ink">{avg.toFixed(1)}</span>
+        <span className="text-2xl font-black text-foreground">{avg.toFixed(1)}</span>
         <div>
           <RatingStars rating={avg} />
           <p className="text-xs text-muted">{reviews.length} đánh giá</p>
@@ -35,13 +35,13 @@ export default function SellerReviewsList({ reviews }: { reviews: Review[] }) {
         {reviews.map((r) => (
           <div key={r.id} className="rounded-xl border border-border-c bg-surface p-4 shadow-sm">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-ink">{r.authorName}</p>
+              <p className="text-sm font-bold text-foreground">{r.authorName}</p>
               <span className="text-xs text-muted">
                 {r.createdAt.toLocaleDateString("vi-VN")}
               </span>
             </div>
             <RatingStars rating={r.rating} />
-            <p className="mt-2 text-sm text-ink/80">{r.comment}</p>
+            <p className="mt-2 text-sm text-foreground/80">{r.comment}</p>
           </div>
         ))}
       </div>

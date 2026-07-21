@@ -83,11 +83,11 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-        <h1 className="flex items-center gap-2 text-lg font-black text-ink">
+        <h1 className="flex items-center gap-2 text-lg font-black text-foreground">
           <Wallet className="h-5 w-5 text-brand-dark" /> Rút tiền
         </h1>
         <p className="mt-1 text-xs text-muted">
-          Số dư ví khả dụng: <span className="font-bold text-ink">{formatVnd(balance)}</span>
+          Số dư ví khả dụng: <span className="font-bold text-foreground">{formatVnd(balance)}</span>
         </p>
 
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -106,7 +106,7 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
           ))}
         </div>
         <div className="mt-3">
-          <label className="mb-1.5 block text-sm font-semibold text-ink">
+          <label className="mb-1.5 block text-sm font-semibold text-foreground">
             Hoặc nhập số tiền khác
           </label>
           <input
@@ -121,7 +121,7 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
         </div>
 
         <div className="mt-4 flex flex-col gap-2 rounded-xl border border-dashed border-brand-dark/40 bg-brand-light/20 p-3">
-          <p className="text-xs font-bold text-ink">Thông tin ngân hàng nhận tiền</p>
+          <p className="text-xs font-bold text-foreground">Thông tin ngân hàng nhận tiền</p>
           <input
             type="text"
             value={bankName}
@@ -172,7 +172,7 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
       </div>
 
       <div>
-        <h2 className="mb-3 text-sm font-bold text-ink">Lịch sử rút tiền</h2>
+        <h2 className="mb-3 text-sm font-bold text-foreground">Lịch sử rút tiền</h2>
         <div className="overflow-hidden rounded-xl border border-border-c bg-surface shadow-sm">
           <div className="grid grid-cols-3 gap-2 border-b border-border-c bg-surface-alt px-4 py-2.5 text-xs font-bold text-muted">
             <span>Thời gian</span>
@@ -192,7 +192,7 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
                 <span className="text-muted">
                   {new Date(w.createdAt).toLocaleString("vi-VN")}
                 </span>
-                <span className="font-bold text-ink">{formatVnd(Math.abs(w.amount))}</span>
+                <span className="font-bold text-foreground">{formatVnd(Math.abs(w.amount))}</span>
                 <span>
                   <span
                     className={`w-fit rounded-full px-2 py-0.5 text-xs font-bold ${statusStyle[w.status]}`}

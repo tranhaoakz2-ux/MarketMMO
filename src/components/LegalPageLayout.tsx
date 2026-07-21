@@ -23,7 +23,7 @@ export default function LegalPageLayout({
 
         <div className="mx-auto max-w-3xl px-4 pb-12 sm:px-6 lg:px-8">
           <Reveal>
-            <h1 className="text-2xl font-black text-ink">{title}</h1>
+            <h1 className="text-2xl font-black text-foreground">{title}</h1>
             {updatedAt && (
               <p className="mt-1 text-xs text-muted">
                 Cập nhật lần cuối: {updatedAt}
@@ -32,7 +32,7 @@ export default function LegalPageLayout({
           </Reveal>
 
           <Reveal delay={0.05}>
-            <div className="prose-legal mt-6 flex flex-col gap-5 rounded-2xl border border-border-c bg-surface p-6 text-sm leading-relaxed text-ink/80 sm:p-8">
+            <div className="prose-legal mt-6 flex flex-col gap-5 rounded-2xl border border-border-c bg-surface p-6 text-sm leading-relaxed text-foreground/80 sm:p-8">
               {children}
             </div>
           </Reveal>

@@ -44,10 +44,10 @@ export default function DeliveredPayloadButton({ deliveredPayload }: { delivered
           key={idx}
           className="flex items-center justify-between gap-1.5 rounded border border-border-c bg-surface px-2 py-1"
         >
-          <code className="min-w-0 flex-1 truncate text-[11px] text-ink">{content}</code>
+          <code className="min-w-0 flex-1 truncate text-[11px] text-foreground">{content}</code>
           <button
             onClick={() => handleCopy(content, idx)}
-            className="shrink-0 rounded p-1 text-muted hover:bg-surface-alt hover:text-ink"
+            className="shrink-0 rounded p-1 text-muted hover:bg-surface-alt hover:text-foreground"
             aria-label="Sao chép"
           >
             {copiedIndex === idx ? (

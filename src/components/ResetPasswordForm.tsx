@@ -31,7 +31,7 @@ export default function ResetPasswordForm() {
     return (
       <div className="flex flex-col items-center gap-3 py-6 text-center">
         <CheckCircle2 className="h-10 w-10 text-success" />
-        <p className="text-sm text-ink">Đặt lại mật khẩu thành công!</p>
+        <p className="text-sm text-foreground">Đặt lại mật khẩu thành công!</p>
         <Link
           href="/dang-nhap"
           className="rounded-full bg-brand px-5 py-2.5 text-sm font-black text-ink transition hover:bg-brand-dark"
@@ -67,7 +67,7 @@ export default function ResetPasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
-        <label className="mb-1.5 block text-sm font-semibold text-ink">Mật khẩu mới</label>
+        <label className="mb-1.5 block text-sm font-semibold text-foreground">Mật khẩu mới</label>
         <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
           <Lock className="h-4 w-4 text-muted" />
           <input
@@ -82,7 +82,7 @@ export default function ResetPasswordForm() {
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-semibold text-ink">
+        <label className="mb-1.5 block text-sm font-semibold text-foreground">
           Xác nhận mật khẩu mới
         </label>
         <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">

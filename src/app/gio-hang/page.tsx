@@ -98,7 +98,7 @@ export default function CartPage() {
 
         <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6 lg:px-8">
           <Reveal>
-            <h1 className="mb-4 text-xl font-black text-ink">
+            <h1 className="mb-4 text-xl font-black text-foreground">
               Giỏ hàng ({lines.length})
             </h1>
           </Reveal>
@@ -125,12 +125,12 @@ export default function CartPage() {
                         href={`/san-pham/${line.slug}`}
                         className="grid h-16 w-16 shrink-0 place-items-center rounded-lg bg-surface-alt ring-1 ring-border-c"
                       >
-                        <Package className="h-7 w-7 text-ink/70" strokeWidth={1.5} />
+                        <Package className="h-7 w-7 text-foreground/70" strokeWidth={1.5} />
                       </Link>
                       <div className="min-w-0 flex-1">
                         <Link
                           href={`/san-pham/${line.slug}`}
-                          className="truncate text-sm font-bold text-ink hover:text-brand-dark"
+                          className="truncate text-sm font-bold text-foreground hover:text-brand-dark"
                         >
                           {line.name}
                         </Link>
@@ -151,7 +151,7 @@ export default function CartPage() {
                           onClick={() =>
                             setQuantity(line.productId, line.variantId, line.quantity - 1)
                           }
-                          className="p-2 text-muted hover:text-ink"
+                          className="p-2 text-muted hover:text-foreground"
                           aria-label="Giảm số lượng"
                         >
                           <Minus className="h-3.5 w-3.5" />
@@ -167,7 +167,7 @@ export default function CartPage() {
                               Math.min(line.stock, line.quantity + 1)
                             )
                           }
-                          className="p-2 text-muted hover:text-ink"
+                          className="p-2 text-muted hover:text-foreground"
                           aria-label="Tăng số lượng"
                         >
                           <Plus className="h-3.5 w-3.5" />
@@ -187,7 +187,7 @@ export default function CartPage() {
 
               <Reveal delay={0.05}>
                 <div className="flex flex-col gap-4 rounded-xl border border-border-c bg-surface p-5 shadow-sm">
-                  <h2 className="text-sm font-bold text-ink">Tóm tắt đơn hàng</h2>
+                  <h2 className="text-sm font-bold text-foreground">Tóm tắt đơn hàng</h2>
                   <div className="flex justify-between text-sm text-muted">
                     <span>Tạm tính</span>
                     <span>{formatVnd(subtotal)}</span>
@@ -222,7 +222,7 @@ export default function CartPage() {
                         <button
                           onClick={handleApplyDiscount}
                           disabled={applyingDiscount || !discountInput.trim()}
-                          className="shrink-0 rounded-lg bg-surface-alt px-3 py-2 text-xs font-bold text-ink transition hover:bg-border-c disabled:opacity-50"
+                          className="shrink-0 rounded-lg bg-surface-alt px-3 py-2 text-xs font-bold text-foreground transition hover:bg-border-c disabled:opacity-50"
                         >
                           {applyingDiscount ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -237,7 +237,7 @@ export default function CartPage() {
                     )}
                   </div>
 
-                  <div className="flex justify-between border-t border-border-c pt-3 text-base font-black text-ink">
+                  <div className="flex justify-between border-t border-border-c pt-3 text-base font-black text-foreground">
                     <span>Tổng cộng</span>
                     <span className="text-danger">{formatVnd(total)}</span>
                   </div>

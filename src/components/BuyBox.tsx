@@ -79,7 +79,7 @@ export default function BuyBox({ product }: { product: Product }) {
     <div className="flex flex-col gap-3">
       {hasVariants && (
         <div>
-          <span className="mb-1.5 block text-xs font-bold uppercase text-ink">
+          <span className="mb-1.5 block text-xs font-bold uppercase text-foreground">
             Chọn loại sản phẩm
           </span>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -117,11 +117,11 @@ export default function BuyBox({ product }: { product: Product }) {
       )}
 
       <div className="flex items-center gap-3">
-        <span className="text-xs font-bold uppercase text-ink">Số lượng</span>
+        <span className="text-xs font-bold uppercase text-foreground">Số lượng</span>
         <div className="flex items-center rounded-lg border border-border-c">
           <button
             onClick={() => setQty((v) => Math.max(1, v - 1))}
-            className="p-2 text-muted hover:text-ink"
+            className="p-2 text-muted hover:text-foreground"
             aria-label="Giảm số lượng"
           >
             <Minus className="h-3.5 w-3.5" />
@@ -129,7 +129,7 @@ export default function BuyBox({ product }: { product: Product }) {
           <span className="w-10 text-center text-sm font-bold">{qty}</span>
           <button
             onClick={() => setQty((v) => Math.min(maxQty, v + 1))}
-            className="p-2 text-muted hover:text-ink"
+            className="p-2 text-muted hover:text-foreground"
             aria-label="Tăng số lượng"
           >
             <Plus className="h-3.5 w-3.5" />
