@@ -1,4 +1,5 @@
 import { Banknote, Gift, Lock, ShieldCheck, TrendingDown, Wallet } from "lucide-react";
+import { requireAdminPage } from "@/lib/authz";
 import { AdminPageHeader } from "@/components/admin/AdminUi";
 import { getAdminFinancialHealth } from "@/lib/queries";
 import { formatVnd } from "@/lib/format";
@@ -6,6 +7,7 @@ import { formatVnd } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 export default async function AdminFinancialHealthPage() {
+  await requireAdminPage();
   const h = await getAdminFinancialHealth();
 
   const cards = [

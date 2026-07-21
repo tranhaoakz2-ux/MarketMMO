@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireAdminPage } from "@/lib/authz";
 import { AdminPageHeader } from "@/components/admin/AdminUi";
 import { getAdminAuditLogPage } from "@/lib/queries";
 
@@ -9,6 +10,7 @@ export default async function AdminAuditLogPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  await requireAdminPage();
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
   const { entries, total, totalPages } = await getAdminAuditLogPage(page);

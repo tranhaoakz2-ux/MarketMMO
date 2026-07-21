@@ -1,9 +1,11 @@
 import { AdminPageHeader } from "@/components/admin/AdminUi";
+import { requireAdminPage } from "@/lib/authz";
 import AdminAuctionPanel from "@/components/admin/AdminAuctionPanel";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminAuctionPage() {
+export default async function AdminAuctionPage() {
+  await requireAdminPage();
   return (
     <div>
       <AdminPageHeader

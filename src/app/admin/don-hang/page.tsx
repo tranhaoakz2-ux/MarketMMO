@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireAdminPage } from "@/lib/authz";
 import { AdminBadge, AdminPageHeader } from "@/components/admin/AdminUi";
 import AdminEscrowReleaseButton from "@/components/admin/AdminEscrowReleaseButton";
 import { getAdminOrderItems } from "@/lib/queries";
@@ -27,6 +28,7 @@ export default async function AdminOrdersPage({
 }: {
   searchParams: Promise<{ status?: string; page?: string }>;
 }) {
+  await requireAdminPage();
   const params = await searchParams;
   const status = (statusFilters.some((f) => f.key === params.status) ? params.status : "ALL") as
     | OrderStatus

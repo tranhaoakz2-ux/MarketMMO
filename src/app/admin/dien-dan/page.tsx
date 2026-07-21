@@ -1,9 +1,11 @@
 import { AdminPageHeader } from "@/components/admin/AdminUi";
+import { requireAdminPage } from "@/lib/authz";
 import AdminForumReportsPanel from "@/components/admin/AdminForumReportsPanel";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminForumReportsPage() {
+export default async function AdminForumReportsPage() {
+  await requireAdminPage();
   return (
     <div>
       <AdminPageHeader

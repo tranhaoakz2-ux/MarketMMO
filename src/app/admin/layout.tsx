@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { requireAdminPage } from "@/lib/authz";
 import { getAdminSidebarCounts } from "@/lib/queries";
 import AdminSidebar from "@/components/AdminSidebar";
 
@@ -13,9 +12,10 @@ export const dynamic = "force-dynamic";
 export default async function AdminLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const session = await auth();
-  if (!session?.user) redirect("/dang-nhap?callbackUrl=/admin");
-  if (session.user.role !== "ADMIN") redirect("/");
+  // Guard tầng layout (lớp 1). Mỗi page.tsx con GỌI LẠI requireAdminPage() (lớp
+  // 2, phòng thủ nhiều lớp) — getAuthSession() bọc React.cache nên cả 2 chung 1
+  // query session trong cùng request, không tốn thêm.
+  const session = await requireAdminPage();
 
   const counts = await getAdminSidebarCounts();
 

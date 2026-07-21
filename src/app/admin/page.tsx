@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { requireAdminPage } from "@/lib/authz";
 import {
   getAdminActivityFeed,
   getAdminOverviewStats,
@@ -57,6 +58,7 @@ export default async function AdminOverviewPage({
 }: {
   searchParams: Promise<{ range?: string; from?: string; to?: string }>;
 }) {
+  await requireAdminPage();
   const params = await searchParams;
   const range = (["today", "yesterday", "7d", "month", "last_month", "custom"] as const).includes(
     params.range as RangeKey

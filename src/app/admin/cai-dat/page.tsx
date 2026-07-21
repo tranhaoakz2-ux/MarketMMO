@@ -1,4 +1,5 @@
 import { AdminBadge, AdminPageHeader } from "@/components/admin/AdminUi";
+import { requireAdminPage } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,8 @@ const integrations = [
   },
 ];
 
-export default function AdminSettingsPage() {
+export default async function AdminSettingsPage() {
+  await requireAdminPage();
   return (
     <div>
       <AdminPageHeader

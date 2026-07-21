@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -14,6 +15,19 @@ export const getAuthSession = cache(async () => auth());
 export const getSellerForUser = cache(async (userId: string) =>
   prisma.seller.findUnique({ where: { userId } })
 );
+
+// Guard cho Server Component TRANG admin (page.tsx) — phòng thủ NHIỀU LỚP bên
+// cạnh guard ở admin/layout.tsx. Next.js không đảm bảo layout luôn là ranh giới
+// bảo mật (client Router Cache có thể phục vụ lại RSC đã cache trên soft-nav),
+// nên MỖI trang admin tự kiểm role ở server thay vì chỉ dựa layout. Dùng
+// getAuthSession() (React cache) nên layout + page trong cùng request chỉ tốn 1
+// query session thật. redirect() ném NEXT_REDIRECT (dừng render) — an toàn.
+export async function requireAdminPage() {
+  const session = await getAuthSession();
+  if (!session?.user) redirect("/dang-nhap?callbackUrl=/admin");
+  if (session.user.banned || session.user.role !== "ADMIN") redirect("/");
+  return session;
+}
 
 export async function requireUser() {
   const session = await auth();

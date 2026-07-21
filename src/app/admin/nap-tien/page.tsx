@@ -1,9 +1,11 @@
 import { AdminPageHeader } from "@/components/admin/AdminUi";
+import { requireAdminPage } from "@/lib/authz";
 import AdminDepositsPanel from "@/components/admin/AdminDepositsPanel";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminDepositsPage() {
+export default async function AdminDepositsPage() {
+  await requireAdminPage();
   return (
     <div>
       <AdminPageHeader

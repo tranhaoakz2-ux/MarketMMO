@@ -16,7 +16,32 @@ function slugifySeller(name: string): string {
   return name.toLowerCase().trim().replace(/\s+/g, "-");
 }
 
+// CHẶN seed chạy nhầm vào DB từ xa/production. Đây là seed DEV/DEMO: nó upsert
+// tài khoản admin theo ADMIN_EMAIL (update: role="ADMIN" + reset mật khẩu) và
+// tạo hàng loạt seller/buyer/sản phẩm demo. Từng có sự cố THẬT: seed chạy với
+// DATABASE_URL trỏ Neon prod đã NÂNG NHẦM 1 tài khoản người dùng thật lên ADMIN
+// (ADMIN_EMAIL = email cá nhân) — xem AUDIT.md. Chỉ cho phép khi DB là localhost,
+// hoặc khi cố ý đặt ALLOW_REMOTE_SEED=yes (bắt buộc gõ tay để không lỡ tay).
+function assertNotRemoteDatabase() {
+  const url = process.env.DATABASE_URL ?? "";
+  let host = "";
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    host = "";
+  }
+  const isLocal = host === "localhost" || host === "127.0.0.1" || host === "::1";
+  if (!isLocal && process.env.ALLOW_REMOTE_SEED !== "yes") {
+    throw new Error(
+      `Từ chối seed: DATABASE_URL trỏ tới host KHÔNG phải localhost ("${host || "?"}").\n` +
+        `Seed là cho DEV/DEMO (nâng ADMIN_EMAIL lên ADMIN + reset mật khẩu + tạo dữ liệu demo).\n` +
+        `Nếu THỰC SỰ muốn seed DB từ xa này, chạy lại với ALLOW_REMOTE_SEED=yes.`
+    );
+  }
+}
+
 async function main() {
+  assertNotRemoteDatabase();
   console.log("Seeding categories...");
   for (const cat of categories) {
     await prisma.category.upsert({
