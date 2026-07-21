@@ -45,7 +45,7 @@ export default function ThemeToggle({ className = "" }: { className?: string }) 
       onClick={toggle}
       aria-label={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
       title={isDark ? "Chế độ sáng" : "Chế độ tối"}
-      className={`flex h-[42px] w-11 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-ink text-white transition hover:bg-ink-soft ${className}`}
+      className={`flex h-[42px] w-11 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-white text-foreground transition hover:bg-surface-alt dark:bg-ink ${className}`}
     >
       {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
     </button>

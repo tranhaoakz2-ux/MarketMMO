@@ -158,14 +158,14 @@ export default function Header() {
             onSubmit={handleSearch}
             className="hidden flex-1 items-center justify-center sm:flex"
           >
-            <div className="flex h-10 w-full items-center overflow-hidden rounded-full bg-ink shadow-inner sm:max-w-[468px] lg:max-w-[528px]">
-              <Search className="ml-3.5 h-4 w-4 shrink-0 text-white/50" />
+            <div className="flex h-10 w-full items-center overflow-hidden rounded-full bg-white shadow-inner dark:bg-ink sm:max-w-[468px] lg:max-w-[528px]">
+              <Search className="ml-3.5 h-4 w-4 shrink-0 text-foreground/40" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Tìm sản phẩm hoặc người bán..."
-                className="h-full w-full bg-transparent px-2.5 text-sm text-white placeholder:text-white/50 focus:outline-none"
+                className="h-full w-full bg-transparent px-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:outline-none"
               />
               <button
                 type="submit"
@@ -182,10 +182,10 @@ export default function Header() {
             {status === "authenticated" && <HeaderChatButton />}
             <Link
               href="/gio-hang"
-              className="relative flex items-center justify-center rounded-full border-2 border-ink bg-ink px-4 py-2 transition hover:bg-ink-soft"
+              className="relative flex items-center justify-center rounded-full border-2 border-ink bg-white px-4 py-2 transition hover:bg-surface-alt dark:bg-ink"
               aria-label="Giỏ hàng"
             >
-              <ShoppingBag className="h-5 w-5 text-white" />
+              <ShoppingBag className="h-5 w-5 text-foreground" />
               {totalCount > 0 && (
                 <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
                   {totalCount}
@@ -199,9 +199,9 @@ export default function Header() {
               <>
                 <Link
                   href="/nap-tien"
-                  className="flex items-center gap-2 rounded-full border-2 border-ink bg-ink px-4 py-2 text-sm font-bold text-white transition hover:bg-ink-soft"
+                  className="flex items-center gap-2 rounded-full border-2 border-ink bg-white px-4 py-2 text-sm font-bold text-foreground transition hover:bg-surface-alt dark:bg-ink"
                 >
-                  <Wallet className="h-4 w-4 text-white" />
+                  <Wallet className="h-4 w-4 text-foreground" />
                   {formatVnd(session.user.walletBalance)}
                 </Link>
                 <AccountMenu
@@ -226,7 +226,7 @@ export default function Header() {
                 </Link>
                 <Link
                   href="/dang-nhap?tab=register"
-                  className="rounded-full border-2 border-ink bg-ink px-4 py-2 text-sm font-bold text-white transition hover:bg-ink-soft"
+                  className="rounded-full border-2 border-ink bg-white px-4 py-2 text-sm font-bold text-foreground transition hover:bg-surface-alt dark:bg-ink"
                 >
                   Đăng ký
                 </Link>
@@ -236,17 +236,17 @@ export default function Header() {
 
           <form
             onSubmit={handleSearch}
-            className="order-last flex h-10 w-full items-center overflow-hidden rounded-full bg-ink shadow-inner sm:hidden"
+            className="order-last flex h-10 w-full items-center overflow-hidden rounded-full bg-white shadow-inner dark:bg-ink sm:hidden"
           >
-            <Search className="ml-3.5 h-4 w-4 shrink-0 text-white/50" />
+            <Search className="ml-3.5 h-4 w-4 shrink-0 text-foreground/40" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Tìm sản phẩm hoặc người bán..."
-              className="h-full w-full bg-transparent px-2.5 text-sm text-white placeholder:text-white/50 focus:outline-none"
+              className="h-full w-full bg-transparent px-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:outline-none"
             />
-            <button type="submit" className="mr-3.5 shrink-0 text-white/50" aria-label="Tìm kiếm">
+            <button type="submit" className="mr-3.5 shrink-0 text-foreground/40" aria-label="Tìm kiếm">
               <Search className="h-4 w-4" />
             </button>
           </form>

@@ -26,10 +26,10 @@ export default function HeaderChatButton() {
   return (
     <Link
       href="/tin-nhan"
-      className="relative flex items-center justify-center rounded-full border-2 border-ink bg-ink px-4 py-2 transition hover:bg-ink-soft"
+      className="relative flex items-center justify-center rounded-full border-2 border-ink bg-white px-4 py-2 transition hover:bg-surface-alt dark:bg-ink"
       aria-label="Tin nhắn"
     >
-      <MessageCircle className="h-5 w-5 text-white" />
+      <MessageCircle className="h-5 w-5 text-foreground" />
       {count > 0 && (
         <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
           {count > 99 ? "99+" : count}

@@ -24,7 +24,7 @@ export default function AccountMenu({ name, role }: { name: string; role: Role }
     <div className="group relative flex h-full items-center">
       <Link
         href="/don-hang"
-        className="flex h-10 items-center gap-2.5 overflow-hidden rounded-full border-2 border-ink bg-ink pr-4 text-sm font-bold text-white transition hover:bg-ink-soft"
+        className="flex h-10 items-center gap-2.5 overflow-hidden rounded-full border-2 border-ink bg-white pr-4 text-sm font-bold text-foreground transition hover:bg-surface-alt dark:bg-ink"
       >
         <Avatar size={40} />
         {name}
