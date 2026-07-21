@@ -355,7 +355,7 @@ export default function ChatInbox() {
                         className={`max-w-[70%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-[15px] ${
                           m.isMine
                             ? "bg-brand text-ink"
-                            : "bg-surface-alt text-ink"
+                            : "bg-surface-alt text-foreground"
                         }`}
                       >
                         {m.attachment?.type === "IMAGE" && (

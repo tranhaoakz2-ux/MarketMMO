@@ -138,7 +138,7 @@ export default async function ShopPage({
                   className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
                     i === 0
                       ? "bg-ink text-white"
-                      : "bg-surface text-ink ring-1 ring-border-c hover:bg-surface-alt"
+                      : "bg-surface text-foreground ring-1 ring-border-c hover:bg-surface-alt"
                   }`}
                 >
                   {option}

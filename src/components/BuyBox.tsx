@@ -97,7 +97,7 @@ export default function BuyBox({ product }: { product: Product }) {
                       ? "cursor-not-allowed border-border-c bg-surface-alt text-muted line-through"
                       : isSelected
                         ? "border-brand bg-brand text-ink"
-                        : "border-border-c bg-surface text-ink hover:border-brand-dark"
+                        : "border-border-c bg-surface text-foreground hover:border-brand-dark"
                   }`}
                 >
                   {v.label}
@@ -141,7 +141,7 @@ export default function BuyBox({ product }: { product: Product }) {
           className={`ml-auto flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
             added
               ? "border-success bg-success/10 text-success"
-              : "border-ink text-ink hover:bg-ink hover:text-white"
+              : "border-ink text-foreground hover:bg-ink hover:text-white dark:border-border-c"
           }`}
         >
           {added ? (

@@ -35,7 +35,7 @@ export default function AuctionBidForm({
     return (
       <Link
         href="/dang-nhap?callbackUrl=/dau-gia"
-        className="flex items-center justify-center gap-1.5 rounded-full border-2 border-ink px-4 py-2 text-xs font-bold text-ink transition hover:bg-ink hover:text-white"
+        className="flex items-center justify-center gap-1.5 rounded-full border-2 border-ink px-4 py-2 text-xs font-bold text-foreground transition hover:bg-ink hover:text-white dark:border-border-c"
       >
         <LogIn className="h-3.5 w-3.5" /> Đăng nhập để đấu giá
       </Link>
@@ -46,7 +46,7 @@ export default function AuctionBidForm({
     return (
       <Link
         href="/tro-thanh-nguoi-ban"
-        className="flex items-center justify-center gap-1.5 rounded-full border-2 border-ink px-4 py-2 text-xs font-bold text-ink transition hover:bg-ink hover:text-white"
+        className="flex items-center justify-center gap-1.5 rounded-full border-2 border-ink px-4 py-2 text-xs font-bold text-foreground transition hover:bg-ink hover:text-white dark:border-border-c"
       >
         <Store className="h-3.5 w-3.5" /> Cần có gian hàng để đấu giá
       </Link>

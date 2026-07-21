@@ -161,7 +161,7 @@ export default function SellerOverviewStats({
                 className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
                   range === opt.key
                     ? "border-brand-dark bg-brand text-ink"
-                    : "border-border-c text-ink/70 hover:bg-surface-alt"
+                    : "border-border-c text-foreground/70 hover:bg-surface-alt"
                 }`}
               >
                 {opt.label}
@@ -193,7 +193,7 @@ export default function SellerOverviewStats({
           <button
             type="submit"
             className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-              range === "custom" ? "bg-brand text-ink" : "bg-surface-alt text-ink hover:bg-border-c"
+              range === "custom" ? "bg-brand text-ink" : "bg-surface-alt text-foreground hover:bg-border-c"
             }`}
           >
             Lọc

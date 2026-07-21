@@ -106,7 +106,7 @@ export default function SellerInsurancePanel({
               className={`rounded-lg border px-3 py-2.5 text-sm font-bold transition ${
                 amount === value
                   ? "border-brand-dark bg-brand text-ink"
-                  : "border-border-c bg-surface text-ink hover:bg-surface-alt"
+                  : "border-border-c bg-surface text-foreground hover:bg-surface-alt"
               }`}
             >
               {formatVnd(value)}

@@ -23,7 +23,7 @@ function CategoryChip({ slug, name, count }: CategoryWithCount) {
   return (
     <Link
       href={`/danh-muc/${slug}`}
-      className="flex items-center gap-1.5 rounded-full bg-surface-alt px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-brand-light"
+      className="flex items-center gap-1.5 rounded-full bg-surface-alt px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-brand-light"
     >
       {createElement(getCategoryIcon(slug), { className: "h-3.5 w-3.5", strokeWidth: 1.75 })}
       {name}

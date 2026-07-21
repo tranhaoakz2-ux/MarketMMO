@@ -16,7 +16,7 @@ function FeaturedCard({ product }: { product: Product }) {
           imageUrl={product.imageUrl}
           categorySlug={product.categorySlug}
           boxClassName="h-[253px] w-full rounded-lg border-2 border-brand bg-surface-alt"
-          iconClassName="h-16 w-16 text-ink/70"
+          iconClassName="h-16 w-16 text-foreground/70"
           sizes="204px"
         />
         <span

@@ -24,7 +24,7 @@ export default function CategoryProductCard({ product }: { product: Product }) {
             imageUrl={product.imageUrl}
             categorySlug={product.categorySlug}
             boxClassName="h-full w-full rounded bg-surface-alt ring-1 ring-border-c"
-            iconClassName="h-12 w-12 text-ink/70 sm:h-16 sm:w-16"
+            iconClassName="h-12 w-12 text-foreground/70 sm:h-16 sm:w-16"
             sizes="170px"
           />
           <span className="absolute left-0 top-0 rounded bg-brand px-1.5 py-[3px] text-[10px] font-extrabold uppercase text-ink">

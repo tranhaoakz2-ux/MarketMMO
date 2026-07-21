@@ -93,7 +93,7 @@ export default function SellerSidebar({
                 className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition lg:whitespace-normal ${
                   active
                     ? "bg-brand text-ink"
-                    : "text-ink/70 hover:bg-surface-alt hover:text-ink"
+                    : "text-foreground/70 hover:bg-surface-alt hover:text-foreground"
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
