@@ -86,7 +86,7 @@ function StockEntryPanel({
             placeholder={
               "Mỗi dòng là 1 sản phẩm sẽ giao cho khách, ví dụ:\nemail1@gmail.com|MatKhau123|MaKhoiPhuc\nemail2@gmail.com|MatKhau456|MaKhoiPhuc"
             }
-            className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-xs focus:border-brand-dark focus:outline-none"
+            className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
           />
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] text-muted">{lineCount} dòng hợp lệ</span>
@@ -163,7 +163,7 @@ function AddVariantForm({
         value={label}
         onChange={(e) => setLabel(e.target.value)}
         placeholder="Tên phiên bản (VD: Domain .US - Thuê 24h - Tên Việt)"
-        className="rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+        className="rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
       />
       <input
         type="number"
@@ -173,7 +173,7 @@ function AddVariantForm({
         value={price}
         onChange={(e) => setPrice(e.target.value)}
         placeholder="Giá (đ)"
-        className="rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+        className="rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
       />
       <input
         type="number"
@@ -182,7 +182,7 @@ function AddVariantForm({
         value={stock}
         onChange={(e) => setStock(e.target.value)}
         placeholder="Kho"
-        className="rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+        className="rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
       />
       <button
         type="submit"

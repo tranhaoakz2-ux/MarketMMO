@@ -217,7 +217,7 @@ export default function CartPage() {
                           value={discountInput}
                           onChange={(e) => setDiscountInput(e.target.value.toUpperCase())}
                           placeholder="Mã giảm giá"
-                          className="min-w-0 flex-1 rounded-lg border border-border-c px-3 py-2 text-sm uppercase focus:border-brand-dark focus:outline-none"
+                          className="min-w-0 flex-1 rounded-lg border border-border-c px-3 py-2 text-sm uppercase bg-surface text-foreground focus:border-brand-dark focus:outline-none"
                         />
                         <button
                           onClick={handleApplyDiscount}

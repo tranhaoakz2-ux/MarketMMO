@@ -56,8 +56,8 @@ export default function ToolsPanel() {
                 onClick={() => setActive(tab.id)}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold transition ${
                   isActive
-                    ? "bg-info text-white"
-                    : "text-info hover:bg-surface-alt"
+                    ? "bg-brand text-ink"
+                    : "text-foreground hover:bg-surface-alt hover:text-brand-dark"
                 }`}
               >
                 <Icon className="h-4 w-4" /> {tab.label}

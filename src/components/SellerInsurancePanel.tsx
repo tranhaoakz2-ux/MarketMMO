@@ -124,7 +124,7 @@ export default function SellerInsurancePanel({
             value={amount ?? ""}
             onChange={(e) => setAmount(Number(e.target.value) || null)}
             placeholder="Nhập số tiền (VNĐ)"
-            className="w-full rounded-lg border border-border-c px-3 py-2.5 text-sm focus:border-brand-dark focus:outline-none"
+            className="w-full rounded-lg border border-border-c px-3 py-2.5 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
           />
         </div>
 

@@ -181,14 +181,14 @@ export default function SellerOverviewStats({
             type="date"
             name="from"
             defaultValue={toInputDate(from)}
-            className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs focus:border-brand-dark focus:outline-none"
+            className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
           />
           <span className="text-xs text-muted">—</span>
           <input
             type="date"
             name="to"
             defaultValue={toInputDate(to)}
-            className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs focus:border-brand-dark focus:outline-none"
+            className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
           />
           <button
             type="submit"

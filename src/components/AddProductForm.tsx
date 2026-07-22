@@ -356,7 +356,7 @@ export default function AddProductForm({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="VD: Gmail Việt Nam random full 2020-2023"
-              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             />
           </div>
 
@@ -376,11 +376,13 @@ export default function AddProductForm({
                 setCategoryId(e.target.value);
                 setCategoryTouched(true);
               }}
-              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             >
-              <option value="">-- Chọn danh mục --</option>
+              <option value="" className="bg-surface text-foreground">
+                -- Chọn danh mục --
+              </option>
               {localCategories.map((c) => (
-                <option key={c.id} value={c.id}>
+                <option key={c.id} value={c.id} className="bg-surface text-foreground">
                   {c.emoji} {c.name}
                 </option>
               ))}
@@ -406,7 +408,7 @@ export default function AddProductForm({
                     onChange={(e) => setNewCategoryName(e.target.value)}
                     placeholder="VD: Netflix"
                     maxLength={40}
-                    className="w-full rounded-lg border border-border-c px-2.5 py-1.5 text-xs focus:border-brand-dark focus:outline-none"
+                    className="w-full rounded-lg border border-border-c px-2.5 py-1.5 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
                   />
                   <button
                     type="button"
@@ -454,7 +456,7 @@ export default function AddProductForm({
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="VD: 15000"
-                className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+                className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
               />
             </div>
             <div>
@@ -506,7 +508,7 @@ export default function AddProductForm({
                     value={v.label}
                     onChange={(e) => updateVariant(v.key, "label", e.target.value)}
                     placeholder="Tên phiên bản (VD: Domain .US - Thuê 24h)"
-                    className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs focus:border-brand-dark focus:outline-none"
+                    className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
                   />
                   <input
                     type="number"
@@ -516,7 +518,7 @@ export default function AddProductForm({
                     value={v.price}
                     onChange={(e) => updateVariant(v.key, "price", e.target.value)}
                     placeholder="Giá (đ)"
-                    className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs focus:border-brand-dark focus:outline-none"
+                    className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
                   />
                   <input
                     type="number"
@@ -541,7 +543,7 @@ export default function AddProductForm({
                   onChange={(e) => updateVariant(v.key, "stockItems", e.target.value)}
                   rows={2}
                   placeholder="Kho dữ liệu giao hàng thật cho phiên bản này (tuỳ chọn) — mỗi dòng 1 sản phẩm sẽ giao cho khách"
-                  className="mt-2 w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-[11px] focus:border-brand-dark focus:outline-none"
+                  className="mt-2 w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-[11px] bg-surface text-foreground focus:border-brand-dark focus:outline-none"
                 />
               </div>
             ))}
@@ -558,7 +560,7 @@ export default function AddProductForm({
               onChange={(e) => setBaseStockItems(e.target.value)}
               rows={3}
               placeholder={"Mỗi dòng là 1 sản phẩm sẽ giao TỰ ĐỘNG cho khách, ví dụ:\nemail1@gmail.com|MatKhau123|MaKhoiPhuc\nemail2@gmail.com|MatKhau456|MaKhoiPhuc"}
-              className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-xs focus:border-brand-dark focus:outline-none"
+              className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             />
             <p className="mt-1 text-[11px] leading-relaxed text-foreground/70">
               Có dán dữ liệu ở đây thì ô &ldquo;Kho&rdquo; phía trên sẽ tự
@@ -581,7 +583,7 @@ export default function AddProductForm({
           value={shortDescription}
           onChange={(e) => setShortDescription(e.target.value)}
           placeholder="1 câu ngắn hiện trên thẻ sản phẩm"
-          className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+          className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
         />
       </div>
 
@@ -594,7 +596,7 @@ export default function AddProductForm({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder={"Mỗi dòng là 1 đoạn mô tả, ví dụ:\nTài khoản chính chủ, đã xác minh 2 lớp.\nBảo hành 7 ngày lỗi 1 đổi 1.\nGiao hàng tự động ngay sau khi thanh toán."}
-          className="w-full rounded-lg border border-border-c px-3 py-2.5 text-sm focus:border-brand-dark focus:outline-none"
+          className="w-full rounded-lg border border-border-c px-3 py-2.5 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
         />
       </div>
 

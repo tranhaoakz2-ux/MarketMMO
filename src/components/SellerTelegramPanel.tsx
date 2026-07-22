@@ -110,7 +110,7 @@ export default function SellerTelegramPanel() {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="Nhập mã 6 số"
-              className="flex-1 rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+              className="flex-1 rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             />
             <button
               onClick={() => call("confirm", { code })}
@@ -135,7 +135,7 @@ export default function SellerTelegramPanel() {
               value={chatId}
               onChange={(e) => setChatId(e.target.value)}
               placeholder="Chat ID (chỉ số)"
-              className="flex-1 rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+              className="flex-1 rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             />
             <button
               onClick={() => call("link", { chatId })}

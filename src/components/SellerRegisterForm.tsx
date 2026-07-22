@@ -123,7 +123,7 @@ export default function SellerRegisterForm() {
           value={shopName}
           onChange={(e) => setShopName(e.target.value)}
           placeholder="VD: MarketMMO Store"
-          className="w-full rounded-lg border border-border-c px-3.5 py-3 text-[15px] shadow-sm focus:border-brand-dark focus:outline-none"
+          className="w-full rounded-lg border border-border-c px-3.5 py-3 text-[15px] shadow-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
         />
         <p className="mt-1 text-xs text-muted">
           Tên hiển thị công khai trên gian hàng của bạn, tối thiểu 3 ký tự.
@@ -141,7 +141,7 @@ export default function SellerRegisterForm() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="Nhập số điện thoại"
-            className="w-full rounded-lg border border-border-c px-3.5 py-3 text-[15px] shadow-sm focus:border-brand-dark focus:outline-none"
+            className="w-full rounded-lg border border-border-c px-3.5 py-3 text-[15px] shadow-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
           />
           <p className="mt-1 text-xs text-muted">
             Số điện thoại sẽ được sử dụng để liên hệ khi cần thiết.
@@ -154,7 +154,7 @@ export default function SellerRegisterForm() {
             value={facebookLink}
             onChange={(e) => setFacebookLink(e.target.value)}
             placeholder="https://facebook.com/..."
-            className="w-full rounded-lg border border-border-c px-3.5 py-3 text-[15px] shadow-sm focus:border-brand-dark focus:outline-none"
+            className="w-full rounded-lg border border-border-c px-3.5 py-3 text-[15px] shadow-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
           />
           <p className="mt-1 text-xs text-muted">
             Link đến trang cá nhân/fanpage Facebook của bạn (không bắt buộc).
@@ -169,7 +169,7 @@ export default function SellerRegisterForm() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Mô tả ngắn gọn về kinh nghiệm hoặc các sản phẩm bạn dự định bán"
-          className="w-full rounded-lg border border-border-c px-3.5 py-3 text-[15px] shadow-sm focus:border-brand-dark focus:outline-none"
+          className="w-full rounded-lg border border-border-c px-3.5 py-3 text-[15px] shadow-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
         />
         <p className="mt-1 text-xs text-muted">
           Mô tả ngắn gọn về kinh nghiệm hoặc các sản phẩm bạn dự định bán.

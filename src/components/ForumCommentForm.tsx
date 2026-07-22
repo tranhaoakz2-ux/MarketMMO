@@ -64,7 +64,7 @@ export default function ForumCommentForm({ postId }: { postId: string }) {
         onChange={(e) => setContent(e.target.value)}
         rows={3}
         placeholder="Viết bình luận của bạn..."
-        className="w-full rounded-lg border border-border-c px-3 py-2.5 text-sm focus:border-brand-dark focus:outline-none"
+        className="w-full rounded-lg border border-border-c px-3 py-2.5 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
       />
 
       {error && (

@@ -102,7 +102,7 @@ export default function SellerDiscountCodesPanel() {
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               placeholder="SALE10"
-              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm uppercase focus:border-brand-dark focus:outline-none"
+              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm uppercase bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             />
           </div>
           <div>
@@ -110,10 +110,14 @@ export default function SellerDiscountCodesPanel() {
             <select
               value={type}
               onChange={(e) => setType(e.target.value as "PERCENT" | "FIXED")}
-              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             >
-              <option value="PERCENT">Theo % (tối đa 100)</option>
-              <option value="FIXED">Số tiền cố định (VNĐ)</option>
+              <option value="PERCENT" className="bg-surface text-foreground">
+                Theo % (tối đa 100)
+              </option>
+              <option value="FIXED" className="bg-surface text-foreground">
+                Số tiền cố định (VNĐ)
+              </option>
             </select>
           </div>
           <div>
@@ -125,7 +129,7 @@ export default function SellerDiscountCodesPanel() {
               min={1}
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             />
           </div>
           <div>
@@ -138,7 +142,7 @@ export default function SellerDiscountCodesPanel() {
               value={maxUses}
               onChange={(e) => setMaxUses(e.target.value)}
               placeholder="Không giới hạn"
-              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             />
           </div>
           <div className="sm:col-span-2">
@@ -149,7 +153,7 @@ export default function SellerDiscountCodesPanel() {
               type="date"
               value={expiresAt}
               onChange={(e) => setExpiresAt(e.target.value)}
-              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none sm:w-1/2"
+              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none sm:w-1/2"
             />
           </div>
         </div>

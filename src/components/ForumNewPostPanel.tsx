@@ -76,12 +76,12 @@ export default function ForumNewPostPanel() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Tiêu đề bài viết"
-              className="flex-1 rounded-lg border border-border-c px-3 py-2.5 text-sm focus:border-brand-dark focus:outline-none"
+              className="flex-1 rounded-lg border border-border-c px-3 py-2.5 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             />
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as (typeof FORUM_CATEGORIES)[number])}
-              className="rounded-lg border border-border-c px-3 py-2.5 text-sm focus:border-brand-dark focus:outline-none"
+              className="rounded-lg border border-border-c px-3 py-2.5 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             >
               {FORUM_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -96,7 +96,7 @@ export default function ForumNewPostPanel() {
             onChange={(e) => setContent(e.target.value)}
             rows={4}
             placeholder="Nội dung bài viết..."
-            className="mt-3 w-full rounded-lg border border-border-c px-3 py-2.5 text-sm focus:border-brand-dark focus:outline-none"
+            className="mt-3 w-full rounded-lg border border-border-c px-3 py-2.5 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
           />
 
           {error && (

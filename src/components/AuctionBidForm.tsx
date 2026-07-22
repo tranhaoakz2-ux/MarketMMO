@@ -93,7 +93,7 @@ export default function AuctionBidForm({
       <select
         value={productId}
         onChange={(e) => setProductId(e.target.value)}
-        className="rounded-lg border border-border-c px-2.5 py-2 text-xs focus:border-brand-dark focus:outline-none"
+        className="rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
       >
         {myProducts.map((p) => (
           <option key={p.id} value={p.id}>
@@ -108,7 +108,7 @@ export default function AuctionBidForm({
           step={1000}
           value={amount}
           onChange={(e) => setAmount(Number(e.target.value) || 0)}
-          className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs focus:border-brand-dark focus:outline-none"
+          className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
         />
         <button
           type="submit"

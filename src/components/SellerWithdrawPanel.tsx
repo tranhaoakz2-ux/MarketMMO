@@ -116,7 +116,7 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
             value={amount ?? ""}
             onChange={(e) => setAmount(Number(e.target.value) || null)}
             placeholder="Nhập số tiền (VNĐ)"
-            className="w-full rounded-lg border border-border-c px-3 py-2.5 text-sm focus:border-brand-dark focus:outline-none"
+            className="w-full rounded-lg border border-border-c px-3 py-2.5 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
           />
         </div>
 
@@ -127,21 +127,21 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
             value={bankName}
             onChange={(e) => setBankName(e.target.value)}
             placeholder="Tên ngân hàng (vd: Vietcombank)"
-            className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+            className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
           />
           <input
             type="text"
             value={accountNumber}
             onChange={(e) => setAccountNumber(e.target.value)}
             placeholder="Số tài khoản"
-            className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+            className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
           />
           <input
             type="text"
             value={accountHolder}
             onChange={(e) => setAccountHolder(e.target.value)}
             placeholder="Chủ tài khoản"
-            className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none"
+            className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
           />
         </div>
 

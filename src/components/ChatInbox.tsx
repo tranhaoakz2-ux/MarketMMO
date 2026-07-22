@@ -465,7 +465,7 @@ export default function ChatInbox() {
                     }
                   }}
                   placeholder="Nhập tin nhắn..."
-                  className="flex-1 rounded-full border border-border-c px-5 py-3 text-[15px] focus:border-brand-dark focus:outline-none"
+                  className="flex-1 rounded-full border border-border-c px-5 py-3 text-[15px] bg-surface text-foreground focus:border-brand-dark focus:outline-none"
                 />
                 <button
                   onClick={handleSend}
