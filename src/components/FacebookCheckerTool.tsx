@@ -89,7 +89,7 @@ export default function FacebookCheckerTool() {
     <div className="flex flex-col gap-4">
       <div>
         <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <span className="grid h-4 w-4 place-items-center rounded-full bg-[#1877F2] text-[9px] font-black text-white">
+          <span className="grid h-4 w-4 place-items-center rounded-full bg-brand text-[9px] font-black text-ink">
             f
           </span>
           Link hoặc username Facebook
@@ -103,13 +103,13 @@ export default function FacebookCheckerTool() {
           onChange={(e) => setRaw(e.target.value)}
           placeholder={"facebook.com/zuck\nnguyenvana.123"}
           rows={6}
-          className="w-full rounded-lg border border-border-c px-3 py-2.5 font-mono text-sm focus:border-info focus:outline-none"
+          className="w-full rounded-lg border border-border-c bg-surface text-foreground px-3 py-2.5 font-mono text-sm focus:border-brand-dark focus:outline-none"
           spellCheck={false}
         />
       </div>
 
-      <div className="flex items-start gap-2 rounded-lg bg-info-light px-3 py-2.5 text-xs text-info">
-        <HelpCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <div className="flex items-start gap-2 rounded-lg border border-border-c bg-surface-alt px-3 py-2.5 text-xs text-muted">
+        <HelpCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-dark" />
         <span>
           Facebook giới hạn xem nội dung với khách vãng lai, nên kết quả chỉ mang tính{" "}
           <strong>tham khảo</strong>: hệ thống chỉ chắc chắn khi phát hiện rõ dấu hiệu đã bị xoá
@@ -127,7 +127,7 @@ export default function FacebookCheckerTool() {
       <button
         onClick={handleCheck}
         disabled={loading}
-        className="flex items-center justify-center gap-2 rounded-lg bg-info py-3 text-sm font-black uppercase tracking-wide text-white transition hover:bg-info/90 disabled:opacity-60"
+        className="flex items-center justify-center gap-2 rounded-lg bg-brand py-3 text-sm font-black uppercase tracking-wide text-ink transition hover:bg-brand-dark disabled:opacity-60"
       >
         {loading ? (
           <>

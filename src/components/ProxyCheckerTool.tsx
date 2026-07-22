@@ -90,7 +90,7 @@ export default function ProxyCheckerTool() {
             "ProxyName|45.77.12.10:8080:username:password\n103.90.227.15:8080:username:password"
           }
           rows={6}
-          className="w-full rounded-lg border border-border-c px-3 py-2.5 font-mono text-sm focus:border-info focus:outline-none"
+          className="w-full rounded-lg border border-border-c bg-surface text-foreground px-3 py-2.5 font-mono text-sm focus:border-brand-dark focus:outline-none"
           spellCheck={false}
         />
       </div>
@@ -104,7 +104,7 @@ export default function ProxyCheckerTool() {
       <button
         onClick={handleCheck}
         disabled={loading}
-        className="flex items-center justify-center gap-2 rounded-lg bg-info py-3 text-sm font-black uppercase tracking-wide text-white transition hover:bg-info/90 disabled:opacity-60"
+        className="flex items-center justify-center gap-2 rounded-lg bg-brand py-3 text-sm font-black uppercase tracking-wide text-ink transition hover:bg-brand-dark disabled:opacity-60"
       >
         {loading ? (
           <>
