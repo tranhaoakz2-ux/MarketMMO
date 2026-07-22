@@ -1,6 +1,8 @@
 import {
   AlertTriangle,
+  ArrowUpRight,
   BadgeCheck,
+  BarChart3,
   ChevronRight,
   Info,
   Lock,
@@ -14,7 +16,7 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
-import RevenueChart from "@/components/RevenueChart";
+import SellerOverviewChart from "@/components/SellerOverviewChart";
 import { formatRelativeTime, formatVnd } from "@/lib/format";
 import {
   INSURANCE_FUND_TARGET,
@@ -23,7 +25,7 @@ import {
   type RangeKey,
 } from "@/lib/constants";
 
-const rangeOptions: { key: RangeKey; label: string }[] = [
+const RANGES: { key: RangeKey; label: string }[] = [
   { key: "today", label: "Hôm nay" },
   { key: "yesterday", label: "Hôm qua" },
   { key: "7d", label: "7 ngày" },
@@ -61,6 +63,112 @@ type RecentOrder = {
   createdAt: Date;
 };
 
+// ---- Sparkline (SVG thuần, không hook) — dùng trong thẻ KPI Doanh thu --------
+function Sparkline({ points }: { points: number[] }) {
+  const W = 120;
+  const H = 34;
+  const max = Math.max(...points);
+  const min = Math.min(...points);
+  const span = max - min || 1;
+  const x = (i: number) => (i / Math.max(points.length - 1, 1)) * W;
+  const y = (v: number) => H - 3 - ((v - min) / span) * (H - 6);
+  const line = points.map((v, i) => `${i === 0 ? "M" : "L"} ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
+  const area = `${line} L ${W} ${H} L 0 ${H} Z`;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-9 w-full" preserveAspectRatio="none" aria-hidden>
+      <path d={area} className="fill-brand/20" />
+      <path d={line} fill="none" className="stroke-brand-dark" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function KpiCard({
+  icon: Icon,
+  iconWrap,
+  label,
+  value,
+  accent = false,
+  delta,
+  sub,
+  linkHref,
+  linkLabel,
+  spark,
+}: {
+  icon: typeof PiggyBank;
+  iconWrap: string;
+  label: string;
+  value: string;
+  accent?: boolean;
+  delta?: number | null;
+  sub?: string;
+  linkHref?: string;
+  linkLabel?: string;
+  spark?: number[];
+}) {
+  return (
+    <div
+      className={`group relative overflow-hidden rounded-2xl border bg-surface p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+        accent ? "border-brand-dark/30" : "border-border-c"
+      }`}
+    >
+      {accent && <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-dark to-brand" />}
+      <div className="flex items-start justify-between gap-2">
+        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${iconWrap}`}>
+          <Icon className="h-5 w-5" strokeWidth={2.2} />
+        </span>
+        {delta !== undefined && delta !== null && (
+          <span
+            className={`flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+              delta >= 0 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+            }`}
+          >
+            {delta >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+            {delta >= 0 ? "+" : ""}
+            {delta}%
+          </span>
+        )}
+      </div>
+      <p className="mt-4 truncate text-[11px] font-bold uppercase tracking-[0.12em] text-muted">{label}</p>
+      <p className="mt-1 break-words text-[26px] font-black leading-tight tabular-nums text-foreground">{value}</p>
+      {spark && spark.length > 1 && (
+        <div className="mt-2">
+          <Sparkline points={spark} />
+        </div>
+      )}
+      {sub && !linkHref && <p className="mt-2 text-[11px] text-muted">{sub}</p>}
+      {linkHref && (
+        <Link href={linkHref} className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-brand-dark transition hover:gap-1.5">
+          {linkLabel} <ArrowUpRight className="h-3 w-3" />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`rounded-2xl border border-border-c bg-surface p-5 shadow-sm ${className}`}>{children}</div>;
+}
+
+function SectionTitle({ children, aside }: { children: React.ReactNode; aside?: React.ReactNode }) {
+  return (
+    <div className="mb-4 flex items-center justify-between gap-2">
+      <h2 className="text-[13px] font-black text-foreground">{children}</h2>
+      {aside}
+    </div>
+  );
+}
+
+function EmptyState({ icon: Icon, children }: { icon: typeof PackageX; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-2 py-6 text-center">
+      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-surface-alt text-muted">
+        <Icon className="h-6 w-6" strokeWidth={1.6} />
+      </span>
+      <p className="max-w-[240px] text-xs text-muted">{children}</p>
+    </div>
+  );
+}
+
 export default function SellerOverviewStats({
   range,
   from,
@@ -96,151 +204,89 @@ export default function SellerOverviewStats({
     reviewCount: number;
   } | null;
 }) {
-  const deltaPct =
-    previousRevenue > 0
-      ? Math.round(((revenueStats.releasedRevenue - previousRevenue) / previousRevenue) * 100)
-      : null;
-
-  const statusEntries = (["RELEASED", "ESCROW", "DISPUTED", "CANCELLED"] as const).map((key) => ({
-    key,
-    count: orderStatusBreakdown[key],
+  const deltaPct = previousRevenue > 0 ? Math.round(((revenueStats.releasedRevenue - previousRevenue) / previousRevenue) * 100) : null;
+  const insurancePct = Math.min(100, Math.round((walletSummary.insuranceBalance / INSURANCE_FUND_TARGET) * 100));
+  const statusEntries = (["RELEASED", "ESCROW", "DISPUTED", "CANCELLED"] as const).map((k) => ({
+    key: k,
+    count: orderStatusBreakdown[k],
   }));
   const statusTotal = statusEntries.reduce((s, e) => s + e.count, 0);
+  const hasRevenue = revenueTrend.some((b) => b.value > 0);
+  const sparkPoints = hasRevenue ? revenueTrend.map((t) => t.value) : undefined;
+  const shopHref = storeSnapshot ? `/shop/${storeSnapshot.slug}` : "#";
 
-  // Luôn hiện đủ 3 mục (khác bản demo hiển thị tĩnh) — kể cả khi count = 0,
-  // để seller biết đây là 3 nhóm hệ thống LUÔN theo dõi, không phải chỉ xuất
-  // hiện khi có việc. count = 0 đổi sang huy hiệu màu success (an tâm) thay
-  // vì màu đỏ cảnh báo.
   const attentionItems = [
-    {
-      href: "/trang-ban-hang/san-pham",
-      icon: Package,
-      iconClass: "bg-brand-light text-brand-dark",
-      title: "Sản phẩm chờ duyệt",
-      sub: "Admin chưa duyệt xong",
-      count: attentionCounts.pendingProducts,
-    },
-    {
-      href: "/trang-ban-hang/khieu-nai",
-      icon: AlertTriangle,
-      iconClass: "bg-danger/10 text-danger",
-      title: "Khiếu nại đang mở",
-      sub: "Cần bạn phản hồi buyer",
-      count: attentionCounts.openDisputes,
-    },
-    {
-      href: "/trang-ban-hang/san-pham",
-      icon: TrendingDown,
-      iconClass: "bg-info/10 text-info",
-      title: "Sắp hết hàng",
-      sub: "Kho thật còn dưới 3 đơn vị",
-      count: attentionCounts.lowStock,
-    },
+    { href: "/trang-ban-hang/san-pham", icon: Package, wrap: "bg-brand-light text-brand-dark", title: "Sản phẩm chờ duyệt", sub: "Admin chưa duyệt xong", count: attentionCounts.pendingProducts },
+    { href: "/trang-ban-hang/khieu-nai", icon: AlertTriangle, wrap: "bg-danger/10 text-danger", title: "Khiếu nại đang mở", sub: "Cần bạn phản hồi buyer", count: attentionCounts.openDisputes },
+    { href: "/trang-ban-hang/san-pham", icon: TrendingDown, wrap: "bg-info/10 text-info", title: "Sắp hết hàng", sub: "Kho thật còn dưới 3 đơn vị", count: attentionCounts.lowStock },
   ];
 
-  const insurancePct = Math.min(
-    100,
-    Math.round((walletSummary.insuranceBalance / INSURANCE_FUND_TARGET) * 100)
-  );
-
   return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-black text-foreground">Tổng quan</h1>
-            <p className="text-xs text-muted">
-              Theo dõi dòng tiền, đơn hàng và những việc cần xử lý cho gian hàng của bạn.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {rangeOptions.map((opt) => (
+    <div className="flex flex-col gap-5">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted">Quản lý bán hàng</p>
+          <h1 className="mt-1 text-3xl font-black tracking-tight text-foreground">Tổng quan</h1>
+          <p className="mt-1 text-sm text-muted">Theo dõi dòng tiền, đơn hàng và việc cần xử lý cho gian hàng của bạn.</p>
+        </div>
+        <div className="flex flex-col items-stretch gap-2 sm:items-end">
+          <div className="flex flex-wrap items-center gap-1 rounded-full border border-border-c bg-surface-alt p-1">
+            {RANGES.map((r) => (
               <Link
-                key={opt.key}
-                href={`/trang-ban-hang?range=${opt.key}`}
-                className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
-                  range === opt.key
-                    ? "border-brand-dark bg-brand text-ink"
-                    : "border-border-c text-foreground/70 hover:bg-surface-alt"
+                key={r.key}
+                href={`/trang-ban-hang?range=${r.key}`}
+                className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
+                  range === r.key ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"
                 }`}
               >
-                {opt.label}
+                {r.label}
               </Link>
             ))}
           </div>
+          <form action="/trang-ban-hang" method="get" className="flex flex-wrap items-center gap-1.5">
+            <input type="hidden" name="range" value="custom" />
+            <input
+              type="date"
+              name="from"
+              defaultValue={toInputDate(from)}
+              className="rounded-lg border border-border-c bg-surface px-2.5 py-1.5 text-xs text-foreground focus:border-brand-dark focus:outline-none"
+            />
+            <span className="text-xs text-muted">—</span>
+            <input
+              type="date"
+              name="to"
+              defaultValue={toInputDate(to)}
+              className="rounded-lg border border-border-c bg-surface px-2.5 py-1.5 text-xs text-foreground focus:border-brand-dark focus:outline-none"
+            />
+            <button
+              type="submit"
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                range === "custom" ? "bg-brand text-ink" : "bg-surface-alt text-foreground hover:bg-border-c"
+              }`}
+            >
+              Lọc
+            </button>
+          </form>
         </div>
-
-        <form
-          action="/trang-ban-hang"
-          method="get"
-          className="flex flex-wrap items-center gap-2 border-t border-border-c pt-4"
-        >
-          <input type="hidden" name="range" value="custom" />
-          <span className="text-xs font-semibold text-muted">Tuỳ chọn:</span>
-          <input
-            type="date"
-            name="from"
-            defaultValue={toInputDate(from)}
-            className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
-          />
-          <span className="text-xs text-muted">—</span>
-          <input
-            type="date"
-            name="to"
-            defaultValue={toInputDate(to)}
-            className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
-          />
-          <button
-            type="submit"
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-              range === "custom" ? "bg-brand text-ink" : "bg-surface-alt text-foreground hover:bg-border-c"
-            }`}
-          >
-            Lọc
-          </button>
-        </form>
       </div>
 
-      <div className="rounded-2xl border border-border-c bg-surface-alt p-4 text-xs text-foreground/80">
-        <p className="flex items-center gap-1.5 font-bold text-foreground">
-          <Info className="h-3.5 w-3.5 text-info" /> Quy định giao dịch
-        </p>
-        <p className="mt-1.5">
-          Mọi giao dịch trên MarketMMO đều phải thực hiện trong hệ thống (ký quỹ, ví, thanh
-          toán) — nghiêm cấm dẫn khách ra ngoài nền tảng. Xem đầy đủ tại{" "}
-          <Link href="/dieu-khoan-ban-hang" className="font-semibold text-info hover:underline">
-            Điều khoản bán hàng
-          </Link>
-          .
-        </p>
-      </div>
-
+      {/* KPI */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
+        <KpiCard
           icon={PiggyBank}
-          iconClass="bg-brand text-ink"
-          label={`Doanh thu (${revenueStats.orderCount} đơn)`}
+          iconWrap="bg-brand text-ink"
+          label={`Doanh thu · ${revenueStats.orderCount} đơn`}
           value={formatVnd(revenueStats.releasedRevenue)}
+          accent
           delta={deltaPct}
-          sub={previousRevenue > 0 ? `So với kỳ trước: ${formatVnd(previousRevenue)}` : undefined}
+          spark={sparkPoints}
         />
-        <StatCard
-          icon={Lock}
-          iconClass="bg-brand-light text-brand-dark"
-          label="Tiền tạm giữ (ký quỹ)"
-          value={formatVnd(revenueStats.escrowHeld)}
-        />
-        <StatCard
-          icon={Wallet}
-          iconClass="bg-success/10 text-success"
-          label="Số dư ví"
-          value={formatVnd(walletSummary.walletBalance)}
-          linkHref="/trang-ban-hang/rut-tien"
-          linkLabel="Rút tiền"
-        />
-        <StatCard
+        <KpiCard icon={Lock} iconWrap="bg-brand-light text-brand-dark" label="Tiền tạm giữ (ký quỹ)" value={formatVnd(revenueStats.escrowHeld)} sub="Sẽ giải ngân sau thời gian ký quỹ" />
+        <KpiCard icon={Wallet} iconWrap="bg-success/10 text-success" label="Số dư ví" value={formatVnd(walletSummary.walletBalance)} linkHref="/trang-ban-hang/rut-tien" linkLabel="Rút tiền" />
+        <KpiCard
           icon={ShieldCheck}
-          iconClass="bg-info/10 text-info"
+          iconWrap="bg-info/10 text-info"
           label="Quỹ bảo hiểm"
           value={formatVnd(walletSummary.insuranceBalance)}
           sub={
@@ -251,144 +297,120 @@ export default function SellerOverviewStats({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="flex flex-col gap-4 min-w-0">
-          <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-            <div className="mb-3 flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-black text-foreground">Doanh số theo thời gian</h2>
-              <span className="text-[11px] text-muted">
-                {revenueTrend.length > 10 ? "Gộp theo tuần" : "Theo ngày"}
-              </span>
-            </div>
-            <RevenueChart bars={revenueTrend} />
-          </div>
+      {/* Notice */}
+      <div className="flex items-start gap-2.5 rounded-2xl border border-border-c bg-surface-alt px-4 py-3 text-xs text-muted">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-dark" />
+        <p>
+          Mọi giao dịch trên MarketMMO đều thực hiện trong hệ thống (ký quỹ, ví, thanh toán) — nghiêm cấm dẫn khách ra ngoài nền tảng.{" "}
+          <Link href="/dieu-khoan-ban-hang" className="font-semibold text-foreground underline decoration-brand-dark/40 underline-offset-2 hover:decoration-brand-dark">
+            Điều khoản bán hàng
+          </Link>
+        </p>
+      </div>
 
-          <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-            <div className="mb-3 flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-black text-foreground">Trạng thái đơn hàng</h2>
-              <span className="text-[11px] text-muted">{statusTotal} đơn trong kỳ</span>
-            </div>
+      {/* Grid chính */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
+        {/* Cột trái */}
+        <div className="flex min-w-0 flex-col gap-5">
+          <Card>
+            <SectionTitle aside={<span className="text-[11px] font-semibold text-muted">{revenueTrend.length > 10 ? "Gộp theo tuần" : "Theo ngày"}</span>}>
+              Doanh số theo thời gian
+            </SectionTitle>
+            {hasRevenue ? <SellerOverviewChart bars={revenueTrend} /> : <EmptyState icon={BarChart3}>Chưa có doanh số trong kỳ này.</EmptyState>}
+          </Card>
+
+          <Card>
+            <SectionTitle aside={<span className="text-[11px] text-muted">{statusTotal} đơn trong kỳ</span>}>Trạng thái đơn hàng</SectionTitle>
             {statusTotal === 0 ? (
-              <p className="py-3 text-center text-xs text-muted">Chưa có đơn hàng nào trong kỳ này.</p>
+              <EmptyState icon={PackageX}>Chưa có đơn hàng nào trong kỳ này.</EmptyState>
             ) : (
               <>
-                <div className="flex h-2.5 overflow-hidden rounded-full bg-surface-alt">
+                <div className="flex h-3 overflow-hidden rounded-full bg-surface-alt">
                   {statusEntries.map(
-                    (e) =>
-                      e.count > 0 && (
-                        <span
-                          key={e.key}
-                          className={statusDotClass[e.key]}
-                          style={{ width: `${(e.count / statusTotal) * 100}%` }}
-                        />
-                      )
+                    (e) => e.count > 0 && <span key={e.key} className={statusDotClass[e.key]} style={{ width: `${(e.count / statusTotal) * 100}%` }} />
                   )}
                 </div>
-                <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
+                <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3">
                   {statusEntries.map((e) => (
-                    <div key={e.key} className="flex items-center gap-2 text-xs text-foreground/80">
-                      <span className={`h-2 w-2 shrink-0 rounded-full ${statusDotClass[e.key]}`} />
-                      {orderStatusLabel[e.key]}
-                      <span className="ml-auto font-bold text-foreground">{e.count}</span>
+                    <div key={e.key} className="flex items-center gap-2 text-xs">
+                      <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${statusDotClass[e.key]}`} />
+                      <span className="truncate text-muted">{orderStatusLabel[e.key]}</span>
+                      <span className="ml-auto font-black tabular-nums text-foreground">{e.count}</span>
                     </div>
                   ))}
                 </div>
               </>
             )}
-          </div>
+          </Card>
 
-          <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-            <div className="mb-2 flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-black text-foreground">Sản phẩm bán chạy</h2>
-              <span className="text-[11px] text-muted">Bấm để xem gian hàng</span>
-            </div>
+          <Card>
+            <SectionTitle aside={<span className="text-[11px] text-muted">Bấm để xem gian hàng</span>}>Sản phẩm bán chạy</SectionTitle>
             {topProducts.length === 0 ? (
-              <p className="py-3 text-center text-xs text-muted">Chưa có sản phẩm nào bán được trong kỳ này.</p>
+              <EmptyState icon={Package}>Chưa có sản phẩm nào bán được trong kỳ này.</EmptyState>
             ) : (
-              topProducts.map((p, i) => (
-                <Link
-                  key={p.slug + i}
-                  href={storeSnapshot ? `/shop/${storeSnapshot.slug}` : "#"}
-                  className="group -mx-2 flex items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-surface-alt"
-                >
-                  <span
-                    className={`grid h-6 w-6 shrink-0 place-items-center rounded-md text-[11px] font-black ${
-                      i === 0 ? "bg-brand text-ink" : "bg-surface-alt text-muted"
-                    }`}
-                  >
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-bold text-foreground">{p.productName}</p>
-                    <p className="truncate text-[11px] text-muted">
-                      {p.categoryName} · đã bán {p.quantity}
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-[13px] font-black text-foreground">{formatVnd(p.revenue)}</span>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
-                </Link>
-              ))
-            )}
-          </div>
-
-          <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-            <div className="mb-2 flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-black text-foreground">Đơn hàng gần đây</h2>
-              <Link
-                href="/trang-ban-hang/don-san-pham"
-                className="text-[11px] font-bold text-info hover:underline"
-              >
-                Xem tất cả →
-              </Link>
-            </div>
-            {recentOrders.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-6 text-center text-xs text-muted">
-                <PackageX className="h-6 w-6 text-muted" />
-                Chưa có đơn hàng nào.
+              <div className="flex flex-col">
+                {topProducts.map((p, i) => (
+                  <Link key={p.slug + i} href={shopHref} className="group -mx-2 flex items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-surface-alt">
+                    <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[12px] font-black ${i === 0 ? "bg-brand text-ink shadow-sm" : "bg-surface-alt text-muted"}`}>
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-bold text-foreground">{p.productName}</p>
+                      <p className="truncate text-[11px] text-muted">
+                        {p.categoryName} · đã bán {p.quantity}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-[13px] font-black tabular-nums text-foreground">{formatVnd(p.revenue)}</span>
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
+                  </Link>
+                ))}
               </div>
-            ) : (
-              recentOrders.map((o) => (
-                <Link
-                  key={o.id}
-                  href={storeSnapshot ? `/shop/${storeSnapshot.slug}` : "#"}
-                  className="group -mx-2 flex items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-surface-alt"
-                >
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${statusDotClass[o.status]}`} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-bold text-foreground">{o.productName}</p>
-                    <p className="truncate text-[11px] text-muted">
-                      {o.buyerName} ·{" "}
-                      {o.status === "DISPUTED" ? "đang tranh chấp" : formatRelativeTime(o.createdAt)}
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-xs font-black text-foreground">{formatVnd(o.amount)}</span>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
-                </Link>
-              ))
             )}
-          </div>
+          </Card>
+
+          <Card>
+            <SectionTitle aside={<Link href="/trang-ban-hang/don-san-pham" className="text-[11px] font-bold text-brand-dark hover:underline">Xem tất cả →</Link>}>
+              Đơn hàng gần đây
+            </SectionTitle>
+            {recentOrders.length === 0 ? (
+              <EmptyState icon={PackageX}>Chưa có đơn hàng nào.</EmptyState>
+            ) : (
+              <div className="flex flex-col">
+                {recentOrders.map((o) => (
+                  <Link key={o.id} href={shopHref} className="group -mx-2 flex items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-surface-alt">
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${statusDotClass[o.status]}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-bold text-foreground">{o.productName}</p>
+                      <p className="truncate text-[11px] text-muted">
+                        {o.buyerName} · {o.status === "DISPUTED" ? "đang tranh chấp" : formatRelativeTime(o.createdAt)}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-xs font-black tabular-nums text-foreground">{formatVnd(o.amount)}</span>
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-            <h2 className="mb-3 text-sm font-black text-foreground">Cần xử lý</h2>
-            <div className="flex flex-col gap-2">
+        {/* Cột phải */}
+        <div className="flex flex-col gap-5">
+          <Card>
+            <SectionTitle>Cần xử lý</SectionTitle>
+            <div className="flex flex-col gap-2.5">
               {attentionItems.map((item) => (
-                <Link
-                  key={item.title}
-                  href={item.href}
-                  className="flex items-center gap-3 rounded-xl bg-surface-alt p-3 transition hover:bg-border-c"
-                >
-                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${item.iconClass}`}>
-                    <item.icon className="h-4 w-4" />
+                <Link key={item.title} href={item.href} className="flex items-center gap-3 rounded-xl bg-surface-alt p-3 transition hover:bg-border-c">
+                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${item.wrap}`}>
+                    <item.icon className="h-4 w-4" strokeWidth={2.2} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-foreground">{item.title}</p>
-                    <p className="text-[10.5px] text-muted">{item.sub}</p>
+                    <p className="truncate text-xs font-bold text-foreground">{item.title}</p>
+                    <p className="truncate text-[10.5px] text-muted">{item.sub}</p>
                   </div>
                   <span
-                    className={`grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1.5 text-xs font-black ${
-                      item.count > 0 ? "bg-danger text-white" : "bg-success/10 text-success"
+                    className={`grid h-6 min-w-6 shrink-0 place-items-center rounded-full px-1.5 text-xs font-black ${
+                      item.count > 0 ? "bg-danger/15 text-danger" : "bg-success/15 text-success"
                     }`}
                   >
                     {item.count}
@@ -396,104 +418,61 @@ export default function SellerOverviewStats({
                 </Link>
               ))}
             </div>
-          </div>
+          </Card>
 
           {storeSnapshot && (
-            <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-              <h2 className="mb-3 text-sm font-black text-foreground">Gian hàng của bạn</h2>
-              <div className="flex items-center gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-base font-black text-brand">
+            <Card className="overflow-hidden p-0">
+              <div className="flex items-center gap-3 border-b border-border-c bg-gradient-to-br from-ink to-ink-soft px-5 py-4">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand text-lg font-black text-ink">
                   {storeSnapshot.shopName.charAt(0).toUpperCase()}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-foreground">{storeSnapshot.shopName}</p>
+                  <p className="truncate text-sm font-black text-white">{storeSnapshot.shopName}</p>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {storeSnapshot.verified && (
-                      <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold text-success">
+                      <span className="flex items-center gap-1 rounded-full bg-success/20 px-2 py-0.5 text-[10px] font-bold text-success">
                         <BadgeCheck className="h-3 w-3" /> Đã xác thực
                       </span>
                     )}
-                    <span className="rounded-full bg-surface-alt px-2 py-0.5 text-[10px] font-bold text-muted">
-                      LV {storeSnapshot.level}
-                    </span>
+                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/80">Level {storeSnapshot.level}</span>
                   </div>
                 </div>
               </div>
-
-              <div className="mt-3 flex items-center gap-1.5 text-xs">
-                <Star className="h-3.5 w-3.5 fill-brand-dark text-brand-dark" />
-                <b className="text-foreground">{storeSnapshot.avgRating.toFixed(1)}</b>
-                <span className="text-muted">({storeSnapshot.reviewCount} đánh giá)</span>
-              </div>
-
-              <div className="mt-4">
-                <div className="mb-1.5 flex items-center justify-between text-[11px]">
-                  <span className="text-muted">Quỹ bảo hiểm</span>
-                  <b className="text-foreground">
-                    {formatVnd(storeSnapshot.insuranceBalance)} / {formatVnd(INSURANCE_FUND_TARGET)}
-                  </b>
+              <div className="p-5">
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Star className="h-4 w-4 fill-brand-dark text-brand-dark" />
+                  <b className="tabular-nums text-foreground">{storeSnapshot.avgRating.toFixed(1)}</b>
+                  <span className="text-xs text-muted">({storeSnapshot.reviewCount} đánh giá)</span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-surface-alt">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-brand-dark to-brand"
-                    style={{ width: `${insurancePct}%` }}
-                  />
+                <div className="mt-4">
+                  <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px]">
+                    <span className="shrink-0 text-muted">Quỹ bảo hiểm</span>
+                    <b className="truncate tabular-nums text-foreground">
+                      {formatVnd(storeSnapshot.insuranceBalance)} / {formatVnd(INSURANCE_FUND_TARGET)}
+                    </b>
+                  </div>
+                  <div className="h-2.5 overflow-hidden rounded-full bg-surface-alt">
+                    <div className="h-full rounded-full bg-gradient-to-r from-brand-dark to-brand" style={{ width: `${insurancePct}%` }} />
+                  </div>
                 </div>
+                <Link href={shopHref} className="mt-4 flex items-center justify-center gap-1.5 rounded-full border border-border-c py-2.5 text-xs font-bold text-foreground transition hover:bg-surface-alt">
+                  Xem gian hàng công khai <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
               </div>
-            </div>
+            </Card>
           )}
+
+          <Card>
+            <SectionTitle>Mẹo tăng doanh số</SectionTitle>
+            <div className="flex flex-col items-center gap-2 py-4 text-center">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-surface-alt text-muted">
+                <PackageX className="h-6 w-6" strokeWidth={1.6} />
+              </span>
+              <p className="text-xs text-muted">Nhập kho dữ liệu thật + bật giao hàng tự động để đơn hoàn tất nhanh hơn.</p>
+            </div>
+          </Card>
         </div>
       </div>
-    </div>
-  );
-}
-
-function StatCard({
-  icon: Icon,
-  iconClass,
-  label,
-  value,
-  delta,
-  sub,
-  linkHref,
-  linkLabel,
-}: {
-  icon: typeof PiggyBank;
-  iconClass: string;
-  label: string;
-  value: string;
-  delta?: number | null;
-  sub?: string;
-  linkHref?: string;
-  linkLabel?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-2 rounded-2xl border-2 border-brand bg-surface p-4 shadow-sm transition hover:border-brand-dark">
-      <div className="flex items-start justify-between gap-2">
-        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${iconClass}`}>
-          <Icon className="h-4.5 w-4.5" />
-        </span>
-        {delta !== undefined && delta !== null && (
-          <span
-            className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-bold ${
-              delta >= 0 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
-            }`}
-          >
-            {delta >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-            {Math.abs(delta)}%
-          </span>
-        )}
-      </div>
-      <div>
-        <p className="text-xs font-semibold text-muted">{label}</p>
-        <p className="mt-0.5 text-lg font-black text-foreground">{value}</p>
-      </div>
-      {sub && !linkHref && <p className="text-[11px] text-muted">{sub}</p>}
-      {linkHref && (
-        <Link href={linkHref} className="text-[11px] font-bold text-info hover:underline">
-          {linkLabel} →
-        </Link>
-      )}
     </div>
   );
 }
