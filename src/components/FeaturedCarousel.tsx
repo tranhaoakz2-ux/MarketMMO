@@ -9,7 +9,7 @@ function FeaturedCard({ product }: { product: Product }) {
   return (
     <Link
       href={`/san-pham/${product.slug}`}
-      className="w-[187px] shrink-0 rounded-xl p-[5px] transition hover:-translate-y-0.5 sm:w-[204px]"
+      className="group w-[187px] shrink-0 rounded-xl p-[5px] transition hover:-translate-y-0.5 sm:w-[204px]"
     >
       <div className="relative">
         <ProductThumbnail
@@ -30,7 +30,7 @@ function FeaturedCard({ product }: { product: Product }) {
           <Avatar size={25} />
         </div>
       </div>
-      <h3 className="mt-[13px] line-clamp-2 text-[15px] font-bold leading-snug text-foreground">
+      <h3 className="mt-[13px] line-clamp-2 text-[15px] font-bold leading-snug text-foreground transition-colors group-hover:text-brand-dark">
         {product.name}
       </h3>
       <div className="mt-1.5 flex items-center justify-between">

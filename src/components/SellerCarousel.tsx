@@ -16,7 +16,7 @@ function SellerCard({ seller }: { seller: SellerListItem }) {
   return (
     <Link
       href={`/shop/${seller.slug}`}
-      className="w-[187px] shrink-0 rounded-xl p-[5px] transition hover:-translate-y-0.5 sm:w-[204px]"
+      className="group w-[187px] shrink-0 rounded-xl p-[5px] transition hover:-translate-y-0.5 sm:w-[204px]"
     >
       <div className="relative">
         <span className="grid h-[253px] w-full place-items-center rounded-lg border-2 border-brand bg-surface-alt text-6xl font-black text-foreground/70">
@@ -33,7 +33,7 @@ function SellerCard({ seller }: { seller: SellerListItem }) {
           {seller.level}
         </span>
       </div>
-      <h3 className="mt-[13px] line-clamp-2 text-[15px] font-bold leading-snug text-foreground">
+      <h3 className="mt-[13px] line-clamp-2 text-[15px] font-bold leading-snug text-foreground transition-colors group-hover:text-brand-dark">
         {seller.shopName}
       </h3>
       <div className="mt-1.5 flex items-center justify-between">
