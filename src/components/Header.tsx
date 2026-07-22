@@ -327,7 +327,7 @@ export default function Header() {
                   <Link
                     href="/nap-tien"
                     onClick={() => setMenuOpen(false)}
-                    className="flex-1 rounded-full border-2 border-ink px-4 py-2 text-center text-sm font-bold text-ink"
+                    className="flex-1 rounded-full border-2 border-ink px-4 py-2 text-center text-sm font-bold text-foreground dark:border-border-c"
                   >
                     Ví: {formatVnd(session.user.walletBalance)}
                   </Link>
@@ -353,7 +353,7 @@ export default function Header() {
                   <Link
                     href="/dang-nhap?tab=register"
                     onClick={() => setMenuOpen(false)}
-                    className="flex-1 rounded-full border-2 border-ink px-4 py-2 text-center text-sm font-bold text-ink"
+                    className="flex-1 rounded-full border-2 border-ink px-4 py-2 text-center text-sm font-bold text-foreground dark:border-border-c"
                   >
                     Đăng ký
                   </Link>
