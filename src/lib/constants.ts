@@ -19,7 +19,11 @@ export type WalletTxType =
 
 export type WalletTxStatus = "PENDING" | "CONFIRMED" | "REJECTED";
 
-export type DisputeStatus = "OPEN" | "RESOLVED_REFUND" | "RESOLVED_RELEASE";
+export type DisputeStatus =
+  | "OPEN"
+  | "RESOLVED_REFUND"
+  | "RESOLVED_PARTIAL"
+  | "RESOLVED_RELEASE";
 
 export type ProductStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -38,7 +42,10 @@ export const CATEGORY_STATUS_LABEL: Record<CategoryStatus, string> = {
 };
 
 // Kho dữ liệu giao hàng thật (ProductStockItem) — xem prisma/schema.prisma.
-export type StockItemStatus = "AVAILABLE" | "SOLD";
+// BURNED = đơn vị đã giao rồi bị HOÀN TOÀN BỘ tiền qua khiếu nại: content đã
+// lộ nên KHÔNG trả về AVAILABLE (không bán lại), tách khỏi SOLD để thống kê
+// thiệt hại cho seller (số đơn vị mất do hoàn tiền). Xem SECURITY_AUDIT #8.
+export type StockItemStatus = "AVAILABLE" | "SOLD" | "BURNED";
 
 export type DiscountType = "PERCENT" | "FIXED";
 
@@ -131,7 +138,8 @@ export const INSURANCE_FUND_TARGET = 300000;
 
 export const disputeStatusLabel: Record<DisputeStatus, string> = {
   OPEN: "Đang chờ xử lý",
-  RESOLVED_REFUND: "Đã hoàn tiền người mua",
+  RESOLVED_REFUND: "Đã hoàn toàn bộ cho người mua",
+  RESOLVED_PARTIAL: "Đã hoàn một phần",
   RESOLVED_RELEASE: "Đã giải ngân người bán",
 };
 

@@ -30,6 +30,9 @@ export async function POST(
   const item = dispute.orderItem;
   const amount = item.price * item.quantity;
 
+  // ── HOÀN TOÀN BỘ: hàng sai/không dùng được. Buyer +100%, seller +0, sàn +0
+  // (đơn huỷ, không thu phí). Kho đã giao bị ĐỐT (SOLD→BURNED, không bán lại vì
+  // content đã lộ). OrderItem→CANCELLED (UI ẩn nút xem content — quyết định a).
   if (action === "refund_buyer") {
     const order = await prisma.order.findUniqueOrThrow({ where: { id: item.orderId } });
     // Gate NGUYÊN TỬ trên trạng thái khiếu nại (bug B6): chỉ khi chuyển được
@@ -38,10 +41,22 @@ export async function POST(
     const done = await prisma.$transaction(async (t) => {
       const gate = await t.dispute.updateMany({
         where: { id, status: "OPEN" },
-        data: { status: "RESOLVED_REFUND", adminNote, resolvedAt: new Date() },
+        data: {
+          status: "RESOLVED_REFUND",
+          adminNote,
+          refundAmount: amount,
+          resolvedAt: new Date(),
+        },
       });
       if (gate.count === 0) return false;
       await t.orderItem.update({ where: { id: item.id }, data: { status: "CANCELLED" } });
+      // Đốt kho đã giao cho đúng đơn này: SOLD→BURNED (chỉ bản còn SOLD, không
+      // đụng bản đã BURNED nếu chạy lại). Kho BURNED không quay về AVAILABLE
+      // (content đã lộ) và bị loại khỏi mọi phép đếm tồn kho (lọc AVAILABLE).
+      await t.productStockItem.updateMany({
+        where: { orderItemId: item.id, status: "SOLD" },
+        data: { status: "BURNED" },
+      });
       await t.user.update({
         where: { id: order.buyerId },
         data: { walletBalance: { increment: amount } },
@@ -52,7 +67,7 @@ export async function POST(
           type: "REFUND",
           amount,
           status: "CONFIRMED",
-          note: `Hoàn tiền khiếu nại đơn #${item.orderId} — ${item.productName}`,
+          note: `Hoàn toàn bộ khiếu nại đơn #${item.orderId} — ${item.productName}`,
           confirmedAt: new Date(),
         },
       });
@@ -66,10 +81,97 @@ export async function POST(
     await prisma.$transaction((t) => finalizeOrderCommission(t, item.orderId));
     await logAdminAction({
       adminId: session!.user!.id,
-      action: "Hoàn tiền khiếu nại cho buyer",
+      action: "Hoàn toàn bộ khiếu nại cho buyer",
       targetType: "Dispute",
       targetId: id,
-      detail: `${amount}đ — ${item.productName}`,
+      detail: `${amount}đ — ${item.productName} (đốt kho đã giao)`,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  // ── HOÀN MỘT PHẦN R%: hàng dùng được nhưng trục trặc. Buyer +R%, seller giữ
+  // phần còn lại TRỪ phí sàn theo tỉ lệ (quyết định d), sàn thu phí theo tỉ lệ.
+  // Kho GIỮ SOLD (đã giao hợp lệ), buyer VẪN xem được content. OrderItem→RELEASED.
+  if (action === "partial_refund") {
+    const refundPercent = Number(body?.refundPercent);
+    if (!Number.isInteger(refundPercent) || refundPercent < 1 || refundPercent > 99) {
+      return NextResponse.json(
+        { error: "Tỉ lệ hoàn phải là số nguyên từ 1 đến 99 (%)." },
+        { status: 400 }
+      );
+    }
+    const seller = await prisma.seller.findUniqueOrThrow({ where: { id: item.sellerId } });
+    const buyerRefund = Math.round((amount * refundPercent) / 100);
+    const sellerKept = amount - buyerRefund;
+    // Phí sàn (đã freeze trên full amount) scale theo phần seller thực giữ.
+    const feeProp = amount > 0 ? Math.round((item.platformFeeAmount * sellerKept) / amount) : 0;
+    const sellerCredit = sellerKept - feeProp;
+    const order = await prisma.order.findUniqueOrThrow({ where: { id: item.orderId } });
+
+    const done = await prisma.$transaction(async (t) => {
+      const gate = await t.dispute.updateMany({
+        where: { id, status: "OPEN" },
+        data: {
+          status: "RESOLVED_PARTIAL",
+          adminNote,
+          refundAmount: buyerRefund,
+          resolvedAt: new Date(),
+        },
+      });
+      if (gate.count === 0) return false;
+      await t.orderItem.update({ where: { id: item.id }, data: { status: "RELEASED" } });
+      // Hoàn phần cho buyer.
+      await t.user.update({
+        where: { id: order.buyerId },
+        data: { walletBalance: { increment: buyerRefund } },
+      });
+      await t.walletTransaction.create({
+        data: {
+          userId: order.buyerId,
+          type: "REFUND",
+          amount: buyerRefund,
+          status: "CONFIRMED",
+          note: `Hoàn một phần (${refundPercent}%) khiếu nại đơn #${item.orderId} — ${item.productName}`,
+          confirmedAt: new Date(),
+        },
+      });
+      // Giải ngân phần seller giữ (đã trừ phí sàn theo tỉ lệ).
+      await t.user.update({
+        where: { id: seller.userId },
+        data: { walletBalance: { increment: sellerCredit } },
+      });
+      await t.walletTransaction.create({
+        data: {
+          userId: seller.userId,
+          type: "PAYOUT",
+          amount: sellerCredit,
+          status: "CONFIRMED",
+          note:
+            feeProp > 0
+              ? `Giải ngân phần còn lại sau hoàn ${refundPercent}% đơn #${item.orderId} — ${item.productName} (đã trừ phí sàn ${feeProp}đ)`
+              : `Giải ngân phần còn lại sau hoàn ${refundPercent}% đơn #${item.orderId} — ${item.productName}`,
+          confirmedAt: new Date(),
+        },
+      });
+      return true;
+    });
+    if (!done) {
+      return NextResponse.json({ error: "Khiếu nại này đã được xử lý." }, { status: 400 });
+    }
+
+    const remaining = await prisma.orderItem.count({
+      where: { orderId: item.orderId, status: { not: "RELEASED" } },
+    });
+    if (remaining === 0) {
+      await prisma.order.update({ where: { id: item.orderId }, data: { status: "RELEASED" } });
+    }
+    await prisma.$transaction((t) => finalizeOrderCommission(t, item.orderId));
+    await logAdminAction({
+      adminId: session!.user!.id,
+      action: "Hoàn một phần khiếu nại",
+      targetType: "Dispute",
+      targetId: id,
+      detail: `Hoàn ${refundPercent}% (${buyerRefund}đ) cho buyer, giải ngân ${sellerCredit}đ cho seller — ${item.productName}`,
     });
     return NextResponse.json({ ok: true });
   }
@@ -84,7 +186,7 @@ export async function POST(
     const done = await prisma.$transaction(async (t) => {
       const gate = await t.dispute.updateMany({
         where: { id, status: "OPEN" },
-        data: { status: "RESOLVED_RELEASE", adminNote, resolvedAt: new Date() },
+        data: { status: "RESOLVED_RELEASE", adminNote, refundAmount: 0, resolvedAt: new Date() },
       });
       if (gate.count === 0) return false;
       await t.orderItem.update({ where: { id: item.id }, data: { status: "RELEASED" } });

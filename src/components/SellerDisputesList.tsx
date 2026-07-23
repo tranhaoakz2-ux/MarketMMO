@@ -16,6 +16,7 @@ type Dispute = {
 const statusStyle: Record<DisputeStatus, string> = {
   OPEN: "bg-brand-light text-brand-dark",
   RESOLVED_REFUND: "bg-danger/10 text-danger",
+  RESOLVED_PARTIAL: "bg-info/10 text-info",
   RESOLVED_RELEASE: "bg-success/10 text-success",
 };
 

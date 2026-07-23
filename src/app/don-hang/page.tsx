@@ -95,7 +95,11 @@ export default async function OrdersPage() {
                           {row.variantLabel && (
                             <p className="truncate text-xs text-brand-dark">{row.variantLabel}</p>
                           )}
-                          {row.deliveredPayload && (
+                          {/* Ẩn nội dung đã giao khi đơn đã HOÀN TOÀN BỘ tiền
+                              (status CANCELLED — nguồn duy nhất là full refund
+                              khiếu nại). Buyer đã nhận lại 100% thì không còn
+                              quyền xem/copy tiếp — quyết định (a), SECURITY_AUDIT #8. */}
+                          {row.deliveredPayload && row.status !== "CANCELLED" && (
                             <DeliveredPayloadButton deliveredPayload={row.deliveredPayload} />
                           )}
                         </td>

@@ -470,8 +470,14 @@ model Dispute {
   openedById  String
   openedBy    User      @relation(fields: [openedById], references: [id])
   reason      String
-  status      String    @default("OPEN") // "OPEN" | "RESOLVED_REFUND" | "RESOLVED_RELEASE"
+  // "OPEN" | "RESOLVED_REFUND" (hoàn toàn bộ) | "RESOLVED_PARTIAL" (hoàn một
+  // phần) | "RESOLVED_RELEASE" (giải ngân seller / từ chối khiếu nại).
+  status      String    @default("OPEN")
   adminNote   String?
+  // Số tiền THỰC hoàn cho buyer khi admin xử (full = giá trị dòng; partial =
+  // phần %; release = 0/không set). Dùng để audit + hiển thị, xem
+  // POST /api/admin/disputes/[id] + SECURITY_AUDIT #8.
+  refundAmount Int?
   createdAt   DateTime  @default(now())
   resolvedAt  DateTime?
 }

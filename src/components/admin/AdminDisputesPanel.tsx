@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, ShieldCheck, X } from "lucide-react";
+import { Eye, Scale, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AdminButton, AdminEmptyState } from "@/components/admin/AdminUi";
 import { formatVnd } from "@/lib/format";
@@ -8,7 +8,7 @@ import { formatVnd } from "@/lib/format";
 type Dispute = {
   id: string;
   reason: string;
-  status: "OPEN" | "RESOLVED_REFUND" | "RESOLVED_RELEASE";
+  status: "OPEN" | "RESOLVED_REFUND" | "RESOLVED_PARTIAL" | "RESOLVED_RELEASE";
   createdAt: string;
   openedBy: { email: string | null; username: string | null; name: string | null };
   orderItem: {
@@ -32,11 +32,25 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
   const [delivered, setDelivered] = useState<string[] | null>(null);
   const [deliveredLoading, setDeliveredLoading] = useState(false);
   const [deliveredEmpty, setDeliveredEmpty] = useState(false);
+  // Hoàn một phần: mở ô nhập % + giá trị (chuỗi để nhập tự do, validate khi gửi).
+  const [showPartial, setShowPartial] = useState(false);
+  const [partialPct, setPartialPct] = useState("");
+
+  const resetModalExtras = () => {
+    setDelivered(null);
+    setDeliveredEmpty(false);
+    setShowPartial(false);
+    setPartialPct("");
+  };
 
   const openDispute = (id: string) => {
     setActiveId(id);
-    setDelivered(null);
-    setDeliveredEmpty(false);
+    resetModalExtras();
+  };
+
+  const closeModal = () => {
+    setActiveId(null);
+    resetModalExtras();
   };
 
   const viewDelivered = async (id: string) => {
@@ -76,16 +90,35 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
     })();
   }, []);
 
-  const handleAction = async (id: string, action: "refund_buyer" | "release_seller") => {
+  const handleAction = async (
+    id: string,
+    action: "refund_buyer" | "release_seller" | "partial_refund",
+    refundPercent?: number
+  ) => {
     setBusyId(id);
-    await fetch(`/api/admin/disputes/${id}`, {
+    const res = await fetch(`/api/admin/disputes/${id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
+      body: JSON.stringify(action === "partial_refund" ? { action, refundPercent } : { action }),
     });
     setBusyId(null);
-    setActiveId(null);
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      alert(data?.error ?? "Xử lý thất bại.");
+      return;
+    }
+    closeModal();
     load();
+  };
+
+  const submitPartial = () => {
+    if (!active) return;
+    const pct = Number(partialPct);
+    if (!Number.isInteger(pct) || pct < 1 || pct > 99) {
+      alert("Tỉ lệ hoàn phải là số nguyên từ 1 đến 99 (%).");
+      return;
+    }
+    handleAction(active.id, "partial_refund", pct);
   };
 
   const openDisputes = disputes.filter((d) => d.status === "OPEN");
@@ -141,10 +174,16 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
                     d.status === "RESOLVED_REFUND"
                       ? "bg-[var(--adm-danger-bg)] text-[var(--adm-danger)]"
-                      : "bg-[var(--adm-success-bg)] text-[var(--adm-success)]"
+                      : d.status === "RESOLVED_PARTIAL"
+                        ? "bg-[var(--adm-surface-2)] text-[var(--adm-brand)]"
+                        : "bg-[var(--adm-success-bg)] text-[var(--adm-success)]"
                   }`}
                 >
-                  {d.status === "RESOLVED_REFUND" ? "Đã hoàn tiền buyer" : "Đã giải ngân seller"}
+                  {d.status === "RESOLVED_REFUND"
+                    ? "Đã hoàn toàn bộ"
+                    : d.status === "RESOLVED_PARTIAL"
+                      ? "Đã hoàn một phần"
+                      : "Đã giải ngân seller"}
                 </span>
               </div>
             ))}
@@ -155,11 +194,7 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
       {active && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-          onClick={() => {
-            setActiveId(null);
-            setDelivered(null);
-            setDeliveredEmpty(false);
-          }}
+          onClick={closeModal}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -173,7 +208,7 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
                 </p>
               </div>
               <button
-                onClick={() => setActiveId(null)}
+                onClick={closeModal}
                 className="rounded-full p-1 text-[var(--adm-muted)] hover:bg-white/10"
               >
                 <X className="h-4 w-4" />
@@ -243,22 +278,70 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
               )}
             </div>
 
-            <div className="mt-5 flex gap-2">
+            <div className="mt-5 flex flex-wrap gap-2">
               <AdminButton
                 variant="danger"
                 disabled={busyId === active.id}
                 onClick={() => handleAction(active.id, "refund_buyer")}
               >
-                <X className="h-3.5 w-3.5" /> Hoàn tiền người mua
+                <X className="h-3.5 w-3.5" /> Hoàn toàn bộ
+              </AdminButton>
+              <AdminButton
+                variant="brand"
+                disabled={busyId === active.id}
+                onClick={() => setShowPartial((v) => !v)}
+              >
+                <Scale className="h-3.5 w-3.5" /> Hoàn một phần
               </AdminButton>
               <AdminButton
                 variant="success"
                 disabled={busyId === active.id}
                 onClick={() => handleAction(active.id, "release_seller")}
               >
-                <ShieldCheck className="h-3.5 w-3.5" /> Giải ngân người bán
+                <ShieldCheck className="h-3.5 w-3.5" /> Từ chối · giải ngân seller
               </AdminButton>
             </div>
+
+            {showPartial && (() => {
+              const lineTotal = active.orderItem.price * active.orderItem.quantity;
+              const pct = Number(partialPct);
+              const valid = Number.isInteger(pct) && pct >= 1 && pct <= 99;
+              const buyerRefund = valid ? Math.round((lineTotal * pct) / 100) : 0;
+              const sellerKept = lineTotal - buyerRefund;
+              return (
+                <div className="mt-3 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-surface-2)] p-3">
+                  <label className="text-[11px] font-bold uppercase tracking-wide text-[var(--adm-muted)]">
+                    Tỉ lệ hoàn cho người mua (1–99%)
+                  </label>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={99}
+                      value={partialPct}
+                      onChange={(e) => setPartialPct(e.target.value)}
+                      placeholder="VD: 30"
+                      className="w-24 rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface)] px-2.5 py-1.5 text-sm text-[var(--adm-text)] focus:border-[var(--adm-brand)] focus:outline-none"
+                    />
+                    <span className="text-sm text-[var(--adm-muted)]">%</span>
+                    <AdminButton
+                      variant="brand"
+                      disabled={!valid || busyId === active.id}
+                      onClick={submitPartial}
+                    >
+                      Xác nhận hoàn {valid ? `${pct}%` : ""}
+                    </AdminButton>
+                  </div>
+                  {valid && (
+                    <p className="mt-2 text-[11px] text-[var(--adm-muted)]">
+                      Người mua nhận lại <b className="text-[var(--adm-text)]">{formatVnd(buyerRefund)}</b> ·
+                      người bán giữ <b className="text-[var(--adm-text)]">{formatVnd(sellerKept)}</b> (trước khi
+                      trừ phí sàn theo tỉ lệ). Người mua VẪN xem được nội dung đã giao.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
