@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { logAdminAction } from "@/lib/audit";
 import { finalizeOrderCommission } from "@/lib/commission";
+import { fullRefundDispute } from "@/lib/disputes";
 
 export async function POST(
   req: Request,
@@ -26,6 +27,14 @@ export async function POST(
   if (dispute.status !== "OPEN") {
     return NextResponse.json({ error: "Khiếu nại này đã được xử lý." }, { status: 400 });
   }
+  // Admin chỉ xử khiếu nại đã escalate lên sàn (phase PLATFORM). Khiếu nại đang
+  // ở pha bảo hành seller do seller/ buyer tự xử — SECURITY_AUDIT #8 Phần B.
+  if (dispute.phase !== "PLATFORM") {
+    return NextResponse.json(
+      { error: "Khiếu nại đang trong giai đoạn bảo hành với người bán, chưa được đưa lên sàn." },
+      { status: 400 }
+    );
+  }
 
   const item = dispute.orderItem;
   const amount = item.price * item.quantity;
@@ -33,52 +42,12 @@ export async function POST(
   // ── HOÀN TOÀN BỘ: hàng sai/không dùng được. Buyer +100%, seller +0, sàn +0
   // (đơn huỷ, không thu phí). Kho đã giao bị ĐỐT (SOLD→BURNED, không bán lại vì
   // content đã lộ). OrderItem→CANCELLED (UI ẩn nút xem content — quyết định a).
+  // Dùng chung helper fullRefundDispute() với luồng seller tự bảo hành (Phần B).
   if (action === "refund_buyer") {
-    const order = await prisma.order.findUniqueOrThrow({ where: { id: item.orderId } });
-    // Gate NGUYÊN TỬ trên trạng thái khiếu nại (bug B6): chỉ khi chuyển được
-    // OPEN→RESOLVED_REFUND (count===1) mới hoàn tiền — chặn hoàn 2 lần khi
-    // bấm song song / đua giữa refund và release.
-    const done = await prisma.$transaction(async (t) => {
-      const gate = await t.dispute.updateMany({
-        where: { id, status: "OPEN" },
-        data: {
-          status: "RESOLVED_REFUND",
-          adminNote,
-          refundAmount: amount,
-          resolvedAt: new Date(),
-        },
-      });
-      if (gate.count === 0) return false;
-      await t.orderItem.update({ where: { id: item.id }, data: { status: "CANCELLED" } });
-      // Đốt kho đã giao cho đúng đơn này: SOLD→BURNED (chỉ bản còn SOLD, không
-      // đụng bản đã BURNED nếu chạy lại). Kho BURNED không quay về AVAILABLE
-      // (content đã lộ) và bị loại khỏi mọi phép đếm tồn kho (lọc AVAILABLE).
-      await t.productStockItem.updateMany({
-        where: { orderItemId: item.id, status: "SOLD" },
-        data: { status: "BURNED" },
-      });
-      await t.user.update({
-        where: { id: order.buyerId },
-        data: { walletBalance: { increment: amount } },
-      });
-      await t.walletTransaction.create({
-        data: {
-          userId: order.buyerId,
-          type: "REFUND",
-          amount,
-          status: "CONFIRMED",
-          note: `Hoàn toàn bộ khiếu nại đơn #${item.orderId} — ${item.productName}`,
-          confirmedAt: new Date(),
-        },
-      });
-      return true;
-    });
-    if (!done) {
+    const result = await fullRefundDispute(id, { adminNote });
+    if (!result || !result.done) {
       return NextResponse.json({ error: "Khiếu nại này đã được xử lý." }, { status: 400 });
     }
-    // Đơn có thể đã settle xong sau khi huỷ item này → chốt lại hoa hồng
-    // (tính trên phần RELEASED còn lại; nếu không còn gì → huỷ hoa hồng).
-    await prisma.$transaction((t) => finalizeOrderCommission(t, item.orderId));
     await logAdminAction({
       adminId: session!.user!.id,
       action: "Hoàn toàn bộ khiếu nại cho buyer",

@@ -25,6 +25,14 @@ export type DisputeStatus =
   | "RESOLVED_PARTIAL"
   | "RESOLVED_RELEASE";
 
+// Pha xử lý khiếu nại (SECURITY_AUDIT #8 Phần B). Buyer mở → SELLER_WARRANTY
+// (seller có WARRANTY_WINDOW_HOURS để tự xử); hết hạn/bị từ chối → buyer
+// escalate → PLATFORM (admin xử). Seller tự mở đi thẳng PLATFORM.
+export type DisputePhase = "SELLER_WARRANTY" | "PLATFORM";
+
+// Cửa sổ (giờ) seller được tự bảo hành trước khi buyer escalate lên sàn.
+export const WARRANTY_WINDOW_HOURS = 24;
+
 export type ProductStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {

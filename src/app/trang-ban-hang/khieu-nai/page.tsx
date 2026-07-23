@@ -17,9 +17,9 @@ export default async function SellerDisputesPage() {
           <AlertTriangle className="h-5 w-5 text-brand-dark" /> Khiếu nại
         </h1>
         <p className="text-xs text-muted">
-          Người mua hoặc bạn có thể mở khiếu nại trên đơn hàng đang ký quỹ (từ trang Lịch sử
-          đơn hàng của người mua). Chỉ admin quyết định kết quả cuối: hoàn tiền người mua hoặc
-          giải ngân cho bạn.
+          Khi người mua báo lỗi, yêu cầu đến <b className="text-foreground">bạn bảo hành trước</b>: bạn có
+          24 giờ để chủ động hoàn tiền cho người mua, hoặc từ chối. Nếu bạn từ chối hoặc quá hạn,
+          người mua có thể đưa khiếu nại lên sàn để admin quyết định.
         </p>
       </div>
       <SellerDisputesList disputes={disputes} />

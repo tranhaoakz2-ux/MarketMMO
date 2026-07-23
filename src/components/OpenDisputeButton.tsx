@@ -39,13 +39,17 @@ export default function OpenDisputeButton({ orderItemId }: { orderItemId: string
         onClick={() => setOpen(true)}
         className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-danger hover:underline"
       >
-        <AlertTriangle className="h-3 w-3" /> Mở khiếu nại
+        <AlertTriangle className="h-3 w-3" /> Báo lỗi / yêu cầu bảo hành
       </button>
     );
   }
 
   return (
     <div className="mt-1.5 flex w-56 flex-col gap-1.5 rounded-lg border border-danger/30 bg-danger/5 p-2">
+      <p className="text-[10px] text-muted">
+        Yêu cầu gửi tới <b className="text-foreground">người bán bảo hành trước</b>. Nếu người bán
+        từ chối hoặc quá 24h, bạn có thể đưa khiếu nại lên sàn.
+      </p>
       <textarea
         value={reason}
         onChange={(e) => setReason(e.target.value)}
@@ -61,7 +65,7 @@ export default function OpenDisputeButton({ orderItemId }: { orderItemId: string
           className="flex items-center gap-1 rounded bg-danger px-2 py-1 text-[10px] font-bold text-white disabled:opacity-60"
         >
           {loading && <Loader2 className="h-3 w-3 animate-spin" />}
-          Gửi khiếu nại
+          Gửi yêu cầu
         </button>
         <button
           onClick={() => setOpen(false)}

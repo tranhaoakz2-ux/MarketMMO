@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authz";
+import { WARRANTY_WINDOW_HOURS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
 // Buyer HOẶC seller của 1 OrderItem đang ESCROW đều có thể mở khiếu nại —
@@ -48,10 +49,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Đơn hàng này đã có khiếu nại." }, { status: 400 });
   }
 
+  // Phần B (SECURITY_AUDIT #8): buyer mở → phải qua BẢO HÀNH với seller trước
+  // (phase SELLER_WARRANTY, admin chưa thấy, seller có WARRANTY_WINDOW_HOURS để
+  // tự xử). Seller tự mở → đi thẳng PLATFORM (không tự bảo hành cho chính mình).
+  const isSellerOpener = isSeller && !isBuyer;
+  const phase = isSellerOpener ? "PLATFORM" : "SELLER_WARRANTY";
+  const warrantyDeadline = isSellerOpener
+    ? null
+    : new Date(Date.now() + WARRANTY_WINDOW_HOURS * 3600_000);
+
   await prisma.$transaction([
     prisma.orderItem.update({ where: { id: orderItemId }, data: { status: "DISPUTED" } }),
     prisma.dispute.create({
-      data: { orderItemId, openedById: session!.user.id, reason },
+      data: { orderItemId, openedById: session!.user.id, reason, phase, warrantyDeadline },
     }),
   ]);
 

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { Product } from "@/data/products";
 import {
   SERVICE_CATEGORY_SLUGS,
+  type DisputePhase,
   type DisputeStatus,
   type OrderStatus,
   type WalletTxType,
@@ -446,6 +447,9 @@ export async function getSellerDisputes(sellerId: string) {
     id: d.id,
     reason: d.reason,
     status: d.status as DisputeStatus,
+    phase: d.phase as DisputePhase,
+    warrantyDeadline: d.warrantyDeadline,
+    warrantyRejectedAt: d.warrantyRejectedAt,
     createdAt: d.createdAt,
     resolvedAt: d.resolvedAt,
     openedByName: d.openedBy.name ?? d.openedBy.username ?? d.openedBy.email ?? "Người dùng",
@@ -609,7 +613,12 @@ const LOW_STOCK_THRESHOLD = 3;
 export async function getSellerAttentionCounts(sellerId: string) {
   const [pendingProducts, openDisputes, stockRows] = await Promise.all([
     prisma.product.count({ where: { sellerId, status: "PENDING" } }),
-    prisma.dispute.count({ where: { status: "OPEN", orderItem: { sellerId } } }),
+    // Việc seller cần xử: khiếu nại đang ở pha BẢO HÀNH (SELLER_WARRANTY) của
+    // gian hàng mình — không tính khiếu nại đã escalate lên sàn (PLATFORM, admin
+    // xử). SECURITY_AUDIT #8 Phần B.
+    prisma.dispute.count({
+      where: { status: "OPEN", phase: "SELLER_WARRANTY", orderItem: { sellerId } },
+    }),
     prisma.productStockItem.groupBy({
       by: ["productId", "variantId", "status"],
       where: { product: { sellerId } },
@@ -672,7 +681,8 @@ export async function getAdminSidebarCounts() {
     prisma.forumReport.count({ where: { status: "OPEN" } }),
     prisma.walletTransaction.count({ where: { type: "DEPOSIT", status: "PENDING" } }),
     prisma.walletTransaction.count({ where: { type: "WITHDRAW", status: "PENDING" } }),
-    prisma.dispute.count({ where: { status: "OPEN" } }),
+    // Admin chỉ đếm khiếu nại đã escalate lên sàn (PLATFORM) — Phần B.
+    prisma.dispute.count({ where: { status: "OPEN", phase: "PLATFORM" } }),
     prisma.referralCommission.count({ where: { status: "ELIGIBLE" } }),
   ]);
   return {
@@ -748,7 +758,8 @@ export async function getAdminActivityFeed(limit = 15): Promise<AdminActivityIte
       select: { id: true, shopName: true, slug: true, createdAt: true },
     }),
     prisma.dispute.findMany({
-      where: { status: "OPEN" },
+      // Feed hoạt động admin chỉ hiện khiếu nại đã lên sàn (PLATFORM) — Phần B.
+      where: { status: "OPEN", phase: "PLATFORM" },
       orderBy: { createdAt: "desc" },
       take,
       select: {

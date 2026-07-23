@@ -2,6 +2,7 @@ import { PackageSearch } from "lucide-react";
 import { redirect } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
 import DeliveredPayloadButton from "@/components/DeliveredPayloadButton";
+import DisputeStatusCell from "@/components/DisputeStatusCell";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import OpenDisputeButton from "@/components/OpenDisputeButton";
@@ -32,20 +33,39 @@ export default async function OrdersPage() {
     },
   });
 
+  const now = new Date();
   const rows = orders.flatMap((order) =>
-    order.items.map((item) => ({
-      orderId: order.id,
-      itemId: item.id,
-      productName: item.productName,
-      variantLabel: item.variantLabel,
-      seller: item.product?.seller.shopName ?? "—",
-      createdAt: order.createdAt,
-      total: item.price * item.quantity,
-      status: item.status as OrderStatus,
-      escrowReleaseAt: item.escrowReleaseAt,
-      hasDispute: Boolean(item.dispute),
-      deliveredPayload: item.deliveredPayload,
-    }))
+    order.items.map((item) => {
+      // Tính SẴN Ở SERVER (so hạn bảo hành với giờ server) xem buyer đã được
+      // escalate lên sàn chưa — tránh lệch giờ server/client. Phần B #8.
+      const d = item.dispute;
+      const rejected = Boolean(d?.warrantyRejectedAt);
+      const deadlinePassed = d?.warrantyDeadline ? d.warrantyDeadline <= now : false;
+      return {
+        orderId: order.id,
+        itemId: item.id,
+        productName: item.productName,
+        variantLabel: item.variantLabel,
+        seller: item.product?.seller.shopName ?? "—",
+        createdAt: order.createdAt,
+        total: item.price * item.quantity,
+        status: item.status as OrderStatus,
+        escrowReleaseAt: item.escrowReleaseAt,
+        hasDispute: Boolean(d),
+        dispute: d
+          ? {
+              id: d.id,
+              phase: d.phase as "SELLER_WARRANTY" | "PLATFORM",
+              rejected,
+              canEscalate: d.phase === "SELLER_WARRANTY" && (rejected || deadlinePassed),
+              deadlineText: d.warrantyDeadline
+                ? d.warrantyDeadline.toLocaleString("vi-VN")
+                : null,
+            }
+          : null,
+        deliveredPayload: item.deliveredPayload,
+      };
+    })
   );
 
   return (
@@ -123,6 +143,15 @@ export default async function OrdersPage() {
                               </p>
                               {!row.hasDispute && <OpenDisputeButton orderItemId={row.itemId} />}
                             </>
+                          )}
+                          {row.status === "DISPUTED" && row.dispute && (
+                            <DisputeStatusCell
+                              disputeId={row.dispute.id}
+                              phase={row.dispute.phase}
+                              rejected={row.dispute.rejected}
+                              canEscalate={row.dispute.canEscalate}
+                              deadlineText={row.dispute.deadlineText}
+                            />
                           )}
                         </td>
                       </tr>

@@ -473,6 +473,20 @@ model Dispute {
   // "OPEN" | "RESOLVED_REFUND" (hoàn toàn bộ) | "RESOLVED_PARTIAL" (hoàn một
   // phần) | "RESOLVED_RELEASE" (giải ngân seller / từ chối khiếu nại).
   status      String    @default("OPEN")
+  // Pha xử lý (SECURITY_AUDIT #8 Phần B — bắt buộc bảo hành seller trước):
+  // "SELLER_WARRANTY" = buyer vừa mở, seller có WARRANTY_WINDOW_HOURS để tự xử
+  // (hoàn/từ chối), admin CHƯA thấy. "PLATFORM" = đã escalate lên sàn, admin xử.
+  // @default("PLATFORM") để MIGRATION-SAFE: mọi dispute cũ (vốn dành cho admin)
+  // giữ nguyên hành vi admin-thấy; route mở dispute set "SELLER_WARRANTY" tường
+  // minh cho khiếu nại buyer mở mới.
+  phase              String    @default("PLATFORM")
+  // Hạn seller tự bảo hành (createdAt + WARRANTY_WINDOW_HOURS). Quá hạn thì
+  // buyer được escalate lên sàn kể cả khi seller chưa phản hồi. null với dispute
+  // cũ / seller tự mở (vào thẳng PLATFORM).
+  warrantyDeadline   DateTime?
+  // Thời điểm seller TỪ CHỐI bảo hành — set thì buyer được escalate NGAY (không
+  // cần đợi hết hạn). null = seller chưa từ chối.
+  warrantyRejectedAt DateTime?
   adminNote   String?
   // Số tiền THỰC hoàn cho buyer khi admin xử (full = giá trị dòng; partial =
   // phần %; release = 0/không set). Dùng để audit + hiển thị, xem

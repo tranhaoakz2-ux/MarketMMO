@@ -13,6 +13,11 @@ export async function GET() {
   // riêng có ghi audit: GET /api/admin/disputes/[id]/delivered. Xem
   // SECURITY_AUDIT.md #7.
   const disputes = await prisma.dispute.findMany({
+    // Admin CHỈ thấy khiếu nại đã escalate lên sàn (phase PLATFORM). Khiếu nại
+    // đang ở pha bảo hành seller (SELLER_WARRANTY) chưa thuộc thẩm quyền admin —
+    // SECURITY_AUDIT #8 Phần B. (Dispute cũ có phase mặc định PLATFORM nên vẫn
+    // hiện bình thường.)
+    where: { phase: "PLATFORM" },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
