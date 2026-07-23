@@ -367,7 +367,13 @@ model ProductVariant {
 model ProductStockItem {
   id        String   @id @default(cuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // onDelete: Restrict (KHÔNG Cascade) — xoá 1 Product sẽ BỊ CHẶN nếu còn bất
+  // kỳ ProductStockItem nào tham chiếu (kể cả đã bán). Trước đây Cascade sẽ xoá
+  // sạch kho, gồm cả bản ghi ĐÃ BÁN → mất lịch sử/nội dung giao hàng của buyer.
+  // Hiện KHÔNG có route xoá Product nào (chỉ xoá variant), nên đây là lớp chặn
+  // phòng thủ cho thao tác xoá tương lai / xoá tay qua Prisma Studio. Xem
+  // SECURITY_AUDIT.md #9.
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
   // null khi sản phẩm CHƯA có variant nào (kho gắn thẳng vào Product) — có
   // giá trị khi kho thuộc về 1 variant cụ thể. onDelete: SetNull (không
   // Cascade) để bản ghi ĐÃ BÁN (status SOLD, đã gắn vào 1 OrderItem) không

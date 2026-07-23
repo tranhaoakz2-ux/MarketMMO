@@ -1,6 +1,6 @@
 "use client";
 
-import { ShieldCheck, X } from "lucide-react";
+import { Eye, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AdminButton, AdminEmptyState } from "@/components/admin/AdminUi";
 import { formatVnd } from "@/lib/format";
@@ -27,6 +27,38 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(openId ?? null);
+  // Nội dung đã giao chỉ tải theo yêu cầu (nút riêng, có ghi audit) — KHÔNG đi
+  // kèm danh sách khiếu nại. null = chưa xem; [] hợp lệ nếu đơn không có kho thật.
+  const [delivered, setDelivered] = useState<string[] | null>(null);
+  const [deliveredLoading, setDeliveredLoading] = useState(false);
+  const [deliveredEmpty, setDeliveredEmpty] = useState(false);
+
+  const openDispute = (id: string) => {
+    setActiveId(id);
+    setDelivered(null);
+    setDeliveredEmpty(false);
+  };
+
+  const viewDelivered = async (id: string) => {
+    setDeliveredLoading(true);
+    setDeliveredEmpty(false);
+    const res = await fetch(`/api/admin/disputes/${id}/delivered`);
+    if (res.ok) {
+      const data = await res.json();
+      let lines: string[] = [];
+      if (data.deliveredPayload) {
+        try {
+          const parsed = JSON.parse(data.deliveredPayload);
+          lines = Array.isArray(parsed) ? parsed.map(String) : [String(parsed)];
+        } catch {
+          lines = [String(data.deliveredPayload)];
+        }
+      }
+      setDelivered(lines);
+      setDeliveredEmpty(lines.length === 0);
+    }
+    setDeliveredLoading(false);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -75,7 +107,7 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
             {openDisputes.map((d) => (
               <button
                 key={d.id}
-                onClick={() => setActiveId(d.id)}
+                onClick={() => openDispute(d.id)}
                 className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 text-left shadow-sm transition hover:border-[var(--adm-brand)]"
               >
                 <div className="min-w-0">
@@ -123,7 +155,11 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
       {active && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-          onClick={() => setActiveId(null)}
+          onClick={() => {
+            setActiveId(null);
+            setDelivered(null);
+            setDeliveredEmpty(false);
+          }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -166,6 +202,45 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
               <p className="text-[11px] text-[var(--adm-muted)]">
                 Mở lúc {new Date(active.createdAt).toLocaleString("vi-VN")}
               </p>
+            </div>
+
+            {/* Nội dung đã giao — ẩn mặc định, tải theo yêu cầu qua endpoint
+                riêng có ghi audit (SECURITY_AUDIT #7). KHÔNG đi kèm danh sách. */}
+            <div className="mt-4 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-surface-2)] p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--adm-muted)]">
+                  Nội dung đã giao
+                </p>
+                {delivered === null && (
+                  <button
+                    onClick={() => viewDelivered(active.id)}
+                    disabled={deliveredLoading}
+                    className="flex items-center gap-1 rounded-full border border-[var(--adm-border)] px-2.5 py-1 text-[11px] font-bold text-[var(--adm-text)] transition hover:border-[var(--adm-brand)] disabled:opacity-50"
+                  >
+                    <Eye className="h-3 w-3" /> {deliveredLoading ? "Đang tải..." : "Xem (ghi nhật ký)"}
+                  </button>
+                )}
+              </div>
+              {delivered === null ? (
+                <p className="mt-1 text-[11px] text-[var(--adm-muted)]">
+                  Ẩn mặc định. Mỗi lần bấm xem đều được ghi vào Nhật ký hoạt động (ai/đơn nào/lúc nào).
+                </p>
+              ) : deliveredEmpty ? (
+                <p className="mt-1 text-xs text-[var(--adm-muted)]">
+                  Đơn này không có nội dung giao tự động (kho thật) — có thể là sản phẩm giao thủ công.
+                </p>
+              ) : (
+                <div className="mt-2 flex flex-col gap-1.5">
+                  {delivered.map((line, i) => (
+                    <code
+                      key={i}
+                      className="block break-all rounded bg-[var(--adm-surface)] px-2 py-1 text-[11px] text-[var(--adm-text)]"
+                    >
+                      {line}
+                    </code>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="mt-5 flex gap-2">
