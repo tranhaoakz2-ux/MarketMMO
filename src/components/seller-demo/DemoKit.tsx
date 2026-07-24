@@ -215,7 +215,7 @@ export function Button({
       type={type}
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-full font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${sizeClass} ${buttonVariant[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${sizeClass} ${buttonVariant[variant]} ${className}`}
     >
       {children}
     </button>
