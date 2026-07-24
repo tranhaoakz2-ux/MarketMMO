@@ -128,3 +128,61 @@ export const SELLER_PRODUCTS: DemoProduct[] = [
     variants: [],
   },
 ];
+
+// ---- Đợt 2: Mã giảm giá / Rút tiền / Đấu giá ----
+
+export type DemoDiscountCode = {
+  id: string;
+  code: string;
+  type: "PERCENT" | "FIXED";
+  value: number;
+  maxUses: number | null;
+  usedCount: number;
+  active: boolean;
+  expiresAt: string | null;
+};
+
+export const DISCOUNT_CODES: DemoDiscountCode[] = [
+  { id: "d1", code: "SALE20", type: "PERCENT", value: 20, maxUses: 100, usedCount: 42, active: true, expiresAt: "31/08/2026" },
+  { id: "d2", code: "GIAM10K", type: "FIXED", value: 10000, maxUses: null, usedCount: 218, active: true, expiresAt: null },
+  { id: "d3", code: "HELLO2026", type: "PERCENT", value: 15, maxUses: 50, usedCount: 50, active: false, expiresAt: "01/07/2026" },
+];
+
+export type DemoWithdrawal = {
+  id: string;
+  amount: number;
+  status: "PENDING" | "CONFIRMED" | "REJECTED";
+  bank: string;
+  createdAt: string;
+};
+
+export const WITHDRAWALS: DemoWithdrawal[] = [
+  { id: "w1", amount: 500000, status: "PENDING", bank: "Vietcombank · 0123xxxx", createdAt: "22/07/2026 09:14" },
+  { id: "w2", amount: 1000000, status: "CONFIRMED", bank: "Techcombank · 1902xxxx", createdAt: "18/07/2026 15:40" },
+  { id: "w3", amount: 200000, status: "REJECTED", bank: "MB Bank · 8888xxxx", createdAt: "12/07/2026 11:02" },
+];
+
+export type DemoAuctionSlot = {
+  id: string;
+  position: number;
+  period: "WEEKLY" | "DAILY";
+  floorPrice: number;
+  countdown: string;
+  topBid: { amount: number; productName: string; sellerName: string } | null;
+  bidCount: number;
+};
+
+export const AUCTION_SLOTS: DemoAuctionSlot[] = [
+  { id: "a1", position: 1, period: "WEEKLY", floorPrice: 500000, countdown: "2 ngày 04:12", topBid: { amount: 1200000, productName: "Gmail US random new", sellerName: "AccVerse" }, bidCount: 7 },
+  { id: "a2", position: 2, period: "WEEKLY", floorPrice: 500000, countdown: "2 ngày 04:12", topBid: { amount: 850000, productName: "Facebook Việt Nam 2FA", sellerName: "ProAccounts" }, bidCount: 3 },
+  { id: "a3", position: 3, period: "WEEKLY", floorPrice: 500000, countdown: "2 ngày 04:12", topBid: null, bidCount: 0 },
+  { id: "a4", position: 4, period: "WEEKLY", floorPrice: 500000, countdown: "2 ngày 04:12", topBid: null, bidCount: 0 },
+  { id: "a5", position: 5, period: "DAILY", floorPrice: 150000, countdown: "03:47:20", topBid: { amount: 320000, productName: "ChatGPT Team cấp sẵn", sellerName: "CloudHouse" }, bidCount: 5 },
+  { id: "a6", position: 6, period: "DAILY", floorPrice: 150000, countdown: "03:47:20", topBid: null, bidCount: 0 },
+];
+
+// Sản phẩm để chọn khi đặt giá đấu (rút gọn từ SELLER_PRODUCTS).
+export const MY_PRODUCT_OPTIONS = SELLER_PRODUCTS.filter((p) => p.status === "APPROVED").map((p) => ({
+  id: p.id,
+  name: p.name,
+}));
