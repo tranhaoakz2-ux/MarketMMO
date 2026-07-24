@@ -37,9 +37,9 @@ const GUIDE = [
 function ScheduleCard({ title, when, countdown, badge }: { title: string; when: string; countdown: string; badge: string }) {
   return (
     <Card padding="p-0" className="overflow-hidden">
-      <div className="bg-gradient-to-br from-ink to-ink-soft px-4 py-3 text-center">
-        <p className="text-sm font-black text-white">{title}</p>
-        <p className="text-[11px] text-white/60">{when}</p>
+      <div className="bg-gradient-to-br from-brand to-brand-dark px-4 py-3 text-center">
+        <p className="text-sm font-black text-ink">{title}</p>
+        <p className="text-[11px] text-ink/70">{when}</p>
       </div>
       <div className="flex flex-col items-center gap-2 py-6">
         <p className="font-mono text-2xl font-black tabular-nums text-foreground">{countdown}</p>
@@ -59,18 +59,18 @@ export default function DemoAuction() {
       />
 
       {/* Hero */}
-      <Card padding="p-0" className="overflow-hidden border-brand/30">
-        <div className="flex flex-col items-center gap-3 bg-gradient-to-r from-ink via-ink-soft to-ink p-6 text-center sm:flex-row sm:text-left">
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full border-2 border-brand bg-black">
+      <Card padding="p-0" className="overflow-hidden border-brand-dark/40">
+        <div className="flex flex-col items-center gap-3 bg-gradient-to-r from-brand-light via-brand to-brand-dark p-6 text-center sm:flex-row sm:text-left">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full border-2 border-ink bg-ink">
             <Flame className="h-7 w-7 text-danger" />
           </span>
           <div className="min-w-0">
-            <h2 className="text-lg font-black uppercase tracking-wide text-brand">
+            <h2 className="text-lg font-black uppercase tracking-wide text-ink">
               Vị trí vàng — hiển thị sản phẩm nổi bật
             </h2>
-            <div className="mt-1.5 flex flex-wrap items-center justify-center gap-3 text-xs text-white/60 sm:justify-start">
-              <span className="flex items-center gap-1"><TrendingUp className="h-3.5 w-3.5 text-success" /> Tăng lượt xem</span>
-              <span className="flex items-center gap-1"><Award className="h-3.5 w-3.5 text-brand" /> Bùng nổ doanh thu</span>
+            <div className="mt-1.5 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-ink/80 sm:justify-start">
+              <span className="flex items-center gap-1"><TrendingUp className="h-3.5 w-3.5" /> Tăng lượt xem</span>
+              <span className="flex items-center gap-1"><Award className="h-3.5 w-3.5" /> Bùng nổ doanh thu</span>
             </div>
           </div>
         </div>

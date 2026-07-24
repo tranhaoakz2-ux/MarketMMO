@@ -245,3 +245,21 @@ export const REVIEWS: DemoReview[] = [
   { id: "rv4", authorName: "cloudhouse", rating: 3, comment: "Chất lượng ok nhưng phản hồi hơi chậm lúc đông đơn.", createdAt: "15/07/2026" },
   { id: "rv5", authorName: "minhtu", rating: 5, comment: "Uy tín, đã mua nhiều lần không lỗi lần nào.", createdAt: "12/07/2026" },
 ];
+
+// Tin nhắn mẫu buyer↔seller cho từng khiếu nại (demo). Khi lên trang thật sẽ
+// nối vào hệ chat có sẵn (Conversation/Message) — xem ghi chú tích hợp.
+export type DemoChatMsg = { from: "seller" | "buyer"; text: string; time: string };
+
+export const DISPUTE_CHATS: Record<string, DemoChatMsg[]> = {
+  dp1: [
+    { from: "buyer", text: "Shop ơi acc Gmail vừa mua đăng nhập báo sai mật khẩu ạ.", time: "08:22" },
+    { from: "seller", text: "Bạn thử đăng nhập bằng trình duyệt ẩn danh giúp mình nhé, kèm mã 2FA ở dòng cuối.", time: "08:25" },
+    { from: "buyer", text: "Mình thử rồi vẫn không vào được, có ảnh chụp lỗi đây.", time: "08:31" },
+    { from: "seller", text: "Ok để mình kiểm tra lại lô này, nếu lỗi thật mình đổi acc mới cho bạn ngay.", time: "08:34" },
+  ],
+  dp2: [
+    { from: "buyer", text: "Acc FB bị checkpoint ngay khi nhận, không mở được luôn.", time: "14:12" },
+    { from: "seller", text: "Bạn gửi mình mã checkpoint hiển thị để mình hỗ trợ mở khoá nhé.", time: "14:20" },
+    { from: "buyer", text: "Nó bắt xác minh danh tính luôn rồi, mình không có giấy tờ acc này.", time: "14:28" },
+  ],
+};
