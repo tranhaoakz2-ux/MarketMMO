@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowRight, ChevronDown, Gavel, Loader2, Scale, ShieldCheck, X } from "lucide-react";
+import { ArrowRight, ChevronDown, Gavel, Loader2, MessageSquare, Scale, ShieldCheck, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { formatVnd } from "@/lib/format";
 import { type DisputePhase, type DisputeStatus } from "@/lib/constants";
+import ConversationThread from "@/components/ConversationThread";
 import {
   Button,
   Card,
@@ -14,6 +15,30 @@ import {
   StatusBadge,
   Tone,
 } from "@/components/seller-demo/DemoKit";
+
+// Ô chat thu gọn/mở rộng gắn vào 1 khiếu nại — mount ConversationThread thật
+// khi mở (chat theo đơn, tách khỏi ChatInbox chung — Cách B).
+function DisputeChatToggle({ disputeId }: { disputeId: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-3 overflow-hidden rounded-xl border border-border-c bg-surface-alt">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-xs font-bold text-foreground transition hover:bg-border-c/40"
+      >
+        <span className="flex items-center gap-1.5">
+          <MessageSquare className="h-3.5 w-3.5 text-brand-dark" /> Trao đổi với người mua
+        </span>
+        <ChevronDown className={`h-4 w-4 text-muted transition ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="border-t border-border-c p-3">
+          <ConversationThread disputeId={disputeId} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 type Dispute = {
   id: string;
@@ -174,6 +199,8 @@ export default function SellerDisputesList({ disputes }: { disputes: Dispute[] }
                   </Button>
                 )}
               </div>
+
+              <DisputeChatToggle disputeId={d.id} />
             </Card>
           ))
         )}
@@ -200,6 +227,8 @@ export default function SellerDisputesList({ disputes }: { disputes: Dispute[] }
               <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-info">
                 <Scale className="h-3.5 w-3.5" /> Đã đưa lên sàn — chờ admin quyết định.
               </p>
+
+              <DisputeChatToggle disputeId={d.id} />
             </Card>
           ))}
         </div>
