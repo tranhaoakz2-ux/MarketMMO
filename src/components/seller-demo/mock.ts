@@ -186,3 +186,62 @@ export const MY_PRODUCT_OPTIONS = SELLER_PRODUCTS.filter((p) => p.status === "AP
   id: p.id,
   name: p.name,
 }));
+
+// ---- Đợt 3: Khiếu nại / Quỹ bảo hiểm / Đánh giá ----
+
+export type DemoDisputeStatus =
+  | "OPEN"
+  | "RESOLVED_REFUND"
+  | "RESOLVED_PARTIAL"
+  | "RESOLVED_RELEASE";
+
+export type DemoDispute = {
+  id: string;
+  productName: string;
+  buyerName: string;
+  amount: number;
+  reason: string;
+  status: DemoDisputeStatus;
+  phase: "SELLER_WARRANTY" | "PLATFORM";
+  warrantyDeadline: string | null; // còn lại (hiển thị)
+  warrantyRejected: boolean;
+  createdAt: string;
+  resolvedAt: string | null;
+  refundAmount?: number;
+};
+
+export const DISPUTES: DemoDispute[] = [
+  { id: "dp1", productName: "Gmail US random new, chưa đăng nhập thiết bị", buyerName: "buyerdemo", amount: 24000, reason: "Tài khoản đăng nhập báo sai mật khẩu, không vào được.", status: "OPEN", phase: "SELLER_WARRANTY", warrantyDeadline: "còn 18 giờ", warrantyRejected: false, createdAt: "23/07/2026 08:20", resolvedAt: null },
+  { id: "dp2", productName: "Facebook Việt Nam 2FA, cổ 2018", buyerName: "haovegas222", amount: 39000, reason: "Acc bị checkpoint ngay sau khi nhận, không mở được.", status: "OPEN", phase: "SELLER_WARRANTY", warrantyDeadline: "hết hạn", warrantyRejected: true, createdAt: "22/07/2026 14:10", resolvedAt: null },
+  { id: "dp3", productName: "Outlook cổ trust, dùng reg tút", buyerName: "cloudhouse", amount: 85000, reason: "Giao thiếu 1 tài khoản so với đơn.", status: "OPEN", phase: "PLATFORM", warrantyDeadline: null, warrantyRejected: true, createdAt: "21/07/2026 09:00", resolvedAt: null },
+  { id: "dp4", productName: "Discord token verify sẵn", buyerName: "aloha99", amount: 45000, reason: "Token die toàn bộ, không dùng được.", status: "RESOLVED_REFUND", phase: "PLATFORM", warrantyDeadline: null, warrantyRejected: true, createdAt: "18/07/2026", resolvedAt: "19/07/2026", refundAmount: 45000 },
+  { id: "dp5", productName: "Steam key game AAA random", buyerName: "refflow371", amount: 165000, reason: "1/3 key trùng, đã kích hoạt lỗi.", status: "RESOLVED_PARTIAL", phase: "PLATFORM", warrantyDeadline: null, warrantyRejected: false, createdAt: "16/07/2026", resolvedAt: "17/07/2026", refundAmount: 55000 },
+  { id: "dp6", productName: "Gmail cổ 2015-2018 full drive", buyerName: "minhtu", amount: 56000, reason: "Đổi ý không muốn mua nữa.", status: "RESOLVED_RELEASE", phase: "PLATFORM", warrantyDeadline: null, warrantyRejected: false, createdAt: "14/07/2026", resolvedAt: "15/07/2026" },
+];
+
+export const DISPUTE_STATUS_META: Record<string, { tone: Tone; label: string }> = {
+  WARRANTY: { tone: "warn", label: "Chờ bạn bảo hành" },
+  PLATFORM: { tone: "info", label: "Đang chờ sàn" },
+  RESOLVED_REFUND: { tone: "danger", label: "Đã hoàn toàn bộ" },
+  RESOLVED_PARTIAL: { tone: "info", label: "Đã hoàn một phần" },
+  RESOLVED_RELEASE: { tone: "success", label: "Đã giải ngân bạn" },
+};
+
+export type DemoInsuranceDeposit = { id: string; amount: number; createdAt: string };
+
+export const INSURANCE_HISTORY: DemoInsuranceDeposit[] = [
+  { id: "in1", amount: 100000, createdAt: "20/07/2026 10:12" },
+  { id: "in2", amount: 100000, createdAt: "10/07/2026 16:30" },
+  { id: "in3", amount: 50000, createdAt: "01/07/2026 09:05" },
+];
+export const INSURANCE_BALANCE = 250000;
+
+export type DemoReview = { id: string; authorName: string; rating: number; comment: string; createdAt: string };
+
+export const REVIEWS: DemoReview[] = [
+  { id: "rv1", authorName: "buyerdemo", rating: 5, comment: "Shop giao nhanh, acc chuẩn, bảo hành nhiệt tình. Sẽ ủng hộ tiếp!", createdAt: "22/07/2026" },
+  { id: "rv2", authorName: "haovegas222", rating: 4, comment: "Hàng ổn, có 1 acc lỗi nhẹ nhưng shop đổi ngay.", createdAt: "20/07/2026" },
+  { id: "rv3", authorName: "refflow371", rating: 5, comment: "Giá tốt, giao tự động 24/7 quá tiện.", createdAt: "18/07/2026" },
+  { id: "rv4", authorName: "cloudhouse", rating: 3, comment: "Chất lượng ok nhưng phản hồi hơi chậm lúc đông đơn.", createdAt: "15/07/2026" },
+  { id: "rv5", authorName: "minhtu", rating: 5, comment: "Uy tín, đã mua nhiều lần không lỗi lần nào.", createdAt: "12/07/2026" },
+];
