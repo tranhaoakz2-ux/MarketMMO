@@ -60,11 +60,12 @@ function detectCategorySlug(productName: string): string | null {
 export default function AddProductForm({
   categories,
   onCreated,
+  onClose,
 }: {
   categories: Category[];
   onCreated: () => void;
+  onClose?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   // Bản sao cục bộ của danh sách danh mục — cho phép chèn thêm danh mục seller
   // vừa tự đề xuất (POST /api/seller/categories) vào dropdown ngay lập tức mà
@@ -294,28 +295,21 @@ export default function AddProductForm({
     onCreated();
   };
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-brand-dark/40 bg-brand-light/10 p-6 text-sm font-bold text-brand-dark transition hover:bg-brand-light/25"
-      >
-        <Plus className="h-4 w-4" /> Đăng sản phẩm mới
-      </button>
-    );
-  }
-
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-4 rounded-2xl border border-border-c bg-surface p-5 shadow-sm"
+      className="flex flex-col gap-4 rounded-2xl border border-brand-dark/30 bg-surface p-5 shadow-sm"
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-black text-foreground">Đăng sản phẩm mới</h3>
+        <div className="flex items-center gap-2">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-ink">
+            <Plus className="h-4 w-4" />
+          </span>
+          <h3 className="text-sm font-black text-foreground">Đăng sản phẩm mới</h3>
+        </div>
         <button
           type="button"
-          onClick={() => setOpen(false)}
+          onClick={() => onClose?.()}
           className="rounded-full p-1.5 text-muted hover:bg-surface-alt hover:text-foreground"
           aria-label="Đóng"
         >
