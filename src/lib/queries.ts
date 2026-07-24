@@ -450,6 +450,7 @@ export async function getSellerDisputes(sellerId: string) {
     phase: d.phase as DisputePhase,
     warrantyDeadline: d.warrantyDeadline,
     warrantyRejectedAt: d.warrantyRejectedAt,
+    refundAmount: d.refundAmount,
     createdAt: d.createdAt,
     resolvedAt: d.resolvedAt,
     openedByName: d.openedBy.name ?? d.openedBy.username ?? d.openedBy.email ?? "Người dùng",
