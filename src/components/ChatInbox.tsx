@@ -59,6 +59,9 @@ export default function ChatInbox() {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
   const [attachError, setAttachError] = useState<string | null>(null);
+  // Tìm tài khoản user để bắt đầu hội thoại mới (không chỉ lọc hội thoại đã có).
+  const [userResults, setUserResults] = useState<{ id: string; name: string; role: "seller" | "buyer" }[]>([]);
+  const [userSearching, setUserSearching] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef(0);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -208,6 +211,45 @@ export default function ChatInbox() {
     }
   };
 
+  // Tìm user để nhắn (debounce). >=3 ký tự mới gọi API; kết quả chỉ tên+vai trò.
+  // Mọi setState nằm TRONG callback setTimeout (không set trực tiếp trong thân
+  // effect) — tránh lint react-hooks/set-state-in-effect.
+  useEffect(() => {
+    const q = search.trim();
+    const t = setTimeout(async () => {
+      if (q.length < 3) {
+        setUserResults([]);
+        return;
+      }
+      setUserSearching(true);
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
+      setUserSearching(false);
+      if (res.ok) {
+        const data = await res.json();
+        setUserResults(data.users);
+      } else {
+        setUserResults([]);
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Chọn 1 user từ kết quả tìm kiếm -> get-or-create hội thoại (không tạo trùng)
+  // rồi mở luôn. Đây là chat CHUNG (disputeId null), không lẫn luồng khiếu nại.
+  const openWithUser = async (targetUserId: string) => {
+    const res = await fetch("/api/messages/conversations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetUserId }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setSelectedId(data.id);
+    setSearch("");
+    setUserResults([]);
+    await loadConversations();
+  };
+
   const filtered = (conversations ?? []).filter((c) => {
     if (tab === "unread" && c.unreadCount === 0) return false;
     if (search.trim() && !c.otherUser.name.toLowerCase().includes(search.trim().toLowerCase())) {
@@ -230,8 +272,8 @@ export default function ChatInbox() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm kiếm người đã nhắn..."
-              className="w-full text-sm focus:outline-none"
+              placeholder="Tìm người dùng để nhắn (≥ 3 ký tự)..."
+              className="w-full bg-transparent text-sm text-foreground placeholder:text-muted focus:outline-none"
             />
           </div>
           <div className="mt-3 flex gap-2">
@@ -259,6 +301,42 @@ export default function ChatInbox() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
+          {/* Kết quả tìm TÀI KHOẢN để nhắn mới (hiện khi gõ >= 3 ký tự) */}
+          {search.trim().length >= 3 && (
+            <div className="border-b border-border-c bg-surface-alt/40">
+              <p className="px-4 pt-3 text-[11px] font-bold uppercase tracking-wide text-muted">
+                Nhắn cho người dùng
+              </p>
+              {userSearching ? (
+                <p className="px-4 py-3 text-sm text-muted">Đang tìm...</p>
+              ) : userResults.length === 0 ? (
+                <p className="px-4 py-3 text-sm text-muted">Không tìm thấy tài khoản phù hợp.</p>
+              ) : (
+                userResults.map((u) => (
+                  <button
+                    key={u.id}
+                    onClick={() => openWithUser(u.id)}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-alt"
+                  >
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface text-sm font-black text-muted">
+                      {u.name.charAt(0).toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-foreground">{u.name}</p>
+                      <span
+                        className={`inline-block rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                          u.role === "seller" ? "bg-brand-light text-brand-dark" : "bg-surface-alt text-muted"
+                        }`}
+                      >
+                        {u.role === "seller" ? "Người bán" : "Người mua"}
+                      </span>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+
           {conversations === null ? (
             <p className="p-4 text-sm text-muted">Đang tải...</p>
           ) : filtered.length === 0 ? (
