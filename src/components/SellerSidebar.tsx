@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
   { label: "Đặt trước", href: "/trang-ban-hang/dat-truoc", icon: Clock },
   { label: "Mã giảm giá", href: "/trang-ban-hang/ma-giam-gia", icon: Tag },
   { label: "Rút tiền", href: "/trang-ban-hang/rut-tien", icon: Wallet },
-  { label: "Quảng bá (Đấu giá)", href: "/dau-gia", icon: Gavel },
+  { label: "Quảng bá (Đấu giá)", href: "/trang-ban-hang/quang-ba", icon: Gavel },
   { label: "Khiếu nại", href: "/trang-ban-hang/khieu-nai", icon: AlertTriangle },
   { label: "Quỹ Bảo Hiểm", href: "/trang-ban-hang/quy-bao-hiem", icon: ShieldCheck },
   { label: "Đánh giá", href: "/trang-ban-hang/danh-gia", icon: Star },

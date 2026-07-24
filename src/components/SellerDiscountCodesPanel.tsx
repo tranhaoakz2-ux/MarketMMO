@@ -1,8 +1,21 @@
 "use client";
 
-import { Loader2, Tag, Trash2 } from "lucide-react";
+import { Tag, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { formatVnd } from "@/lib/format";
+import {
+  Button,
+  Card,
+  Column,
+  DataTable,
+  EmptyState,
+  Field,
+  PageHeader,
+  SectionTitle,
+  Select,
+  StatusBadge,
+  TextInput,
+} from "@/components/seller-demo/DemoKit";
 
 type DiscountCode = {
   id: string;
@@ -90,139 +103,147 @@ export default function SellerDiscountCodesPanel() {
     load();
   };
 
+  const columns: Column<DiscountCode>[] = [
+    {
+      key: "code",
+      header: "Mã",
+      primary: true,
+      render: (c) => (
+        <div>
+          <p className="font-mono text-sm font-black tracking-wide text-foreground">{c.code}</p>
+          <p className="text-[11px] text-muted">
+            {c.type === "PERCENT" ? `Giảm ${c.value}%` : `Giảm ${formatVnd(c.value)}`}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "uses",
+      header: "Lượt dùng",
+      align: "right",
+      render: (c) => (
+        <span className="tabular-nums text-foreground">
+          {c.usedCount}
+          <span className="text-muted">{c.maxUses ? ` / ${c.maxUses}` : " / ∞"}</span>
+        </span>
+      ),
+    },
+    {
+      key: "expires",
+      header: "Hết hạn",
+      render: (c) => (
+        <span className="whitespace-nowrap text-muted">
+          {c.expiresAt ? new Date(c.expiresAt).toLocaleDateString("vi-VN") : "Không"}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Trạng thái",
+      render: (c) => (
+        <button
+          onClick={() => handleToggle(c.id, !c.active)}
+          disabled={busyId === c.id}
+          className="transition hover:opacity-80 disabled:opacity-50"
+        >
+          <StatusBadge tone={c.active ? "success" : "neutral"} dot>
+            {c.active ? "Đang bật" : "Đã tắt"}
+          </StatusBadge>
+        </button>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      hideOnMobile: true,
+      render: (c) => (
+        <button
+          onClick={() => handleDelete(c.id)}
+          disabled={busyId === c.id}
+          title="Xoá mã"
+          className="grid h-8 w-8 place-items-center rounded-lg border border-border-c bg-surface text-muted transition hover:border-danger hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      ),
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-2xl border border-dashed border-brand-dark/40 bg-brand-light/15 p-4">
-        <h2 className="mb-3 text-sm font-bold text-foreground">Tạo mã giảm giá mới</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-foreground">Mã (VD: SALE10)</label>
-            <input
-              type="text"
+      <PageHeader
+        title="Mã giảm giá"
+        subtitle="Tạo mã áp dụng cho toàn bộ sản phẩm gian hàng bạn. Người mua nhập ở giỏ hàng hoặc mua ngay."
+      />
+
+      {/* Form tạo mã */}
+      <Card className="border-brand-dark/30">
+        <SectionTitle>Tạo mã giảm giá mới</SectionTitle>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Mã (VD: SALE20)">
+            <TextInput
+              className="uppercase"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="SALE10"
-              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm uppercase bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+              placeholder="SALE20"
             />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-foreground">Loại giảm giá</label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value as "PERCENT" | "FIXED")}
-              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
-            >
-              <option value="PERCENT" className="bg-surface text-foreground">
-                Theo % (tối đa 100)
-              </option>
-              <option value="FIXED" className="bg-surface text-foreground">
-                Số tiền cố định (VNĐ)
-              </option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-foreground">
-              Giá trị {type === "PERCENT" ? "(%)" : "(VNĐ)"}
-            </label>
-            <input
-              type="number"
-              min={1}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-foreground">
-              Số lần dùng tối đa (bỏ trống = không giới hạn)
-            </label>
-            <input
+          </Field>
+          <Field label="Loại giảm giá">
+            <Select value={type} onChange={(e) => setType(e.target.value as "PERCENT" | "FIXED")}>
+              <option value="PERCENT">Theo % (tối đa 100)</option>
+              <option value="FIXED">Số tiền cố định (VNĐ)</option>
+            </Select>
+          </Field>
+          <Field label={type === "PERCENT" ? "Giá trị (%)" : "Giá trị (VNĐ)"}>
+            <TextInput type="number" min={1} value={value} onChange={(e) => setValue(e.target.value)} />
+          </Field>
+          <Field label="Số lần dùng tối đa" hint="Bỏ trống = không giới hạn">
+            <TextInput
               type="number"
               min={1}
               value={maxUses}
               onChange={(e) => setMaxUses(e.target.value)}
               placeholder="Không giới hạn"
-              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             />
-          </div>
+          </Field>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-semibold text-foreground">
-              Ngày hết hạn (bỏ trống = không hết hạn)
-            </label>
-            <input
-              type="date"
-              value={expiresAt}
-              onChange={(e) => setExpiresAt(e.target.value)}
-              className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none sm:w-1/2"
-            />
+            <Field label="Ngày hết hạn" hint="Bỏ trống = không hết hạn">
+              <TextInput
+                type="date"
+                className="sm:w-1/2"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+              />
+            </Field>
           </div>
         </div>
-
         {error && (
-          <p className="mt-3 rounded-lg bg-danger/10 px-3 py-2 text-xs font-semibold text-danger">
-            {error}
-          </p>
+          <p className="mt-3 rounded-lg bg-danger/10 px-3 py-2 text-xs font-semibold text-danger">{error}</p>
         )}
+        <div className="mt-4">
+          <Button onClick={handleCreate} disabled={submitting || !code}>
+            <Tag className="h-4 w-4" /> {submitting ? "Đang tạo..." : "Tạo mã"}
+          </Button>
+        </div>
+      </Card>
 
-        <button
-          onClick={handleCreate}
-          disabled={submitting || !code}
-          className="mt-4 flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-black text-ink transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Tag className="h-4 w-4" />}
-          Tạo mã
-        </button>
-      </div>
-
-      <div>
-        <h2 className="mb-3 text-sm font-bold text-foreground">Danh sách mã giảm giá</h2>
+      {/* Danh sách mã */}
+      <Card>
+        <SectionTitle aside={!loading ? <span className="text-[11px] text-muted">{codes.length} mã</span> : undefined}>
+          Danh sách mã giảm giá
+        </SectionTitle>
         {loading ? (
-          <p className="text-sm text-muted">Đang tải...</p>
-        ) : codes.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border-c bg-surface p-8 text-center text-sm text-muted">
-            Bạn chưa tạo mã giảm giá nào.
-          </div>
+          <p className="py-4 text-center text-sm text-muted">Đang tải...</p>
         ) : (
-          <div className="flex flex-col gap-2">
-            {codes.map((c) => (
-              <div
-                key={c.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-c bg-surface p-4 shadow-sm"
-              >
-                <div>
-                  <p className="font-mono text-sm font-black text-foreground">{c.code}</p>
-                  <p className="text-xs text-muted">
-                    {c.type === "PERCENT" ? `Giảm ${c.value}%` : `Giảm ${formatVnd(c.value)}`} · Đã
-                    dùng {c.usedCount}
-                    {c.maxUses ? `/${c.maxUses}` : ""} lần
-                    {c.expiresAt && ` · Hết hạn ${new Date(c.expiresAt).toLocaleDateString("vi-VN")}`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleToggle(c.id, !c.active)}
-                    disabled={busyId === c.id}
-                    className={`rounded-full px-3 py-1.5 text-xs font-bold transition disabled:opacity-50 ${
-                      c.active
-                        ? "bg-success/10 text-success"
-                        : "bg-surface-alt text-muted"
-                    }`}
-                  >
-                    {c.active ? "Đang bật" : "Đã tắt"}
-                  </button>
-                  <button
-                    onClick={() => handleDelete(c.id)}
-                    disabled={busyId === c.id}
-                    className="rounded-full bg-danger/10 p-2 text-danger transition hover:bg-danger/20 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          <DataTable
+            columns={columns}
+            rows={codes}
+            rowKey={(c) => c.id}
+            empty={<EmptyState icon={Tag} title="Chưa có mã nào">Tạo mã giảm giá đầu tiên để thu hút người mua.</EmptyState>}
+          />
         )}
-      </div>
+      </Card>
     </div>
   );
 }
