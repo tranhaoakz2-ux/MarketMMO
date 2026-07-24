@@ -87,7 +87,7 @@ export default function DemoWithdraw() {
 
         {/* Số dư */}
         <div className="flex flex-col gap-4">
-          <Card className="overflow-hidden p-0">
+          <Card padding="p-0" className="overflow-hidden">
             <div className="bg-gradient-to-br from-brand to-brand-dark p-5">
               <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-ink/70">
                 <Wallet className="h-3.5 w-3.5" /> Số dư khả dụng

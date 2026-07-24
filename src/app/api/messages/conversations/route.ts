@@ -16,6 +16,9 @@ export async function GET() {
         userA: { select: { id: true, name: true, username: true, email: true } },
         userB: { select: { id: true, name: true, username: true, email: true } },
         messages: {
+          // CHỈ tin CHUNG (disputeId null) — không lấy tin thuộc luồng khiếu
+          // nại làm preview cuối, tránh lẫn ngữ cảnh (Cách B).
+          where: { disputeId: null },
           orderBy: { createdAt: "desc" },
           take: 1,
           select: { content: true, attachmentType: true },
@@ -32,6 +35,7 @@ export async function GET() {
           conversationId: { in: conversations.map((c) => c.id) },
           senderId: { not: userId },
           readAt: null,
+          disputeId: null, // chưa đọc của CHAT CHUNG — không tính tin khiếu nại
         },
         _count: { id: true },
       })

@@ -10,6 +10,8 @@ export async function GET() {
     where: {
       readAt: null,
       senderId: { not: session!.user.id },
+      disputeId: null, // badge Header chỉ đếm CHAT CHUNG; chưa đọc của luồng
+      // khiếu nại sẽ hiển thị ở khu Khiếu nại, không trộn vào đây (Cách B).
       conversation: {
         OR: [{ userAId: session!.user.id }, { userBId: session!.user.id }],
       },

@@ -95,6 +95,9 @@ function DisputeChat({ disputeId, open, onToggle }: { disputeId: string; open: b
       </button>
       {open && (
         <div className="border-t border-border-c p-3">
+          <p className="mb-2 flex items-center gap-1 text-[10px] text-muted">
+            <Scale className="h-3 w-3" /> Luồng riêng cho khiếu nại này — tách khỏi tin nhắn chung (Chat).
+          </p>
           <div className="flex max-h-60 flex-col gap-2 overflow-y-auto pr-1">
             {msgs.map((m, i) => (
               <div key={i} className={`flex flex-col ${m.from === "seller" ? "items-end" : "items-start"}`}>

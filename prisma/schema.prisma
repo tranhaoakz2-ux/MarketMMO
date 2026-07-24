@@ -633,8 +633,20 @@ model Message {
   attachmentPath String?
   attachmentName String?
   attachmentType String?
+  // Ngữ cảnh KHIẾU NẠI (Cách B — SECURITY_AUDIT #8 chat theo đơn). null = tin
+  // nhắn CHUNG (ChatInbox thường); có giá trị = tin thuộc luồng trao đổi của
+  // đúng 1 khiếu nại (Dispute.id). CỐ TÌNH là cột String THƯỜNG (không FK
+  // relation): nếu để relation onDelete:SetNull thì khi xoá Dispute, disputeId
+  // bị null → tin nhắn khiếu nại LỌT vào chat chung (đúng thứ cần tránh). Để
+  // cột thường: tin của khiếu nại đã xoá vẫn disputeId != null → vẫn bị loại
+  // khỏi chat chung, không rò. Mọi query chat chung lọc disputeId = null; luồng
+  // khiếu nại lọc disputeId = <id>. Cùng 1 Conversation buyer↔seller (không tạo
+  // hội thoại mới — tránh phá @@unique([userAId,userBId]) của Conversation).
+  disputeId      String?
   readAt         DateTime?
   createdAt      DateTime     @default(now())
+
+  @@index([conversationId, disputeId])
 }
 
 // Hoa hồng affiliate — GHI NHẬN khi buyer (được giới thiệu) đặt đơn, nhưng
