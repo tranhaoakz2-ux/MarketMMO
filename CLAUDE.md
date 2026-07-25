@@ -744,27 +744,46 @@ Messenger / số điện thoại thật khi có thông tin liên hệ chính th�
 ### Lưu trữ file (`src/lib/uploads.ts`)
 
 Dùng cho ảnh/file đính kèm chat (`Message.attachmentPath`) — **2 chế độ lưu
-trữ song song**, tự chọn theo
-env, cùng quy ước env-var-gated như VNPay/Telegram/Resend trong dự án:
+trữ song song**, tự chọn theo env, cùng quy ước env-var-gated như
+VNPay/Telegram/Resend trong dự án. **Dùng Blob store RIÊNG với ảnh sản
+phẩm** (token `marketmmo_chat_private_READ_WRITE_TOKEN`, khác
+`BLOB_READ_WRITE_TOKEN` của `saveProductImage`) — 1 store Vercel Blob chỉ
+chọn được `access` public HOẶC private **lúc tạo, không đổi lại được sau**
+(giới hạn thật của Vercel), nên ảnh chat (riêng tư) và ảnh sản phẩm (công
+khai) bắt buộc phải là 2 store khác nhau, không thể dùng chung 1 token như
+thiết kế ban đầu. Tên biến `marketmmo_chat_private_READ_WRITE_TOKEN` (chữ
+thường + gạch dưới, khác quy ước UPPER_CASE) do chính Vercel sinh ra khi kết
+nối store "marketmmo-chat-private" vào project — **giữ nguyên đúng chính
+tả**, không tự đổi cách viết hoa/thường. Vercel sinh kèm 1 biến
+`marketmmo_chat_private_STORE_ID` nhưng code hiện **không dùng tới** (chỉ
+cần khi xác thực bằng OIDC thay vì token tĩnh — xem `chatBlobToken()` trong
+`src/lib/uploads.ts`).
 
-- **Có `BLOB_READ_WRITE_TOKEN`** (bắt buộc khi deploy lên Vercel): lưu qua
-  **Vercel Blob** (`@vercel/blob`, `access: "public"` + `addRandomSuffix:
-true` — URL có suffix ngẫu nhiên nên không đoán được, không public theo
-  nghĩa "ai cũng thấy trong danh sách", chỉ ai có đúng URL mới xem được).
-  Giá trị lưu vào DB (`attachmentPath`...) là **URL Blob đầy
-  đủ**. Bắt buộc dùng Blob khi deploy Vercel vì filesystem trong môi trường
+- **Có `marketmmo_chat_private_READ_WRITE_TOKEN`** (bắt buộc khi deploy lên
+  Vercel): lưu qua **Vercel Blob store PRIVATE** (`@vercel/blob`, `access:
+"private"` + `addRandomSuffix: true`) — đọc/ghi đều yêu cầu xác thực token
+  phía server, không có URL public nào lộ ra ngoài dù URL có bị đoán trúng.
+  Giá trị lưu vào DB (`attachmentPath`...) có tiền tố `blob:` + pathname
+  (không phải URL đầy đủ) — đọc lại bằng `get({access:"private", token:
+...})`. Bắt buộc dùng Blob khi deploy Vercel vì filesystem trong môi trường
   serverless **không lưu trữ lâu dài** — mỗi request/instance có thể chạy
   trên máy chủ khác, ghi vào ổ đĩa cục bộ dễ mất ngay sau đó hoặc sau lần
   deploy tiếp theo.
 - **Thiếu token** (dev local mặc định): rơi về ghi ổ đĩa cục bộ, thư mục
   `/uploads` ở root (NGOÀI `/public`, không commit — xem `.gitignore`). Giá
   trị lưu vào DB là đường dẫn tương đối.
+- **Dữ liệu cũ (trước khi vá bảo mật)**: một số bản ghi chat cũ vẫn còn lưu
+  URL Blob **public** đầy đủ (`https://...public.blob.vercel-storage.com/...`,
+  từ store public gốc dùng trước khi tách private) — cố tình **KHÔNG
+  migrate**, `readUploadedFile()` vẫn nhận diện tiền tố `http(s)://` và đọc
+  qua `fetch()` bình thường để không mất lịch sử chat cũ. Ảnh chat **mới**
+  từ nay luôn qua store private.
 
 Dù lưu theo chế độ nào, **file không public trực tiếp** — API vẫn luôn tự
 verify quyền xem (`requireSeller`/`requireAdmin`/kiểm tra user thuộc đúng
-hội thoại) rồi mới đọc nội dung qua `readUploadedFile()` (tự nhận diện URL
-Blob hay đường dẫn ổ đĩa qua tiền tố `http`) và trả về, trình duyệt/client
-không bao giờ nhận được URL Blob trực tiếp để tự ý chia sẻ ra ngoài. Khi thay
+hội thoại) rồi mới đọc nội dung qua `readUploadedFile()` (tự nhận diện tiền
+tố `blob:`/`http`/đường dẫn ổ đĩa) và trả về, trình duyệt/client không bao
+giờ nhận được URL/token Blob trực tiếp để tự ý chia sẻ ra ngoài. Khi thay
 đổi nguồn ảnh mới hoặc thêm loại file mới: chỉ cần sửa `src/lib/uploads.ts`,
 không cần đụng vào từng route đọc file.
 

@@ -89,7 +89,29 @@ function isBlobConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
-// Lưu file: dùng Vercel Blob nếu có BLOB_READ_WRITE_TOKEN — bắt buộc khi
+// Ảnh/file chat dùng 1 Blob STORE RIÊNG (private) với sản phẩm (public) — 1
+// store Vercel Blob chỉ được chọn public HOẶC private lúc tạo, không đổi lại
+// được sau, nên không thể dùng chung store public sẵn có cho dữ liệu riêng
+// tư. Biến môi trường riêng, KHÔNG dùng chung BLOB_READ_WRITE_TOKEN — tên
+// biến do chính Vercel sinh ra khi tạo store "marketmmo-chat-private" và kết
+// nối vào project (Storage > store > Connect Project), GIỮ NGUYÊN dạng chữ
+// thường Vercel đặt (khác quy ước UPPER_CASE thường dùng cho biến tự khai
+// báo trong .env.example) — không tự đổi tên, đổi là mất kết nối biến thật
+// trên Vercel Dashboard. Chỉ cần token (`_READ_WRITE_TOKEN`) là đủ để
+// put()/get() xác thực đúng store; `_STORE_ID` đi kèm không cần dùng ở đây —
+// theo type định nghĩa của @vercel/blob, `storeId` chỉ cần khi xác thực bằng
+// OIDC (`oidcToken`), không cần khi đã truyền thẳng `token` tĩnh như dưới đây.
+const CHAT_BLOB_TOKEN_ENV = "marketmmo_chat_private_READ_WRITE_TOKEN";
+
+function chatBlobToken(): string | undefined {
+  return process.env[CHAT_BLOB_TOKEN_ENV];
+}
+
+function isChatBlobConfigured(): boolean {
+  return Boolean(chatBlobToken());
+}
+
+// Lưu file: dùng Vercel Blob nếu có marketmmo_chat_private_READ_WRITE_TOKEN — bắt buộc khi
 // deploy lên Vercel vì filesystem trong môi trường serverless không lưu trữ
 // lâu dài (mỗi request/instance có thể chạy trên máy chủ khác, file ghi vào
 // ổ đĩa cục bộ dễ biến mất). Thiếu token (dev local không cấu hình Blob) thì
@@ -107,12 +129,12 @@ async function saveBuffer(
   buffer: Buffer,
   contentType: string
 ): Promise<string> {
-  if (isBlobConfigured()) {
+  if (isChatBlobConfigured()) {
     const blob = await put(relativePath, buffer, {
       access: "private",
       contentType,
       addRandomSuffix: true,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      token: chatBlobToken(),
     });
     // Lưu pathname (không phải URL public) — đọc lại bằng get({access:"private"}).
     return `blob:${blob.pathname}`;
@@ -212,13 +234,14 @@ export async function readUploadedFile(storedPath: string): Promise<Uint8Array> 
     const pathname = storedPath.slice("blob:".length);
     const result = await get(pathname, {
       access: "private",
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      token: chatBlobToken(),
     });
     if (!result || !result.stream) throw new Error("Không tìm thấy file.");
     return new Uint8Array(await new Response(result.stream).arrayBuffer());
   }
-  // Blob CÔNG KHAI cũ (dữ liệu chat lưu trước khi chuyển sang private) — vẫn
-  // đọc được qua URL để không mất lịch sử; route vẫn kiểm quyền trước khi gọi.
+  // Blob CÔNG KHAI cũ (dữ liệu chat lưu trước khi chuyển sang private, nằm
+  // trong store public gốc — KHÔNG migrate, cố tình giữ nguyên) — vẫn đọc
+  // được qua URL để không mất lịch sử; route vẫn kiểm quyền trước khi gọi.
   if (storedPath.startsWith("http://") || storedPath.startsWith("https://")) {
     const res = await fetch(storedPath);
     if (!res.ok) throw new Error("Không tìm thấy file.");
