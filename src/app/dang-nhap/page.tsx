@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import AuthForms from "@/components/AuthForms";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
@@ -8,6 +10,14 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ callbackUrl?: string; ref?: string; tab?: string }>;
 }) {
+  // Đã đăng nhập thì không có lý do gì để thấy lại form đăng nhập/đăng ký —
+  // đá thẳng về trang chủ TRƯỚC KHI render (server-side, không chờ client
+  // xử lý) để tránh flash form login cho người đã có session hợp lệ.
+  const session = await auth();
+  if (session?.user) {
+    redirect("/");
+  }
+
   const params = await searchParams;
   const callbackUrl = params.callbackUrl ?? "/";
   const googleEnabled = Boolean(
