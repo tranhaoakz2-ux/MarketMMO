@@ -70,6 +70,7 @@ next-env.d.ts
 /*_AUDIT.md
 /CCCD_REMOVAL.md
 /PROJECT_MAP.md
+/SETUP_CHECKLIST.md
 
 
 # Local-only SQL previews (project uses prisma db push, no migrations)

@@ -100,11 +100,16 @@ TurnstileWidget.tsx` + `src/lib/turnstile.ts`), theo cùng quy ước "tuỳ ch�
   `.env`, thiếu key thì tự động bỏ qua bước xác minh (không chặn đăng nhập ở
   môi trường dev chưa đăng ký Cloudflare). Verify thất bại ném lỗi
   `CredentialsSignin` với `code: "turnstile"` để client phân biệt được với
-  lỗi sai email/mật khẩu. **Quên mật khẩu**: link ở form đăng nhập →
-  `/quen-mat-khau` → `/dat-lai-mat-khau?token=...`, gửi email qua **Resend**
-  (`src/lib/email.ts`, env-gated `RESEND_API_KEY` — thiếu key thì log link
-  reset ra console thay vì gửi thật, vẫn test được đầy đủ), xem model
-  `PasswordResetToken` trong mục Backend. `AuthForms.tsx` (`/dang-nhap`)
+  lỗi sai email/mật khẩu. **Quên mật khẩu**: link "Quên mật khẩu?" ở form
+  đăng nhập → `/quen-mat-khau` — 1 trang duy nhất, wizard 2 bước nội bộ
+  (`ForgotPasswordForm.tsx`, state `step: "email" | "code"`, KHÔNG còn trang
+  `/dat-lai-mat-khau?token=...` riêng — đã đổi từ link-token sang **mã OTP 6
+  số** theo yêu cầu người dùng): nhập email → hệ thống gửi mã 6 số qua
+  **Resend** (`src/lib/email.ts`, env-gated `RESEND_API_KEY` — thiếu key thì
+  log mã ra console thay vì gửi thật, vẫn test được đầy đủ) → nhập mã + mật
+  khẩu mới trong CÙNG bước 2 (1 request gộp verify+đổi mật khẩu, không tách
+  riêng bước "xác minh mã"). Xem model `PasswordResetToken` trong mục
+  Backend. `AuthForms.tsx` (`/dang-nhap`)
   render **2 form tách biệt theo tab thật** (state `tab`, click đổi
   `"login"`/`"register"`, chỉ 1 form hiện tại 1 thời điểm) — trước đây 2 form
   hiện cùng lúc cạnh nhau trong lưới 2 cột, thanh "Đăng nhập | Đăng ký" phía
@@ -159,8 +164,8 @@ src/
     shop/[seller]/page.tsx      # Gian hàng người bán — dynamic, fetch DB theo slug
     dang-nhap/page.tsx          # Đăng nhập / Đăng ký thật (AuthForms — signIn/register API,
                                  # dạng tab thật — xem ghi chú AuthForms.tsx bên dưới)
-    quen-mat-khau/page.tsx      # ForgotPasswordForm — nhập email, gửi link reset qua Resend
-    dat-lai-mat-khau/page.tsx   # ResetPasswordForm (đọc ?token=) — đặt mật khẩu mới
+    quen-mat-khau/page.tsx      # ForgotPasswordForm — wizard 2 bước: nhập email (gửi mã OTP
+                                 # 6 số qua Resend) rồi nhập mã + mật khẩu mới, cùng 1 trang
     nap-tien/page.tsx           # Ví — DepositPanel (VNPay hoặc yêu cầu thủ công + lịch sử)
     gio-hang/page.tsx           # Giỏ hàng (client, CartContext) + nút thanh toán thật
     don-hang/page.tsx           # Lịch sử đơn hàng thật (yêu cầu đăng nhập, redirect nếu chưa)
@@ -235,9 +240,11 @@ src/
       auth/[...nextauth]/route.ts  # Auth.js route handler
       auth/register/route.ts       # đăng ký tài khoản (bcrypt hash) + xử lý mã mời affiliate
                                     # (refCode optional) trong cùng transaction
-      auth/forgot-password/route.ts # tạo PasswordResetToken (SHA-256 hash) + gửi email Resend,
-                                    # luôn trả message chung chung (không lộ email có tồn tại)
-      auth/reset-password/route.ts # verify token + hạn + chưa dùng, đổi passwordHash
+      auth/forgot-password/route.ts # sinh mã OTP 6 số (SHA-256 hash) + gửi email Resend, rate-
+                                    # limit theo IP+email, luôn trả message chung chung (không
+                                    # lộ email có tồn tại)
+      auth/reset-password/route.ts # verify mã (theo userId, timing-safe) + hạn + số lần sai +
+                                    # chưa dùng, đổi passwordHash trong 1 request gộp
       checkout/route.ts            # giỏ hàng → Order/OrderItem, trừ ví, giảm kho, escrow —
                                     # tự "claim" ProductStockItem (FOR UPDATE SKIP LOCKED)
                                     # cho sản phẩm/variant đã dùng kho thật, điền
@@ -827,14 +834,30 @@ thêm route đọc file mới, áp dụng cùng cách ép kiểu này.
   vài phút mà không cần đăng xuất/đăng nhập lại — không có cơ chế invalidate
   session tức thời, đây là đánh đổi có chủ đích (đơn giản, không cần thêm hạ
   tầng session store). `banned` mặc định `false` (migration-safe).
-- **PasswordResetToken**: 1-nhiều với `User`, phục vụ luồng quên mật khẩu.
-  `tokenHash` (String, unique) lưu **SHA-256 hash** của token gốc — token gốc
-  (32 byte ngẫu nhiên, đủ entropy nên không cần bcrypt) chỉ nằm trong link
-  gửi qua email, không lưu trong DB, để rò rỉ DB không thể dùng trực tiếp
-  reset mật khẩu người khác. `expiresAt` mặc định +60 phút
-  (`PASSWORD_RESET_TOKEN_EXPIRY_MINUTES`, `src/lib/constants.ts`), `usedAt`
-  đánh dấu đã dùng (chặn tái sử dụng). Tạo token mới tự xoá mọi token cũ
-  chưa dùng của cùng user — chỉ 1 link hiệu lực tại 1 thời điểm.
+- **PasswordResetToken**: 1-nhiều với `User`, phục vụ luồng quên mật khẩu
+  bằng **mã OTP 6 số** (đổi từ link-token ban đầu). `codeHash` (String,
+  **KHÔNG** `@unique` — khác token 256-bit cũ, mã 6 số chỉ có 1 triệu khả
+  năng nên một ràng buộc unique toàn cục sẽ va chạm thật giữa nhiều user
+  khác nhau; tra cứu luôn scope theo `userId`, tìm bằng email trước) lưu
+  **SHA-256 hash** của mã gốc — mã gốc chỉ nằm trong email gửi đi, không lưu
+  trong DB, để rò rỉ DB không thể dùng trực tiếp reset mật khẩu người khác
+  (đánh đổi có chủ đích: SHA-256 không hoàn toàn chống brute-force offline
+  với secret chỉ 1 triệu khả năng như token 256-bit cũ, nhưng giữ nguyên
+  cách xử lý hash hiện có theo đúng yêu cầu, không thêm bcrypt/scrypt cho
+  phạm vi này). `attempts` (Int, mặc định 0) đếm số lần nhập sai — khoá mã
+  khi `>= PASSWORD_RESET_MAX_ATTEMPTS` (5, `src/lib/constants.ts`), buộc xin
+  mã mới. `expiresAt` mặc định +10 phút (`PASSWORD_RESET_CODE_EXPIRY_MINUTES`),
+  `usedAt` đánh dấu đã dùng (chặn tái sử dụng). Tạo mã mới tự xoá mọi mã cũ
+  chưa dùng của cùng user — chỉ 1 mã hiệu lực tại 1 thời điểm.
+  `POST /api/auth/reset-password` nhận `{email, code, password}` trong
+  **cùng 1 request** (không tách bước verify riêng), so khớp hash bằng
+  `crypto.timingSafeEqual` (constant-time, tránh timing side-channel), và
+  dùng **1 message lỗi duy nhất** ("Mã xác nhận không đúng hoặc đã hết
+  hạn.") cho MỌI nhánh thất bại (không tìm thấy user, không có mã hiệu lực,
+  hết hạn, khoá do sai quá số lần, sai mã) — tránh tạo kênh dò xem 1 email
+  có tồn tại/đang có mã hiệu lực hay không, cùng nguyên tắc chống
+  enumeration ở `forgot-password/route.ts`. Cả 2 route đều rate-limit qua
+  `src/lib/rate-limit.ts` theo CẢ IP lẫn email (2 bucket riêng).
 - **Seller**: 1-1 với User đã nâng role SELLER, có `slug` (dùng cho
   `/shop/[seller]`), `level`. `verified` (Boolean, mặc định `false`) — badge
   "Đã xác thực" công khai trên gian hàng; **TRƯỚC ĐÂY** set tự động qua quy
@@ -1999,38 +2022,54 @@ Các quy tắc sau **luôn phải tuân thủ** khi phát triển MarketMMO, kh�
       trang; gửi ảnh/file kèm caption → người nhận xem/tải được; tài khoản
       không liên quan bị chặn 404 khi gọi thẳng API hội thoại/đính kèm
       người khác (không rò rỉ tin nhắn/file).
-- [x] **Quên mật khẩu** (`/quen-mat-khau` → `/dat-lai-mat-khau`, model
-      `PasswordResetToken`): link "Quên mật khẩu?" ở form đăng nhập
-      (`AuthForms.tsx`) → `POST /api/auth/forgot-password` nhận email, luôn
+- [x] **Quên mật khẩu bằng mã OTP 6 số** (`/quen-mat-khau`, model
+      `PasswordResetToken`, **đã đổi từ link-token sang mã OTP** theo yêu
+      cầu người dùng — xem chi tiết model ở mục "Mô hình dữ liệu"): link
+      "Quên mật khẩu?" ở form đăng nhập (`AuthForms.tsx`) → trang
+      `/quen-mat-khau` (component `ForgotPasswordForm.tsx`, wizard 2 bước
+      nội bộ bằng state `step`, KHÔNG còn trang `/dat-lai-mat-khau?token=...`
+      riêng) — **bước 1**: nhập email, `POST /api/auth/forgot-password` luôn
       trả **cùng 1 message chung chung** dù email có tồn tại hay không (tránh
-      dò tài khoản) — chỉ thực sự tạo token + gửi mail nếu user tồn tại **và**
+      dò tài khoản) — chỉ thực sự tạo mã + gửi mail nếu user tồn tại **và**
       có `passwordHash` (tài khoản chỉ đăng nhập Google thì không có gì để
-      "đặt lại", bỏ qua). Token là 32 byte ngẫu nhiên (`crypto.randomBytes`),
-      **chỉ lưu SHA-256 hash trong DB** (`PasswordResetToken.tokenHash`),
-      token gốc chỉ nằm trong link email — rò rỉ DB không dùng được để reset
-      mật khẩu người khác. Hết hạn sau
-      `PASSWORD_RESET_TOKEN_EXPIRY_MINUTES` (60 phút,
-      `src/lib/constants.ts`), tạo token mới tự xoá mọi token cũ chưa dùng
-      của user đó (chỉ 1 link hiệu lực tại 1 thời điểm). `POST
-/api/auth/reset-password` verify hash + hạn + chưa dùng (`usedAt`) trước khi
-      đổi `passwordHash`, đánh dấu `usedAt` ngay trong cùng
-      `$transaction` — token dùng lại lần 2 bị từ chối đúng (đã test).
+      "đặt lại", bỏ qua); rate-limit theo cả IP (10/giờ) lẫn email (5/giờ,
+      `src/lib/rate-limit.ts`). **Bước 2**: nhập mã 6 số + mật khẩu mới +
+      xác nhận mật khẩu **trong cùng 1 form**, submit gộp 1 request
+      `POST /api/auth/reset-password {email, code, password}` — vừa verify
+      mã vừa đổi mật khẩu, không tách bước "xác minh mã" riêng. Có nút "Gửi
+      lại mã" (gọi lại đúng API bước 1) và "Đổi email khác" (quay về bước 1).
 
-      **Gửi email qua Resend** (`src/lib/email.ts`, `sendPasswordResetEmail`)
-      — cùng quy ước env-var-gated như VNPay/Telegram: thiếu `RESEND_API_KEY`
-      thì **không chặn luồng**, chỉ `console.log` link reset ra log server
-      (đủ để test toàn bộ luồng ở dev/demo mà không cần key thật).
-      `RESEND_FROM_EMAIL` mặc định dùng địa chỉ sandbox
+      Mã 6 số sinh bằng `crypto.randomInt(0, 1_000_000)`, **chỉ lưu SHA-256
+      hash trong DB** (`PasswordResetToken.codeHash`, **không** `@unique` —
+      khác token cũ, xem lý do ở mục "Mô hình dữ liệu"), so khớp bằng
+      `crypto.timingSafeEqual` (constant-time). Hết hạn sau
+      `PASSWORD_RESET_CODE_EXPIRY_MINUTES` (10 phút, `src/lib/constants.ts`);
+      nhập sai tăng `attempts`, đạt `PASSWORD_RESET_MAX_ATTEMPTS` (5) thì mã
+      bị khoá — cả 2 trường hợp cùng trả về **1 message lỗi duy nhất** ("Mã
+      xác nhận không đúng hoặc đã hết hạn.") áp dụng cho MỌI nhánh thất bại
+      (user không tồn tại, không có mã hiệu lực, hết hạn, khoá do sai quá số
+      lần, sai mã) để không mở kênh dò email. Tạo mã mới tự xoá mọi mã cũ
+      chưa dùng của user đó (chỉ 1 mã hiệu lực tại 1 thời điểm), đánh dấu
+      `usedAt` ngay trong cùng `$transaction` với đổi `passwordHash` — dùng
+      lại mã đã dùng bị từ chối đúng (đã test).
+
+      **Gửi email qua Resend** (`src/lib/email.ts`, `sendPasswordResetEmail`
+      nay nhận `code` thay vì `resetUrl`) — cùng quy ước env-var-gated như
+      VNPay/Telegram: thiếu `RESEND_API_KEY` thì **không chặn luồng**, chỉ
+      `console.log` mã ra log server (đủ để test toàn bộ luồng ở dev/demo mà
+      không cần key thật). `RESEND_FROM_EMAIL` mặc định dùng địa chỉ sandbox
       `onboarding@resend.dev` của Resend — địa chỉ này **chỉ gửi được tới
       đúng email đã đăng ký tài khoản Resend**, cần xác minh 1 domain thật
       trên Resend rồi đổi `RESEND_FROM_EMAIL` sang `@domain đó` mới gửi được
-      cho người dùng bất kỳ ở production. Đã test end-to-end qua nhánh
-      log-fallback (chưa test gửi mail thật vì chưa có `RESEND_API_KEY`):
-      đăng ký tài khoản mới → quên mật khẩu → lấy link từ log server → đặt
-      mật khẩu mới → đăng nhập bằng mật khẩu **cũ** bị từ chối đúng → đăng
-      nhập bằng mật khẩu **mới** thành công → dùng lại đúng token đó lần 2 bị
-      từ chối ("không hợp lệ hoặc đã hết hạn") → truy cập `/dat-lai-mat-khau`
-      không kèm `?token=` hiện đúng thông báo link không hợp lệ.
+      cho người dùng bất kỳ ở production. Đã test 14 kịch bản qua script
+      HTTP gọi thẳng cả 2 route (không phải qua Prisma trực tiếp — logic
+      quan trọng nhất nằm trong chính route) + xác nhận UI qua Playwright
+      screenshot: email không tồn tại/tồn tại đều trả cùng message ở cả 2
+      bước; mã sai tăng đúng `attempts`; mã đúng đổi mật khẩu thành công,
+      mật khẩu cũ bị từ chối, mật khẩu mới đăng nhập được; dùng lại mã đã
+      dùng bị từ chối; mã hết hạn bị từ chối; mã bị khoá sau 5 lần sai dù
+      lần cuối nhập đúng cũng vẫn bị từ chối; rate-limit gửi mã theo email
+      kích hoạt đúng sau 5 lần/giờ.
 - [x] **Đăng nhập Google & xác minh chống bot Turnstile — xác nhận vẫn hoạt
       động đúng**: 2 tính năng này **code đã có sẵn từ trước** (không phải
       xây mới), chỉ đang ẩn vì `.env` để trống `AUTH_GOOGLE_ID`/

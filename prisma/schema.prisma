@@ -96,18 +96,24 @@ model User {
   feeChanges           PlatformFeeChange[]   @relation("FeeChangedBy")
 }
 
-// Quên mật khẩu: token lưu dạng SHA-256 hash (không lưu token gốc) để dữ
+// Quên mật khẩu: mã OTP 6 số lưu dạng SHA-256 hash (không lưu mã gốc) để dữ
 // liệu bị rò rỉ từ DB không thể dùng trực tiếp reset mật khẩu người khác —
-// token gốc (đủ entropy, 32 byte ngẫu nhiên) chỉ gửi qua email, xem
-// src/lib/email.ts + src/app/api/auth/forgot-password/route.ts.
+// mã gốc chỉ gửi qua email, xem src/lib/email.ts +
+// src/app/api/auth/forgot-password/route.ts. KHÔNG @unique trên codeHash
+// (khác token cũ 256-bit): mã 6 số chỉ có 1 triệu khả năng, một ràng buộc
+// unique toàn cục sẽ va chạm thật giữa các user khác nhau — tra cứu luôn
+// scope theo userId (tìm bằng email trước) thay vì tìm ngược từ hash.
 model PasswordResetToken {
   id        String    @id @default(cuid())
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String    @unique
+  codeHash  String
+  attempts  Int       @default(0)
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model Account {

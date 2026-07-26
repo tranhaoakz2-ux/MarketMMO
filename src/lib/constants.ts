@@ -79,8 +79,10 @@ export const FORUM_CATEGORIES: ForumCategory[] = [
 
 export const ESCROW_HOLD_DAYS = 3;
 
-// Quên mật khẩu: link reset hết hạn sau ngần này phút kể từ lúc yêu cầu.
-export const PASSWORD_RESET_TOKEN_EXPIRY_MINUTES = 60;
+// Quên mật khẩu: mã OTP 6 số hết hạn sau ngần này phút kể từ lúc gửi.
+export const PASSWORD_RESET_CODE_EXPIRY_MINUTES = 10;
+// Nhập sai mã quá số lần này thì mã bị khoá, buộc phải xin mã mới.
+export const PASSWORD_RESET_MAX_ATTEMPTS = 5;
 
 // ── Hoa hồng affiliate (xem src/lib/commission.ts + model ReferralCommission) ──
 // % hoa hồng + margin sàn KHÔNG còn hardcode — lưu trong DB (CommissionSetting,
