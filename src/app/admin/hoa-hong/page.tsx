@@ -1,20 +1,13 @@
-import { AdminPageHeader } from "@/components/admin/AdminUi";
 import { requireAdminPage } from "@/lib/authz";
 import AdminCommissionsPanel from "@/components/admin/AdminCommissionsPanel";
 
 export const dynamic = "force-dynamic";
 
+// PageHeader nằm bên trong AdminCommissionsPanel (cùng cấu trúc với bản demo
+// AdminDemoCommissions.tsx, vì tiêu đề cần đứng trên cả segmented 2 tab).
 export default async function AdminCommissionsPage() {
   await requireAdminPage();
-  return (
-    <div>
-      <AdminPageHeader
-        title="Hoa hồng affiliate"
-        sub="Quản lý hoa hồng giới thiệu: theo dõi theo trạng thái, chỉnh % (có ràng buộc ngưỡng margin), và giải ngân phần đủ điều kiện."
-      />
-      <AdminCommissionsPanel />
-    </div>
-  );
+  return <AdminCommissionsPanel />;
 }
 
 export const metadata = { title: "Hoa hồng — Admin Control Center — MarketMMO" };

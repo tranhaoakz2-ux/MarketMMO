@@ -1,8 +1,13 @@
 "use client";
 
-import { Check, X } from "lucide-react";
+// Panel THẬT "Danh mục mới" — giao diện đồng bộ với bản demo đã duyệt
+// (AdminDemoCategories.tsx), dùng chung AdminDemoKit. TOÀN BỘ dữ liệu/hành
+// vi vẫn THẬT: fetch GET /api/admin/categories, POST
+// /api/admin/categories/[id] {action:"approve"|"reject"} — không đổi 1 dòng
+// logic nghiệp vụ. API route đã có sẵn requireAdmin() (không đụng tới).
+import { Check, Tags, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { AdminButton, AdminCard, AdminEmptyState } from "@/components/admin/AdminUi";
+import { Button, Card, EmptyState, ListSkeleton } from "@/components/admin-demo/AdminDemoKit";
 
 type PendingCategory = {
   id: string;
@@ -48,16 +53,23 @@ export default function AdminCategoriesPanel() {
   const pending = categories.filter((c) => c.status === "PENDING");
 
   return (
-    <div>
-      <h2 className="mb-3 text-sm font-black text-[var(--adm-text)]">Danh mục mới chờ duyệt ({pending.length})</h2>
+    <div className="flex flex-col gap-4">
+      <p className="text-xs font-bold text-[var(--adm-muted)]">
+        {loading ? "Đang tải..." : `${pending.length} danh mục đang chờ duyệt`}
+      </p>
+
       {loading ? (
-        <p className="text-sm text-[var(--adm-muted)]">Đang tải...</p>
+        <ListSkeleton rows={2} />
       ) : pending.length === 0 ? (
-        <AdminEmptyState>Không có danh mục nào đang chờ duyệt.</AdminEmptyState>
+        <Card>
+          <EmptyState icon={Tags} title="Không có danh mục nào đang chờ duyệt">
+            Mọi đề xuất danh mục đã được xử lý hết. 🎉
+          </EmptyState>
+        </Card>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           {pending.map((c) => (
-            <AdminCard key={c.id} className="flex flex-wrap items-center justify-between gap-3">
+            <Card key={c.id} className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-bold text-[var(--adm-text)]">
                   {c.emoji} {c.name}
@@ -65,14 +77,14 @@ export default function AdminCategoriesPanel() {
                 <p className="text-xs text-[var(--adm-muted)]">Đề xuất bởi: {c.proposedBy?.shopName ?? "—"}</p>
               </div>
               <div className="flex gap-2">
-                <AdminButton variant="success" disabled={busyId === c.id} onClick={() => handleAction(c.id, "approve")}>
+                <Button variant="success" disabled={busyId === c.id} onClick={() => handleAction(c.id, "approve")}>
                   <Check className="h-3.5 w-3.5" /> Duyệt
-                </AdminButton>
-                <AdminButton variant="danger" disabled={busyId === c.id} onClick={() => handleAction(c.id, "reject")}>
+                </Button>
+                <Button variant="danger" disabled={busyId === c.id} onClick={() => handleAction(c.id, "reject")}>
                   <X className="h-3.5 w-3.5" /> Từ chối
-                </AdminButton>
+                </Button>
               </div>
-            </AdminCard>
+            </Card>
           ))}
         </div>
       )}

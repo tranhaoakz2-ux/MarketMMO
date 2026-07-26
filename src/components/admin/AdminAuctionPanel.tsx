@@ -1,10 +1,17 @@
 "use client";
 
+// Panel THẬT "Đấu giá vị trí vàng" — giao diện đồng bộ với bản demo đã
+// duyệt (AdminDemoAuction.tsx), dùng chung AdminDemoKit. TOÀN BỘ dữ
+// liệu/hành vi vẫn THẬT (đụng tiền seller + thay đổi hiển thị trang chủ):
+// fetch GET /api/admin/auction/slots, PATCH .../slots/[id] (giá sàn), POST
+// .../slots/[id]/close-now, POST .../slots/[id]/cancel-bids, POST
+// .../assign (gán thủ công), GET /api/admin/sellers + .../sellers/[id]/
+// products (dropdown liên động) — không đổi 1 dòng logic nghiệp vụ. API
+// route đã có sẵn requireAdmin() (không đụng tới).
 import { Ban, Save, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { AdminBadge, AdminButton } from "@/components/admin/AdminUi";
+import { Button, PageHeader, StatusBadge, formatVndDemo } from "@/components/admin-demo/AdminDemoKit";
 import AdminAuctionResolveButton from "@/components/admin/AdminAuctionResolveButton";
-import { formatVnd } from "@/lib/format";
 
 type Bid = {
   id: string;
@@ -58,19 +65,19 @@ export default function AdminAuctionPanel() {
   const active = slots.find((s) => s.id === activeId) ?? null;
 
   return (
-    <div>
-      <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Đấu giá vị trí vàng" subtitle="Quản lý 6 vị trí carousel Sản phẩm nổi bật ở trang chủ — xem lịch sử bid, sửa giá sàn, gán thủ công, đóng phiên sớm." />
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <MiniStat label="Vị trí đang mở" value={`${openSlots.length}`} />
         <MiniStat label="Tổng lượt đặt giá" value={`${totalBids}`} />
         <MiniStat label="Vị trí Tuần" value="#1 – #4" />
         <MiniStat label="Vị trí Ngày" value="#5 – #6" />
       </div>
 
-      <div className="mb-5">
-        <AdminAuctionResolveButton onDone={load} />
-      </div>
+      <AdminAuctionResolveButton onDone={load} />
 
-      <div className="mb-6">
+      <div>
         <h2 className="mb-3 text-sm font-black text-[var(--adm-text)]">Vị trí Tuần (#1 – #4)</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {weekly.map((s) => (
@@ -89,7 +96,7 @@ export default function AdminAuctionPanel() {
       </div>
 
       {!loading && openSlots.length === 0 && (
-        <p className="mt-4 text-center text-sm text-[var(--adm-muted)]">Không có vị trí nào đang mở.</p>
+        <p className="text-center text-sm text-[var(--adm-muted)]">Không có vị trí nào đang mở.</p>
       )}
 
       {active && (
@@ -107,9 +114,9 @@ export default function AdminAuctionPanel() {
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4">
+    <div className="rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
       <p className="text-[11px] font-semibold text-[var(--adm-muted)]">{label}</p>
-      <p className="mt-0.5 text-lg font-black text-[var(--adm-text)]">{value}</p>
+      <p className="mt-0.5 text-lg font-black tabular-nums text-[var(--adm-text)]">{value}</p>
     </div>
   );
 }
@@ -119,23 +126,23 @@ function SlotCard({ slot, onClick }: { slot: Slot; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col gap-2 rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 text-left shadow-sm transition hover:border-[var(--adm-brand)]"
+      className="flex flex-col gap-2 rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 text-left shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition hover:border-[var(--adm-brand)]/60"
     >
       <div className="flex items-center justify-between">
         <span className="text-xs font-black text-[var(--adm-brand)]">Vị trí #{slot.position}</span>
-        <AdminBadge variant="neutral">{slot.bids.length} bid</AdminBadge>
+        <StatusBadge tone="neutral">{slot.bids.length} bid</StatusBadge>
       </div>
       {top ? (
         <div>
           <p className="truncate text-xs font-bold text-[var(--adm-text)]">{top.productName}</p>
           <p className="truncate text-[11px] text-[var(--adm-muted)]">{top.sellerName}</p>
-          <p className="mt-1 text-sm font-black text-[var(--adm-success)]">{formatVnd(top.amount)}</p>
+          <p className="mt-1 text-sm font-black tabular-nums text-[var(--adm-success)]">{formatVndDemo(top.amount)}</p>
         </div>
       ) : (
         <p className="text-xs text-[var(--adm-muted)]">Chưa có lượt đặt giá</p>
       )}
       <p className="text-[10.5px] text-[var(--adm-muted)]">
-        Giá sàn {formatVnd(slot.floorPrice)} · Hết hạn {new Date(slot.endAt).toLocaleString("vi-VN")}
+        Giá sàn {formatVndDemo(slot.floorPrice)} · Hết hạn {new Date(slot.endAt).toLocaleString("vi-VN")}
       </p>
     </button>
   );
@@ -272,7 +279,7 @@ function SlotModal({ slot, onClose, onChanged }: { slot: Slot; onClose: () => vo
                     <span className="truncate text-[var(--adm-text)]">
                       {b.sellerName} — {b.productName}
                     </span>
-                    <span className="shrink-0 font-bold text-[var(--adm-brand)]">{formatVnd(b.amount)}</span>
+                    <span className="shrink-0 font-bold tabular-nums text-[var(--adm-brand)]">{formatVndDemo(b.amount)}</span>
                   </div>
                 ))}
               </div>
@@ -290,9 +297,9 @@ function SlotModal({ slot, onClose, onChanged }: { slot: Slot; onClose: () => vo
                     onChange={(e) => setFloorPrice(Number(e.target.value))}
                     className="w-40 rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-1.5 text-sm text-[var(--adm-text)] outline-none"
                   />
-                  <AdminButton variant="neutral" disabled={busy} onClick={saveFloorPrice}>
+                  <Button variant="secondary" disabled={busy} onClick={saveFloorPrice}>
                     <Save className="h-3.5 w-3.5" /> Lưu
-                  </AdminButton>
+                  </Button>
                 </div>
               </div>
 
@@ -333,6 +340,7 @@ function SlotModal({ slot, onClose, onChanged }: { slot: Slot; onClose: () => vo
                       type="checkbox"
                       checked={chargeSeller}
                       onChange={(e) => setChargeSeller(e.target.checked)}
+                      className="h-4 w-4 accent-[var(--adm-brand)]"
                     />
                     Thu phí seller
                   </label>
@@ -345,20 +353,20 @@ function SlotModal({ slot, onClose, onChanged }: { slot: Slot; onClose: () => vo
                       className="rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-1.5 text-sm text-[var(--adm-text)] outline-none"
                     />
                   )}
-                  <AdminButton variant="brand" disabled={busy || !productId} onClick={submitAssign}>
+                  <Button variant="primary" disabled={busy || !productId} onClick={submitAssign}>
                     <Sparkles className="h-3.5 w-3.5" /> Gán vào vị trí này
-                  </AdminButton>
+                  </Button>
                 </div>
               </div>
 
               <div className="flex gap-2 border-t border-[var(--adm-border)] pt-4">
-                <AdminButton variant="neutral" disabled={busy} onClick={closeNow}>
+                <Button variant="secondary" disabled={busy} onClick={closeNow}>
                   Đóng phiên ngay
-                </AdminButton>
+                </Button>
                 {slot.bids.length > 0 && (
-                  <AdminButton variant="danger" disabled={busy} onClick={cancelBids}>
+                  <Button variant="danger" disabled={busy} onClick={cancelBids}>
                     <Ban className="h-3.5 w-3.5" /> Huỷ mọi lượt đặt giá
-                  </AdminButton>
+                  </Button>
                 )}
               </div>
             </>

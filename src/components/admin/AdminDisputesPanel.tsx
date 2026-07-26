@@ -1,9 +1,16 @@
 "use client";
 
-import { Eye, Scale, ShieldCheck, X } from "lucide-react";
+// Panel THẬT "Khiếu nại" — giao diện đồng bộ với bản demo đã duyệt
+// (AdminDemoDisputes.tsx), dùng chung AdminDemoKit. TOÀN BỘ dữ liệu/hành vi
+// vẫn THẬT (thao tác đụng tiền + xem nội dung nhạy cảm): fetch GET
+// /api/admin/disputes, GET /api/admin/disputes/[id]/delivered (có ghi audit
+// log phía server mỗi lần xem), POST /api/admin/disputes/[id]
+// {action:"refund_buyer"|"release_seller"|"partial_refund", refundPercent?}
+// — không đổi 1 dòng logic nghiệp vụ. API route đã có sẵn requireAdmin()
+// (không đụng tới).
+import { Eye, Inbox, Scale, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { AdminButton, AdminEmptyState } from "@/components/admin/AdminUi";
-import { formatVnd } from "@/lib/format";
+import { Button, Card, EmptyState, PageHeader, formatVndDemo } from "@/components/admin-demo/AdminDemoKit";
 
 type Dispute = {
   id: string;
@@ -17,6 +24,12 @@ type Dispute = {
     quantity: number;
     product: { seller: { shopName: string } } | null;
   };
+};
+
+const RESOLVED_LABEL: Record<string, { label: string; className: string }> = {
+  RESOLVED_REFUND: { label: "Đã hoàn toàn bộ", className: "bg-[var(--adm-danger-bg)] text-[var(--adm-danger)]" },
+  RESOLVED_PARTIAL: { label: "Đã hoàn một phần", className: "bg-[var(--adm-surface-2)] text-[var(--adm-brand)]" },
+  RESOLVED_RELEASE: { label: "Đã giải ngân seller", className: "bg-[var(--adm-success-bg)] text-[var(--adm-success)]" },
 };
 
 // Bấm vào 1 dòng khiếu nại mở modal chi tiết đầy đủ (thay vì action button
@@ -126,22 +139,24 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
   const active = disputes.find((d) => d.id === activeId) ?? null;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Khiếu nại" subtitle="Buyer hoặc seller mở khiếu nại trên đơn hàng đang ký quỹ — bấm vào 1 dòng để xem chi tiết và quyết định." />
+
       <div>
         <h2 className="mb-3 text-sm font-black text-[var(--adm-text)]">
-          Khiếu nại đang chờ xử lý ({openDisputes.length})
+          {loading ? "Đang tải..." : `Khiếu nại đang chờ xử lý (${openDisputes.length})`}
         </h2>
         {loading ? (
           <p className="text-sm text-[var(--adm-muted)]">Đang tải...</p>
         ) : openDisputes.length === 0 ? (
-          <AdminEmptyState>Không có khiếu nại nào đang chờ xử lý.</AdminEmptyState>
+          <Card><EmptyState icon={Inbox} title="Không có khiếu nại nào đang chờ xử lý" /></Card>
         ) : (
           <div className="flex flex-col gap-2">
             {openDisputes.map((d) => (
               <button
                 key={d.id}
                 onClick={() => openDispute(d.id)}
-                className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 text-left shadow-sm transition hover:border-[var(--adm-brand)]"
+                className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 text-left shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition hover:border-[var(--adm-brand)]/50"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-[var(--adm-text)]">{d.orderItem.productName}</p>
@@ -152,7 +167,7 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
                   </p>
                 </div>
                 <span className="shrink-0 text-base font-black text-[var(--adm-danger)]">
-                  {formatVnd(d.orderItem.price * d.orderItem.quantity)}
+                  {formatVndDemo(d.orderItem.price * d.orderItem.quantity)}
                 </span>
               </button>
             ))}
@@ -165,25 +180,10 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
           <h2 className="mb-3 text-sm font-black text-[var(--adm-text)]">Đã xử lý</h2>
           <div className="overflow-hidden rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)]">
             {resolved.map((d) => (
-              <div
-                key={d.id}
-                className="flex items-center justify-between gap-3 border-b border-[var(--adm-border)] px-4 py-3 text-sm last:border-0"
-              >
+              <div key={d.id} className="flex items-center justify-between gap-3 border-b border-[var(--adm-border)] px-4 py-3 text-sm last:border-0">
                 <span className="truncate text-[var(--adm-text)]">{d.orderItem.productName}</span>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                    d.status === "RESOLVED_REFUND"
-                      ? "bg-[var(--adm-danger-bg)] text-[var(--adm-danger)]"
-                      : d.status === "RESOLVED_PARTIAL"
-                        ? "bg-[var(--adm-surface-2)] text-[var(--adm-brand)]"
-                        : "bg-[var(--adm-success-bg)] text-[var(--adm-success)]"
-                  }`}
-                >
-                  {d.status === "RESOLVED_REFUND"
-                    ? "Đã hoàn toàn bộ"
-                    : d.status === "RESOLVED_PARTIAL"
-                      ? "Đã hoàn một phần"
-                      : "Đã giải ngân seller"}
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${RESOLVED_LABEL[d.status]!.className}`}>
+                  {RESOLVED_LABEL[d.status]!.label}
                 </span>
               </div>
             ))}
@@ -192,25 +192,14 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
       )}
 
       {active && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-          onClick={closeModal}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-6 shadow-2xl"
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={closeModal}>
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-6 shadow-2xl">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-base font-black text-[var(--adm-text)]">{active.orderItem.productName}</h3>
-                <p className="mt-0.5 text-xs text-[var(--adm-muted)]">
-                  Người bán: {active.orderItem.product?.seller.shopName ?? "—"}
-                </p>
+                <p className="mt-0.5 text-xs text-[var(--adm-muted)]">Người bán: {active.orderItem.product?.seller.shopName ?? "—"}</p>
               </div>
-              <button
-                onClick={closeModal}
-                className="rounded-full p-1 text-[var(--adm-muted)] hover:bg-white/10"
-              >
+              <button onClick={closeModal} className="rounded-full p-1 text-[var(--adm-muted)] hover:bg-white/10">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -229,23 +218,19 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
                 </div>
                 <div className="rounded-xl bg-[var(--adm-surface-2)] p-3">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--adm-muted)]">Số tiền</p>
-                  <p className="mt-1 font-black text-[var(--adm-brand)]">
-                    {formatVnd(active.orderItem.price * active.orderItem.quantity)}
+                  <p className="mt-1 font-black tabular-nums text-[var(--adm-brand)]">
+                    {formatVndDemo(active.orderItem.price * active.orderItem.quantity)}
                   </p>
                 </div>
               </div>
-              <p className="text-[11px] text-[var(--adm-muted)]">
-                Mở lúc {new Date(active.createdAt).toLocaleString("vi-VN")}
-              </p>
+              <p className="text-[11px] text-[var(--adm-muted)]">Mở lúc {new Date(active.createdAt).toLocaleString("vi-VN")}</p>
             </div>
 
             {/* Nội dung đã giao — ẩn mặc định, tải theo yêu cầu qua endpoint
                 riêng có ghi audit (SECURITY_AUDIT #7). KHÔNG đi kèm danh sách. */}
             <div className="mt-4 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-surface-2)] p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--adm-muted)]">
-                  Nội dung đã giao
-                </p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--adm-muted)]">Nội dung đã giao</p>
                 {delivered === null && (
                   <button
                     onClick={() => viewDelivered(active.id)}
@@ -267,10 +252,7 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
               ) : (
                 <div className="mt-2 flex flex-col gap-1.5">
                   {delivered.map((line, i) => (
-                    <code
-                      key={i}
-                      className="block break-all rounded bg-[var(--adm-surface)] px-2 py-1 text-[11px] text-[var(--adm-text)]"
-                    >
+                    <code key={i} className="block break-all rounded bg-[var(--adm-surface)] px-2 py-1 text-[11px] text-[var(--adm-text)]">
                       {line}
                     </code>
                   ))}
@@ -279,69 +261,52 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2">
-              <AdminButton
-                variant="danger"
-                disabled={busyId === active.id}
-                onClick={() => handleAction(active.id, "refund_buyer")}
-              >
+              <Button variant="danger" disabled={busyId === active.id} onClick={() => handleAction(active.id, "refund_buyer")}>
                 <X className="h-3.5 w-3.5" /> Hoàn toàn bộ
-              </AdminButton>
-              <AdminButton
-                variant="brand"
-                disabled={busyId === active.id}
-                onClick={() => setShowPartial((v) => !v)}
-              >
+              </Button>
+              <Button variant="primary" disabled={busyId === active.id} onClick={() => setShowPartial((v) => !v)}>
                 <Scale className="h-3.5 w-3.5" /> Hoàn một phần
-              </AdminButton>
-              <AdminButton
-                variant="success"
-                disabled={busyId === active.id}
-                onClick={() => handleAction(active.id, "release_seller")}
-              >
+              </Button>
+              <Button variant="success" disabled={busyId === active.id} onClick={() => handleAction(active.id, "release_seller")}>
                 <ShieldCheck className="h-3.5 w-3.5" /> Từ chối · giải ngân seller
-              </AdminButton>
+              </Button>
             </div>
 
-            {showPartial && (() => {
-              const lineTotal = active.orderItem.price * active.orderItem.quantity;
-              const pct = Number(partialPct);
-              const valid = Number.isInteger(pct) && pct >= 1 && pct <= 99;
-              const buyerRefund = valid ? Math.round((lineTotal * pct) / 100) : 0;
-              const sellerKept = lineTotal - buyerRefund;
-              return (
-                <div className="mt-3 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-surface-2)] p-3">
-                  <label className="text-[11px] font-bold uppercase tracking-wide text-[var(--adm-muted)]">
-                    Tỉ lệ hoàn cho người mua (1–99%)
-                  </label>
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={1}
-                      max={99}
-                      value={partialPct}
-                      onChange={(e) => setPartialPct(e.target.value)}
-                      placeholder="VD: 30"
-                      className="w-24 rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface)] px-2.5 py-1.5 text-sm text-[var(--adm-text)] focus:border-[var(--adm-brand)] focus:outline-none"
-                    />
-                    <span className="text-sm text-[var(--adm-muted)]">%</span>
-                    <AdminButton
-                      variant="brand"
-                      disabled={!valid || busyId === active.id}
-                      onClick={submitPartial}
-                    >
-                      Xác nhận hoàn {valid ? `${pct}%` : ""}
-                    </AdminButton>
+            {showPartial &&
+              (() => {
+                const lineTotal = active.orderItem.price * active.orderItem.quantity;
+                const pct = Number(partialPct);
+                const valid = Number.isInteger(pct) && pct >= 1 && pct <= 99;
+                const buyerRefund = valid ? Math.round((lineTotal * pct) / 100) : 0;
+                const sellerKept = lineTotal - buyerRefund;
+                return (
+                  <div className="mt-3 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-surface-2)] p-3">
+                    <label className="text-[11px] font-bold uppercase tracking-wide text-[var(--adm-muted)]">Tỉ lệ hoàn cho người mua (1–99%)</label>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={99}
+                        value={partialPct}
+                        onChange={(e) => setPartialPct(e.target.value)}
+                        placeholder="VD: 30"
+                        className="w-24 rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface)] px-2.5 py-1.5 text-sm text-[var(--adm-text)] focus:border-[var(--adm-brand)] focus:outline-none"
+                      />
+                      <span className="text-sm text-[var(--adm-muted)]">%</span>
+                      <Button variant="primary" disabled={!valid || busyId === active.id} onClick={submitPartial}>
+                        Xác nhận hoàn {valid ? `${pct}%` : ""}
+                      </Button>
+                    </div>
+                    {valid && (
+                      <p className="mt-2 text-[11px] text-[var(--adm-muted)]">
+                        Người mua nhận lại <b className="text-[var(--adm-text)]">{formatVndDemo(buyerRefund)}</b> · người bán giữ{" "}
+                        <b className="text-[var(--adm-text)]">{formatVndDemo(sellerKept)}</b> (trước khi trừ phí sàn theo tỉ lệ). Người
+                        mua VẪN xem được nội dung đã giao.
+                      </p>
+                    )}
                   </div>
-                  {valid && (
-                    <p className="mt-2 text-[11px] text-[var(--adm-muted)]">
-                      Người mua nhận lại <b className="text-[var(--adm-text)]">{formatVnd(buyerRefund)}</b> ·
-                      người bán giữ <b className="text-[var(--adm-text)]">{formatVnd(sellerKept)}</b> (trước khi
-                      trừ phí sàn theo tỉ lệ). Người mua VẪN xem được nội dung đã giao.
-                    </p>
-                  )}
-                </div>
-              );
-            })()}
+                );
+              })()}
           </div>
         </div>
       )}

@@ -1,9 +1,25 @@
 "use client";
 
-import { Check, X } from "lucide-react";
+// Panel THẬT "Rút tiền" — giao diện đồng bộ với bản demo đã duyệt
+// (AdminDemoWithdrawals.tsx), dùng chung AdminDemoKit. TOÀN BỘ dữ liệu/hành
+// vi vẫn THẬT: fetch GET /api/admin/withdrawals, POST
+// /api/admin/withdrawals/[id] {action:"approve"|"reject"} — không đổi 1
+// dòng logic nghiệp vụ (Duyệt chỉ đánh dấu, Từ chối hoàn tiền — đụng tiền
+// thật). API route đã có sẵn requireAdmin() (không đụng tới).
+import { Check, Inbox, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { AdminBadge, AdminButton, AdminCard, AdminEmptyState } from "@/components/admin/AdminUi";
-import { formatVnd } from "@/lib/format";
+import {
+  Button,
+  Card,
+  type Column,
+  DataTable,
+  EmptyState,
+  ListSkeleton,
+  StatusBadge,
+  TableSkeleton,
+  type Tone,
+  formatVndDemo,
+} from "@/components/admin-demo/AdminDemoKit";
 import { walletTxStatusLabel, type WalletTxStatus } from "@/lib/constants";
 
 type Withdrawal = {
@@ -15,7 +31,7 @@ type Withdrawal = {
   user: { email: string | null; username: string | null; name: string | null };
 };
 
-const badgeVariant: Record<WalletTxStatus, "warn" | "success" | "danger"> = {
+const toneOf: Record<WalletTxStatus, Tone> = {
   PENDING: "warn",
   CONFIRMED: "success",
   REJECTED: "danger",
@@ -56,24 +72,34 @@ export default function AdminWithdrawalsPanel() {
   const pending = withdrawals.filter((w) => w.status === "PENDING");
   const processed = withdrawals.filter((w) => w.status !== "PENDING");
 
+  const columns: Column<Withdrawal>[] = [
+    {
+      key: "user",
+      header: "Người dùng",
+      primary: true,
+      render: (w) => <span className="truncate font-semibold text-[var(--adm-text)]">{w.user.name ?? w.user.username ?? w.user.email}</span>,
+    },
+    { key: "amount", header: "Số tiền", align: "right", render: (w) => <span className="font-bold tabular-nums text-[var(--adm-text)]">{formatVndDemo(Math.abs(w.amount))}</span> },
+    { key: "time", header: "Thời gian", render: (w) => <span className="text-xs text-[var(--adm-muted)]">{new Date(w.createdAt).toLocaleDateString("vi-VN")}</span> },
+    { key: "status", header: "Trạng thái", render: (w) => <StatusBadge tone={toneOf[w.status]} dot>{walletTxStatusLabel[w.status]}</StatusBadge> },
+  ];
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
       <div>
         <h2 className="mb-3 text-sm font-black text-[var(--adm-text)]">
-          Yêu cầu rút tiền chờ duyệt ({pending.length})
+          {loading ? "Đang tải..." : `Yêu cầu rút tiền chờ duyệt (${pending.length})`}
         </h2>
         {loading ? (
-          <p className="text-sm text-[var(--adm-muted)]">Đang tải...</p>
+          <ListSkeleton />
         ) : pending.length === 0 ? (
-          <AdminEmptyState>Không có yêu cầu rút tiền nào đang chờ duyệt.</AdminEmptyState>
+          <Card><EmptyState icon={Inbox} title="Không có yêu cầu rút tiền nào đang chờ duyệt" /></Card>
         ) : (
           <div className="flex flex-col gap-2">
             {pending.map((w) => (
-              <AdminCard key={w.id} className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-bold text-[var(--adm-text)]">
-                    {w.user.name ?? w.user.username ?? w.user.email}
-                  </p>
+              <Card key={w.id} className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold text-[var(--adm-text)]">{w.user.name ?? w.user.username ?? w.user.email}</p>
                   <p className="text-xs text-[var(--adm-muted)]">{new Date(w.createdAt).toLocaleString("vi-VN")}</p>
                   {w.note && <p className="mt-1 text-xs text-[var(--adm-muted)]">{w.note}</p>}
                   <p className="mt-1 text-xs font-semibold text-[var(--adm-brand)]">
@@ -82,15 +108,15 @@ export default function AdminWithdrawalsPanel() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-base font-black text-[var(--adm-brand)]">{formatVnd(Math.abs(w.amount))}</span>
-                  <AdminButton variant="success" disabled={busyId === w.id} onClick={() => handleAction(w.id, "approve")}>
+                  <span className="text-base font-black text-[var(--adm-brand)]">{formatVndDemo(Math.abs(w.amount))}</span>
+                  <Button variant="success" disabled={busyId === w.id} onClick={() => handleAction(w.id, "approve")}>
                     <Check className="h-3.5 w-3.5" /> Đã chuyển khoản
-                  </AdminButton>
-                  <AdminButton variant="danger" disabled={busyId === w.id} onClick={() => handleAction(w.id, "reject")}>
+                  </Button>
+                  <Button variant="danger" disabled={busyId === w.id} onClick={() => handleAction(w.id, "reject")}>
                     <X className="h-3.5 w-3.5" /> Từ chối (hoàn tiền)
-                  </AdminButton>
+                  </Button>
                 </div>
-              </AdminCard>
+              </Card>
             ))}
           </div>
         )}
@@ -98,31 +124,16 @@ export default function AdminWithdrawalsPanel() {
 
       <div>
         <h2 className="mb-3 text-sm font-black text-[var(--adm-text)]">Lịch sử rút tiền</h2>
-        <div className="overflow-hidden rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)]">
-          <div className="grid grid-cols-4 gap-2 border-b border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-4 py-2.5 text-xs font-bold text-[var(--adm-muted)]">
-            <span>Người dùng</span>
-            <span>Số tiền</span>
-            <span>Thời gian</span>
-            <span>Trạng thái</span>
-          </div>
-          {processed.length === 0 ? (
-            <div className="p-6 text-center text-sm text-[var(--adm-muted)]">Chưa có giao dịch nào.</div>
-          ) : (
-            processed.map((w) => (
-              <div
-                key={w.id}
-                className="grid grid-cols-4 gap-2 border-b border-[var(--adm-border)] px-4 py-3 text-sm last:border-0"
-              >
-                <span className="truncate text-[var(--adm-text)]">
-                  {w.user.name ?? w.user.username ?? w.user.email}
-                </span>
-                <span className="font-bold text-[var(--adm-text)]">{formatVnd(Math.abs(w.amount))}</span>
-                <span className="text-[var(--adm-muted)]">{new Date(w.createdAt).toLocaleDateString("vi-VN")}</span>
-                <AdminBadge variant={badgeVariant[w.status]}>{walletTxStatusLabel[w.status]}</AdminBadge>
-              </div>
-            ))
-          )}
-        </div>
+        {loading ? (
+          <TableSkeleton rows={3} />
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={processed}
+            rowKey={(w) => w.id}
+            empty={<EmptyState icon={Inbox} title="Chưa có giao dịch nào" />}
+          />
+        )}
       </div>
     </div>
   );

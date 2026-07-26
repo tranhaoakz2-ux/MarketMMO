@@ -1,9 +1,25 @@
 "use client";
 
-import { Lock, Search, Unlock } from "lucide-react";
+// Panel THẬT "Người dùng" — giao diện đồng bộ với bản demo đã duyệt
+// (AdminDemoUsers.tsx), dùng chung AdminDemoKit. TOÀN BỘ dữ liệu/hành vi vẫn
+// THẬT: fetch GET /api/admin/users?q=, PATCH /api/admin/users/[id]
+// {action:"ban"|"unban", reason?} — không đổi 1 dòng logic nghiệp vụ, chỉ đổi
+// phần trình bày (raw CSS grid → DataTable responsive, "Đang tải..." →
+// skeleton). API route đã có sẵn requireAdmin() (không đụng tới).
+import { Lock, Unlock, Users as UsersIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { AdminBadge, AdminButton, AdminEmptyState } from "@/components/admin/AdminUi";
-import { formatVnd } from "@/lib/format";
+import {
+  Button,
+  type Column,
+  DataTable,
+  EmptyState,
+  Field,
+  SearchInput,
+  StatusBadge,
+  TableSkeleton,
+  Textarea,
+  formatVndDemo,
+} from "@/components/admin-demo/AdminDemoKit";
 import { roleLabel, type Role } from "@/lib/constants";
 
 type AdminUser = {
@@ -73,75 +89,74 @@ export default function AdminUsersPanel() {
     load(q);
   };
 
-  return (
-    <div>
-      <form onSubmit={handleSearch} className="mb-4 flex items-center gap-2">
-        <div className="flex flex-1 items-center gap-2 rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface)] px-3.5 py-2">
-          <Search className="h-4 w-4 text-[var(--adm-muted)]" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Tìm theo email, username hoặc tên..."
-            className="w-full bg-transparent text-sm text-[var(--adm-text)] outline-none placeholder:text-[var(--adm-muted)]"
-          />
+  const columns: Column<AdminUser>[] = [
+    {
+      key: "user",
+      header: "Người dùng",
+      primary: true,
+      render: (u) => (
+        <div className="min-w-0">
+          <p className="max-w-[320px] truncate font-bold text-[var(--adm-text)]">{u.name ?? u.username ?? "—"}</p>
+          <p className="max-w-[320px] truncate text-xs text-[var(--adm-muted)]">{u.email ?? u.username}</p>
         </div>
-        <AdminButton type="submit" variant="brand">
-          Tìm
-        </AdminButton>
+      ),
+    },
+    { key: "role", header: "Vai trò", render: (u) => <span className="text-xs text-[var(--adm-muted)]">{roleLabel[u.role]}</span> },
+    {
+      key: "wallet",
+      header: "Số dư ví",
+      align: "right",
+      render: (u) => <span className="font-bold tabular-nums text-[var(--adm-text)]">{formatVndDemo(u.walletBalance)}</span>,
+    },
+    {
+      key: "status",
+      header: "Trạng thái",
+      render: (u) =>
+        u.banned ? (
+          <StatusBadge tone="danger" dot>Đã khoá</StatusBadge>
+        ) : (
+          <StatusBadge tone="success" dot>Hoạt động</StatusBadge>
+        ),
+    },
+    {
+      key: "actions",
+      header: "Hành động",
+      align: "right",
+      render: (u) =>
+        u.role === "ADMIN" ? (
+          <span className="text-xs text-[var(--adm-muted)]">—</span>
+        ) : u.banned ? (
+          <Button size="sm" variant="success" disabled={busyId === u.id} onClick={() => handleUnban(u.id)}>
+            <Unlock className="h-3.5 w-3.5" /> Mở khoá
+          </Button>
+        ) : (
+          <Button size="sm" variant="danger" disabled={busyId === u.id} onClick={() => setBanTarget(u)}>
+            <Lock className="h-3.5 w-3.5" /> Khoá
+          </Button>
+        ),
+    },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <form onSubmit={handleSearch} className="flex items-center gap-2">
+        <SearchInput value={q} onChange={setQ} placeholder="Tìm theo email, username hoặc tên..." />
+        <Button type="submit" variant="primary">Tìm</Button>
       </form>
 
       {loading ? (
-        <p className="text-sm text-[var(--adm-muted)]">Đang tải...</p>
-      ) : users.length === 0 ? (
-        <AdminEmptyState>Không tìm thấy người dùng nào.</AdminEmptyState>
+        <TableSkeleton />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)]">
-          <div className="grid grid-cols-[1fr_110px_120px_100px_140px] gap-2 border-b border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-4 py-2.5 text-xs font-bold text-[var(--adm-muted)]">
-            <span>Người dùng</span>
-            <span>Vai trò</span>
-            <span>Số dư ví</span>
-            <span>Trạng thái</span>
-            <span>Hành động</span>
-          </div>
-          {users.map((u) => (
-            <div
-              key={u.id}
-              className="grid grid-cols-[1fr_110px_120px_100px_140px] items-center gap-2 border-b border-[var(--adm-border)] px-4 py-3 text-sm last:border-0"
-            >
-              <div className="min-w-0">
-                <p className="truncate font-bold text-[var(--adm-text)]">
-                  {u.name ?? u.username ?? "—"}
-                </p>
-                <p className="truncate text-xs text-[var(--adm-muted)]">{u.email ?? u.username}</p>
-              </div>
-              <span className="text-xs text-[var(--adm-muted)]">{roleLabel[u.role]}</span>
-              <span className="font-bold text-[var(--adm-text)]">{formatVnd(u.walletBalance)}</span>
-              {u.banned ? (
-                <AdminBadge variant="danger">Đã khoá</AdminBadge>
-              ) : (
-                <AdminBadge variant="success">Hoạt động</AdminBadge>
-              )}
-              {u.role === "ADMIN" ? (
-                <span className="text-xs text-[var(--adm-muted)]">—</span>
-              ) : u.banned ? (
-                <AdminButton variant="success" disabled={busyId === u.id} onClick={() => handleUnban(u.id)}>
-                  <Unlock className="h-3.5 w-3.5" /> Mở khoá
-                </AdminButton>
-              ) : (
-                <AdminButton variant="danger" disabled={busyId === u.id} onClick={() => setBanTarget(u)}>
-                  <Lock className="h-3.5 w-3.5" /> Khoá
-                </AdminButton>
-              )}
-            </div>
-          ))}
-        </div>
+        <DataTable
+          columns={columns}
+          rows={users}
+          rowKey={(u) => u.id}
+          empty={<EmptyState icon={UsersIcon} title="Không tìm thấy người dùng nào">Thử từ khoá khác.</EmptyState>}
+        />
       )}
 
       {banTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-          onClick={() => setBanTarget(null)}
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setBanTarget(null)}>
           <div
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-sm rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-6 shadow-2xl"
@@ -152,20 +167,23 @@ export default function AdminUsersPanel() {
             <p className="mt-1 text-xs text-[var(--adm-muted)]">
               Tài khoản sẽ không thể đăng nhập, mua hàng, hoặc thực hiện bất kỳ thao tác nào cho tới khi được mở khoá.
             </p>
-            <textarea
-              value={banReason}
-              onChange={(e) => setBanReason(e.target.value)}
-              placeholder="Lý do khoá (tuỳ chọn)..."
-              rows={3}
-              className="mt-3 w-full rounded-xl border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-2 text-sm text-[var(--adm-text)] outline-none placeholder:text-[var(--adm-muted)]"
-            />
+            <div className="mt-3">
+              <Field label="Lý do khoá" hint="Tuỳ chọn">
+                <Textarea
+                  rows={3}
+                  value={banReason}
+                  onChange={(e) => setBanReason(e.target.value)}
+                  placeholder="Lý do khoá (tuỳ chọn)..."
+                />
+              </Field>
+            </div>
             <div className="mt-4 flex gap-2">
-              <AdminButton variant="danger" disabled={busyId === banTarget.id} onClick={confirmBan}>
+              <Button variant="danger" disabled={busyId === banTarget.id} onClick={confirmBan}>
                 <Lock className="h-3.5 w-3.5" /> Xác nhận khoá
-              </AdminButton>
-              <AdminButton variant="neutral" onClick={() => setBanTarget(null)}>
+              </Button>
+              <Button variant="secondary" onClick={() => setBanTarget(null)}>
                 Huỷ
-              </AdminButton>
+              </Button>
             </div>
           </div>
         </div>

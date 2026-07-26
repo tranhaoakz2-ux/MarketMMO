@@ -1,10 +1,12 @@
-import { AdminBadge, AdminPageHeader } from "@/components/admin/AdminUi";
+import { Card, PageHeader, StatusBadge } from "@/components/admin-demo/AdminDemoKit";
 import { requireAdminPage } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
 // Chỉ đọc SỰ TỒN TẠI của biến môi trường (đã cấu hình hay chưa) — KHÔNG bao
-// giờ render giá trị thật của secret ra client, kể cả cho admin.
+// giờ render giá trị thật của secret ra client, kể cả cho admin. GIỮ NGUYÊN
+// không đổi so với bản trước khi đổi giao diện (chỉ đổi JSX render bên
+// dưới, không đụng logic đọc process.env này).
 const integrations = [
   {
     name: "VNPay (thanh toán tự động)",
@@ -46,27 +48,24 @@ const integrations = [
 export default async function AdminSettingsPage() {
   await requireAdminPage();
   return (
-    <div>
-      <AdminPageHeader
+    <div className="flex flex-col gap-6">
+      <PageHeader
         title="Cài đặt hệ thống"
-        sub="Trạng thái các tích hợp bên thứ ba — cấu hình qua biến môi trường (.env), không sửa được trực tiếp tại đây vì lý do bảo mật."
+        subtitle="Trạng thái các tích hợp bên thứ ba — cấu hình qua biến môi trường (.env), không sửa được trực tiếp tại đây vì lý do bảo mật."
       />
-      <div className="overflow-hidden rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)]">
+      <Card padding="p-0">
         {integrations.map((i) => (
-          <div
-            key={i.name}
-            className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--adm-border)] px-5 py-4 last:border-0"
-          >
+          <div key={i.name} className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--adm-border)] px-5 py-4 last:border-0">
             <div className="min-w-0">
               <p className="text-sm font-bold text-[var(--adm-text)]">{i.name}</p>
               <p className="mt-0.5 text-xs text-[var(--adm-muted)]">{i.note}</p>
             </div>
-            <AdminBadge variant={i.configured ? "success" : "warn"}>
+            <StatusBadge tone={i.configured ? "success" : "warn"} dot>
               {i.configured ? "Đã cấu hình" : "Chưa cấu hình"}
-            </AdminBadge>
+            </StatusBadge>
           </div>
         ))}
-      </div>
+      </Card>
     </div>
   );
 }

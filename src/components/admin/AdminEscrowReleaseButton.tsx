@@ -3,7 +3,7 @@
 import { PackageCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { AdminButton } from "@/components/admin/AdminUi";
+import { Button } from "@/components/admin-demo/AdminDemoKit";
 
 export default function AdminEscrowReleaseButton() {
   const router = useRouter();
@@ -21,11 +21,11 @@ export default function AdminEscrowReleaseButton() {
   };
 
   return (
-    <div className="flex items-center gap-3">
-      <AdminButton variant="brand" disabled={busy} onClick={handleRelease}>
-        <PackageCheck className="h-3.5 w-3.5" /> {busy ? "Đang xử lý..." : "Chạy giải ngân ký quỹ đến hạn"}
-      </AdminButton>
-      {msg && <span className="text-xs font-semibold text-[var(--adm-muted)]">{msg}</span>}
+    <div className="flex flex-col items-end gap-1.5">
+      <Button variant="primary" disabled={busy} onClick={handleRelease}>
+        <PackageCheck className="h-4 w-4" /> {busy ? "Đang xử lý..." : "Chạy giải ngân ký quỹ đến hạn"}
+      </Button>
+      {msg && <span className="text-[11px] font-semibold text-[var(--adm-muted)]">{msg}</span>}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { Banknote, Gift, Lock, ShieldCheck, TrendingDown, Wallet } from "lucide-react";
 import { requireAdminPage } from "@/lib/authz";
-import { AdminPageHeader } from "@/components/admin/AdminUi";
+import { Card, PageHeader } from "@/components/admin-demo/AdminDemoKit";
 import { getAdminFinancialHealth } from "@/lib/queries";
 import { formatVnd } from "@/lib/format";
 
@@ -20,21 +20,21 @@ export default async function AdminFinancialHealthPage() {
   ];
 
   return (
-    <div>
-      <AdminPageHeader
+    <div className="flex flex-col gap-6">
+      <PageHeader
         title="Sức khoẻ tài chính"
-        sub="Tổng hợp số dư toàn hệ thống tại thời điểm hiện tại — dùng để đối chiếu dòng tiền, không thay thế sổ sách kế toán chính thức."
+        subtitle="Tổng hợp số dư toàn hệ thống tại thời điểm hiện tại — dùng để đối chiếu dòng tiền, không thay thế sổ sách kế toán chính thức."
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
-          <div key={c.label} className="rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-5 shadow-sm">
+          <Card key={c.label}>
             <span className="grid h-9 w-9 place-items-center rounded-full bg-[var(--adm-brand-dim)] text-[var(--adm-brand)]">
               <c.icon className="h-4.5 w-4.5" />
             </span>
             <p className="mt-3 text-xs font-semibold text-[var(--adm-muted)]">{c.label}</p>
-            <p className="mt-0.5 text-xl font-black text-[var(--adm-text)]">{formatVnd(c.value)}</p>
+            <p className="mt-0.5 text-xl font-black tabular-nums text-[var(--adm-text)]">{formatVnd(c.value)}</p>
             <p className="mt-2 text-[11px] text-[var(--adm-muted)]">{c.note}</p>
-          </div>
+          </Card>
         ))}
       </div>
     </div>

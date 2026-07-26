@@ -1,8 +1,13 @@
 "use client";
 
-import { Eye, EyeOff } from "lucide-react";
+// Panel THẬT "Diễn đàn" — giao diện đồng bộ với bản demo đã duyệt
+// (AdminDemoForum.tsx), dùng chung AdminDemoKit. TOÀN BỘ dữ liệu/hành vi vẫn
+// THẬT: fetch GET /api/admin/forum-reports, POST
+// /api/admin/forum-reports/[id] {action:"hide"|"dismiss"} — không đổi 1
+// dòng logic nghiệp vụ. API route đã có sẵn requireAdmin() (không đụng tới).
+import { Eye, EyeOff, MessageSquareWarning } from "lucide-react";
 import { useEffect, useState } from "react";
-import { AdminButton, AdminCard, AdminEmptyState } from "@/components/admin/AdminUi";
+import { Button, Card, EmptyState, ListSkeleton } from "@/components/admin-demo/AdminDemoKit";
 
 type Report = {
   id: string;
@@ -50,39 +55,44 @@ export default function AdminForumReportsPanel() {
   };
 
   return (
-    <div>
-      <h2 className="mb-3 text-sm font-black text-[var(--adm-text)]">Báo cáo đang chờ xử lý ({reports.length})</h2>
+    <div className="flex flex-col gap-4">
+      <p className="text-xs font-bold text-[var(--adm-muted)]">
+        {loading ? "Đang tải..." : `${reports.length} báo cáo đang chờ xử lý`}
+      </p>
+
       {loading ? (
-        <p className="text-sm text-[var(--adm-muted)]">Đang tải...</p>
+        <ListSkeleton rows={3} />
       ) : reports.length === 0 ? (
-        <AdminEmptyState>Không có báo cáo nào đang chờ xử lý.</AdminEmptyState>
+        <Card>
+          <EmptyState icon={MessageSquareWarning} title="Không có báo cáo nào đang chờ xử lý">
+            Diễn đàn hiện không có nội dung nào bị báo cáo. 🎉
+          </EmptyState>
+        </Card>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           {reports.map((r) => (
-            <AdminCard key={r.id}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-wide text-[var(--adm-brand)]">
-                    {r.type === "POST" ? "Bài viết" : "Bình luận"} · {r.targetTitle}
-                  </p>
-                  <p className="mt-1 line-clamp-2 text-sm text-[var(--adm-text)]">{r.targetContent}</p>
-                  <p className="mt-2 text-xs text-[var(--adm-muted)]">
-                    Báo cáo bởi {r.reporterName} · {new Date(r.createdAt).toLocaleString("vi-VN")}
-                  </p>
-                  <p className="mt-1 rounded-lg bg-[var(--adm-surface-2)] px-2.5 py-1.5 text-xs text-[var(--adm-text)]">
-                    Lý do: {r.reason}
-                  </p>
-                </div>
+            <Card key={r.id}>
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wide text-[var(--adm-brand)]">
+                  {r.type === "POST" ? "Bài viết" : "Bình luận"} · {r.targetTitle}
+                </p>
+                <p className="mt-1.5 line-clamp-2 text-sm text-[var(--adm-text)]">{r.targetContent}</p>
+                <p className="mt-2 text-xs text-[var(--adm-muted)]">
+                  Báo cáo bởi {r.reporterName} · {new Date(r.createdAt).toLocaleString("vi-VN")}
+                </p>
+                <p className="mt-1.5 rounded-lg bg-[var(--adm-surface-2)] px-2.5 py-1.5 text-xs text-[var(--adm-text)]">
+                  Lý do: {r.reason}
+                </p>
               </div>
               <div className="mt-3 flex gap-2">
-                <AdminButton variant="danger" disabled={busyId === r.id} onClick={() => handleAction(r.id, "hide")}>
+                <Button variant="danger" disabled={busyId === r.id} onClick={() => handleAction(r.id, "hide")}>
                   <EyeOff className="h-3.5 w-3.5" /> Ẩn nội dung
-                </AdminButton>
-                <AdminButton variant="neutral" disabled={busyId === r.id} onClick={() => handleAction(r.id, "dismiss")}>
+                </Button>
+                <Button variant="secondary" disabled={busyId === r.id} onClick={() => handleAction(r.id, "dismiss")}>
                   <Eye className="h-3.5 w-3.5" /> Bỏ qua (không vi phạm)
-                </AdminButton>
+                </Button>
               </div>
-            </AdminCard>
+            </Card>
           ))}
         </div>
       )}

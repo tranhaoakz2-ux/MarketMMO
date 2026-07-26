@@ -23,18 +23,21 @@ export default async function AdminLayout({
     <div className="admin-shell flex">
       <AdminSidebar adminEmail={session.user.email ?? "admin"} counts={counts} />
       <main className="min-w-0 flex-1">
-        <div className="sticky top-0 z-10 flex h-[60px] items-center gap-3 border-b border-[var(--adm-border)] bg-[var(--adm-surface)] px-[22px]">
+        {/* pl-16 dưới lg: chừa chỗ cho nút hamburger cố định (AdminSidebar) —
+            từ lg trở lên sidebar tĩnh đã chiếm chỗ nên không cần chừa nữa.
+            Đồng bộ cấu trúc responsive với bản demo (admin-demo/layout.tsx). */}
+        <div className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-[var(--adm-border)] bg-[var(--adm-surface)]/95 py-2.5 pl-16 pr-4 backdrop-blur lg:h-[60px] lg:flex-nowrap lg:py-0 lg:pl-[22px] lg:pr-[22px]">
           <Link
             href="/"
             className="rounded-[9px] border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-1.5 text-[12px] font-bold text-[var(--adm-text)] hover:bg-[var(--adm-border)]"
           >
             ← Xem trang web
           </Link>
-          <span className="ml-auto flex items-center gap-1.5 rounded-full bg-[var(--adm-success-bg)] px-2.5 py-1 text-[11px] font-bold text-[var(--adm-success)]">
+          <span className="flex items-center gap-1.5 rounded-full bg-[var(--adm-success-bg)] px-2.5 py-1 text-[11px] font-bold text-[var(--adm-success)] lg:ml-auto">
             ● Hệ thống ổn định
           </span>
         </div>
-        <div className="mx-auto max-w-[1320px] px-7 pb-16 pt-6">{children}</div>
+        <div className="mx-auto max-w-[1320px] px-4 pb-16 pt-6 sm:px-7">{children}</div>
       </main>
     </div>
   );

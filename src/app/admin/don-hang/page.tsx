@@ -1,13 +1,20 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/authz";
-import { AdminBadge, AdminPageHeader } from "@/components/admin/AdminUi";
+import { type Column, DataTable, EmptyState, PageHeader, StatusBadge, type Tone, formatVndDemo } from "@/components/admin-demo/AdminDemoKit";
 import AdminEscrowReleaseButton from "@/components/admin/AdminEscrowReleaseButton";
 import { getAdminOrderItems } from "@/lib/queries";
 import { orderStatusLabel, type OrderStatus } from "@/lib/constants";
-import { formatVnd } from "@/lib/format";
+import { Inbox } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+// Trang THẬT "Đơn hàng & Ký quỹ" — giao diện đồng bộ với bản demo đã duyệt
+// (AdminDemoOrders.tsx), dùng AdminDemoKit. Vẫn là Server Component thuần
+// (không "use client") — lọc trạng thái + phân trang giữ nguyên qua URL
+// (?status=&page=, Link điều hướng thật, KHÔNG chuyển sang state client như
+// demo) để tiếp tục fetch đúng trang/bộ lọc từ DB thay vì tải hết rồi lọc ở
+// client. requireAdminPage() (guard) giữ nguyên; getAdminOrderItems() giữ
+// nguyên (đã tự phân trang trong query, không tải cả nghìn bản ghi 1 lúc).
 const statusFilters: { key: OrderStatus | "ALL"; label: string }[] = [
   { key: "ALL", label: "Tất cả" },
   { key: "ESCROW", label: "Đang ký quỹ" },
@@ -16,7 +23,7 @@ const statusFilters: { key: OrderStatus | "ALL"; label: string }[] = [
   { key: "CANCELLED", label: "Đã huỷ" },
 ];
 
-const badgeVariant: Record<OrderStatus, "warn" | "success" | "danger" | "neutral"> = {
+const toneOf: Record<OrderStatus, Tone> = {
   ESCROW: "warn",
   RELEASED: "success",
   DISPUTED: "danger",
@@ -36,26 +43,53 @@ export default async function AdminOrdersPage({
   const page = Math.max(1, Number(params.page) || 1);
 
   const { items, total, totalPages } = await getAdminOrderItems(status, page);
+  type OrderRow = (typeof items)[number];
+
+  const columns: Column<OrderRow>[] = [
+    {
+      key: "product",
+      header: "Sản phẩm",
+      primary: true,
+      render: (i) => (
+        <div className="min-w-0">
+          <p className="max-w-[280px] truncate font-bold text-[var(--adm-text)]">{i.productName}</p>
+          {i.variantLabel && <p className="truncate text-xs text-[var(--adm-muted)]">{i.variantLabel}</p>}
+        </div>
+      ),
+    },
+    { key: "buyer", header: "Người mua", render: (i) => <span className="truncate text-[var(--adm-text)]">{i.buyerName}</span> },
+    { key: "seller", header: "Người bán", render: (i) => <span className="truncate text-[var(--adm-text)]">{i.sellerName}</span> },
+    {
+      key: "amount",
+      header: "Số tiền",
+      align: "right",
+      render: (i) => <span className="font-bold tabular-nums text-[var(--adm-brand)]">{formatVndDemo(i.price * i.quantity)}</span>,
+    },
+    { key: "status", header: "Trạng thái", render: (i) => <StatusBadge tone={toneOf[i.status]} dot>{orderStatusLabel[i.status]}</StatusBadge> },
+    {
+      key: "time",
+      header: "Thời gian",
+      render: (i) => <span className="text-xs text-[var(--adm-muted)]">{new Date(i.createdAt).toLocaleDateString("vi-VN")}</span>,
+    },
+  ];
 
   return (
-    <div>
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <AdminPageHeader
-          title="Đơn hàng & Ký quỹ"
-          sub={`Duyệt toàn bộ ${total} mục đơn hàng trên nền tảng — lọc theo trạng thái, giải ngân ký quỹ đến hạn.`}
-        />
-        <AdminEscrowReleaseButton />
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Đơn hàng & Ký quỹ"
+        subtitle={`Duyệt toàn bộ ${total} mục đơn hàng trên nền tảng — lọc theo trạng thái, giải ngân ký quỹ đến hạn.`}
+        actions={<AdminEscrowReleaseButton />}
+      />
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-1 rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] p-1">
         {statusFilters.map((f) => (
           <Link
             key={f.key}
             href={`/admin/don-hang${f.key === "ALL" ? "" : `?status=${f.key}`}`}
-            className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+            className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
               status === f.key
-                ? "border-[var(--adm-brand)] bg-[var(--adm-brand-dim)] text-[var(--adm-brand)]"
-                : "border-[var(--adm-border)] text-[var(--adm-muted)] hover:bg-white/5"
+                ? "bg-[var(--adm-brand)] text-[#14141f]"
+                : "text-[var(--adm-muted)] hover:text-[var(--adm-text)]"
             }`}
           >
             {f.label}
@@ -63,54 +97,33 @@ export default async function AdminOrdersPage({
         ))}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)]">
-        <div className="grid grid-cols-[1fr_140px_140px_110px_100px_130px] gap-2 border-b border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-4 py-2.5 text-xs font-bold text-[var(--adm-muted)]">
-          <span>Sản phẩm</span>
-          <span>Người mua</span>
-          <span>Người bán</span>
-          <span>Số tiền</span>
-          <span>Trạng thái</span>
-          <span>Thời gian</span>
-        </div>
-        {items.length === 0 ? (
-          <div className="p-8 text-center text-sm text-[var(--adm-muted)]">Không có đơn hàng nào khớp bộ lọc.</div>
-        ) : (
-          items.map((i) => (
-            <div
-              key={i.id}
-              className="grid grid-cols-[1fr_140px_140px_110px_100px_130px] items-center gap-2 border-b border-[var(--adm-border)] px-4 py-3 text-sm last:border-0"
-            >
-              <div className="min-w-0">
-                <p className="truncate font-bold text-[var(--adm-text)]">{i.productName}</p>
-                {i.variantLabel && <p className="truncate text-xs text-[var(--adm-muted)]">{i.variantLabel}</p>}
-              </div>
-              <span className="truncate text-[var(--adm-text)]">{i.buyerName}</span>
-              <span className="truncate text-[var(--adm-text)]">{i.sellerName}</span>
-              <span className="font-bold text-[var(--adm-brand)]">{formatVnd(i.price * i.quantity)}</span>
-              <AdminBadge variant={badgeVariant[i.status]}>{orderStatusLabel[i.status]}</AdminBadge>
-              <span className="text-xs text-[var(--adm-muted)]">
-                {new Date(i.createdAt).toLocaleDateString("vi-VN")}
-              </span>
-            </div>
-          ))
-        )}
-      </div>
+      <DataTable
+        columns={columns}
+        rows={items}
+        rowKey={(i) => i.id}
+        empty={<EmptyState icon={Inbox} title="Không có đơn hàng nào khớp bộ lọc">Thử đổi bộ lọc trạng thái khác.</EmptyState>}
+      />
 
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-center gap-2">
-          {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((p) => (
-            <Link
-              key={p}
-              href={`/admin/don-hang?${status !== "ALL" ? `status=${status}&` : ""}page=${p}`}
-              className={`grid h-8 w-8 place-items-center rounded-full text-xs font-bold ${
-                p === page
-                  ? "bg-[var(--adm-brand)] text-[#14141f]"
-                  : "border border-[var(--adm-border)] text-[var(--adm-muted)] hover:bg-white/5"
-              }`}
-            >
-              {p}
-            </Link>
-          ))}
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-[var(--adm-muted)]">
+            Trang <b className="tabular-nums text-[var(--adm-text)]">{page}</b> / {totalPages}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((p) => (
+              <Link
+                key={p}
+                href={`/admin/don-hang?${status !== "ALL" ? `status=${status}&` : ""}page=${p}`}
+                className={`grid h-8 w-8 place-items-center rounded-lg text-xs font-bold ${
+                  p === page
+                    ? "bg-[var(--adm-brand)] text-[#14141f]"
+                    : "border border-[var(--adm-border)] bg-[var(--adm-surface-2)] text-[var(--adm-text)] hover:bg-white/10"
+                }`}
+              >
+                {p}
+              </Link>
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -1,9 +1,28 @@
 "use client";
 
+// Panel THẬT "Hoa hồng" — giao diện đồng bộ với bản demo đã duyệt
+// (AdminDemoCommissions.tsx), dùng chung AdminDemoKit. TOÀN BỘ dữ liệu/hành
+// vi vẫn THẬT (đây là thao tác đụng tiền + cấu hình nhạy cảm nhất trong khu
+// admin): fetch GET /api/admin/commissions, POST
+// /api/admin/commissions/disburse (chọn/tất cả), GET/PATCH
+// /api/admin/commissions/settings, POST /api/admin/commissions/toggle —
+// không đổi 1 dòng logic nghiệp vụ (validate %, kill switch, xác nhận
+// confirm() trước khi giải ngân/tắt). API route đã có sẵn requireAdmin()
+// (không đụng tới).
 import { useEffect, useState } from "react";
-import { Flag, Save, Send } from "lucide-react";
-import { AdminBadge, AdminButton, AdminCard, AdminEmptyState } from "@/components/admin/AdminUi";
-import { formatVnd } from "@/lib/format";
+import { Flag, Inbox, Save, Send } from "lucide-react";
+import {
+  Button,
+  Card,
+  type Column,
+  DataTable,
+  EmptyState,
+  PageHeader,
+  Segmented,
+  StatusBadge,
+  type Tone,
+  formatVndDemo,
+} from "@/components/admin-demo/AdminDemoKit";
 import { commissionStatusLabel, type CommissionStatus } from "@/lib/constants";
 
 type Row = {
@@ -14,8 +33,6 @@ type Row = {
   percentApplied: number;
   flagged: boolean;
   flaggedReason: string | null;
-  eligibleAt: string | null;
-  paidAt: string | null;
   createdAt: string;
   orderId: string;
   referrer: { id: string; name: string | null; username: string | null; email: string | null };
@@ -33,7 +50,7 @@ const FILTERS: { key: string; label: string }[] = [
   { key: "CANCELLED", label: "Đã huỷ" },
   { key: "FLAGGED", label: "Bị gắn cờ" },
 ];
-const badgeOf: Record<CommissionStatus, "warn" | "info" | "success" | "neutral"> = {
+const toneOf: Record<CommissionStatus, Tone> = {
   PENDING: "warn",
   ELIGIBLE: "info",
   PAID: "success",
@@ -43,21 +60,19 @@ const badgeOf: Record<CommissionStatus, "warn" | "info" | "success" | "neutral">
 export default function AdminCommissionsPanel() {
   const [tab, setTab] = useState<"list" | "settings">("list");
   return (
-    <div>
-      <div className="mb-4 flex gap-2">
-        <button
-          onClick={() => setTab("list")}
-          className={`rounded-full px-4 py-1.5 text-xs font-bold ${tab === "list" ? "bg-[var(--adm-brand)] text-[#14141f]" : "bg-[var(--adm-surface-2)] text-[var(--adm-muted)]"}`}
-        >
-          Danh sách & Giải ngân
-        </button>
-        <button
-          onClick={() => setTab("settings")}
-          className={`rounded-full px-4 py-1.5 text-xs font-bold ${tab === "settings" ? "bg-[var(--adm-brand)] text-[#14141f]" : "bg-[var(--adm-surface-2)] text-[var(--adm-muted)]"}`}
-        >
-          Cài đặt %
-        </button>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Hoa hồng affiliate"
+        subtitle="Quản lý hoa hồng giới thiệu: theo dõi theo trạng thái, chỉnh % (có ràng buộc ngưỡng margin), và giải ngân phần đủ điều kiện."
+      />
+      <Segmented
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "list", label: "Danh sách & Giải ngân" },
+          { value: "settings", label: "Cài đặt %" },
+        ]}
+      />
       {tab === "list" ? <ListTab /> : <SettingsTab />}
     </div>
   );
@@ -88,14 +103,17 @@ function ListTab() {
     setLoading(false);
   };
   useEffect(() => {
-    (async () => { await load(); })();
+    (async () => {
+      await load();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
       const n = new Set(prev);
-      if (n.has(id)) n.delete(id); else n.add(id);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
   };
@@ -111,23 +129,64 @@ function ListTab() {
     });
     const d = await res.json();
     setBusy(false);
-    setMsg(res.ok ? `Đã giải ngân ${d.disbursed} khoản, tổng ${formatVnd(d.totalPaid)}.` : (d.error ?? "Thất bại."));
+    setMsg(res.ok ? `Đã giải ngân ${d.disbursed} khoản, tổng ${formatVndDemo(d.totalPaid)}.` : (d.error ?? "Thất bại."));
     if (res.ok) load();
   };
 
   const eligibleSelected = rows.filter((r) => selected.has(r.id) && r.status === "ELIGIBLE").map((r) => r.id);
 
+  const columns: Column<Row>[] = [
+    {
+      key: "select",
+      header: "",
+      render: (r) =>
+        r.status === "ELIGIBLE" ? (
+          <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggle(r.id)} className="h-4 w-4 accent-[var(--adm-brand)]" />
+        ) : (
+          <span />
+        ),
+    },
+    {
+      key: "referrer",
+      header: "Người giới thiệu",
+      primary: true,
+      render: (r) => (
+        <div className="min-w-0">
+          <p className="flex items-center gap-1 truncate font-bold text-[var(--adm-text)]">
+            {r.referrer.name ?? r.referrer.username ?? r.referrer.email}
+            {r.flagged && <Flag className="h-3 w-3 shrink-0 text-[var(--adm-danger)]" />}
+          </p>
+          <p className="truncate text-[11px] text-[var(--adm-muted)]">{r.percentApplied}% · {formatVndDemo(r.orderAmount)}</p>
+          {r.flagged && r.flaggedReason && <p className="truncate text-[10.5px] text-[var(--adm-danger)]">{r.flaggedReason}</p>}
+        </div>
+      ),
+    },
+    {
+      key: "referred",
+      header: "Người được mời / Đơn",
+      render: (r) => (
+        <div className="min-w-0">
+          <p className="truncate text-[var(--adm-text)]">{r.referredName}</p>
+          <p className="truncate text-[11px] text-[var(--adm-muted)]">#{r.orderId.slice(-8)}</p>
+        </div>
+      ),
+    },
+    { key: "amount", header: "Hoa hồng", align: "right", render: (r) => <span className="font-bold tabular-nums text-[var(--adm-brand)]">{formatVndDemo(r.commissionAmount)}</span> },
+    { key: "status", header: "Trạng thái", render: (r) => <StatusBadge tone={toneOf[r.status]} dot>{commissionStatusLabel[r.status]}</StatusBadge> },
+    { key: "time", header: "Thời gian", render: (r) => <span className="text-xs text-[var(--adm-muted)]">{new Date(r.createdAt).toLocaleDateString("vi-VN")}</span> },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {(["PENDING", "ELIGIBLE", "PAID", "CANCELLED", "FLAGGED"] as const).map((k) => (
-          <div key={k} className="rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-3">
+          <Card key={k} padding="p-3">
             <p className="text-[11px] font-semibold text-[var(--adm-muted)]">
               {k === "FLAGGED" ? "Bị gắn cờ" : commissionStatusLabel[k as CommissionStatus]}
             </p>
-            <p className="mt-0.5 text-sm font-black text-[var(--adm-text)]">{formatVnd(summary[k]?.total ?? 0)}</p>
+            <p className="mt-0.5 text-sm font-black tabular-nums text-[var(--adm-text)]">{formatVndDemo(summary[k]?.total ?? 0)}</p>
             <p className="text-[11px] text-[var(--adm-muted)]">{summary[k]?.count ?? 0} khoản</p>
-          </div>
+          </Card>
         ))}
       </div>
 
@@ -136,7 +195,11 @@ function ListTab() {
           <button
             key={f.key}
             onClick={() => setStatus(f.key)}
-            className={`rounded-full border px-3 py-1.5 text-xs font-bold ${status === f.key ? "border-[var(--adm-brand)] bg-[var(--adm-brand-dim)] text-[var(--adm-brand)]" : "border-[var(--adm-border)] text-[var(--adm-muted)] hover:bg-white/5"}`}
+            className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+              status === f.key
+                ? "border-[var(--adm-brand)] bg-[var(--adm-brand-dim)] text-[var(--adm-brand)]"
+                : "border-[var(--adm-border)] text-[var(--adm-muted)] hover:bg-white/5"
+            }`}
           >
             {f.label}
           </button>
@@ -146,60 +209,33 @@ function ListTab() {
           onChange={(e) => setReferrer(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && load()}
           placeholder="Lọc theo referrerId..."
-          className="ml-auto rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface)] px-3 py-1.5 text-xs text-[var(--adm-text)] outline-none"
+          className="ml-auto rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-1.5 text-xs text-[var(--adm-text)] outline-none placeholder:text-[var(--adm-muted)] sm:w-56"
         />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <AdminButton variant="brand" disabled={busy || eligibleSelected.length === 0} onClick={() => disburse({ ids: eligibleSelected }, `giải ngân ${eligibleSelected.length} khoản đã chọn`)}>
+        <Button
+          variant="primary"
+          disabled={busy || eligibleSelected.length === 0}
+          onClick={() => disburse({ ids: eligibleSelected }, `giải ngân ${eligibleSelected.length} khoản đã chọn`)}
+        >
           <Send className="h-3.5 w-3.5" /> Giải ngân đã chọn ({eligibleSelected.length})
-        </AdminButton>
-        <AdminButton variant="success" disabled={busy} onClick={() => disburse({ all: true }, "giải ngân TẤT CẢ khoản đủ điều kiện")}>
+        </Button>
+        <Button variant="success" disabled={busy} onClick={() => disburse({ all: true }, "giải ngân TẤT CẢ khoản đủ điều kiện")}>
           <Send className="h-3.5 w-3.5" /> Giải ngân tất cả đủ điều kiện
-        </AdminButton>
+        </Button>
         {msg && <span className="text-xs font-semibold text-[var(--adm-muted)]">{msg}</span>}
       </div>
 
       {loading ? (
         <p className="text-sm text-[var(--adm-muted)]">Đang tải...</p>
-      ) : rows.length === 0 ? (
-        <AdminEmptyState>Không có khoản hoa hồng nào khớp bộ lọc.</AdminEmptyState>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)]">
-          <div className="grid grid-cols-[30px_1fr_1fr_110px_110px_130px] gap-2 border-b border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-4 py-2.5 text-xs font-bold text-[var(--adm-muted)]">
-            <span></span>
-            <span>Người giới thiệu</span>
-            <span>Người được mời / Đơn</span>
-            <span>Hoa hồng</span>
-            <span>Trạng thái</span>
-            <span>Thời gian</span>
-          </div>
-          {rows.map((r) => (
-            <div key={r.id} className="grid grid-cols-[30px_1fr_1fr_110px_110px_130px] items-center gap-2 border-b border-[var(--adm-border)] px-4 py-3 text-sm last:border-0">
-              <input
-                type="checkbox"
-                disabled={r.status !== "ELIGIBLE"}
-                checked={selected.has(r.id)}
-                onChange={() => toggle(r.id)}
-              />
-              <div className="min-w-0">
-                <p className="truncate font-bold text-[var(--adm-text)]">
-                  {r.referrer.name ?? r.referrer.username ?? r.referrer.email}
-                  {r.flagged && <Flag className="ml-1 inline h-3 w-3 text-[var(--adm-danger)]" />}
-                </p>
-                <p className="truncate text-[11px] text-[var(--adm-muted)]">{r.percentApplied}% · {formatVnd(r.orderAmount)}</p>
-                {r.flagged && r.flaggedReason && <p className="truncate text-[10.5px] text-[var(--adm-danger)]">{r.flaggedReason}</p>}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-[var(--adm-text)]">{r.referredName}</p>
-                <p className="truncate text-[11px] text-[var(--adm-muted)]">#{r.orderId.slice(-8)}</p>
-              </div>
-              <span className="font-bold text-[var(--adm-brand)]">{formatVnd(r.commissionAmount)}</span>
-              <AdminBadge variant={badgeOf[r.status]}>{commissionStatusLabel[r.status]}</AdminBadge>
-              <span className="text-[11px] text-[var(--adm-muted)]">{new Date(r.createdAt).toLocaleDateString("vi-VN")}</span>
-            </div>
-          ))}
-        </div>
+        <DataTable
+          columns={columns}
+          rows={rows}
+          rowKey={(r) => r.id}
+          empty={<EmptyState icon={Inbox} title="Không có khoản hoa hồng nào khớp bộ lọc" />}
+        />
       )}
     </div>
   );
@@ -231,7 +267,9 @@ function SettingsTab() {
     }
   };
   useEffect(() => {
-    (async () => { await load(); })();
+    (async () => {
+      await load();
+    })();
   }, []);
 
   const save = async () => {
@@ -255,7 +293,13 @@ function SettingsTab() {
   const toggleEnabled = async () => {
     if (!setting) return;
     const next = !setting.enabled;
-    if (!next && !confirm("Tắt hoa hồng giới thiệu? Hoa hồng MỚI sẽ ngừng phát sinh từ giờ. Hoa hồng đã ghi nhận trước đó KHÔNG bị huỷ và vẫn được giải ngân bình thường.")) return;
+    if (
+      !next &&
+      !confirm(
+        "Tắt hoa hồng giới thiệu? Hoa hồng MỚI sẽ ngừng phát sinh từ giờ. Hoa hồng đã ghi nhận trước đó KHÔNG bị huỷ và vẫn được giải ngân bình thường."
+      )
+    )
+      return;
     setToggling(true);
     const res = await fetch("/api/admin/commissions/toggle", {
       method: "POST",
@@ -270,35 +314,37 @@ function SettingsTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Kill switch bật/tắt hoa hồng */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 shadow-sm">
+      <Card className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-black text-[var(--adm-text)]">Tính năng hoa hồng giới thiệu</h3>
-            <AdminBadge variant={setting.enabled ? "success" : "neutral"}>
-              {setting.enabled ? "ĐANG BẬT" : "ĐÃ TẮT"}
-            </AdminBadge>
+            <StatusBadge tone={setting.enabled ? "success" : "neutral"}>{setting.enabled ? "ĐANG BẬT" : "ĐÃ TẮT"}</StatusBadge>
           </div>
           <p className="mt-1 max-w-xl text-[11px] text-[var(--adm-muted)]">
-            Tắt sẽ ngừng phát sinh hoa hồng MỚI kể từ thời điểm tắt. Hoa hồng đã ghi nhận (đủ điều kiện/đã giải ngân) KHÔNG bị huỷ và vẫn hiển thị + giải ngân bình thường. Bật lại chỉ áp dụng cho hoa hồng phát sinh sau đó.
+            Tắt sẽ ngừng phát sinh hoa hồng MỚI kể từ thời điểm tắt. Hoa hồng đã ghi nhận (đủ điều kiện/đã giải ngân)
+            KHÔNG bị huỷ và vẫn hiển thị + giải ngân bình thường. Bật lại chỉ áp dụng cho hoa hồng phát sinh sau đó.
           </p>
         </div>
-        <AdminButton variant={setting.enabled ? "danger" : "brand"} disabled={toggling} onClick={toggleEnabled}>
+        <Button variant={setting.enabled ? "danger" : "primary"} disabled={toggling} onClick={toggleEnabled}>
           {setting.enabled ? "Tắt hoa hồng" : "Bật hoa hồng"}
-        </AdminButton>
-      </div>
+        </Button>
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[380px_1fr]">
-        <AdminCard>
+        <Card>
           <h3 className="mb-1 text-sm font-black text-[var(--adm-text)]">Cấu hình %</h3>
           <p className="mb-3 text-[11px] text-[var(--adm-muted)]">
-            Ràng buộc: % hoa hồng phải NHỎ HƠN phí sàn / 2 = <b className="text-[var(--adm-text)]">{maxCommission}%</b> (phí sàn hiện tại {feeDefault}%). % mới chỉ áp dụng cho hoa hồng phát sinh sau, không hồi tố.
+            Ràng buộc: % hoa hồng phải NHỎ HƠN phí sàn / 2 = <b className="text-[var(--adm-text)]">{maxCommission}%</b> (phí sàn hiện tại{" "}
+            {feeDefault}%). % mới chỉ áp dụng cho hoa hồng phát sinh sau, không hồi tố.
           </p>
           <label className="mb-1 block text-xs font-semibold text-[var(--adm-muted)]">% hoa hồng</label>
-          <input type="number" step="0.1" value={commission} onChange={(e) => setCommission(e.target.value)} className="mb-1 w-full rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-2 text-sm text-[var(--adm-text)] outline-none" />
-          <p className="mb-3 text-[11px] text-[var(--adm-muted)]">
-            Phí sàn ({feeDefault}%) chỉnh riêng ở mục <b className="text-[var(--adm-text)]">Phí sàn</b>. Phần sàn thực thu ròng = phí sàn − hoa hồng.
-          </p>
+          <input
+            type="number"
+            step="0.1"
+            value={commission}
+            onChange={(e) => setCommission(e.target.value)}
+            className="mb-3 w-full rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-2 text-sm text-[var(--adm-text)] outline-none"
+          />
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="mb-1 block text-xs font-semibold text-[var(--adm-muted)]">Trần/kỳ (đ, 0=∞)</label>
@@ -315,13 +361,13 @@ function SettingsTab() {
             </p>
           )}
           <div className="mt-4">
-            <AdminButton variant="brand" disabled={busy} onClick={save}>
+            <Button variant="primary" disabled={busy} onClick={save}>
               <Save className="h-3.5 w-3.5" /> Lưu cấu hình
-            </AdminButton>
+            </Button>
           </div>
-        </AdminCard>
+        </Card>
 
-        <AdminCard>
+        <Card>
           <h3 className="mb-3 text-sm font-black text-[var(--adm-text)]">Lịch sử đổi %</h3>
           {history.length === 0 ? (
             <p className="text-xs text-[var(--adm-muted)]">Chưa có thay đổi nào.</p>
@@ -337,7 +383,7 @@ function SettingsTab() {
               ))}
             </div>
           )}
-        </AdminCard>
+        </Card>
       </div>
     </div>
   );

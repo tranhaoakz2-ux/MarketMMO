@@ -1,4 +1,4 @@
-import { AdminPageHeader } from "@/components/admin/AdminUi";
+import { PageHeader } from "@/components/admin-demo/AdminDemoKit";
 import { requireAdminPage } from "@/lib/authz";
 import AdminUsersPanel from "@/components/admin/AdminUsersPanel";
 
@@ -7,10 +7,10 @@ export const dynamic = "force-dynamic";
 export default async function AdminUsersPage() {
   await requireAdminPage();
   return (
-    <div>
-      <AdminPageHeader
+    <div className="flex flex-col gap-6">
+      <PageHeader
         title="Người dùng"
-        sub="Tìm kiếm và quản lý toàn bộ tài khoản trên nền tảng. Khoá tài khoản chặn đăng nhập và mọi thao tác cần xác thực (mua hàng, chat, đăng bài...)."
+        subtitle="Tìm kiếm và quản lý toàn bộ tài khoản trên nền tảng. Khoá tài khoản chặn đăng nhập và mọi thao tác cần xác thực (mua hàng, chat, đăng bài...)."
       />
       <AdminUsersPanel />
     </div>
