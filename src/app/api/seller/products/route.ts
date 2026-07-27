@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireSeller } from "@/lib/authz";
+import {
+  SERVICE_CREDENTIAL_MAX_WINDOW_HOURS,
+  SERVICE_CREDENTIAL_MIN_WINDOW_HOURS,
+  SERVICE_DELIVERY_METHODS,
+  SERVICE_FIELD_INPUT_TYPES,
+} from "@/lib/constants";
 import { getMySellerProducts } from "@/lib/queries";
 import { prisma } from "@/lib/prisma";
-import { slugifyProduct } from "@/lib/slug";
+import { slugifyFieldKey, slugifyProduct } from "@/lib/slug";
 import { saveProductImage } from "@/lib/uploads";
 
 export async function GET() {
@@ -70,6 +76,104 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Vui lòng chọn ảnh sản phẩm." }, { status: 400 });
   }
 
+  // Dịch vụ: buyer phải cung cấp thông tin (tài khoản/link/mật khẩu...) cho
+  // seller thực hiện — xem model ServiceFieldDefinition. productType mặc
+  // định "PRODUCT" nếu client không gửi (form cũ/chưa cập nhật UI).
+  const productTypeRaw = String(form.get("productType") ?? "PRODUCT").trim().toUpperCase();
+  if (productTypeRaw !== "PRODUCT" && productTypeRaw !== "SERVICE") {
+    return NextResponse.json({ error: "Loại sản phẩm không hợp lệ." }, { status: 400 });
+  }
+  const productType = productTypeRaw as "PRODUCT" | "SERVICE";
+
+  let serviceDeliveryMethods: string[] = [];
+  let credentialViewWindowHours: number | null = null;
+  const serviceFieldsData: {
+    fieldKey: string;
+    label: string;
+    inputType: string;
+    required: boolean;
+    sortOrder: number;
+  }[] = [];
+
+  if (productType === "SERVICE") {
+    let deliveryParsed: unknown;
+    try {
+      deliveryParsed = JSON.parse(String(form.get("serviceDeliveryMethods") ?? ""));
+    } catch {
+      deliveryParsed = null;
+    }
+    if (Array.isArray(deliveryParsed)) {
+      serviceDeliveryMethods = deliveryParsed.filter(
+        (m): m is string =>
+          typeof m === "string" && (SERVICE_DELIVERY_METHODS as readonly string[]).includes(m)
+      );
+    }
+    if (serviceDeliveryMethods.length === 0) {
+      return NextResponse.json(
+        { error: "Vui lòng chọn ít nhất 1 phương thức bàn giao hợp lệ." },
+        { status: 400 }
+      );
+    }
+
+    const windowRaw = form.get("credentialViewWindowHours");
+    if (windowRaw !== null && String(windowRaw).trim() !== "") {
+      const windowNum = Number(windowRaw);
+      if (
+        !Number.isInteger(windowNum) ||
+        windowNum < SERVICE_CREDENTIAL_MIN_WINDOW_HOURS ||
+        windowNum > SERVICE_CREDENTIAL_MAX_WINDOW_HOURS
+      ) {
+        return NextResponse.json(
+          {
+            error: `Cửa sổ xem thông tin phải từ ${SERVICE_CREDENTIAL_MIN_WINDOW_HOURS} đến ${SERVICE_CREDENTIAL_MAX_WINDOW_HOURS} giờ (để trống dùng mặc định).`,
+          },
+          { status: 400 }
+        );
+      }
+      credentialViewWindowHours = windowNum;
+    }
+
+    let fieldsParsed: unknown;
+    try {
+      fieldsParsed = JSON.parse(String(form.get("serviceFields") ?? ""));
+    } catch {
+      fieldsParsed = null;
+    }
+    if (!Array.isArray(fieldsParsed) || fieldsParsed.length === 0) {
+      return NextResponse.json(
+        { error: "Vui lòng khai ít nhất 1 trường buyer cần nhập cho dịch vụ." },
+        { status: 400 }
+      );
+    }
+    const usedKeys = new Set<string>();
+    for (const raw of fieldsParsed as Record<string, unknown>[]) {
+      const label = typeof raw?.label === "string" ? raw.label.trim() : "";
+      const inputType = typeof raw?.inputType === "string" ? raw.inputType : "";
+      if (label.length < 2 || label.length > 100) {
+        return NextResponse.json(
+          { error: `Nhãn trường "${label || "(trống)"}" phải từ 2-100 ký tự.` },
+          { status: 400 }
+        );
+      }
+      if (!(SERVICE_FIELD_INPUT_TYPES as readonly string[]).includes(inputType)) {
+        return NextResponse.json(
+          { error: `Loại trường không hợp lệ cho "${label}".` },
+          { status: 400 }
+        );
+      }
+      const fieldKey = slugifyFieldKey(label, usedKeys);
+      usedKeys.add(fieldKey);
+      serviceFieldsData.push({
+        fieldKey,
+        label,
+        inputType,
+        // Mặc định bắt buộc trừ khi client gửi tường minh required:false.
+        required: raw?.required !== false,
+        sortOrder: serviceFieldsData.length,
+      });
+    }
+  }
+
   // Chỉ cho gán vào danh mục APPROVED hoặc PENDING (đang chờ duyệt) — chặn hẳn
   // category REJECTED (hoặc không tồn tại) để sản phẩm không treo ở danh mục đã
   // bị từ chối/ẩn. Nhất quán với getSellerVisibleCategories() dùng cho dropdown.
@@ -100,20 +204,32 @@ export async function POST(req: Request) {
     slug = `${slug}-${Date.now().toString(36)}`;
   }
 
-  const product = await prisma.product.create({
-    data: {
-      slug,
-      name,
-      shortDescription,
-      description: JSON.stringify(description),
-      attributes: JSON.stringify([]),
-      price,
-      stock,
-      imageUrl,
-      status: "PENDING",
-      categoryId,
-      sellerId: seller!.id,
-    },
+  const product = await prisma.$transaction(async (tx) => {
+    const p = await tx.product.create({
+      data: {
+        slug,
+        name,
+        shortDescription,
+        description: JSON.stringify(description),
+        attributes: JSON.stringify([]),
+        price,
+        stock,
+        imageUrl,
+        status: "PENDING",
+        categoryId,
+        sellerId: seller!.id,
+        productType,
+        serviceDeliveryMethods:
+          productType === "SERVICE" ? JSON.stringify(serviceDeliveryMethods) : null,
+        credentialViewWindowHours: productType === "SERVICE" ? credentialViewWindowHours : null,
+      },
+    });
+    if (productType === "SERVICE") {
+      await tx.serviceFieldDefinition.createMany({
+        data: serviceFieldsData.map((f) => ({ ...f, productId: p.id })),
+      });
+    }
+    return p;
   });
 
   return NextResponse.json({ id: product.id, slug: product.slug });

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logAdminAction } from "@/lib/audit";
 import { finalizeOrderCommission } from "@/lib/commission";
 import { fullRefundDispute } from "@/lib/disputes";
+import { purgeServiceIntakeSecrets } from "@/lib/service-intake";
 
 export async function POST(
   req: Request,
@@ -89,6 +90,7 @@ export async function POST(
       });
       if (gate.count === 0) return false;
       await t.orderItem.update({ where: { id: item.id }, data: { status: "RELEASED" } });
+      await purgeServiceIntakeSecrets(t, item.id);
       // Hoàn phần cho buyer.
       await t.user.update({
         where: { id: order.buyerId },
@@ -159,6 +161,7 @@ export async function POST(
       });
       if (gate.count === 0) return false;
       await t.orderItem.update({ where: { id: item.id }, data: { status: "RELEASED" } });
+      await purgeServiceIntakeSecrets(t, item.id);
       await t.user.update({
         where: { id: seller.userId },
         data: { walletBalance: { increment: sellerCredit } },

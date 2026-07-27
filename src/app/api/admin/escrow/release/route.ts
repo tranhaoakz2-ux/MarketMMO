@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { logAdminAction } from "@/lib/audit";
 import { finalizeOrderCommission } from "@/lib/commission";
+import { purgeServiceIntakeSecrets } from "@/lib/service-intake";
 
 export async function POST() {
   const { session, error } = await requireAdmin();
@@ -34,6 +35,7 @@ export async function POST() {
         data: { status: "RELEASED" },
       });
       if (gate.count === 0) return false;
+      await purgeServiceIntakeSecrets(t, item.id);
       await t.user.update({
         where: { id: seller.userId },
         data: { walletBalance: { increment: sellerCredit } },

@@ -13,6 +13,7 @@ const productInclude = {
   category: true,
   seller: { include: { user: true } },
   variants: { orderBy: { sortOrder: "asc" } },
+  serviceFields: { orderBy: { sortOrder: "asc" } },
 } satisfies Prisma.ProductInclude;
 
 type ProductWithRelations = Prisma.ProductGetPayload<{ include: typeof productInclude }>;
@@ -53,6 +54,18 @@ function mapProduct(p: ProductWithRelations): Product {
       price: v.price,
       stock: v.stock,
       sold: v.sold,
+    })),
+    productType: p.productType as "PRODUCT" | "SERVICE",
+    serviceDeliveryMethods: p.serviceDeliveryMethods
+      ? (JSON.parse(p.serviceDeliveryMethods) as string[])
+      : undefined,
+    credentialViewWindowHours: p.credentialViewWindowHours ?? undefined,
+    serviceFields: p.serviceFields.map((f) => ({
+      id: f.id,
+      fieldKey: f.fieldKey,
+      label: f.label,
+      inputType: f.inputType as "text" | "url" | "textarea" | "secret",
+      required: f.required,
     })),
   };
 }
@@ -380,18 +393,31 @@ export async function getSellerWalletSummary(userId: string, sellerId: string) {
 }
 
 export async function getSellerOrderItems(sellerId: string, { service }: { service: boolean }) {
+  // Ưu tiên productType (field DB thật) — SERVICE_CATEGORY_SLUGS chỉ còn là
+  // fallback lịch sử, đã backfill đủ productType cho toàn bộ sản phẩm cũ
+  // thuộc 3 category đó (xem prisma/pending-sql/2026-07-28-service-orders.sql)
+  // nên trong thực tế 2 điều kiện hiện cho kết quả giống hệt nhau — giữ OR
+  // với heuristic cũ chỉ để phòng trường hợp hiếm: sản phẩm tạo NGOÀI luồng
+  // POST /api/seller/products (vd chèn tay qua Prisma Studio) thiếu productType.
   const rows = await prisma.orderItem.findMany({
     where: {
       sellerId,
-      product: {
-        category: {
-          slug: service ? { in: SERVICE_CATEGORY_SLUGS } : { notIn: SERVICE_CATEGORY_SLUGS },
-        },
-      },
+      product: service
+        ? {
+            OR: [
+              { productType: "SERVICE" },
+              { category: { slug: { in: SERVICE_CATEGORY_SLUGS } } },
+            ],
+          }
+        : {
+            productType: "PRODUCT",
+            category: { slug: { notIn: SERVICE_CATEGORY_SLUGS } },
+          },
     },
     include: {
       product: { include: { category: true } },
       order: { include: { buyer: { select: { name: true, username: true, email: true } } } },
+      serviceIntake: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -409,6 +435,18 @@ export async function getSellerOrderItems(sellerId: string, { service }: { servi
     status: item.status as OrderStatus,
     escrowReleaseAt: item.escrowReleaseAt,
     createdAt: item.createdAt,
+    serviceIntake: item.serviceIntake
+      ? {
+          deliveryMethod: item.serviceIntake.deliveryMethod,
+          publicFields: item.serviceIntake.publicFields
+            ? (JSON.parse(item.serviceIntake.publicFields) as Record<string, string>)
+            : {},
+          hasSecretFields: Boolean(item.serviceIntake.encryptedFields),
+          sellerAcceptedAt: item.serviceIntake.sellerAcceptedAt,
+          sensitiveRevealDeadline: item.serviceIntake.sensitiveRevealDeadline,
+          sensitivePurgedAt: item.serviceIntake.sensitivePurgedAt,
+        }
+      : null,
   }));
 }
 

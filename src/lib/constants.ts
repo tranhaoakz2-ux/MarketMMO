@@ -139,8 +139,52 @@ export const walletTxTypeLabel: Record<WalletTxType, string> = {
 
 // Category nào được coi là "dịch vụ" khi seller xem đơn hàng trong Trang Bán
 // Hàng — tái dùng đúng heuristic đã dùng ở NavMegaMenu (mục "Dịch vụ" trên nav
-// chính) vì schema chưa tách bảng dịch vụ khỏi sản phẩm, không phải field DB thật.
+// chính). TỪ KHI CÓ Product.productType (xem mục "Thời hạn sử dụng dịch vụ"),
+// đây chỉ còn là FALLBACK cho sản phẩm cũ chưa từng được backfill/gắn field
+// definition — getSellerOrderItems() ưu tiên productType, chỉ dùng slug này
+// khi productType không đủ tin cậy. Không xoá vì vẫn còn nơi tham chiếu.
 export const SERVICE_CATEGORY_SLUGS = ["boosting", "chatgpt", "youtube"];
+
+// ── Dịch vụ: buyer cung cấp thông tin (tài khoản/link/mật khẩu...) cho
+// seller thực hiện — xem model ServiceFieldDefinition/ServiceIntake/
+// ServiceCredentialAccessLog trong prisma/schema.prisma. ──
+
+// Mã phương thức bàn giao hợp lệ cho Product.serviceDeliveryMethods — seller
+// khai TẬP HỢP mã được chấp nhận, buyer chọn 1 trong đó lúc đặt đơn. Sắp xếp
+// THEO THỨ TỰ AN TOÀN GIẢM DẦN (UI dùng đúng thứ tự này để gợi ý phương án
+// an toàn nhất được phép) — đừng đổi thứ tự khi thêm mã mới.
+export const SERVICE_DELIVERY_METHODS = [
+  "add_as_admin",
+  "app_password",
+  "full_credential",
+] as const;
+export type ServiceDeliveryMethod = (typeof SERVICE_DELIVERY_METHODS)[number];
+
+export const SERVICE_DELIVERY_METHOD_LABEL: Record<ServiceDeliveryMethod, string> = {
+  add_as_admin: "Thêm làm quản trị viên/cộng tác viên (an toàn nhất — không cần chia sẻ mật khẩu)",
+  app_password: "Mật khẩu ứng dụng/token riêng (thu hồi được, không phải mật khẩu chính)",
+  full_credential: "Tài khoản + mật khẩu đầy đủ (rủi ro cao nhất — chỉ dùng khi không còn cách khác)",
+};
+
+// Cửa sổ mặc định (giờ) seller được xem field nhạy cảm sau khi "Nhận đơn"
+// dịch vụ, áp dụng khi seller bỏ trống Product.credentialViewWindowHours lúc
+// đăng dịch vụ. KHÁC WARRANTY_WINDOW_HOURS (đó là SLA xử lý khiếu nại).
+export const SERVICE_CREDENTIAL_DEFAULT_WINDOW_HOURS = 48;
+export const SERVICE_CREDENTIAL_MIN_WINDOW_HOURS = 1;
+export const SERVICE_CREDENTIAL_MAX_WINDOW_HOURS = 168;
+
+// Loại input field seller có thể khai cho 1 dịch vụ — "secret" là NGUỒN DUY
+// NHẤT xác định "nhạy cảm" (đi vào ServiceIntake.encryptedFields), các loại
+// khác luôn plaintext (ServiceIntake.publicFields). Xem src/lib/service-intake.ts.
+export const SERVICE_FIELD_INPUT_TYPES = ["text", "url", "textarea", "secret"] as const;
+export type ServiceFieldInputType = (typeof SERVICE_FIELD_INPUT_TYPES)[number];
+
+export const SERVICE_FIELD_INPUT_TYPE_LABEL: Record<ServiceFieldInputType, string> = {
+  text: "Văn bản ngắn (vd tài khoản, tên đăng nhập)",
+  url: "Đường link (vd trang cá nhân, bài viết mục tiêu)",
+  textarea: "Văn bản nhiều dòng (vd ghi chú, yêu cầu)",
+  secret: "Bí mật — LUÔN mã hoá (vd mật khẩu, mã OTP/2FA)",
+};
 
 // Mức quỹ bảo hiểm gợi ý hiển thị cho seller (KHÔNG bắt buộc, chỉ mang tính
 // khuyến khích/tín nhiệm — MarketMMO không chặn tính năng bán hàng như shopmini.pro).

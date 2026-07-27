@@ -1,13 +1,23 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authz";
-import { ESCROW_HOLD_DAYS } from "@/lib/constants";
+import { ESCROW_HOLD_DAYS, SERVICE_DELIVERY_METHODS } from "@/lib/constants";
 import { accrueCommission } from "@/lib/commission";
 import { feeAmountOf, getEffectiveFeePercent } from "@/lib/platform-fee";
 import { computeDiscountAmount, distributeDiscount, isDiscountCodeUsable } from "@/lib/discount";
 import { computeProratedPrice } from "@/lib/prorate";
+import { encryptSensitiveFields } from "@/lib/service-crypto";
+import { splitServiceFieldValues } from "@/lib/service-intake";
 import { prisma } from "@/lib/prisma";
 
-type CheckoutItem = { productId: string; variantId?: string; quantity: number };
+type CheckoutItem = {
+  productId: string;
+  variantId?: string;
+  quantity: number;
+  // Chỉ cần khi sản phẩm là dịch vụ (product.productType === "SERVICE") —
+  // xem model ServiceIntake. `values` khớp theo fieldKey của
+  // ServiceFieldDefinition đã seller khai cho đúng sản phẩm này.
+  serviceInput?: { deliveryMethod: string; values?: Record<string, string>; note?: string };
+};
 
 export async function POST(req: Request) {
   // Dùng requireUser() (không phải await auth() trực tiếp) để cùng chặn tài
@@ -49,6 +59,19 @@ export async function POST(req: Request) {
         // Snapshot ngày hết hạn của (các) đơn vị đã claim — JSON mảng cùng
         // cấu trúc/thứ tự với deliveredPayload, null nếu không dùng kho thật.
         deliveredExpiresAt: string | null;
+        // Dữ liệu buyer cung cấp cho dòng hàng DỊCH VỤ (xem model
+        // ServiceIntake) — null nếu không phải dịch vụ. Tạo SAU khi có
+        // orderItem.id nên chỉ mang theo dữ liệu đã chuẩn bị sẵn (mã hoá rồi)
+        // qua bước tạo OrderItem bên dưới.
+        serviceIntakeData: {
+          deliveryMethod: string;
+          publicFields: string | null;
+          encryptedFields: string | null;
+          encryptionIv: string | null;
+          encryptionAuthTag: string | null;
+          encryptionKeyVersion: number | null;
+          preHandoffSnapshot: string | null;
+        } | null;
         // true = dòng hàng dùng "kho số học" (Product.stock/Variant.stock) và
         // KHÔNG phải preOrder → phải trừ kho CÓ ĐIỀU KIỆN (nguyên tử) để chặn
         // oversell khi 2 buyer mua song song (bug B3). false = đã claim kho
@@ -65,6 +88,10 @@ export async function POST(req: Request) {
         let unitPrice = product.price;
         let variantLabel: string | undefined;
         let variant: (typeof product.variants)[number] | undefined;
+        // Dịch vụ không có khái niệm "tồn kho" (buyer đặt lượt thực hiện, không
+        // trừ đơn vị hàng có sẵn) — Product.stock của dịch vụ luôn để 0 và
+        // KHÔNG được dùng để chặn/trừ như sản phẩm thường.
+        const isService = product.productType === "SERVICE";
 
         if (item.variantId) {
           variant = product.variants.find((v) => v.id === item.variantId);
@@ -153,7 +180,7 @@ export async function POST(req: Request) {
             }, 0);
             unitPrice = Math.floor(lineTotal / item.quantity);
           }
-        } else if (!product.preOrder) {
+        } else if (!product.preOrder && !isService) {
           if (item.variantId) {
             if (variant!.stock < item.quantity) {
               throw new Error(`"${displayLabel}" không đủ tồn kho.`);
@@ -161,6 +188,76 @@ export async function POST(req: Request) {
           } else if (product.stock < item.quantity) {
             throw new Error(`"${product.name}" không đủ tồn kho.`);
           }
+        }
+
+        // Dịch vụ: buyer PHẢI cung cấp đủ thông tin seller cần để thực hiện —
+        // xem model ServiceFieldDefinition/ServiceIntake. Field "secret" (mật
+        // khẩu/OTP) mã hoá NGAY tại đây, TRƯỚC khi tạo OrderItem — không bao
+        // giờ có thời điểm nào plaintext của field secret được ghi vào biến
+        // ngoài phạm vi hàm encryptSensitiveFields().
+        let serviceIntakeData:
+          | (typeof itemsToCreate)[number]["serviceIntakeData"]
+          | null = null;
+        if (product.productType === "SERVICE") {
+          if (item.quantity !== 1) {
+            throw new Error(
+              `"${displayLabel}" là dịch vụ — chỉ đặt được số lượng 1 mỗi lần, vui lòng đặt riêng nếu cần nhiều lượt.`
+            );
+          }
+          const allowedMethods: string[] = product.serviceDeliveryMethods
+            ? JSON.parse(product.serviceDeliveryMethods)
+            : [];
+          const chosenMethod = item.serviceInput?.deliveryMethod;
+          if (
+            !chosenMethod ||
+            !allowedMethods.includes(chosenMethod) ||
+            !(SERVICE_DELIVERY_METHODS as readonly string[]).includes(chosenMethod)
+          ) {
+            throw new Error(`Vui lòng chọn phương thức bàn giao hợp lệ cho "${displayLabel}".`);
+          }
+
+          const fieldDefs = await tx.serviceFieldDefinition.findMany({
+            where: { productId: product.id },
+            orderBy: { sortOrder: "asc" },
+          });
+          if (fieldDefs.length === 0) {
+            throw new Error(
+              `"${displayLabel}" chưa được người bán cấu hình đủ thông tin cần thiết — vui lòng liên hệ người bán.`
+            );
+          }
+          const { publicFields, secretFields, missingLabels } = splitServiceFieldValues(
+            fieldDefs,
+            item.serviceInput?.values ?? {}
+          );
+          if (missingLabels.length > 0) {
+            throw new Error(`Vui lòng nhập đủ thông tin: ${missingLabels.join(", ")}.`);
+          }
+
+          let encrypted: ReturnType<typeof encryptSensitiveFields> | null = null;
+          if (Object.keys(secretFields).length > 0) {
+            try {
+              encrypted = encryptSensitiveFields(secretFields);
+            } catch {
+              // Không log chi tiết lỗi gốc (tránh rò rỉ thông tin nội bộ) —
+              // đây LÀ nhánh fail-closed bắt buộc khi thiếu
+              // SERVICE_CREDENTIAL_ENCRYPTION_KEY, xem src/lib/service-crypto.ts.
+              throw new Error(
+                "Hệ thống chưa sẵn sàng nhận đơn dịch vụ có thông tin nhạy cảm lúc này, vui lòng thử lại sau hoặc liên hệ hỗ trợ."
+              );
+            }
+          }
+
+          const note = typeof item.serviceInput?.note === "string" ? item.serviceInput.note.trim() : "";
+
+          serviceIntakeData = {
+            deliveryMethod: chosenMethod,
+            publicFields: Object.keys(publicFields).length > 0 ? JSON.stringify(publicFields) : null,
+            encryptedFields: encrypted?.ciphertext ?? null,
+            encryptionIv: encrypted?.iv ?? null,
+            encryptionAuthTag: encrypted?.authTag ?? null,
+            encryptionKeyVersion: encrypted?.keyVersion ?? null,
+            preHandoffSnapshot: note ? JSON.stringify({ note }) : null,
+          };
         }
 
         total += unitPrice * item.quantity;
@@ -175,9 +272,11 @@ export async function POST(req: Request) {
           claimedStockItemIds,
           deliveredPayload,
           deliveredExpiresAt,
-          // Chỉ cần trừ kho có điều kiện khi dùng kho số học + không preOrder.
+          serviceIntakeData,
+          // Chỉ cần trừ kho có điều kiện khi dùng kho số học + không preOrder +
+          // không phải dịch vụ (dịch vụ không có tồn kho để trừ).
           // Kho thật đã claim nguyên tử ở trên; preOrder cho phép âm.
-          guardLegacyStock: stockItemTotal === 0 && !product.preOrder,
+          guardLegacyStock: stockItemTotal === 0 && !product.preOrder && !isService,
         });
       }
 
@@ -296,6 +395,21 @@ export async function POST(req: Request) {
           await tx.productStockItem.updateMany({
             where: { id: { in: item.claimedStockItemIds } },
             data: { orderItemId: orderItem.id },
+          });
+        }
+
+        if (item.serviceIntakeData) {
+          await tx.serviceIntake.create({
+            data: {
+              orderItemId: orderItem.id,
+              deliveryMethod: item.serviceIntakeData.deliveryMethod,
+              publicFields: item.serviceIntakeData.publicFields,
+              encryptedFields: item.serviceIntakeData.encryptedFields,
+              encryptionIv: item.serviceIntakeData.encryptionIv,
+              encryptionAuthTag: item.serviceIntakeData.encryptionAuthTag,
+              encryptionKeyVersion: item.serviceIntakeData.encryptionKeyVersion,
+              preHandoffSnapshot: item.serviceIntakeData.preHandoffSnapshot,
+            },
           });
         }
 

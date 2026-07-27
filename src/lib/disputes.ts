@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { finalizeOrderCommission } from "@/lib/commission";
+import { purgeServiceIntakeSecrets } from "@/lib/service-intake";
 
 // HOÀN TOÀN BỘ 1 khiếu nại — DÙNG CHUNG cho admin (POST /api/admin/disputes/[id]
 // action refund_buyer) và seller tự bảo hành (POST /api/seller/disputes/[id]
@@ -37,6 +38,9 @@ export async function fullRefundDispute(
     });
     if (gate.count === 0) return false;
     await t.orderItem.update({ where: { id: item.id }, data: { status: "CANCELLED" } });
+    // Đơn rời ESCROW an toàn — xoá cứng field nhạy cảm dịch vụ (nếu có, xem
+    // model ServiceIntake). No-op cho đơn không phải dịch vụ.
+    await purgeServiceIntakeSecrets(t, item.id);
     // Đốt kho đã giao cho đúng đơn này: SOLD→BURNED (không quay về AVAILABLE).
     await t.productStockItem.updateMany({
       where: { orderItemId: item.id, status: "SOLD" },

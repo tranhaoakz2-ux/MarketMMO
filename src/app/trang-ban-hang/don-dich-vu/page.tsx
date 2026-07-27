@@ -14,9 +14,9 @@ export default async function SellerServiceOrdersPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Đơn dịch vụ"
-        subtitle="Đơn hàng thuộc danh mục dịch vụ (Boosting, ChatGPT, YouTube)."
+        subtitle="Đơn hàng dịch vụ (buyer cung cấp thông tin để bạn thực hiện) và các danh mục dịch vụ cũ (Boosting, ChatGPT, YouTube)."
       />
-      <SellerOrdersTable items={items} emptyLabel="Chưa có đơn hàng dịch vụ nào." />
+      <SellerOrdersTable items={items} emptyLabel="Chưa có đơn hàng dịch vụ nào." showServiceColumn />
     </div>
   );
 }

@@ -23,6 +23,7 @@ import ProductInfoTabs from "@/components/ProductInfoTabs";
 import ProductThumbnail from "@/components/ProductThumbnail";
 import RatingStars from "@/components/RatingStars";
 import Reveal from "@/components/Reveal";
+import ServiceBuyBox from "@/components/ServiceBuyBox";
 import { formatLastActive, formatVnd } from "@/lib/format";
 import { getRecentForumPosts } from "@/lib/forum";
 import { getProductBySlugDb, getRelatedProductsDb, getSellerReviews } from "@/lib/queries";
@@ -174,7 +175,11 @@ export default async function ProductDetailPage({
                 </div>
               )}
 
-              <BuyBox product={product} />
+              {product.productType === "SERVICE" ? (
+                <ServiceBuyBox product={product} />
+              ) : (
+                <BuyBox product={product} />
+              )}
             </div>
           </Reveal>
         </div>

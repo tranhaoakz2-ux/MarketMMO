@@ -2,8 +2,26 @@
 
 import { Check, ImagePlus, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import {
+  SERVICE_DELIVERY_METHOD_LABEL,
+  SERVICE_DELIVERY_METHODS,
+  SERVICE_FIELD_INPUT_TYPE_LABEL,
+  SERVICE_FIELD_INPUT_TYPES,
+  type ServiceDeliveryMethod,
+  type ServiceFieldInputType,
+} from "@/lib/constants";
 
 type Category = { id: string; slug: string; name: string; emoji: string };
+
+// Field buyer phải nhập khi đặt dịch vụ này (seller tự khai) — xem model
+// ServiceFieldDefinition. `inputType==="secret"` là NGUỒN DUY NHẤT đánh dấu
+// nhạy cảm (mật khẩu/OTP), server tự mã hoá field đó khi buyer checkout.
+type DraftServiceField = {
+  key: string;
+  label: string;
+  inputType: ServiceFieldInputType;
+  required: boolean;
+};
 
 // Phiên bản nháp — seller điền ngay trong lúc đăng sản phẩm (thay vì phải
 // quay lại sau qua ProductVariantManager). `stockItems` là nội dung kho
@@ -104,6 +122,38 @@ export default function AddProductForm({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Dịch vụ: buyer phải cung cấp thông tin (tài khoản/link/mật khẩu...) cho
+  // seller thực hiện — xem model ServiceFieldDefinition/ServiceIntake. Ẩn
+  // hẳn khối "Phiên bản/Kho dữ liệu giao hàng thật" (dành cho PRODUCT, nơi
+  // SELLER giao sẵn nội dung) khi chọn Dịch vụ — 2 khái niệm không áp dụng
+  // cùng lúc cho 1 sản phẩm trong phạm vi tính năng này.
+  const [productType, setProductType] = useState<"PRODUCT" | "SERVICE">("PRODUCT");
+  const [serviceDeliveryMethods, setServiceDeliveryMethods] = useState<ServiceDeliveryMethod[]>([]);
+  const [credentialViewWindowHours, setCredentialViewWindowHours] = useState("");
+  const [serviceFields, setServiceFields] = useState<DraftServiceField[]>([]);
+
+  const toggleServiceDeliveryMethod = (method: ServiceDeliveryMethod) => {
+    setServiceDeliveryMethods((prev) =>
+      prev.includes(method) ? prev.filter((m) => m !== method) : [...prev, method]
+    );
+  };
+  const addServiceField = () => {
+    setServiceFields((prev) => [
+      ...prev,
+      { key: crypto.randomUUID(), label: "", inputType: "text", required: true },
+    ]);
+  };
+  const removeServiceField = (key: string) => {
+    setServiceFields((prev) => prev.filter((f) => f.key !== key));
+  };
+  const updateServiceField = <K extends keyof DraftServiceField>(
+    key: string,
+    field: K,
+    value: DraftServiceField[K]
+  ) => {
+    setServiceFields((prev) => prev.map((f) => (f.key === key ? { ...f, [field]: value } : f)));
+  };
 
   const addVariantRow = () => {
     setVariants((prev) => [
@@ -218,6 +268,10 @@ export default function AddProductForm({
     setBaseNominalTermDays("30");
     setBaseExpiresAtItems("");
     setVariants([]);
+    setProductType("PRODUCT");
+    setServiceDeliveryMethods([]);
+    setCredentialViewWindowHours("");
+    setServiceFields([]);
   };
 
   // Đăng sản phẩm + phiên bản + nhập kho TRONG CÙNG 1 LẦN GỬI — thay vì phải
@@ -242,6 +296,22 @@ export default function AddProductForm({
         return;
       }
     }
+    if (productType === "SERVICE") {
+      if (serviceDeliveryMethods.length === 0) {
+        setError("Vui lòng chọn ít nhất 1 phương thức bàn giao cho dịch vụ.");
+        return;
+      }
+      if (serviceFields.length === 0) {
+        setError("Vui lòng khai ít nhất 1 trường thông tin buyer cần nhập cho dịch vụ.");
+        return;
+      }
+      for (const f of serviceFields) {
+        if (f.label.trim().length < 2) {
+          setError("Vui lòng điền đủ nhãn (tối thiểu 2 ký tự) cho mọi trường thông tin dịch vụ.");
+          return;
+        }
+      }
+    }
 
     setLoading(true);
     const form = new FormData();
@@ -255,6 +325,23 @@ export default function AddProductForm({
     // trùng nếu seller lỡ điền cả 2 nơi.
     form.append("stock", variants.length === 0 && baseStockItems.trim() ? "0" : stock);
     form.append("image", image);
+    form.append("productType", productType);
+    if (productType === "SERVICE") {
+      form.append("serviceDeliveryMethods", JSON.stringify(serviceDeliveryMethods));
+      if (credentialViewWindowHours.trim()) {
+        form.append("credentialViewWindowHours", credentialViewWindowHours.trim());
+      }
+      form.append(
+        "serviceFields",
+        JSON.stringify(
+          serviceFields.map((f) => ({
+            label: f.label.trim(),
+            inputType: f.inputType,
+            required: f.required,
+          }))
+        )
+      );
+    }
 
     const res = await fetch("/api/seller/products", { method: "POST", body: form });
     const data = await res.json().catch(() => null);
@@ -358,6 +445,40 @@ export default function AddProductForm({
         >
           <X className="h-4 w-4" />
         </button>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-sm font-semibold text-foreground">Loại sản phẩm</label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setProductType("PRODUCT")}
+            className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
+              productType === "PRODUCT"
+                ? "border-brand bg-brand text-ink"
+                : "border-border-c bg-surface text-foreground hover:border-brand-dark"
+            }`}
+          >
+            Sản phẩm
+            <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
+              Seller giao sẵn nội dung (tài khoản, mã kích hoạt...)
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setProductType("SERVICE")}
+            className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
+              productType === "SERVICE"
+                ? "border-brand bg-brand text-ink"
+                : "border-border-c bg-surface text-foreground hover:border-brand-dark"
+            }`}
+          >
+            Dịch vụ
+            <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
+              Buyer cung cấp thông tin để seller thực hiện
+            </span>
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-[160px_1fr]">
@@ -515,6 +636,7 @@ export default function AddProductForm({
         </div>
       </div>
 
+      {productType === "PRODUCT" && (
       <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -685,6 +807,135 @@ export default function AddProductForm({
           </div>
         )}
       </div>
+      )}
+
+      {productType === "SERVICE" && (
+        <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
+          <p className="text-sm font-bold text-foreground">Cấu hình dịch vụ</p>
+          <p className="text-[11px] text-muted">
+            Khai rõ buyer cần cung cấp gì và bạn nhận bàn giao theo cách nào —
+            càng rõ ràng càng tránh tranh chấp.
+          </p>
+
+          <div className="mt-3">
+            <span className="mb-1.5 block text-xs font-bold uppercase text-foreground">
+              Phương thức bàn giao chấp nhận
+            </span>
+            <div className="flex flex-col gap-1.5">
+              {SERVICE_DELIVERY_METHODS.map((method) => (
+                <label
+                  key={method}
+                  className="flex items-start gap-2 rounded-lg border border-border-c bg-surface p-2 text-[11px] font-semibold text-foreground"
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                    checked={serviceDeliveryMethods.includes(method)}
+                    onChange={() => toggleServiceDeliveryMethod(method)}
+                  />
+                  {SERVICE_DELIVERY_METHOD_LABEL[method]}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <label className="mb-1 block text-xs font-bold uppercase text-foreground">
+              Cửa sổ xem thông tin nhạy cảm (giờ)
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={168}
+              value={credentialViewWindowHours}
+              onChange={(e) => setCredentialViewWindowHours(e.target.value)}
+              placeholder="Để trống dùng mặc định 48 giờ"
+              className="w-full max-w-[220px] rounded-lg border border-border-c px-2.5 py-1.5 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+            />
+            <p className="mt-1 text-[11px] leading-relaxed text-foreground/70">
+              Thời gian bạn được xem mật khẩu/OTP buyer cung cấp, tính từ lúc
+              bấm &ldquo;Nhận đơn&rdquo; — sau đó thông tin sẽ tự ẩn dù đơn
+              chưa hoàn tất.
+            </p>
+          </div>
+
+          <div className="mt-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold uppercase text-foreground">
+                Thông tin buyer cần nhập
+              </span>
+              <button
+                type="button"
+                onClick={addServiceField}
+                className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-brand-dark"
+              >
+                <Plus className="h-3.5 w-3.5" /> Thêm trường
+              </button>
+            </div>
+
+            {serviceFields.length > 0 && (
+              <div className="mt-2 flex flex-col gap-2">
+                {serviceFields.map((f) => (
+                  <div
+                    key={f.key}
+                    className="grid gap-2 rounded-lg border border-border-c bg-surface p-2.5 sm:grid-cols-[1fr_180px_auto_auto]"
+                  >
+                    <input
+                      type="text"
+                      required
+                      minLength={2}
+                      maxLength={100}
+                      value={f.label}
+                      onChange={(e) => updateServiceField(f.key, "label", e.target.value)}
+                      placeholder="Nhãn (VD: Tài khoản Facebook)"
+                      className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+                    />
+                    <select
+                      value={f.inputType}
+                      onChange={(e) =>
+                        updateServiceField(
+                          f.key,
+                          "inputType",
+                          e.target.value as ServiceFieldInputType
+                        )
+                      }
+                      className="rounded-lg border border-border-c bg-surface px-2 py-1.5 text-xs text-foreground focus:border-brand-dark focus:outline-none"
+                    >
+                      {SERVICE_FIELD_INPUT_TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {SERVICE_FIELD_INPUT_TYPE_LABEL[t]}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={f.required}
+                        onChange={(e) => updateServiceField(f.key, "required", e.target.checked)}
+                        className="h-3.5 w-3.5"
+                      />
+                      Bắt buộc
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeServiceField(f.key)}
+                      className="flex shrink-0 items-center justify-center rounded-lg p-1.5 text-muted hover:bg-danger/10 hover:text-danger"
+                      aria-label="Xoá trường"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="mt-1.5 text-[11px] leading-relaxed text-foreground/70">
+              Chọn loại &ldquo;Bí mật&rdquo; cho mật khẩu/OTP — hệ thống sẽ TỰ
+              ĐỘNG mã hoá field này, chỉ hiện lại cho bạn sau khi &ldquo;Nhận
+              đơn&rdquo; và trong đúng cửa sổ thời gian ở trên.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div>
         <label className="mb-1 block text-sm font-semibold text-foreground">Mô tả ngắn</label>

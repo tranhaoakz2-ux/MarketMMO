@@ -198,6 +198,9 @@ model Seller {
   // form đăng sản phẩm) — chỉ để admin biết ai đã đề xuất, KHÔNG có UI riêng
   // cho seller theo dõi danh sách này (ngoài phạm vi, xem CLAUDE.md).
   proposedCategories Category[]
+  // Audit: mỗi lần seller giải mã/xem field nhạy cảm của 1 đơn dịch vụ (xem
+  // model ServiceCredentialAccessLog).
+  credentialAccessLogs ServiceCredentialAccessLog[]
 }
 
 // Mã giảm giá do seller tự tạo, áp dụng cho TOÀN BỘ sản phẩm của chính họ
@@ -327,10 +330,123 @@ model Product {
   sellerId   String
   seller     Seller   @relation(fields: [sellerId], references: [id])
 
-  orderItems  OrderItem[]
-  auctionBids AuctionBid[]
-  variants    ProductVariant[]
-  stockItems  ProductStockItem[]
+  // "PRODUCT" | "SERVICE" — dần thay heuristic SERVICE_CATEGORY_SLUGS (xem
+  // src/lib/constants.ts) vốn chỉ so category slug, không phải field DB
+  // thật. Default "PRODUCT" migration-safe; 180+ sản phẩm cũ thuộc category
+  // boosting/chatgpt/youtube đã được backfill sang "SERVICE" thủ công cùng
+  // đợt tạo field này (xem prisma/pending-sql/2026-07-28-service-orders.sql)
+  // để giữ đúng ý nghĩa heuristic cũ.
+  productType String @default("PRODUCT")
+  // Chỉ có ý nghĩa khi productType="SERVICE". JSON string mảng các mã
+  // phương thức bàn giao seller CHẤP NHẬN cho dịch vụ này (xem
+  // SERVICE_DELIVERY_METHODS trong src/lib/constants.ts, vd
+  // '["add_as_admin","app_password"]') — buyer chọn 1 trong tập này lúc đặt
+  // đơn, không được tự ý chọn cách khác. null/rỗng = seller chưa cấu hình
+  // đủ, chặn buyer đặt đơn dịch vụ cho tới khi seller khai xong.
+  serviceDeliveryMethods String?
+  // Số giờ seller được xem field nhạy cảm (mật khẩu/OTP) SAU KHI bấm "Nhận
+  // đơn" cho dịch vụ này — seller tự khai theo từng dịch vụ khi đăng sản
+  // phẩm. null = dùng mặc định SERVICE_CREDENTIAL_DEFAULT_WINDOW_HOURS
+  // (constants.ts). Validate 1-168 ở API, không phải ràng buộc DB — KHÁC
+  // WARRANTY_WINDOW_HOURS (đó là SLA xử lý khiếu nại, không liên quan).
+  credentialViewWindowHours Int?
+
+  orderItems    OrderItem[]
+  auctionBids   AuctionBid[]
+  variants      ProductVariant[]
+  stockItems    ProductStockItem[]
+  serviceFields ServiceFieldDefinition[]
+}
+
+// Seller tự định nghĩa danh sách field buyer PHẢI nhập khi đặt 1 dịch vụ cụ
+// thể (vd "Tài khoản Facebook", "Mật khẩu", "Link bài cần seeding"...).
+// inputType="secret" là NGUỒN DUY NHẤT xác định "nhạy cảm" (không dùng cờ
+// isSensitive riêng — tránh seller cấu hình sai khiến mật khẩu bị lưu
+// plaintext): mọi field secret luôn đi vào ServiceIntake.encryptedFields,
+// mọi field khác đi vào ServiceIntake.publicFields — xem
+// src/lib/service-intake.ts.
+model ServiceFieldDefinition {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // Khoá dùng làm key trong JSON publicFields/encryptedFields — slugify từ
+  // label lúc tạo (tái dùng src/lib/slug.ts), duy nhất trong phạm vi 1 product.
+  fieldKey  String
+  label     String
+  // "text" (1 dòng, vd tài khoản) | "url" (validate dạng link) | "textarea"
+  // (nhiều dòng, vd ghi chú) | "secret" (mật khẩu/OTP — LUÔN mã hoá).
+  inputType String   @default("text")
+  required  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+// Buyer nhập lúc checkout dịch vụ. Field "secret" (mật khẩu/OTP) mã hoá
+// AES-256-GCM bằng khoá từ SERVICE_CREDENTIAL_ENCRYPTION_KEY (env, KHÔNG
+// hardcode) — xem src/lib/service-crypto.ts. Seller chỉ giải mã được SAU
+// sellerAcceptedAt và TRƯỚC sensitiveRevealDeadline; xoá cứng
+// (encryptedFields/encryptionIv/encryptionAuthTag → NULL) khi OrderItem rời
+// trạng thái ESCROW an toàn (RELEASED/CANCELLED) — xem
+// purgeServiceIntakeSecrets() trong src/lib/service-intake.ts, gọi từ 3 nơi
+// OrderItem đổi trạng thái (escrow/release, fullRefundDispute,
+// partial_refund/release_seller trong admin disputes).
+model ServiceIntake {
+  id          String    @id @default(cuid())
+  orderItemId String    @unique
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  // Buyer chọn 1 trong Product.serviceDeliveryMethods lúc đặt đơn.
+  deliveryMethod String
+
+  // JSON object các field KHÔNG nhạy cảm, plaintext — vd
+  // {"account_username": "...", "target_link": "...", "notes": "..."}.
+  publicFields String?
+
+  // JSON object các field "secret" (mật khẩu/OTP...), đã mã hoá NGUYÊN KHỐI
+  // thành 1 blob — không lưu plaintext ở đâu, không log ra console/file.
+  encryptedFields   String?
+  encryptionIv      String?
+  encryptionAuthTag String?
+  // Hỗ trợ xoay khoá sau này (versioned key) — hiện luôn =1, đọc từ
+  // SERVICE_CREDENTIAL_ENCRYPTION_KEY hiện hành.
+  encryptionKeyVersion Int?
+
+  // JSON: bằng chứng trạng thái tài khoản TRƯỚC bàn giao (email/SĐT khôi
+  // phục, ảnh chụp màn hình — tái dùng cơ chế lưu ảnh riêng tư đã có ở
+  // src/lib/uploads.ts, KHÔNG mã hoá vì không phải bí mật, chỉ là bằng
+  // chứng đối chiếu tranh chấp). Optional hoàn toàn.
+  preHandoffSnapshot String?
+
+  // Mốc seller bấm "Nhận đơn dịch vụ" — điều kiện BẮT BUỘC để xem field
+  // nhạy cảm. null = seller chưa nhận, chưa xem được gì.
+  sellerAcceptedAt DateTime?
+  // = sellerAcceptedAt + credentialViewWindowHours, tính SẴN lúc accept
+  // (đóng băng, không đổi dù seller sau này đổi credentialViewWindowHours
+  // trên Product). Qua mốc này, dù chưa purge, API giải mã cũng từ chối.
+  sensitiveRevealDeadline DateTime?
+  // Đã xoá cứng field nhạy cảm hay chưa — idempotent, chặn purge 2 lần.
+  sensitivePurgedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  accessLogs ServiceCredentialAccessLog[]
+}
+
+// Audit: seller nào đã giải mã/xem field nhạy cảm của 1 đơn dịch vụ, lúc
+// nào — mỗi lần xem (kể cả xem lại) ghi thêm 1 dòng, không ghi đè.
+model ServiceCredentialAccessLog {
+  id              String        @id @default(cuid())
+  serviceIntakeId String
+  serviceIntake   ServiceIntake @relation(fields: [serviceIntakeId], references: [id], onDelete: Cascade)
+  sellerId        String
+  seller          Seller        @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  viewedAt        DateTime      @default(now())
+  ipAddress       String?
+
+  @@index([serviceIntakeId])
+  @@index([sellerId])
 }
 
 // Biến thể/gói của 1 sản phẩm — vd Gmail: "Domain .US - Thuê 24h - Tên Việt"
@@ -478,8 +594,9 @@ model OrderItem {
   platformFeeAmount  Int   @default(0)
   createdAt        DateTime @default(now())
 
-  dispute    Dispute?
-  stockItems ProductStockItem[]
+  dispute       Dispute?
+  stockItems    ProductStockItem[]
+  serviceIntake ServiceIntake?
 }
 
 // Khiếu nại (Trang Bán Hàng > Khiếu nại) — buyer hoặc seller mở trên 1

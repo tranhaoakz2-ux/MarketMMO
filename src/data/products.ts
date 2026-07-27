@@ -55,6 +55,20 @@ export type Product = {
   stockAvailable?: number;
   /** Có ≥1 dòng ProductStockItem AVAILABLE với expiresAt khác null hay không (sản phẩm KHÔNG có variant) — chỉ có khi fetch qua getProductBySlugDb. */
   hasTimedStock?: boolean;
+  /** "PRODUCT" | "SERVICE" — mặc định "PRODUCT" nếu không set (seed/mock data cũ). SERVICE = buyer phải cung cấp thông tin (tài khoản/link/mật khẩu...) cho seller thực hiện, xem serviceFields + ServiceIntake trong prisma/schema.prisma. */
+  productType?: "PRODUCT" | "SERVICE";
+  /** Chỉ có ý nghĩa khi productType="SERVICE" — mã phương thức bàn giao seller chấp nhận (xem SERVICE_DELIVERY_METHODS trong src/lib/constants.ts), buyer chọn 1 trong tập này lúc đặt đơn. */
+  serviceDeliveryMethods?: string[];
+  /** Chỉ có ý nghĩa khi productType="SERVICE" — số giờ seller được xem field nhạy cảm sau khi "Nhận đơn", undefined = dùng mặc định SERVICE_CREDENTIAL_DEFAULT_WINDOW_HOURS. */
+  credentialViewWindowHours?: number;
+  /** Danh sách field buyer phải nhập khi đặt dịch vụ này (seller tự khai lúc đăng sản phẩm) — rỗng/undefined nếu không phải dịch vụ hoặc chưa cấu hình. */
+  serviceFields?: {
+    id: string;
+    fieldKey: string;
+    label: string;
+    inputType: "text" | "url" | "textarea" | "secret";
+    required: boolean;
+  }[];
 };
 
 export const products: Product[] = [
