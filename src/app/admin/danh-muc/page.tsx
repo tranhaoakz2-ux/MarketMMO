@@ -1,18 +1,28 @@
-import { PageHeader } from "@/components/admin-demo/AdminDemoKit";
+import { PageHeader, SectionTitle } from "@/components/admin-demo/AdminDemoKit";
 import { requireAdminPage } from "@/lib/authz";
 import AdminCategoriesPanel from "@/components/admin/AdminCategoriesPanel";
+import AdminCategoryTreePanel from "@/components/admin/AdminCategoryTreePanel";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminCategoriesPage() {
   await requireAdminPage();
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <PageHeader
-        title="Danh mục mới"
-        subtitle="Duyệt danh mục do seller tự đề xuất khi đăng sản phẩm — danh mục PENDING đã dùng được ngay cho sản phẩm đang đăng, nhưng vẫn ẩn khỏi trang công khai cho tới khi duyệt."
+        title="Danh mục"
+        subtitle="Quản lý cây danh mục (nhóm cha/danh mục con) và duyệt danh mục do seller tự đề xuất."
       />
-      <AdminCategoriesPanel />
+
+      <div>
+        <SectionTitle>Cây danh mục</SectionTitle>
+        <AdminCategoryTreePanel />
+      </div>
+
+      <div>
+        <SectionTitle>Danh mục seller đề xuất</SectionTitle>
+        <AdminCategoriesPanel />
+      </div>
     </div>
   );
 }

@@ -5,7 +5,16 @@ import Link from "next/link";
 import { useState } from "react";
 import Avatar from "@/components/Avatar";
 
-export type SidebarCategory = { slug: string; name: string; emoji: string };
+// Cây danh mục động — nhóm cha lồng category con (đệ quy, không giới hạn
+// tầng), khớp CategoryTreeNode trả về từ getCategoryTree() (src/lib/queries.ts).
+// Thêm nhóm/category mới chỉ cần thêm dữ liệu (Category.parentId) — component
+// này KHÔNG hardcode bất kỳ slug/tên nhóm nào.
+export type SidebarCategory = {
+  slug: string;
+  name: string;
+  emoji: string;
+  children: SidebarCategory[];
+};
 export type SidebarForumPost = {
   id: string;
   title: string;
@@ -13,6 +22,101 @@ export type SidebarForumPost = {
   commentCount: number;
   likeCount: number;
 };
+
+// Tính sẵn tập slug cần MỞ RỘNG ban đầu = mọi nhóm cha nằm trên đường đi tới
+// activeSlug (kể cả khi activeSlug chính là 1 nhóm cha) — để vào thẳng URL
+// của 1 category con vẫn thấy đúng nhóm cha của nó đang mở, không phải tự
+// bấm mở lại.
+function findExpandedAncestors(nodes: SidebarCategory[], activeSlug: string): Set<string> {
+  const expanded = new Set<string>();
+  function visit(node: SidebarCategory): boolean {
+    let matches = node.slug === activeSlug;
+    for (const child of node.children) {
+      if (visit(child)) matches = true;
+    }
+    if (matches && node.children.length > 0) expanded.add(node.slug);
+    return matches;
+  }
+  nodes.forEach(visit);
+  return expanded;
+}
+
+function CategoryTreeRow({
+  node,
+  depth,
+  activeSlug,
+  expanded,
+  onToggle,
+}: {
+  node: SidebarCategory;
+  depth: number;
+  activeSlug: string;
+  expanded: Set<string>;
+  onToggle: (slug: string) => void;
+}) {
+  const hasChildren = node.children.length > 0;
+  const active = node.slug === activeSlug;
+  const isExpanded = expanded.has(node.slug);
+
+  return (
+    <li>
+      <div
+        className="flex items-center justify-between gap-1.5"
+        style={depth > 0 ? { paddingLeft: depth * 16 } : undefined}
+      >
+        <Link href={`/danh-muc/${node.slug}`} className="flex min-w-0 flex-1 items-center gap-2.5 py-0.5">
+          <span
+            className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded border-2 ${
+              active ? "border-brand bg-brand" : "border-border-c"
+            }`}
+          >
+            {active && <Check className="h-3 w-3 text-foreground" strokeWidth={3} />}
+          </span>
+          <span className="shrink-0 leading-none">{node.emoji}</span>
+          <span
+            className={`truncate text-sm ${
+              active
+                ? "font-semibold text-foreground"
+                : hasChildren
+                  ? "font-bold text-foreground"
+                  : "text-muted"
+            }`}
+          >
+            {node.name}
+          </span>
+        </Link>
+        {hasChildren && (
+          <button
+            type="button"
+            onClick={() => onToggle(node.slug)}
+            className="shrink-0 rounded p-0.5 text-muted transition hover:text-foreground"
+            aria-label={isExpanded ? `Thu gọn ${node.name}` : `Mở rộng ${node.name}`}
+          >
+            {isExpanded ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
+          </button>
+        )}
+      </div>
+      {hasChildren && isExpanded && (
+        <ul className="mt-1.5 flex flex-col gap-2">
+          {node.children.map((child) => (
+            <CategoryTreeRow
+              key={child.slug}
+              node={child}
+              depth={depth + 1}
+              activeSlug={activeSlug}
+              expanded={expanded}
+              onToggle={onToggle}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
 
 export default function CategorySidebar({
   activeSlug,
@@ -24,6 +128,17 @@ export default function CategorySidebar({
   posts: SidebarForumPost[];
 }) {
   const [stockOnly, setStockOnly] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(() =>
+    findExpandedAncestors(categories, activeSlug)
+  );
+  const toggleExpand = (slug: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  };
 
   return (
     <aside className="flex w-full flex-col gap-4 lg:w-64 lg:shrink-0">
@@ -53,33 +168,16 @@ export default function CategorySidebar({
               </span>
             </Link>
           </li>
-          {categories.map((cat) => {
-            const active = cat.slug === activeSlug;
-            return (
-              <li key={cat.slug}>
-                <a
-                  href={`/danh-muc/${cat.slug}`}
-                  className="flex items-center justify-between gap-2"
-                >
-                  <span
-                    className={`flex items-center gap-2.5 text-sm ${
-                      active ? "font-semibold text-foreground" : "text-muted"
-                    }`}
-                  >
-                    <span
-                      className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded border-2 ${
-                        active ? "border-brand bg-brand" : "border-border-c"
-                      }`}
-                    >
-                      {active && <Check className="h-3 w-3 text-foreground" strokeWidth={3} />}
-                    </span>
-                    {cat.name}
-                  </span>
-                  <ChevronRight className="h-2.5 w-2.5 shrink-0 text-border-c" />
-                </a>
-              </li>
-            );
-          })}
+          {categories.map((node) => (
+            <CategoryTreeRow
+              key={node.slug}
+              node={node}
+              depth={0}
+              activeSlug={activeSlug}
+              expanded={expanded}
+              onToggle={toggleExpand}
+            />
+          ))}
         </ul>
 
         <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-ink shadow-sm transition hover:bg-brand-dark">

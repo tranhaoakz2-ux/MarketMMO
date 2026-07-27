@@ -73,9 +73,12 @@ function mapProduct(p: ProductWithRelations): Product {
 // Dùng cho mọi nơi hiển thị công khai (trang chủ, trang danh mục, mega-menu)
 // — chỉ trả danh mục đã được admin duyệt. Danh mục do seller tự đề xuất
 // (status PENDING/REJECTED) không được lộ ra ngoài cho tới khi admin duyệt.
+// CHỈ trả category LÁ (children: none) — nhóm cha trong cây danh mục
+// (xem getCategoryTree() bên dưới) không bao giờ lọt vào tabs/dropdown chọn
+// category vì sản phẩm chỉ được gán vào category lá, không gán vào nhóm cha.
 export async function getAllCategories() {
   return prisma.category.findMany({
-    where: { status: "APPROVED" },
+    where: { status: "APPROVED", isActive: true, children: { none: {} } },
     orderBy: { name: "asc" },
   });
 }
@@ -84,12 +87,86 @@ export async function getAllCategories() {
 // (AddProductForm) — seller cần thấy CẢ danh mục đang chờ duyệt (kể cả do
 // chính họ hoặc seller khác vừa đề xuất) để có thể gán sản phẩm mới vào đó
 // ngay, không cần đợi admin duyệt xong category mới đăng được sản phẩm. Loại
-// trừ REJECTED vì danh mục đó coi như không tồn tại.
+// trừ REJECTED vì danh mục đó coi như không tồn tại. Cùng lý do trên: chỉ
+// category lá (danh mục seller-đề-xuất mới tạo luôn là lá, không có con).
 export async function getSellerVisibleCategories() {
   return prisma.category.findMany({
-    where: { status: { in: ["APPROVED", "PENDING"] } },
+    where: { status: { in: ["APPROVED", "PENDING"] }, isActive: true, children: { none: {} } },
     orderBy: { name: "asc" },
   });
+}
+
+export type CategoryTreeNode = {
+  id: string;
+  slug: string;
+  name: string;
+  emoji: string;
+  sortOrder: number;
+  children: CategoryTreeNode[];
+};
+
+// Cây danh mục ĐẦY ĐỦ (nhóm cha + lá) cho sidebar "Bộ lọc" ở trang danh mục
+// — xem CategorySidebar.tsx. Chỉ 1 query phẳng rồi dựng cây trong bộ nhớ
+// (số category hiện tại rất nhỏ, không cần recursive CTE). Nếu category cha
+// của 1 dòng bị ẩn/chưa duyệt (không có trong `rows`), dòng đó tự rơi về làm
+// gốc thay vì biến mất hẳn khỏi sidebar — tránh mồ côi dữ liệu trong mắt
+// người dùng.
+export async function getCategoryTree(): Promise<CategoryTreeNode[]> {
+  const rows = await prisma.category.findMany({
+    where: { status: "APPROVED", isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, slug: true, name: true, emoji: true, sortOrder: true, parentId: true },
+  });
+
+  const byId = new Map<string, CategoryTreeNode>();
+  for (const r of rows) {
+    byId.set(r.id, { id: r.id, slug: r.slug, name: r.name, emoji: r.emoji, sortOrder: r.sortOrder, children: [] });
+  }
+  const roots: CategoryTreeNode[] = [];
+  for (const r of rows) {
+    const node = byId.get(r.id)!;
+    const parent = r.parentId ? byId.get(r.parentId) : undefined;
+    if (parent) {
+      parent.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+  return roots;
+}
+
+// Lấy 1 category BẤT KỲ theo slug (nhóm cha lẫn lá) — dùng cho trang danh
+// mục (`/danh-muc/[slug]`) để hiển thị tiêu đề/breadcrumb, KHÁC
+// getAllCategories() (chỉ trả lá, dùng cho tabs/dropdown). Trang danh mục
+// phải nhận diện được cả slug nhóm cha vì bấm vào nhóm cha trong sidebar
+// cũng điều hướng tới đúng route này (gộp sản phẩm mọi category con — xem
+// getProductsByCategory()).
+export async function getCategoryBySlug(slug: string) {
+  return prisma.category.findFirst({
+    where: { slug, status: "APPROVED", isActive: true },
+    include: { parent: { select: { slug: true, name: true } } },
+  });
+}
+
+// Thu thập id của 1 category + TOÀN BỘ category con cháu (đệ quy, không giới
+// hạn độ sâu) — dùng để gộp sản phẩm khi bấm vào 1 nhóm cha. Lặp theo từng
+// tầng (BFS) thay vì raw SQL recursive CTE vì cây hiện rất nông (2-3 tầng),
+// đơn giản hơn và đủ nhanh cho tần suất truy cập của 1 trang danh mục.
+// Export để dùng lại ở API admin quản lý cây category (chặn gán parentId
+// tạo vòng lặp — xem src/app/api/admin/category-tree/[id]/route.ts).
+export async function collectDescendantCategoryIds(rootId: string): Promise<string[]> {
+  const ids = [rootId];
+  let frontier = [rootId];
+  while (frontier.length > 0) {
+    const children = await prisma.category.findMany({
+      where: { parentId: { in: frontier } },
+      select: { id: true },
+    });
+    if (children.length === 0) break;
+    frontier = children.map((c) => c.id);
+    ids.push(...frontier);
+  }
+  return ids;
 }
 
 export async function getAllProducts(): Promise<Product[]> {
@@ -119,11 +196,21 @@ export async function getFeaturedProducts(limit = 8): Promise<Product[]> {
   return rows.map(mapProduct);
 }
 
+// Khi categorySlug là 1 nhóm cha (có category con), gộp sản phẩm của MỌI
+// category con cháu (đệ quy) — khi là category lá, hành vi y hệt trước đây
+// (chỉ sản phẩm gán trực tiếp vào đúng category đó).
 export async function getProductsByCategory(
   categorySlug: string
 ): Promise<Product[]> {
+  const category = await prisma.category.findUnique({
+    where: { slug: categorySlug },
+    select: { id: true },
+  });
+  if (!category) return [];
+  const categoryIds = await collectDescendantCategoryIds(category.id);
+
   const rows = await prisma.product.findMany({
-    where: { status: "APPROVED", seller: { suspended: false }, category: { slug: categorySlug } },
+    where: { status: "APPROVED", seller: { suspended: false }, categoryId: { in: categoryIds } },
     include: productInclude,
     orderBy: { createdAt: "desc" },
   });

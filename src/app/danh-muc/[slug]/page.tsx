@@ -1,6 +1,5 @@
 import { Info, ListFilter } from "lucide-react";
 import { notFound } from "next/navigation";
-import { createElement } from "react";
 import Breadcrumb from "@/components/Breadcrumb";
 import CategoryProductCard from "@/components/CategoryProductCard";
 import CategorySidebar from "@/components/CategorySidebar";
@@ -9,8 +8,7 @@ import Header from "@/components/Header";
 import Pagination from "@/components/Pagination";
 import Reveal from "@/components/Reveal";
 import { getRecentForumPosts } from "@/lib/forum";
-import { getCategoryIcon } from "@/lib/categoryIcons";
-import { getAllCategories, getProductsByCategory } from "@/lib/queries";
+import { getCategoryBySlug, getCategoryTree, getProductsByCategory } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +26,7 @@ export default async function CategoryPage({
   const { page } = await searchParams;
   const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
 
-  const categories = await getAllCategories();
-  const category = categories.find((c) => c.slug === slug);
+  const [category, tree] = await Promise.all([getCategoryBySlug(slug), getCategoryTree()]);
   if (!category) notFound();
 
   const items = await getProductsByCategory(slug);
@@ -44,22 +41,25 @@ export default async function CategoryPage({
       <main className="flex-1 bg-background">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <Breadcrumb
-            items={[{ label: "Trang chủ", href: "/" }, { label: category.name }]}
+            items={[
+              { label: "Trang chủ", href: "/" },
+              ...(category.parent
+                ? [{ label: category.parent.name, href: `/danh-muc/${category.parent.slug}` }]
+                : []),
+              { label: category.name },
+            ]}
           />
         </div>
 
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pb-12 sm:px-6 lg:flex-row lg:px-8">
           <Reveal direction="right" className="lg:sticky lg:top-24 lg:self-start">
-            <CategorySidebar activeSlug={slug} categories={categories} posts={recentPosts} />
+            <CategorySidebar activeSlug={slug} categories={tree} posts={recentPosts} />
           </Reveal>
 
           <div className="min-w-0 flex-1">
             <Reveal>
               <h1 className="mb-4 flex items-center gap-2 text-2xl font-black text-foreground">
-                {createElement(getCategoryIcon(slug), {
-                  className: "h-6 w-6 text-brand-dark",
-                  strokeWidth: 1.75,
-                })}
+                <span className="text-2xl leading-none">{category.emoji}</span>
                 {category.name}
               </h1>
             </Reveal>

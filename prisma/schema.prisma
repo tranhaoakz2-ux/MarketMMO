@@ -282,7 +282,27 @@ model Category {
   proposedById String?
   proposedBy   Seller? @relation(fields: [proposedById], references: [id], onDelete: SetNull)
 
+  // Cây danh mục động (self-reference) — cho phép mở rộng vô hạn tầng, thêm
+  // nhóm cha/danh mục con mới chỉ cần thêm dữ liệu, không cần sửa code. Một
+  // category là "nhóm cha" hay "lá" suy ra THUẦN CẤU TRÚC (có children hay
+  // không) — cố tình KHÔNG thêm cờ isGroup/isService riêng: nhóm "Dịch Vụ"
+  // trong sidebar chỉ là admin gán parentId thủ công, tách biệt hoàn toàn
+  // khỏi Product.productType="SERVICE" đã có (2 khái niệm không liên quan).
+  // ON DELETE SET NULL: xoá 1 nhóm cha không kéo xoá category con theo (con
+  // rớt về "chưa có nhóm cha") — việc CHẶN xoá nhóm cha còn con nằm ở tầng
+  // ứng dụng (route admin xoá category), không phải ràng buộc DB.
+  parentId String?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryTree")
+  // Thứ tự hiển thị trong cùng 1 cha (kể cả cấp gốc, parentId=null).
+  sortOrder Int     @default(0)
+  // Ẩn/hiện thủ công của admin — tách biệt hoàn toàn khỏi `status` (không
+  // đụng luồng duyệt category do seller đề xuất).
+  isActive  Boolean @default(true)
+
   products Product[]
+
+  @@index([parentId])
 }
 
 model Product {
