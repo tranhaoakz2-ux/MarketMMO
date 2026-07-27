@@ -153,6 +153,54 @@ body {
   }
 }
 
+/* Hiệu ứng hover cho icon trong cụm nút liên hệ nổi (Footer.tsx) — mỗi icon
+   1 chuyển động riêng cho tự nhiên: chuông điện thoại lắc kiểu chuông đổ
+   (bell-ring), Zalo phóng to nảy nhẹ (icon-bounce), Messenger dùng thẳng
+   `animate-spin` có sẵn của Tailwind (xoay tròn mượt, không cần khai báo
+   riêng). Áp dụng qua `motion-safe:group-hover:animate-[...]` tại nơi dùng
+   để tự tôn trọng prefers-reduced-motion (biến thể có sẵn của Tailwind),
+   không cần thêm @media riêng như 2 keyframes marquee ở trên.
+*/
+@keyframes bell-ring {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(-14deg);
+  }
+  30% {
+    transform: rotate(12deg);
+  }
+  45% {
+    transform: rotate(-8deg);
+  }
+  60% {
+    transform: rotate(5deg);
+  }
+  75% {
+    transform: rotate(-2deg);
+  }
+}
+
+@keyframes icon-bounce {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.18);
+  }
+  55% {
+    transform: scale(0.92);
+  }
+  80% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 /* Admin Control Center (/admin) — bảng màu tối riêng, cố tình KHÁC hẳn
    vàng-trắng của trang mua sắm để phân biệt rõ "đây là khu vực quản trị"
    (yêu cầu thiết kế "sang trọng", đối chiếu bản demo Artifact đã duyệt).

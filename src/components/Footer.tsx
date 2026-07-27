@@ -1,6 +1,6 @@
 "use client";
 
-import { Music2 } from "lucide-react";
+import { ArrowUp, Music2, Phone } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import LegalNotice from "./LegalNotice";
@@ -10,6 +10,31 @@ function YoutubeIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
       <path d="M22 12s0-3.2-.4-4.7a2.9 2.9 0 0 0-2-2C17.9 5 12 5 12 5s-5.9 0-7.6.3a2.9 2.9 0 0 0-2 2C2 8.8 2 12 2 12s0 3.2.4 4.7c.2 1 1 1.8 2 2C6.1 19 12 19 12 19s5.9 0 7.6-.3a2.9 2.9 0 0 0 2-2c.4-1.5.4-4.7.4-4.7ZM10 15V9l5.2 3-5.2 3Z" />
+    </svg>
+  );
+}
+
+// Logo Zalo/Messenger chính thức dạng vector — path lấy từ bộ Simple Icons
+// (simpleicons.org, artwork cấp phép CC0-1.0, dùng logo thương hiệu vẫn cần
+// tuân thủ quy định riêng của từng hãng). Thay cho ảnh PNG 64x64 cũ: ảnh cũ
+// vỡ nét vì (1) chỉ 64x64px gốc trong khi hiển thị ở khung 57px CSS — trên
+// màn hình retina (devicePixelRatio 2-3) cần tới 114-171px thật mới đủ nét,
+// và (2) bản thân ảnh vốn cắt ra từ 1 ảnh chụp màn hình chất lượng thấp (đã
+// mờ sẵn ở nguồn). SVG là vector nên luôn sắc nét ở MỌI độ phân giải, không
+// còn phụ thuộc kích thước ảnh nguồn — và giữ đúng hình dạng logo gốc thay
+// vì tự vẽ lại gần đúng.
+function ZaloIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-8 w-8" fill="#fff" aria-hidden>
+      <path d="M12.49 10.2722v-.4496h1.3467v6.3218h-.7704a.576.576 0 01-.5763-.5729l-.0006.0005a3.273 3.273 0 01-1.9372.6321c-1.8138 0-3.2844-1.4697-3.2844-3.2823 0-1.8125 1.4706-3.2822 3.2844-3.2822a3.273 3.273 0 011.9372.6321l.0006.0005zM6.9188 7.7896v.205c0 .3823-.051.6944-.2995 1.0605l-.03.0343c-.0542.0615-.1815.206-.2421.2843L2.024 14.8h4.8948v.7682a.5764.5764 0 01-.5767.5761H0v-.3622c0-.4436.1102-.6414.2495-.8476L4.8582 9.23H.1922V7.7896h6.7266zm8.5513 8.3548a.4805.4805 0 01-.4803-.4798v-7.875h1.4416v8.3548H15.47zM20.6934 9.6C22.52 9.6 24 11.0807 24 12.9044c0 1.8252-1.4801 3.306-3.3066 3.306-1.8264 0-3.3066-1.4808-3.3066-3.306 0-1.8237 1.4802-3.3044 3.3066-3.3044zm-10.1412 5.253c1.0675 0 1.9324-.8645 1.9324-1.9312 0-1.065-.865-1.9295-1.9324-1.9295s-1.9324.8644-1.9324 1.9295c0 1.0667.865 1.9312 1.9324 1.9312zm10.1412-.0033c1.0737 0 1.945-.8707 1.945-1.9453 0-1.073-.8713-1.9436-1.945-1.9436-1.0753 0-1.945.8706-1.945 1.9436 0 1.0746.8697 1.9453 1.945 1.9453z" />
+    </svg>
+  );
+}
+
+function MessengerIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-8 w-8" fill="#fff" aria-hidden>
+      <path d="M12 0C5.24 0 0 4.952 0 11.64c0 3.499 1.434 6.521 3.769 8.61a.96.96 0 0 1 .323.683l.065 2.135a.96.96 0 0 0 1.347.85l2.381-1.053a.96.96 0 0 1 .641-.046A13 13 0 0 0 12 23.28c6.76 0 12-4.952 12-11.64S18.76 0 12 0m6.806 7.44c.522-.03.971.567.63 1.094l-4.178 6.457a.707.707 0 0 1-.977.208l-3.87-2.504a.44.44 0 0 0-.49.007l-4.363 3.01c-.637.438-1.415-.317-.995-.966l4.179-6.457a.706.706 0 0 1 .977-.21l3.87 2.505c.15.097.344.094.491-.007l4.362-3.008a.7.7 0 0 1 .364-.13" />
     </svg>
   );
 }
@@ -118,34 +143,45 @@ export default function Footer() {
         <a
           href="#"
           aria-label="Nhắn tin Zalo"
-          className="h-[57px] w-[57px] shrink-0 rounded-full shadow-lg transition hover:scale-105"
+          className="group grid h-16 w-16 shrink-0 place-items-center rounded-full bg-[#0290E3] shadow-lg transition hover:scale-110 hover:shadow-xl"
         >
-          <Image src="/support-zalo.png" alt="" width={57} height={57} className="h-full w-full" />
+          <span className="motion-safe:group-hover:animate-[icon-bounce_0.6s_ease-in-out]">
+            <ZaloIcon />
+          </span>
         </a>
         <a
           href="#"
           aria-label="Nhắn tin Messenger"
-          className="h-[57px] w-[57px] shrink-0 rounded-full shadow-lg transition hover:scale-105"
+          className="group grid h-16 w-16 shrink-0 place-items-center rounded-full bg-[#0083FE] shadow-lg transition hover:scale-110 hover:shadow-xl"
         >
-          <Image src="/support-messenger.png" alt="" width={57} height={57} className="h-full w-full" />
+          <span className="motion-safe:group-hover:animate-[spin_0.6s_ease-in-out]">
+            <MessengerIcon />
+          </span>
         </a>
         <a
           href="#"
           aria-label="Gọi điện hỗ trợ"
-          className="h-[57px] w-[57px] shrink-0 rounded-full shadow-lg transition hover:scale-105"
+          className="group grid h-16 w-16 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#fe470f] via-[#d60428] to-[#a91663] shadow-lg transition hover:scale-110 hover:shadow-xl"
         >
-          <Image src="/support-phone.png" alt="" width={57} height={57} className="h-full w-full" />
+          <Phone
+            className="h-8 w-8 origin-top text-white motion-safe:group-hover:animate-[bell-ring_0.6s_ease-in-out]"
+            strokeWidth={2}
+          />
         </a>
 
         <div className="h-px w-8 bg-border-c/60" />
 
+        {/* Nút lên đầu trang: trước dùng ảnh PNG 64x64 (cũng vỡ nét cùng lý
+            do 3 nút trên) — giữ đúng style vòng tròn viền mảnh trong suốt của
+            ảnh gốc bằng border thật, chỉ đổi mũi tên bên trong sang icon
+            lucide-react (vector, luôn sắc nét). */}
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           aria-label="Lên đầu trang"
-          className="h-[57px] w-[57px] shrink-0 rounded-full shadow-lg transition hover:scale-105"
+          className="grid h-16 w-16 shrink-0 place-items-center rounded-full border-2 border-muted/40 bg-surface shadow-lg transition hover:scale-110 hover:border-muted hover:shadow-xl"
         >
-          <Image src="/support-arrow-up.png" alt="" width={57} height={57} className="h-full w-full" />
+          <ArrowUp className="h-8 w-8 text-muted" strokeWidth={2} />
         </button>
       </div>
     </footer>
