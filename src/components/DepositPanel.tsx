@@ -1,6 +1,20 @@
 "use client";
 
-import { Building2, Check, Copy, LogIn, QrCode } from "lucide-react";
+import {
+  AlertTriangle,
+  Banknote,
+  Building2,
+  Check,
+  CheckCircle2,
+  Copy,
+  CreditCard,
+  DollarSign,
+  History,
+  LogIn,
+  QrCode,
+  RefreshCw,
+  Wallet,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -35,6 +49,12 @@ const statusStyle: Record<WalletTxStatus, string> = {
   REJECTED: "bg-danger/10 text-danger",
 };
 
+const statusDotStyle: Record<WalletTxStatus, string> = {
+  PENDING: "bg-brand-dark",
+  CONFIRMED: "bg-success",
+  REJECTED: "bg-danger",
+};
+
 function CopyField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -45,19 +65,23 @@ function CopyField({ label, value }: { label: string; value: string }) {
   };
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-border-c bg-surface px-3 py-2">
+    <div className="flex items-center justify-between gap-3 py-2.5">
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase text-muted">{label}</p>
+        <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted">{label}</p>
         <p className="truncate text-sm font-bold text-foreground">{value}</p>
       </div>
       <button
         type="button"
         onClick={handleCopy}
-        className="flex shrink-0 items-center gap-1 rounded-full bg-surface-alt px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-border-c"
+        className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition ${
+          copied
+            ? "bg-success/10 text-success"
+            : "bg-surface-alt text-foreground hover:bg-brand-light/60 hover:text-ink"
+        }`}
       >
         {copied ? (
           <>
-            <Check className="h-3.5 w-3.5 text-success" /> Đã chép
+            <Check className="h-3.5 w-3.5" /> Đã chép
           </>
         ) : (
           <>
@@ -113,11 +137,19 @@ export default function DepositPanel({
 
   if (!session) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl border border-border-c bg-surface p-10 text-center shadow-sm">
-        <p className="text-sm text-muted">Bạn cần đăng nhập để nạp tiền vào ví.</p>
+      <div className="flex flex-col items-center gap-4 rounded-3xl border border-border-c bg-surface p-10 text-center shadow-sm sm:p-14">
+        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-light text-brand-dark">
+          <Wallet className="h-7 w-7" strokeWidth={1.75} />
+        </span>
+        <div>
+          <p className="text-base font-bold text-foreground">Cần đăng nhập để nạp tiền</p>
+          <p className="mt-1 text-sm text-muted">
+            Đăng nhập vào tài khoản MarketMMO để nạp tiền vào ví.
+          </p>
+        </div>
         <Link
           href="/dang-nhap?callbackUrl=/nap-tien"
-          className="flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-black text-ink transition hover:bg-brand-dark"
+          className="flex items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-black text-ink shadow-[0_10px_25px_-8px_rgba(224,196,0,0.55)] transition hover:bg-brand-dark"
         >
           <LogIn className="h-4 w-4" /> Đăng nhập ngay
         </Link>
@@ -192,35 +224,64 @@ export default function DepositPanel({
     setCodeNonce(randomCodeNonce());
   };
 
+  // Số liệu hiển thị thêm cho khối số dư — tính thuần từ dữ liệu đã fetch sẵn
+  // (transactions), KHÔNG gọi thêm API nào.
+  const totalConfirmedDeposits = transactions
+    .filter((t) => t.status === "CONFIRMED")
+    .reduce((sum, t) => sum + t.amount, 0);
+
   return (
     <>
-      <div className="mb-6 flex flex-col justify-between gap-4 rounded-2xl bg-gradient-to-r from-ink to-ink-soft p-6 text-white sm:flex-row sm:items-center">
-        <div>
-          <p className="text-sm text-white/60">Số dư ví hiện tại</p>
-          <p className="mt-1 text-3xl font-black text-brand">
-            {formatVnd(session.user.walletBalance)}
-          </p>
+      {/* Khối số dư — nền tối cao cấp thay cho nền đen phẳng cũ, số dư nổi
+          bật màu vàng thương hiệu, có điểm sáng trang trí (glow) tạo chiều
+          sâu thay vì để trống trải. */}
+      <div className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-ink via-ink to-ink-soft p-6 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.55)] sm:p-8">
+        <div className="pointer-events-none absolute -right-14 -top-14 h-52 w-52 rounded-full bg-brand/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-8 h-40 w-40 rounded-full bg-brand/10 blur-3xl" />
+
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-3 flex items-center gap-2.5">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-brand">
+                <Wallet className="h-4 w-4" strokeWidth={2} />
+              </span>
+              <p className="text-sm font-medium text-white/60">Số dư ví hiện tại</p>
+            </div>
+            <p className="text-4xl font-black tracking-tight text-brand tabular-nums sm:text-5xl">
+              {formatVnd(session.user.walletBalance)}
+            </p>
+            {totalConfirmedDeposits > 0 && (
+              <p className="mt-3 text-xs text-white/50">
+                Tổng đã nạp:{" "}
+                <span className="font-bold text-white/80">{formatVnd(totalConfirmedDeposits)}</span>
+              </p>
+            )}
+          </div>
+
+          <button
+            onClick={() => update()}
+            className="flex w-fit shrink-0 items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-bold text-white/80 backdrop-blur transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> Làm mới số dư
+          </button>
         </div>
-        <button
-          onClick={() => update()}
-          className="w-fit rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/10"
-        >
-          Làm mới số dư
-        </button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-        <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-foreground">
-            Chọn phương thức nạp tiền
-          </h2>
-          <div className="flex flex-col gap-2">
+        <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm sm:p-6">
+          <div className="mb-4 flex items-center gap-2.5">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-light text-brand-dark">
+              <CreditCard className="h-4 w-4" />
+            </span>
+            <h2 className="text-sm font-black text-foreground">Chọn phương thức nạp tiền</h2>
+          </div>
+          <div className="flex flex-col gap-2.5">
             <label
-              className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${
+              className={`relative flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition ${
                 method === "vnpay"
-                  ? "border-brand-dark bg-brand-light/40"
-                  : "border-border-c hover:bg-surface-alt"
-              } ${!vnpayEnabled ? "cursor-not-allowed opacity-50" : ""}`}
+                  ? "border-brand-dark bg-brand-light/30 shadow-sm"
+                  : "border-border-c bg-surface hover:border-brand-dark/40 hover:bg-surface-alt"
+              } ${!vnpayEnabled ? "cursor-not-allowed opacity-60 hover:border-border-c hover:bg-surface" : ""}`}
             >
               <input
                 type="radio"
@@ -228,26 +289,42 @@ export default function DepositPanel({
                 checked={method === "vnpay"}
                 disabled={!vnpayEnabled}
                 onChange={() => setMethod("vnpay")}
-                className="accent-brand"
+                className="sr-only"
               />
-              <QrCode className="h-5 w-5 text-foreground/70" />
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  VNPay — tự động cộng tiền
-                </p>
-                <p className="text-xs text-muted">
+              <span
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+                  method === "vnpay" ? "bg-brand text-ink" : "bg-surface-alt text-foreground/60"
+                }`}
+              >
+                <QrCode className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-sm font-bold text-foreground">VNPay — tự động cộng tiền</p>
+                  {!vnpayEnabled && (
+                    <span className="rounded-full bg-surface-alt px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">
+                      Chưa cấu hình
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-xs text-muted">
                   {vnpayEnabled
                     ? "Chuyển hướng sang VNPay, số dư cộng ngay sau khi thanh toán"
-                    : "Chưa cấu hình (thiếu VNPAY_TMN_CODE/VNPAY_HASH_SECRET trong .env)"}
+                    : "Thiếu VNPAY_TMN_CODE/VNPAY_HASH_SECRET trong .env"}
                 </p>
               </div>
+              {method === "vnpay" && (
+                <span className="absolute right-3 top-3 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-ink">
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </span>
+              )}
             </label>
 
             <label
-              className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${
+              className={`relative flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition ${
                 method === "bank"
-                  ? "border-brand-dark bg-brand-light/40"
-                  : "border-border-c hover:bg-surface-alt"
+                  ? "border-brand-dark bg-brand-light/30 shadow-sm"
+                  : "border-border-c bg-surface hover:border-brand-dark/40 hover:bg-surface-alt"
               }`}
             >
               <input
@@ -255,25 +332,34 @@ export default function DepositPanel({
                 name="method"
                 checked={method === "bank"}
                 onChange={() => setMethod("bank")}
-                className="accent-brand"
+                className="sr-only"
               />
-              <Building2 className="h-5 w-5 text-foreground/70" />
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  Chuyển khoản ngân hàng
-                </p>
-                <p className="text-xs text-muted">
+              <span
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+                  method === "bank" ? "bg-brand text-ink" : "bg-surface-alt text-foreground/60"
+                }`}
+              >
+                <Building2 className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-foreground">Chuyển khoản ngân hàng</p>
+                <p className="mt-0.5 text-xs text-muted">
                   Gửi yêu cầu, admin xác nhận sau khi nhận được chuyển khoản
                 </p>
               </div>
+              {method === "bank" && (
+                <span className="absolute right-3 top-3 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-ink">
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </span>
+              )}
             </label>
 
             <label
-              className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${
+              className={`relative flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition ${
                 method === "usdt"
-                  ? "border-brand-dark bg-brand-light/40"
-                  : "border-border-c hover:bg-surface-alt"
-              } ${!usdtInfo ? "cursor-not-allowed opacity-50" : ""}`}
+                  ? "border-brand-dark bg-brand-light/30 shadow-sm"
+                  : "border-border-c bg-surface hover:border-brand-dark/40 hover:bg-surface-alt"
+              } ${!usdtInfo ? "cursor-not-allowed opacity-60 hover:border-border-c hover:bg-surface" : ""}`}
             >
               <input
                 type="radio"
@@ -281,35 +367,56 @@ export default function DepositPanel({
                 checked={method === "usdt"}
                 disabled={!usdtInfo}
                 onChange={() => setMethod("usdt")}
-                className="accent-brand"
+                className="sr-only"
               />
-              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-500 text-[10px] font-black text-white">
-                $
+              <span
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+                  method === "usdt" ? "bg-brand text-ink" : "bg-surface-alt text-foreground/60"
+                }`}
+              >
+                <DollarSign className="h-5 w-5" />
               </span>
-              <div>
-                <p className="text-sm font-semibold text-foreground">USDT (mạng TRC20)</p>
-                <p className="text-xs text-muted">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-sm font-bold text-foreground">USDT (mạng TRC20)</p>
+                  {!usdtInfo && (
+                    <span className="rounded-full bg-surface-alt px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">
+                      Chưa cấu hình
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-xs text-muted">
                   {usdtInfo
                     ? `Quy đổi theo tỷ giá 1 USDT ≈ ${usdtInfo.rate.toLocaleString("vi-VN")}đ`
-                    : "Chưa cấu hình (thiếu USDT_TRC20_ADDRESS trong .env)"}
+                    : "Thiếu USDT_TRC20_ADDRESS trong .env"}
                 </p>
               </div>
+              {method === "usdt" && (
+                <span className="absolute right-3 top-3 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-ink">
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </span>
+              )}
             </label>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-foreground">Số tiền nạp</h2>
+        <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm sm:p-6">
+          <div className="mb-4 flex items-center gap-2.5">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-light text-brand-dark">
+              <Banknote className="h-4 w-4" />
+            </span>
+            <h2 className="text-sm font-black text-foreground">Số tiền nạp</h2>
+          </div>
           <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2.5">
               {quickAmounts.map((value) => (
                 <button
                   key={value}
                   onClick={() => setAmount(value)}
-                  className={`rounded-lg border px-3 py-2.5 text-sm font-bold transition ${
+                  className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
                     amount === value
-                      ? "border-brand-dark bg-brand text-ink"
-                      : "border-border-c bg-surface text-foreground hover:bg-surface-alt"
+                      ? "border-brand-dark bg-brand text-ink shadow-[0_8px_18px_-8px_rgba(224,196,0,0.6)]"
+                      : "border-border-c bg-surface text-foreground hover:border-brand-dark/40 hover:bg-surface-alt"
                   }`}
                 >
                   {formatVnd(value)}
@@ -317,50 +424,69 @@ export default function DepositPanel({
               ))}
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-foreground">
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">
                 Hoặc nhập số tiền khác
               </label>
-              <input
-                type="number"
-                min={10000}
-                step={10000}
-                value={amount ?? ""}
-                onChange={(e) => setAmount(Number(e.target.value) || null)}
-                placeholder="Nhập số tiền (VNĐ)"
-                className="w-full rounded-lg border border-border-c px-3 py-2.5 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  min={10000}
+                  step={10000}
+                  value={amount ?? ""}
+                  onChange={(e) => setAmount(Number(e.target.value) || null)}
+                  placeholder="Nhập số tiền (VNĐ)"
+                  className="w-full rounded-xl border border-border-c bg-surface px-3.5 py-3 text-sm font-semibold text-foreground focus:border-brand-dark focus:outline-none focus:ring-2 focus:ring-brand/20"
+                />
+                <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-muted">
+                  VNĐ
+                </span>
+              </div>
             </div>
 
             {method === "bank" && (
-              <div className="flex flex-col gap-2 rounded-xl border border-dashed border-brand-dark/40 bg-brand-light/20 p-3">
-                <p className="text-xs font-bold text-foreground">
-                  Thông tin chuyển khoản
-                </p>
-                {bankInfo ? (
-                  <>
-                    {bankInfo.bin && (
-                      <div className="flex justify-center py-1">
+              <div className="overflow-hidden rounded-2xl border border-border-c bg-surface-alt/60">
+                <div className="flex items-center gap-2.5 border-b border-border-c bg-surface px-4 py-3">
+                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-light text-brand-dark">
+                    <Building2 className="h-4 w-4" />
+                  </span>
+                  <p className="text-sm font-bold text-foreground">Thông tin chuyển khoản</p>
+                </div>
+
+                <div className="px-4">
+                  {bankInfo?.bin && (
+                    <div className="flex justify-center py-4">
+                      <div className="rounded-2xl border border-border-c bg-white p-3 shadow-sm">
                         {/* eslint-disable-next-line @next/next/no-img-element -- ảnh QR động từ VietQR, không phải asset tĩnh trong repo nên không dùng next/image được */}
                         <img
                           src={`https://img.vietqr.io/image/${bankInfo.bin}-${bankInfo.accountNumber}-compact2.png?amount=${amount ?? ""}&addInfo=${encodeURIComponent(transferCode)}&accountName=${encodeURIComponent(bankInfo.accountHolder)}`}
                           alt="Mã QR chuyển khoản VietQR"
-                          className="h-56 w-56 rounded-lg border border-border-c bg-white object-contain p-2"
+                          className="h-48 w-48 rounded-lg object-contain sm:h-52 sm:w-52"
                         />
                       </div>
+                    </div>
+                  )}
+
+                  {!bankInfo && (
+                    <p className="pb-1 pt-3 text-xs leading-relaxed text-muted">
+                      Hệ thống chưa cấu hình sẵn số tài khoản — sau khi gửi yêu
+                      cầu, vui lòng liên hệ admin qua Zalo/Messenger (góc dưới
+                      bên phải trang) để được hướng dẫn chuyển khoản.
+                    </p>
+                  )}
+
+                  <div className="divide-y divide-border-c">
+                    {bankInfo && (
+                      <>
+                        <CopyField label="Ngân hàng" value={bankInfo.bankName} />
+                        <CopyField label="Số tài khoản" value={bankInfo.accountNumber} />
+                        <CopyField label="Chủ tài khoản" value={bankInfo.accountHolder} />
+                      </>
                     )}
-                    <CopyField label="Ngân hàng" value={bankInfo.bankName} />
-                    <CopyField label="Số tài khoản" value={bankInfo.accountNumber} />
-                    <CopyField label="Chủ tài khoản" value={bankInfo.accountHolder} />
-                  </>
-                ) : (
-                  <p className="text-xs text-muted">
-                    Hệ thống chưa cấu hình sẵn số tài khoản — sau khi gửi yêu
-                    cầu, vui lòng liên hệ admin qua Zalo/Messenger (góc dưới
-                    bên phải trang) để được hướng dẫn chuyển khoản.
-                  </p>
-                )}
-                <CopyField label="Nội dung chuyển khoản" value={transferCode} />
-                <p className="text-[11px] text-muted">
+                    <CopyField label="Nội dung chuyển khoản" value={transferCode} />
+                  </div>
+                </div>
+
+                <p className="border-t border-border-c bg-brand-light/30 px-4 py-2.5 text-[11px] font-medium text-brand-dark">
                   Vui lòng chuyển đúng số tiền và ghi đúng nội dung trên để
                   yêu cầu được duyệt nhanh hơn.
                 </p>
@@ -368,49 +494,60 @@ export default function DepositPanel({
             )}
 
             {method === "usdt" && usdtInfo && (
-              <div className="flex flex-col gap-2 rounded-xl border border-dashed border-emerald-500/50 bg-emerald-500/5 p-3">
-                <p className="text-xs font-bold text-foreground">
-                  Gửi USDT đến địa chỉ ví (mạng TRC20)
-                </p>
-                <CopyField label="Địa chỉ ví USDT-TRC20" value={usdtInfo.address} />
-                <p className="text-sm font-bold text-foreground">
-                  Số USDT cần gửi: ≈{" "}
-                  <span className="text-emerald-600">{usdtAmount?.toFixed(2)} USDT</span>
-                </p>
-                <p className="text-[11px] text-muted">
-                  Chỉ gửi USDT trên mạng TRC20 (Tron) — gửi sai mạng có thể
-                  mất tiền. Sau khi chuyển, dán mã giao dịch (TxID) bên dưới.
-                </p>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-foreground">
-                    Mã giao dịch (TxID)
-                  </label>
-                  <input
-                    type="text"
-                    value={txid}
-                    onChange={(e) => setTxid(e.target.value)}
-                    placeholder="Dán mã giao dịch từ ví/sàn của bạn"
-                    className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
-                  />
+              <div className="overflow-hidden rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.04]">
+                <div className="flex items-center gap-2.5 border-b border-emerald-500/20 bg-surface px-4 py-3">
+                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600">
+                    <DollarSign className="h-4 w-4" />
+                  </span>
+                  <p className="text-sm font-bold text-foreground">Gửi USDT (mạng TRC20)</p>
                 </div>
+
+                <div className="px-4">
+                  <div className="divide-y divide-emerald-500/15">
+                    <CopyField label="Địa chỉ ví USDT-TRC20" value={usdtInfo.address} />
+                  </div>
+                  <div className="flex items-center justify-between gap-2 border-t border-emerald-500/15 py-3">
+                    <span className="text-xs font-semibold text-muted">Số USDT cần gửi</span>
+                    <span className="text-base font-black text-emerald-600">
+                      ≈ {usdtAmount?.toFixed(2)} USDT
+                    </span>
+                  </div>
+                  <div className="pb-4">
+                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">
+                      Mã giao dịch (TxID)
+                    </label>
+                    <input
+                      type="text"
+                      value={txid}
+                      onChange={(e) => setTxid(e.target.value)}
+                      placeholder="Dán mã giao dịch từ ví/sàn của bạn"
+                      className="w-full rounded-xl border border-border-c bg-surface px-3.5 py-2.5 text-sm focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <p className="border-t border-emerald-500/20 bg-emerald-500/10 px-4 py-2.5 text-[11px] font-medium text-emerald-600">
+                  Chỉ gửi USDT trên mạng TRC20 (Tron) — gửi sai mạng có thể
+                  mất tiền. Sau khi chuyển, dán mã giao dịch (TxID) ở trên.
+                </p>
               </div>
             )}
 
             {error && (
-              <p className="rounded-lg bg-danger/10 px-3 py-2 text-xs font-semibold text-danger">
-                {error}
+              <p className="flex items-center gap-2 rounded-xl bg-danger/10 px-3.5 py-2.5 text-xs font-semibold text-danger">
+                <AlertTriangle className="h-4 w-4 shrink-0" /> {error}
               </p>
             )}
             {message && (
-              <p className="rounded-lg bg-success/10 px-3 py-2 text-xs font-semibold text-success">
-                {message}
+              <p className="flex items-center gap-2 rounded-xl bg-success/10 px-3.5 py-2.5 text-xs font-semibold text-success">
+                <CheckCircle2 className="h-4 w-4 shrink-0" /> {message}
               </p>
             )}
 
             <button
               onClick={handleSubmit}
               disabled={!amount || loading || (method === "usdt" && !usdtInfo)}
-              className="rounded-full bg-brand py-3 text-sm font-black text-ink transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-full bg-brand py-3.5 text-sm font-black text-ink shadow-[0_10px_25px_-8px_rgba(224,196,0,0.55)] transition hover:bg-brand-dark hover:shadow-[0_10px_28px_-6px_rgba(224,196,0,0.65)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
             >
               {loading
                 ? "Đang xử lý..."
@@ -425,40 +562,89 @@ export default function DepositPanel({
       </div>
 
       <div className="mt-8">
-        <h2 className="mb-3 text-sm font-bold text-foreground">Lịch sử nạp tiền</h2>
-        <div className="overflow-hidden rounded-xl border border-border-c bg-surface shadow-sm">
-          <div className="grid grid-cols-4 gap-2 border-b border-border-c bg-surface-alt px-4 py-2.5 text-xs font-bold text-muted">
-            <span>Thời gian</span>
-            <span>Phương thức</span>
-            <span>Số tiền</span>
-            <span>Trạng thái</span>
-          </div>
+        <div className="mb-3 flex items-center gap-2.5">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-light text-brand-dark">
+            <History className="h-4 w-4" />
+          </span>
+          <h2 className="text-sm font-black text-foreground">Lịch sử nạp tiền</h2>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-border-c bg-surface shadow-sm">
           {transactions.length === 0 ? (
-            <div className="p-8 text-center text-sm text-muted">
-              Bạn chưa có giao dịch nạp tiền nào.
+            <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-surface-alt text-muted">
+                <History className="h-6 w-6" strokeWidth={1.6} />
+              </span>
+              <p className="text-sm font-bold text-foreground">Chưa có giao dịch nào</p>
+              <p className="max-w-[260px] text-xs text-muted">
+                Lịch sử các lần nạp tiền của bạn sẽ hiện ở đây.
+              </p>
             </div>
           ) : (
-            transactions.map((tx) => (
-              <div
-                key={tx.id}
-                className="grid grid-cols-4 gap-2 border-b border-border-c px-4 py-3 text-sm last:border-0"
-              >
-                <span className="text-muted">
-                  {new Date(tx.createdAt).toLocaleString("vi-VN")}
-                </span>
-                <span className="text-foreground">
-                  {walletMethodLabel[tx.method ?? ""] ?? tx.method ?? "—"}
-                </span>
-                <span className="font-bold text-foreground">{formatVnd(tx.amount)}</span>
-                <span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-bold ${statusStyle[tx.status]}`}
-                  >
-                    {walletTxStatusLabel[tx.status]}
-                  </span>
-                </span>
+            <>
+              {/* Desktop: bảng thật */}
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-border-c bg-surface-alt text-[11px] font-bold uppercase tracking-wide text-muted">
+                      <th className="px-4 py-3">Thời gian</th>
+                      <th className="px-4 py-3">Phương thức</th>
+                      <th className="px-4 py-3">Số tiền</th>
+                      <th className="px-4 py-3">Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map((tx) => (
+                      <tr
+                        key={tx.id}
+                        className="border-b border-border-c transition last:border-0 hover:bg-surface-alt/60"
+                      >
+                        <td className="px-4 py-3.5 text-muted">
+                          {new Date(tx.createdAt).toLocaleString("vi-VN")}
+                        </td>
+                        <td className="px-4 py-3.5 text-foreground">
+                          {walletMethodLabel[tx.method ?? ""] ?? tx.method ?? "—"}
+                        </td>
+                        <td className="px-4 py-3.5 font-bold tabular-nums text-foreground">
+                          {formatVnd(tx.amount)}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${statusStyle[tx.status]}`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full ${statusDotStyle[tx.status]}`} />
+                            {walletTxStatusLabel[tx.status]}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ))
+
+              {/* Mobile: dạng thẻ */}
+              <div className="flex flex-col divide-y divide-border-c md:hidden">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="flex flex-col gap-1.5 px-4 py-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold tabular-nums text-foreground">
+                        {formatVnd(tx.amount)}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${statusStyle[tx.status]}`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${statusDotStyle[tx.status]}`} />
+                        {walletTxStatusLabel[tx.status]}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-xs text-muted">
+                      <span>{walletMethodLabel[tx.method ?? ""] ?? tx.method ?? "—"}</span>
+                      <span>{new Date(tx.createdAt).toLocaleString("vi-VN")}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
