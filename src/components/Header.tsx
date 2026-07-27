@@ -5,12 +5,13 @@ import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AccountMenu from "@/components/AccountMenu";
 import HeaderChatButton from "@/components/HeaderChatButton";
+import MobileProductAccordion from "@/components/MobileProductAccordion";
 import NavMegaMenu, { type MegaMenuItem } from "@/components/NavMegaMenu";
+import ProductMegaMenu, { type CategoryMenuNode } from "@/components/ProductMegaMenu";
 import ThemeToggle from "@/components/ThemeToggle";
-import { categories } from "@/data/categories";
 import { useCart } from "@/context/CartContext";
 import { getCategoryIcon, getCategoryIconColor } from "@/lib/categoryIcons";
 import { formatVnd } from "@/lib/format";
@@ -22,15 +23,6 @@ const simpleNavLinks = [
   { label: "Affiliate", href: "/affiliate" },
   { label: "Diễn đàn", href: "/dien-dan" },
 ];
-
-const productMenuItems: MegaMenuItem[] = categories.map((c) => {
-  const Icon = getCategoryIcon(c.slug);
-  return {
-    label: c.name,
-    href: `/danh-muc/${c.slug}`,
-    icon: <Icon className={`h-5 w-5 ${getCategoryIconColor(c.slug)}`} strokeWidth={2.5} />,
-  };
-});
 
 const BoostingIcon = getCategoryIcon("boosting");
 const ChatGptIcon = getCategoryIcon("chatgpt");
@@ -87,9 +79,10 @@ const depositMenuItems: MegaMenuItem[] = [
   },
 ];
 
+// "Trang chủ"/"Sản phẩm" tách riêng khỏi danh sách phẳng này — render tường
+// minh trước, "Sản phẩm" qua MobileProductAccordion (cây động, xem bên
+// dưới) — giữ đúng thứ tự cũ (Trang chủ, Sản phẩm, Dịch vụ, ...).
 const mobileNavLinks = [
-  { label: "Trang chủ", href: "/" },
-  { label: "Sản phẩm", href: "/danh-muc/gmail" },
   { label: "Dịch vụ", href: "/danh-muc/boosting" },
   { label: "Nạp tiền", href: "/nap-tien" },
   { label: "Tin nhắn", href: "/tin-nhan" },
@@ -102,9 +95,26 @@ const mobileNavLinks = [
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [categoryTree, setCategoryTree] = useState<CategoryMenuNode[]>([]);
   const { totalCount } = useCart();
   const { data: session, status } = useSession();
   const router = useRouter();
+
+  // Cây danh mục cho dropdown "Sản phẩm" — fetch 1 lần lúc mount (không cần
+  // poll lại như HeaderChatButton, category ít đổi), dùng chung cho cả bản
+  // desktop (ProductMegaMenu) lẫn mobile (MobileProductAccordion) để không
+  // gọi API 2 lần trên cùng 1 trang.
+  useEffect(() => {
+    let active = true;
+    fetch("/api/categories/tree")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && data?.tree) setCategoryTree(data.tree);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const isSeller =
     status === "authenticated" &&
@@ -258,12 +268,7 @@ export default function Header() {
           <Link href="/" className="whitespace-nowrap transition hover:text-brand-dark">
             Trang chủ
           </Link>
-          <NavMegaMenu
-            label="Sản phẩm"
-            href="/danh-muc/gmail"
-            items={productMenuItems}
-            columns={2}
-          />
+          <ProductMegaMenu tree={categoryTree} />
           <NavMegaMenu
             label="Dịch vụ"
             href="/danh-muc/boosting"
@@ -297,6 +302,14 @@ export default function Header() {
       {menuOpen && (
         <div className="border-b border-border-c bg-surface px-4 py-3 shadow-lg lg:hidden">
           <nav className="flex flex-col gap-1 text-sm font-semibold text-foreground/80">
+            <Link
+              href="/"
+              onClick={() => setMenuOpen(false)}
+              className="rounded-lg px-2 py-2.5 hover:bg-surface-alt hover:text-brand-dark"
+            >
+              Trang chủ
+            </Link>
+            <MobileProductAccordion tree={categoryTree} onNavigate={() => setMenuOpen(false)} />
             {mobileNavLinks.map((link) => (
               <Link
                 key={link.label}
