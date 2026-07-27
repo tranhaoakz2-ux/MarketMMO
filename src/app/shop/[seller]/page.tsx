@@ -14,16 +14,14 @@ import { notFound } from "next/navigation";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Avatar from "@/components/Avatar";
-import ProductCard from "@/components/ProductCard";
 import RatingStars from "@/components/RatingStars";
 import Reveal from "@/components/Reveal";
 import ReviewForm from "@/components/ReviewForm";
+import ShopProductList from "@/components/ShopProductList";
 import { getAuthSession } from "@/lib/authz";
 import { getSellerBySlug } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
-
-const sortOptions = ["Phổ Biến", "Mới Nhất", "Bán Chạy"];
 
 export default async function ShopPage({
   params,
@@ -131,34 +129,7 @@ export default async function ShopPage({
           </Reveal>
 
           <Reveal delay={0.05}>
-            <div className="my-4 flex flex-wrap gap-2">
-              {sortOptions.map((option, i) => (
-                <button
-                  key={option}
-                  className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-                    i === 0
-                      ? "bg-ink text-white"
-                      : "bg-surface text-foreground ring-1 ring-border-c hover:bg-surface-alt"
-                  }`}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </Reveal>
-
-          <Reveal delay={0.1}>
-            {items.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border-c bg-surface p-10 text-center text-sm text-muted">
-                Gian hàng chưa có sản phẩm.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {items.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            )}
+            <ShopProductList products={items} />
           </Reveal>
 
           <Reveal delay={0.1} className="mt-10 pb-12">

@@ -46,6 +46,8 @@ export type Product = {
   sellerId?: string;
   /** Ảnh thật do seller upload lúc đăng sản phẩm — null/undefined thì UI fallback về icon category (xem ProductThumbnail.tsx). */
   imageUrl?: string | null;
+  /** Ngày tạo (ISO string) — chỉ có khi fetch qua queries.ts (DB thật), dùng để sắp xếp "Mới nhất" (vd ShopProductList.tsx ở trang gian hàng seller). Seed/mock data tĩnh không set field này. */
+  createdAt?: string;
   /** "PENDING" | "APPROVED" | "REJECTED" — chỉ có khi fetch qua getMySellerProducts (trang quản lý sản phẩm của seller); các trang public chỉ trả sản phẩm APPROVED nên field này luôn ngầm định "APPROVED" ở đó, không cần set. */
   status?: "PENDING" | "APPROVED" | "REJECTED";
   adminNote?: string | null;

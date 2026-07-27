@@ -46,6 +46,7 @@ function mapProduct(p: ProductWithRelations): Product {
     sellerInsuranceBalance: p.seller.insuranceBalance,
     sellerId: p.sellerId,
     imageUrl: p.imageUrl,
+    createdAt: p.createdAt.toISOString(),
     status: p.status as "PENDING" | "APPROVED" | "REJECTED",
     adminNote: p.adminNote,
     variants: p.variants.map((v) => ({
