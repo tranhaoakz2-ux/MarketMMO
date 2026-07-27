@@ -9,6 +9,7 @@ import PromoBanner from "@/components/PromoBanner";
 import Reveal from "@/components/Reveal";
 import SellerFeaturedPanel from "@/components/SellerFeaturedPanel";
 import TagCloud from "@/components/TagCloud";
+import WelcomeModal from "@/components/WelcomeModal";
 import {
   getAllCategories,
   getAllProducts,
@@ -116,6 +117,7 @@ export default async function Home({
         </div>
       </main>
       <Footer />
+      <WelcomeModal />
     </>
   );
 }
