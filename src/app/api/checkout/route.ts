@@ -4,6 +4,7 @@ import { ESCROW_HOLD_DAYS } from "@/lib/constants";
 import { accrueCommission } from "@/lib/commission";
 import { feeAmountOf, getEffectiveFeePercent } from "@/lib/platform-fee";
 import { computeDiscountAmount, distributeDiscount, isDiscountCodeUsable } from "@/lib/discount";
+import { computeProratedPrice } from "@/lib/prorate";
 import { prisma } from "@/lib/prisma";
 
 type CheckoutItem = { productId: string; variantId?: string; quantity: number };
@@ -45,6 +46,9 @@ export async function POST(req: Request) {
         // sản phẩm/phiên bản chưa dùng kho thật, xem model ProductStockItem).
         claimedStockItemIds: string[];
         deliveredPayload: string | null;
+        // Snapshot ngày hết hạn của (các) đơn vị đã claim — JSON mảng cùng
+        // cấu trúc/thứ tự với deliveredPayload, null nếu không dùng kho thật.
+        deliveredExpiresAt: string | null;
         // true = dòng hàng dùng "kho số học" (Product.stock/Variant.stock) và
         // KHÔNG phải preOrder → phải trừ kho CÓ ĐIỀU KIỆN (nguyên tử) để chặn
         // oversell khi 2 buyer mua song song (bug B3). false = đã claim kho
@@ -87,6 +91,8 @@ export async function POST(req: Request) {
         let claimedStockItemIds: string[] = [];
         let deliveredPayload: string | null = null;
 
+        let deliveredExpiresAt: string | null = null;
+
         if (stockItemTotal > 0) {
           // Chế độ kho thật: BẮT BUỘC "claim" đủ số lượng bản ghi AVAILABLE
           // ngay trong transaction này (FOR UPDATE SKIP LOCKED để 2 checkout
@@ -94,11 +100,19 @@ export async function POST(req: Request) {
           // dụng kể cả khi sản phẩm đang preOrder — không thể "giao trước"
           // 1 nội dung chưa thật sự tồn tại trong kho, khác hẳn chế độ cũ
           // (stock chỉ là con số, preOrder cho phép âm).
-          const claimed = await tx.$queryRaw<{ id: string; content: string }[]>`
-            SELECT id, content FROM "ProductStockItem"
+          //
+          // Điều kiện "expiresAt" IS NULL OR "expiresAt" > NOW() là cơ chế
+          // TỰ ĐỘNG loại đơn vị đã hết hạn khỏi diện có thể bán — không cần
+          // cron/job nền, chỉ là điều kiện lọc tính lại mỗi lần checkout
+          // (xem model ProductStockItem, mục "Thời hạn sử dụng sản phẩm").
+          const claimed = await tx.$queryRaw<
+            { id: string; content: string; expiresAt: Date | null; nominalTermDays: number | null }[]
+          >`
+            SELECT id, content, "expiresAt", "nominalTermDays" FROM "ProductStockItem"
             WHERE "productId" = ${product.id}
               AND "variantId" IS NOT DISTINCT FROM ${item.variantId ?? null}
               AND status = 'AVAILABLE'
+              AND ("expiresAt" IS NULL OR "expiresAt" > NOW())
             ORDER BY "createdAt" ASC
             LIMIT ${item.quantity}
             FOR UPDATE SKIP LOCKED
@@ -118,6 +132,27 @@ export async function POST(req: Request) {
           });
           claimedStockItemIds = claimed.map((c) => c.id);
           deliveredPayload = JSON.stringify(claimed.map((c) => c.content));
+          deliveredExpiresAt = JSON.stringify(
+            claimed.map((c) => c.expiresAt?.toISOString() ?? null)
+          );
+
+          // Prorate giá theo từng đơn vị CÓ thời hạn (đơn vị không thời hạn
+          // giữ nguyên unitPrice gốc). Cộng thành lineTotal rồi floor-chia
+          // lại cho quantity — tái dùng đúng kỹ thuật chống lệch làm tròn đã
+          // có trong distributeDiscount() (src/lib/discount.ts): toàn bộ
+          // codebase (phí sàn, hoa hồng, doanh thu, hoàn tiền khiếu nại...)
+          // đều giả định unitPrice * quantity = tổng tiền dòng hàng, nên
+          // KHÔNG thể lưu nhiều giá khác nhau cho cùng 1 OrderItem — phải
+          // gộp về đúng 1 con số nguyên trước khi tạo OrderItem.
+          const hasAnyTimed = claimed.some((c) => c.expiresAt !== null);
+          if (hasAnyTimed) {
+            const lineTotal = claimed.reduce((sum, c) => {
+              if (!c.expiresAt) return sum + unitPrice;
+              const nominal = c.nominalTermDays ?? 1;
+              return sum + computeProratedPrice(unitPrice, nominal, c.expiresAt).price;
+            }, 0);
+            unitPrice = Math.floor(lineTotal / item.quantity);
+          }
         } else if (!product.preOrder) {
           if (item.variantId) {
             if (variant!.stock < item.quantity) {
@@ -139,6 +174,7 @@ export async function POST(req: Request) {
           price: unitPrice,
           claimedStockItemIds,
           deliveredPayload,
+          deliveredExpiresAt,
           // Chỉ cần trừ kho có điều kiện khi dùng kho số học + không preOrder.
           // Kho thật đã claim nguyên tử ở trên; preOrder cho phép âm.
           guardLegacyStock: stockItemTotal === 0 && !product.preOrder,
@@ -250,6 +286,7 @@ export async function POST(req: Request) {
             status: "ESCROW",
             escrowReleaseAt,
             deliveredPayload: item.deliveredPayload,
+            deliveredExpiresAt: item.deliveredExpiresAt,
             platformFeePercent: feePercent,
             platformFeeAmount,
           },

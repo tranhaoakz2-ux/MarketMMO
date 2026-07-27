@@ -149,7 +149,27 @@ export async function getProductBySlugDb(
     where: { slug, status: "APPROVED", seller: { suspended: false } },
     include: productInclude,
   });
-  return row ? mapProduct(row) : null;
+  if (!row) return null;
+  const product = mapProduct(row);
+
+  // Tín hiệu "có thời hạn" cho BuyBox — 1 query nhỏ RIÊNG chỉ trong hàm này
+  // (không đụng `productInclude` dùng chung cho mọi trang listing, tránh
+  // làm chậm trang chủ/danh mục), cùng tinh thần với getMySellerProducts()
+  // tự query thêm groupBy riêng cho số liệu kho. `distinct: ["variantId"]`
+  // nên chỉ trả tối đa 1 dòng/variant (+ 1 dòng cho variantId=null), không
+  // tốn kém dù sản phẩm có nhiều bản ghi kho.
+  const timedRows = await prisma.productStockItem.findMany({
+    where: { productId: product.id, status: "AVAILABLE", expiresAt: { gt: new Date() } },
+    select: { variantId: true },
+    distinct: ["variantId"],
+  });
+  const timedVariantIds = new Set(timedRows.map((r) => r.variantId));
+  product.hasTimedStock = timedVariantIds.has(null);
+  for (const variant of product.variants ?? []) {
+    variant.hasTimedStock = timedVariantIds.has(variant.id);
+  }
+
+  return product;
 }
 
 export async function getRelatedProductsDb(

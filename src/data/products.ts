@@ -8,6 +8,8 @@ export type ProductVariant = {
   stockManaged?: boolean;
   /** Số bản ghi kho thật còn AVAILABLE — chỉ có khi fetch qua getMySellerProducts. */
   stockAvailable?: number;
+  /** Có ≥1 dòng ProductStockItem AVAILABLE với expiresAt khác null hay không — chỉ có khi fetch qua getProductBySlugDb (trang chi tiết công khai), dùng để hiện badge "CÓ THỜI HẠN" ở BuyBox. */
+  hasTimedStock?: boolean;
 };
 
 export type Product = {
@@ -51,6 +53,8 @@ export type Product = {
   stockManaged?: boolean;
   /** Số bản ghi kho thật còn AVAILABLE (sản phẩm không có variant) — chỉ có khi fetch qua getMySellerProducts. */
   stockAvailable?: number;
+  /** Có ≥1 dòng ProductStockItem AVAILABLE với expiresAt khác null hay không (sản phẩm KHÔNG có variant) — chỉ có khi fetch qua getProductBySlugDb. */
+  hasTimedStock?: boolean;
 };
 
 export const products: Product[] = [

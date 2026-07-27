@@ -31,6 +31,16 @@ export async function POST(
   const body = await req.json().catch(() => null);
   const variantId = typeof body?.variantId === "string" && body.variantId ? body.variantId : null;
   const rawItems: string = typeof body?.items === "string" ? body.items : "";
+  // Thời hạn sử dụng — ô textarea THỨ 2, khớp theo SỐ THỨ TỰ DÒNG với ô nội
+  // dung (dòng N của expiresAt = hạn của dòng N ở items). Để trống dòng nào
+  // nghĩa là đơn vị đó không có hạn (trộn được trong cùng batch). Rỗng toàn
+  // bộ = không đơn vị nào có hạn (không đổi hành vi cũ).
+  const rawExpiresAt: string = typeof body?.expiresAt === "string" ? body.expiresAt : "";
+  const nominalTermDaysRaw = body?.nominalTermDays;
+  const nominalTermDays =
+    typeof nominalTermDaysRaw === "number" && Number.isFinite(nominalTermDaysRaw)
+      ? Math.trunc(nominalTermDaysRaw)
+      : null;
 
   if (variantId) {
     const variant = product.variants.find((v) => v.id === variantId);
@@ -44,10 +54,8 @@ export async function POST(
     );
   }
 
-  const lines = rawItems
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const rawItemLines = rawItems.split("\n").map((line) => line.trim());
+  const lines = rawItemLines.filter(Boolean);
 
   if (lines.length === 0) {
     return NextResponse.json({ error: "Vui lòng nhập ít nhất 1 dòng dữ liệu." }, { status: 400 });
@@ -66,14 +74,68 @@ export async function POST(
     );
   }
 
+  // expiresAtByLine[i] tương ứng đúng lines[i] (đã align phía dưới) — null =
+  // đơn vị đó không có hạn.
+  let expiresAtByLine: (Date | null)[] = lines.map(() => null);
+  const anyExpiryProvided = rawExpiresAt.trim().length > 0;
+  if (anyExpiryProvided) {
+    // Không cho phép dòng trống giữa chừng ở ô nội dung khi dùng kèm ngày
+    // hết hạn — nếu không, việc lọc dòng trống (lines = rawItemLines.filter)
+    // sẽ làm lệch chỉ số so với ô ngày hết hạn (dòng N không còn khớp dòng N).
+    if (rawItemLines.length !== lines.length) {
+      return NextResponse.json(
+        {
+          error:
+            "Ô nội dung có dòng trống — vui lòng xoá dòng trống khi dùng kèm ngày hết hạn để 2 ô khớp đúng theo dòng.",
+        },
+        { status: 400 }
+      );
+    }
+    const expiresAtLinesRaw = rawExpiresAt.split("\n").map((line) => line.trim());
+    if (expiresAtLinesRaw.length !== lines.length) {
+      return NextResponse.json(
+        { error: "Số dòng ở ô Ngày hết hạn phải khớp với số dòng ở ô Nội dung." },
+        { status: 400 }
+      );
+    }
+    const hasAnyNonEmptyExpiry = expiresAtLinesRaw.some((l) => l.length > 0);
+    if (hasAnyNonEmptyExpiry && (!nominalTermDays || nominalTermDays < 1)) {
+      return NextResponse.json(
+        { error: "Vui lòng chọn số ngày của gói đầy đủ (áp dụng cho các dòng có ngày hết hạn)." },
+        { status: 400 }
+      );
+    }
+    const parsed: (Date | null)[] = [];
+    for (const raw of expiresAtLinesRaw) {
+      if (!raw) {
+        parsed.push(null);
+        continue;
+      }
+      const date = new Date(raw);
+      if (Number.isNaN(date.getTime()) || date.getTime() <= Date.now()) {
+        return NextResponse.json(
+          { error: `Ngày hết hạn không hợp lệ hoặc đã ở quá khứ: "${raw}".` },
+          { status: 400 }
+        );
+      }
+      parsed.push(date);
+    }
+    expiresAtByLine = parsed;
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.productStockItem.createMany({
-      data: lines.map((content) => ({
-        productId,
-        variantId,
-        content,
-        status: "AVAILABLE",
-      })),
+      data: lines.map((content, i) => {
+        const expiresAt = expiresAtByLine[i];
+        return {
+          productId,
+          variantId,
+          content,
+          status: "AVAILABLE",
+          expiresAt,
+          nominalTermDays: expiresAt ? nominalTermDays : null,
+        };
+      }),
     });
 
     if (variantId) {

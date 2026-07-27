@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Check, LogIn, Minus, Plus, ShoppingBag } from "lucide-react";
+import { AlertCircle, Check, Clock, LogIn, Minus, Plus, ShoppingBag } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -30,6 +30,7 @@ export default function BuyBox({ product }: { product: Product }) {
   const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? null;
   const effectivePrice = selectedVariant ? selectedVariant.price : product.price;
   const effectiveStock = selectedVariant ? selectedVariant.stock : product.stock;
+  const hasTimedStock = selectedVariant ? selectedVariant.hasTimedStock : product.hasTimedStock;
   const maxQty = Math.max(1, Math.min(effectiveStock, MAX_QTY_CAP));
   const canBuy = !hasVariants || (selectedVariant !== null && effectiveStock > 0);
 
@@ -113,6 +114,17 @@ export default function BuyBox({ product }: { product: Product }) {
               {formatVnd(selectedVariant.price)}
             </p>
           )}
+        </div>
+      )}
+
+      {hasTimedStock && (
+        <div className="flex items-start gap-1.5 rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-xs text-foreground/80">
+          <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-info" />
+          <span>
+            <b className="font-bold text-info">CÓ THỜI HẠN</b> — giá hiển thị là giá gói đầy đủ, giá
+            thực tế tính theo số ngày còn lại của tài khoản, xem chi tiết ngay sau khi mua tại{" "}
+            <span className="font-semibold">Đơn hàng</span>.
+          </span>
         </div>
       )}
 

@@ -17,6 +17,22 @@ export function formatRelativeTime(date: Date | string): string {
   return d.toLocaleDateString("vi-VN");
 }
 
+// Khác formatRelativeTime()/formatLastActive() (đếm LÙI về quá khứ) — hàm
+// này đếm TỚI một mốc trong TƯƠNG LAI, dùng cho hạn dùng sản phẩm có thời
+// hạn (xem ProductStockItem.expiresAt / OrderItem.deliveredExpiresAt).
+// `tone` để nơi gọi tự map sang class màu cảnh báo phù hợp (vd text-danger).
+export function formatDaysRemaining(
+  expiresAt: Date | string
+): { label: string; tone: "danger" | "warn" | "safe" } {
+  const d = typeof expiresAt === "string" ? new Date(expiresAt) : expiresAt;
+  const diffDays = Math.ceil((d.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+  const dateLabel = d.toLocaleDateString("vi-VN");
+  if (diffDays <= 0) return { label: `Đã hết hạn (${dateLabel})`, tone: "danger" };
+  if (diffDays <= 2) return { label: `Hạn dùng đến ${dateLabel} (còn ${diffDays} ngày)`, tone: "danger" };
+  if (diffDays <= 7) return { label: `Hạn dùng đến ${dateLabel} (còn ${diffDays} ngày)`, tone: "warn" };
+  return { label: `Hạn dùng đến ${dateLabel} (còn ${diffDays} ngày)`, tone: "safe" };
+}
+
 export function formatLastActive(date: Date | string | null | undefined): string {
   if (!date) return "Chưa hoạt động";
   const d = typeof date === "string" ? new Date(date) : date;

@@ -48,6 +48,12 @@ function StockEntryPanel({
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Thời hạn sử dụng (tuỳ chọn) — bật lên mới hiện ô ngày hết hạn + gói ngày.
+  // Không lưu ở đâu khác ngoài state cục bộ này, "sản phẩm có thời hạn hay
+  // không" tự suy ra từ dữ liệu kho (có dòng expiresAt != null) sau khi lưu.
+  const [hasExpiry, setHasExpiry] = useState(false);
+  const [expiresAtText, setExpiresAtText] = useState("");
+  const [nominalTermDays, setNominalTermDays] = useState("30");
 
   const lineCount = text
     .split("\n")
@@ -60,7 +66,13 @@ function StockEntryPanel({
     const res = await fetch(`/api/seller/products/${productId}/stock`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ variantId, items: text }),
+      body: JSON.stringify({
+        variantId,
+        items: text,
+        ...(hasExpiry
+          ? { expiresAt: expiresAtText, nominalTermDays: Number(nominalTermDays) }
+          : {}),
+      }),
     });
     const data = await res.json().catch(() => null);
     setLoading(false);
@@ -69,6 +81,8 @@ function StockEntryPanel({
       return;
     }
     setText("");
+    setHasExpiry(false);
+    setExpiresAtText("");
     setOpen(false);
     onAdded();
   };
@@ -103,6 +117,50 @@ function StockEntryPanel({
             }
             className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
           />
+
+          <label className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
+            <input
+              type="checkbox"
+              checked={hasExpiry}
+              onChange={(e) => setHasExpiry(e.target.checked)}
+              className="h-3.5 w-3.5"
+            />
+            Lô này có thời hạn sử dụng (vd ChatGPT Plus, Netflix...)
+          </label>
+
+          {hasExpiry && (
+            <div className="flex flex-col gap-1.5 rounded-lg border border-border-c bg-surface p-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-foreground">Gói đầy đủ:</span>
+                <select
+                  value={nominalTermDays}
+                  onChange={(e) => setNominalTermDays(e.target.value)}
+                  className="rounded-lg border border-border-c bg-surface px-2 py-1 text-[11px] text-foreground focus:border-brand-dark focus:outline-none"
+                >
+                  <option value="7">7 ngày</option>
+                  <option value="30">30 ngày (1 tháng)</option>
+                  <option value="60">60 ngày (2 tháng)</option>
+                  <option value="90">90 ngày (3 tháng)</option>
+                  <option value="180">180 ngày (6 tháng)</option>
+                  <option value="365">365 ngày (12 tháng)</option>
+                </select>
+              </div>
+              <textarea
+                value={expiresAtText}
+                onChange={(e) => setExpiresAtText(e.target.value)}
+                rows={4}
+                placeholder={
+                  "Ngày hết hạn của TỪNG dòng ở ô trên, khớp đúng theo số thứ tự dòng — để trống dòng nào nếu dòng đó không có hạn, ví dụ:\n2026-04-20\n2026-05-15"
+                }
+                className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+              />
+              <p className="text-[11px] leading-relaxed text-foreground/70">
+                Dòng N ở đây = hạn dùng của dòng N ở ô nội dung phía trên — phải khớp đúng số dòng
+                (không được có dòng trống giữa chừng ở ô nội dung).
+              </p>
+            </div>
+          )}
+
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] text-muted">{lineCount} dòng hợp lệ</span>
             <button

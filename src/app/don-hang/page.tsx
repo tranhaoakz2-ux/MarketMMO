@@ -64,6 +64,7 @@ export default async function OrdersPage() {
             }
           : null,
         deliveredPayload: item.deliveredPayload,
+        deliveredExpiresAt: item.deliveredExpiresAt,
       };
     })
   );
@@ -120,7 +121,10 @@ export default async function OrdersPage() {
                               khiếu nại). Buyer đã nhận lại 100% thì không còn
                               quyền xem/copy tiếp — quyết định (a), SECURITY_AUDIT #8. */}
                           {row.deliveredPayload && row.status !== "CANCELLED" && (
-                            <DeliveredPayloadButton deliveredPayload={row.deliveredPayload} />
+                            <DeliveredPayloadButton
+                              deliveredPayload={row.deliveredPayload}
+                              deliveredExpiresAt={row.deliveredExpiresAt}
+                            />
                           )}
                         </td>
                         <td className="px-4 py-3 text-muted">{row.seller}</td>

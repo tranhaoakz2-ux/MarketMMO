@@ -404,6 +404,18 @@ model ProductStockItem {
   createdAt   DateTime  @default(now())
   soldAt      DateTime?
 
+  // Thời hạn sử dụng — khai theo TỪNG đơn vị (không phải theo cả Product/
+  // Variant) vì tài khoản nhập sỉ thường lệch hạn nhau. null = không thời
+  // hạn (Gmail, tài khoản clone...), giữ nguyên hành vi bán giá cố định như
+  // trước khi có tính năng này — không phá vỡ 180+ sản phẩm cũ.
+  expiresAt DateTime?
+  // Số ngày của gói ĐẦY ĐỦ mà đơn vị này thuộc về (vd 30 cho "1 tháng") —
+  // CHỈ dùng làm mẫu số tính % ngày còn lại để prorate giá lúc checkout
+  // (xem src/lib/prorate.ts), không hiển thị trực tiếp cho buyer. Bắt buộc
+  // phải có giá trị nếu expiresAt có giá trị (validate ở API nhập kho, xem
+  // POST /api/seller/products/[productId]/stock — không phải ràng buộc DB).
+  nominalTermDays Int?
+
   @@index([productId, variantId, status])
 }
 
@@ -451,6 +463,12 @@ model OrderItem {
   // seller tự gõ tay, không có nội dung để giao) — giữ nguyên hành vi cũ cho
   // toàn bộ đơn hàng/sản phẩm có từ trước tính năng này.
   deliveredPayload String?
+  // Snapshot ngày hết hạn của (các) đơn vị đã giao cho dòng hàng này tại
+  // thời điểm mua — JSON string mảng, CÙNG cấu trúc + CÙNG thứ tự index với
+  // deliveredPayload (1 phần tử/1 đơn vị, khớp quantity; phần tử null nếu
+  // đơn vị đó không có hạn). null khi deliveredPayload cũng null (sản phẩm
+  // chưa dùng kho thật) — không phá vỡ đơn hàng cũ.
+  deliveredExpiresAt String?
   // PHÍ SÀN — snapshot FREEZE tại thời điểm đặt đơn (tính hoàn toàn ở server
   // trên giá SAU giảm giá của dòng hàng này). Đổi % phí về sau KHÔNG hồi tố
   // đơn cũ vì đã lưu cứng ở đây. Giải ngân cho seller = price*quantity −

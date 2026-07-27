@@ -15,6 +15,13 @@ type DraftVariant = {
   price: string;
   stock: string;
   stockItems: string;
+  // Thời hạn sử dụng (tuỳ chọn) — hasExpiry chỉ là UI state, không lưu ở
+  // Product/Variant nào; "có thời hạn hay không" tự suy ra từ dữ liệu kho
+  // sau khi lưu (xem ProductStockItem.expiresAt). expiresAtItems khớp theo
+  // SỐ THỨ TỰ DÒNG với stockItems (dòng N = hạn của dòng N).
+  hasExpiry: boolean;
+  nominalTermDays: string;
+  expiresAtItems: string;
 };
 
 // Từ khoá gợi ý danh mục theo tên sản phẩm — chỉ GỢI Ý (tự điền sẵn dropdown),
@@ -90,6 +97,9 @@ export default function AddProductForm({
   // phiên bản nào bên dưới (khớp đúng quy tắc "Product.stock chỉ thật sự
   // dùng khi sản phẩm chưa có variant" đã có sẵn trong hệ thống).
   const [baseStockItems, setBaseStockItems] = useState("");
+  const [baseHasExpiry, setBaseHasExpiry] = useState(false);
+  const [baseNominalTermDays, setBaseNominalTermDays] = useState("30");
+  const [baseExpiresAtItems, setBaseExpiresAtItems] = useState("");
   const [variants, setVariants] = useState<DraftVariant[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -98,14 +108,30 @@ export default function AddProductForm({
   const addVariantRow = () => {
     setVariants((prev) => [
       ...prev,
-      { key: crypto.randomUUID(), label: "", price: "", stock: "", stockItems: "" },
+      {
+        key: crypto.randomUUID(),
+        label: "",
+        price: "",
+        stock: "",
+        stockItems: "",
+        hasExpiry: false,
+        nominalTermDays: "30",
+        expiresAtItems: "",
+      },
     ]);
   };
   const removeVariantRow = (key: string) => {
     setVariants((prev) => prev.filter((v) => v.key !== key));
   };
-  const updateVariant = (key: string, field: keyof DraftVariant, value: string) => {
+  const updateVariant = (
+    key: string,
+    field: Exclude<keyof DraftVariant, "hasExpiry">,
+    value: string
+  ) => {
     setVariants((prev) => prev.map((v) => (v.key === key ? { ...v, [field]: value } : v)));
+  };
+  const toggleVariantExpiry = (key: string, checked: boolean) => {
+    setVariants((prev) => prev.map((v) => (v.key === key ? { ...v, hasExpiry: checked } : v)));
   };
 
   useEffect(() => {
@@ -188,6 +214,9 @@ export default function AddProductForm({
     setImage(null);
     setPreviewUrl(null);
     setBaseStockItems("");
+    setBaseHasExpiry(false);
+    setBaseNominalTermDays("30");
+    setBaseExpiresAtItems("");
     setVariants([]);
   };
 
@@ -244,7 +273,15 @@ export default function AddProductForm({
         const stockRes = await fetch(`/api/seller/products/${productId}/stock`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: baseStockItems }),
+          body: JSON.stringify({
+            items: baseStockItems,
+            ...(baseHasExpiry
+              ? {
+                  expiresAt: baseExpiresAtItems,
+                  nominalTermDays: Number(baseNominalTermDays),
+                }
+              : {}),
+          }),
         });
         if (!stockRes.ok) {
           const stockData = await stockRes.json().catch(() => null);
@@ -272,7 +309,13 @@ export default function AddProductForm({
           const stockRes = await fetch(`/api/seller/products/${productId}/stock`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ variantId: variantData.variant.id, items: v.stockItems }),
+            body: JSON.stringify({
+              variantId: variantData.variant.id,
+              items: v.stockItems,
+              ...(v.hasExpiry
+                ? { expiresAt: v.expiresAtItems, nominalTermDays: Number(v.nominalTermDays) }
+                : {}),
+            }),
           });
           if (!stockRes.ok) {
             const stockData = await stockRes.json().catch(() => null);
@@ -539,6 +582,44 @@ export default function AddProductForm({
                   placeholder="Kho dữ liệu giao hàng thật cho phiên bản này (tuỳ chọn) — mỗi dòng 1 sản phẩm sẽ giao cho khách"
                   className="mt-2 w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-[11px] bg-surface text-foreground focus:border-brand-dark focus:outline-none"
                 />
+
+                <label className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={v.hasExpiry}
+                    onChange={(e) => toggleVariantExpiry(v.key, e.target.checked)}
+                    className="h-3.5 w-3.5"
+                  />
+                  Lô kho này có thời hạn sử dụng (vd ChatGPT Plus, Netflix...)
+                </label>
+                {v.hasExpiry && (
+                  <div className="mt-1.5 flex flex-col gap-1.5 rounded-lg border border-border-c bg-surface-alt/50 p-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-semibold text-foreground">Gói đầy đủ:</span>
+                      <select
+                        value={v.nominalTermDays}
+                        onChange={(e) => updateVariant(v.key, "nominalTermDays", e.target.value)}
+                        className="rounded-lg border border-border-c bg-surface px-2 py-1 text-[11px] text-foreground focus:border-brand-dark focus:outline-none"
+                      >
+                        <option value="7">7 ngày</option>
+                        <option value="30">30 ngày (1 tháng)</option>
+                        <option value="60">60 ngày (2 tháng)</option>
+                        <option value="90">90 ngày (3 tháng)</option>
+                        <option value="180">180 ngày (6 tháng)</option>
+                        <option value="365">365 ngày (12 tháng)</option>
+                      </select>
+                    </div>
+                    <textarea
+                      value={v.expiresAtItems}
+                      onChange={(e) => updateVariant(v.key, "expiresAtItems", e.target.value)}
+                      rows={2}
+                      placeholder={
+                        "Ngày hết hạn của TỪNG dòng ở ô kho phía trên, khớp đúng theo số thứ tự dòng — để trống dòng nào nếu dòng đó không có hạn, vd:\n2026-04-20\n2026-05-15"
+                      }
+                      className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-[11px] bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+                    />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -563,6 +644,44 @@ export default function AddProductForm({
               hàng tự động), có thể nhập kho sau tại mục &ldquo;Sản
               phẩm&rdquo; bên dưới.
             </p>
+
+            <label className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
+              <input
+                type="checkbox"
+                checked={baseHasExpiry}
+                onChange={(e) => setBaseHasExpiry(e.target.checked)}
+                className="h-3.5 w-3.5"
+              />
+              Lô kho này có thời hạn sử dụng (vd ChatGPT Plus, Netflix...)
+            </label>
+            {baseHasExpiry && (
+              <div className="mt-1.5 flex flex-col gap-1.5 rounded-lg border border-border-c bg-surface-alt/50 p-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-foreground">Gói đầy đủ:</span>
+                  <select
+                    value={baseNominalTermDays}
+                    onChange={(e) => setBaseNominalTermDays(e.target.value)}
+                    className="rounded-lg border border-border-c bg-surface px-2 py-1 text-[11px] text-foreground focus:border-brand-dark focus:outline-none"
+                  >
+                    <option value="7">7 ngày</option>
+                    <option value="30">30 ngày (1 tháng)</option>
+                    <option value="60">60 ngày (2 tháng)</option>
+                    <option value="90">90 ngày (3 tháng)</option>
+                    <option value="180">180 ngày (6 tháng)</option>
+                    <option value="365">365 ngày (12 tháng)</option>
+                  </select>
+                </div>
+                <textarea
+                  value={baseExpiresAtItems}
+                  onChange={(e) => setBaseExpiresAtItems(e.target.value)}
+                  rows={3}
+                  placeholder={
+                    "Ngày hết hạn của TỪNG dòng ở ô kho phía trên, khớp đúng theo số thứ tự dòng — để trống dòng nào nếu dòng đó không có hạn, vd:\n2026-04-20\n2026-05-15"
+                  }
+                  className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
