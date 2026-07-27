@@ -151,7 +151,10 @@ export default function CategorySidebar({
 
         <ul className="flex flex-col gap-2.5">
           <li>
-            <Link href="/" className="flex items-center justify-between gap-2">
+            {/* Trỏ tới /danh-muc (trang "tất cả sản phẩm"), KHÔNG phải "/"
+                (trang chủ) — bug cũ: bấm "Tất cả" bị văng khỏi trang danh
+                sách thay vì lọc bỏ category. */}
+            <Link href="/danh-muc" className="flex items-center justify-between gap-2">
               <span
                 className={`flex items-center gap-2.5 text-sm ${
                   !activeSlug ? "font-semibold text-foreground" : "text-muted"
