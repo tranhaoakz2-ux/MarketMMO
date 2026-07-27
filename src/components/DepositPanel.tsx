@@ -224,47 +224,33 @@ export default function DepositPanel({
     setCodeNonce(randomCodeNonce());
   };
 
-  // Số liệu hiển thị thêm cho khối số dư — tính thuần từ dữ liệu đã fetch sẵn
-  // (transactions), KHÔNG gọi thêm API nào.
-  const totalConfirmedDeposits = transactions
-    .filter((t) => t.status === "CONFIRMED")
-    .reduce((sum, t) => sum + t.amount, 0);
-
   return (
     <>
-      {/* Khối số dư — nền tối cao cấp thay cho nền đen phẳng cũ, số dư nổi
-          bật màu vàng thương hiệu, có điểm sáng trang trí (glow) tạo chiều
-          sâu thay vì để trống trải. */}
-      <div className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-ink via-ink to-ink-soft p-6 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.55)] sm:p-8">
-        <div className="pointer-events-none absolute -right-14 -top-14 h-52 w-52 rounded-full bg-brand/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-16 -left-8 h-40 w-40 rounded-full bg-brand/10 blur-3xl" />
-
-        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+      {/* Khối số dư — card trắng gọn (đồng bộ với 2 card bên dưới), KHÔNG
+          còn nền tối cao cấp cũ (quá to/trống). 1 hàng ngang: icon+label+số
+          dư bên trái, nút làm mới bên phải. Số dư dùng text-foreground
+          (theo theme: gần đen ở light, gần trắng ở dark) để đủ tương phản
+          trên bg-surface — KHÔNG dùng text-brand/brand-dark ở đây vì vàng
+          không đủ tương phản trên nền trắng, vàng chỉ còn ở badge icon nhỏ. */}
+      <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-border-c bg-surface px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand text-ink">
+            <Wallet className="h-5 w-5" strokeWidth={2.25} />
+          </span>
           <div>
-            <div className="mb-3 flex items-center gap-2.5">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-brand">
-                <Wallet className="h-4 w-4" strokeWidth={2} />
-              </span>
-              <p className="text-sm font-medium text-white/60">Số dư ví hiện tại</p>
-            </div>
-            <p className="text-4xl font-black tracking-tight text-brand tabular-nums sm:text-5xl">
+            <p className="text-xs font-medium text-muted">Số dư ví hiện tại</p>
+            <p className="text-2xl font-black tracking-tight text-foreground tabular-nums sm:text-[26px]">
               {formatVnd(session.user.walletBalance)}
             </p>
-            {totalConfirmedDeposits > 0 && (
-              <p className="mt-3 text-xs text-white/50">
-                Tổng đã nạp:{" "}
-                <span className="font-bold text-white/80">{formatVnd(totalConfirmedDeposits)}</span>
-              </p>
-            )}
           </div>
-
-          <button
-            onClick={() => update()}
-            className="flex w-fit shrink-0 items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-bold text-white/80 backdrop-blur transition hover:border-white/30 hover:bg-white/10 hover:text-white"
-          >
-            <RefreshCw className="h-3.5 w-3.5" /> Làm mới số dư
-          </button>
         </div>
+
+        <button
+          onClick={() => update()}
+          className="flex w-fit shrink-0 items-center gap-1.5 rounded-full border border-border-c bg-surface-alt px-3.5 py-2 text-xs font-bold text-foreground transition hover:border-brand-dark/40 hover:bg-brand-light/40 hover:text-brand-dark"
+        >
+          <RefreshCw className="h-3.5 w-3.5" /> Làm mới số dư
+        </button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
