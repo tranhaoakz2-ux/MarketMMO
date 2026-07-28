@@ -1,4 +1,4 @@
-import { BadgeCheck, Crown, Star } from "lucide-react";
+import { BadgeCheck, Crown, ShieldCheck, Star } from "lucide-react";
 import Link from "next/link";
 import ProductThumbnail from "@/components/ProductThumbnail";
 import type { Product } from "@/data/products";
@@ -72,6 +72,15 @@ export default function CategoryProductCard({ product }: { product: Product }) {
           <span>
             Đã bán: <b className="font-bold text-success">{product.sold}</b>
           </span>
+          {!!product.sellerInsuranceBalance && (
+            <>
+              <span className="text-muted">|</span>
+              <span className="flex items-center gap-1 text-info">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Bảo hiểm: {formatVnd(product.sellerInsuranceBalance)}
+              </span>
+            </>
+          )}
         </div>
 
         <div className="mb-2 flex flex-wrap items-center gap-1.5 text-sm text-muted">

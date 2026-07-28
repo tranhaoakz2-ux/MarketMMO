@@ -1,4 +1,4 @@
-import { BadgeCheck, Clock, Eye, Flame, PackageCheck } from "lucide-react";
+import { BadgeCheck, Clock, Eye, Flame, PackageCheck, ShieldCheck, Star } from "lucide-react";
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import ProductThumbnail from "@/components/ProductThumbnail";
@@ -53,6 +53,24 @@ export default function ProductCard({ product }: { product: Product }) {
           <p className="mt-1.5 line-clamp-1 text-[11px] text-muted">
             {product.shortDescription}
           </p>
+
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px]">
+            {product.reviewCount > 0 ? (
+              <span className="flex items-center gap-1 font-semibold text-foreground">
+                <Star className="h-3 w-3 fill-brand text-brand" />
+                {product.rating.toFixed(1)}
+                <span className="font-normal text-muted">({product.reviewCount})</span>
+              </span>
+            ) : (
+              <span className="text-muted">Chưa có đánh giá</span>
+            )}
+            {!!product.sellerInsuranceBalance && (
+              <span className="flex items-center gap-1 text-info">
+                <ShieldCheck className="h-3 w-3" />
+                Bảo hiểm: {formatVnd(product.sellerInsuranceBalance)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
