@@ -22,6 +22,7 @@ import {
   Scroll,
   Settings,
   ShoppingBag,
+  Star,
   Store,
   Tags,
   Users,
@@ -69,6 +70,7 @@ export default function AdminSidebar({
         { href: "/admin/san-pham", icon: PackageSearch, label: "Sản phẩm", count: counts.pendingProducts },
         { href: "/admin/danh-muc", icon: Tags, label: "Danh mục mới", count: counts.pendingCategories },
         { href: "/admin/dien-dan", icon: Library, label: "Diễn đàn", count: counts.pendingForumReports },
+        { href: "/admin/danh-gia", icon: Star, label: "Đánh giá" },
       ],
     },
     {

@@ -261,6 +261,12 @@ model Review {
   comment   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  // Admin ẩn review spam/xúc phạm — cùng pattern ForumPost.hidden. Không
+  // xoá cứng (giữ lại làm bằng chứng/lịch sử kiểm duyệt) — review bị ẩn
+  // biến mất khỏi trang shop công khai VÀ khỏi rating trung bình tính động
+  // (ratingStats() trong queries.ts), giống hệt cách ForumPost bị ẩn biến
+  // mất khỏi diễn đàn công khai.
+  hidden    Boolean  @default(false)
 
   @@unique([sellerId, userId])
 }

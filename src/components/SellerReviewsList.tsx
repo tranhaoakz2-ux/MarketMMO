@@ -7,6 +7,7 @@ type Review = {
   rating: number;
   comment: string;
   createdAt: Date;
+  hidden?: boolean;
 };
 
 function Stars({ rating, size = "h-4 w-4" }: { rating: number; size?: string }) {
@@ -23,11 +24,15 @@ function Stars({ rating, size = "h-4 w-4" }: { rating: number; size?: string }) 
 }
 
 export default function SellerReviewsList({ reviews }: { reviews: Review[] }) {
-  const count = reviews.length;
-  const avg = count ? reviews.reduce((s, r) => s + r.rating, 0) / count : 0;
+  // Thống kê CHỈ tính review chưa bị admin ẩn — khớp đúng số buyer nhìn
+  // thấy công khai. Danh sách bên dưới vẫn hiện ĐỦ mọi review (kể cả bị
+  // ẩn) kèm badge, để seller biết đầy đủ những gì đã nhận được.
+  const visibleReviews = reviews.filter((r) => !r.hidden);
+  const count = visibleReviews.length;
+  const avg = count ? visibleReviews.reduce((s, r) => s + r.rating, 0) / count : 0;
   const dist = [5, 4, 3, 2, 1].map((star) => ({
     star,
-    n: reviews.filter((r) => r.rating === star).length,
+    n: visibleReviews.filter((r) => r.rating === star).length,
   }));
 
   return (
@@ -37,7 +42,7 @@ export default function SellerReviewsList({ reviews }: { reviews: Review[] }) {
         subtitle="Đánh giá của người mua dành cho gian hàng của bạn (không thể chỉnh sửa/xoá)."
       />
 
-      {count === 0 ? (
+      {reviews.length === 0 ? (
         <Card>
           <EmptyState icon={MessageSquare} title="Chưa có đánh giá">
             Gian hàng của bạn chưa có đánh giá nào.
@@ -72,14 +77,21 @@ export default function SellerReviewsList({ reviews }: { reviews: Review[] }) {
           <div className="flex flex-col gap-3">
             <SectionTitle>Tất cả đánh giá</SectionTitle>
             {reviews.map((r) => (
-              <Card key={r.id}>
+              <Card key={r.id} className={r.hidden ? "opacity-60" : ""}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5">
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface-alt text-sm font-black text-muted">
                       {r.authorName.charAt(0).toUpperCase()}
                     </span>
                     <div>
-                      <p className="text-sm font-bold text-foreground">{r.authorName}</p>
+                      <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                        {r.authorName}
+                        {r.hidden && (
+                          <span className="rounded-full bg-danger/10 px-1.5 py-0.5 text-[10px] font-bold text-danger">
+                            Admin đã ẩn
+                          </span>
+                        )}
+                      </p>
                       <Stars rating={r.rating} size="h-3.5 w-3.5" />
                     </div>
                   </div>

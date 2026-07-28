@@ -320,7 +320,10 @@ export async function getSellerBySlug(slug: string) {
         include: productInclude,
         orderBy: { createdAt: "desc" },
       },
+      // hidden: false — review admin đã ẩn (spam/xúc phạm) biến mất khỏi
+      // trang shop công khai VÀ khỏi rating trung bình tính ở ratingStats().
       reviews: {
+        where: { hidden: false },
         include: { user: { select: { name: true, username: true } } },
         orderBy: { createdAt: "desc" },
       },
@@ -442,7 +445,7 @@ export async function getAllSellersWithStats() {
     where: { suspended: false },
     include: {
       products: { select: { id: true } },
-      reviews: { select: { rating: true } },
+      reviews: { where: { hidden: false }, select: { rating: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -548,7 +551,30 @@ export async function getSellerOrderItems(sellerId: string, { service }: { servi
   }));
 }
 
+// Công khai — dùng cho tab "Đánh giá" ở trang chi tiết sản phẩm/gian hàng
+// (ProductInfoTabs qua san-pham/[slug]/page.tsx). Review admin đã ẩn KHÔNG
+// hiện ở đây, cùng cách ForumPost bị ẩn biến mất khỏi diễn đàn công khai.
 export async function getSellerReviews(sellerId: string) {
+  const reviews = await prisma.review.findMany({
+    where: { sellerId, hidden: false },
+    include: { user: { select: { name: true, username: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+  return reviews.map((r) => ({
+    id: r.id,
+    authorName: r.user.name ?? r.user.username ?? "Người dùng",
+    rating: r.rating,
+    comment: r.comment,
+    createdAt: r.createdAt,
+  }));
+}
+
+// Dùng riêng cho trang quản lý CỦA CHÍNH seller (/trang-ban-hang/danh-gia)
+// — seller thấy ĐỦ mọi review kể cả bị admin ẩn (kèm cờ hidden để UI hiện
+// badge), cùng quy ước "seller luôn thấy đủ dữ liệu của mình" đã áp dụng
+// cho getMySellerProducts(). Thống kê điểm trung bình vẫn nên tính riêng
+// theo review KHÔNG ẩn ở tầng component để khớp với số buyer nhìn thấy.
+export async function getMySellerReviews(sellerId: string) {
   const reviews = await prisma.review.findMany({
     where: { sellerId },
     include: { user: { select: { name: true, username: true } } },
@@ -560,6 +586,7 @@ export async function getSellerReviews(sellerId: string) {
     rating: r.rating,
     comment: r.comment,
     createdAt: r.createdAt,
+    hidden: r.hidden,
   }));
 }
 
@@ -806,7 +833,7 @@ export async function getSellerAttentionCounts(sellerId: string) {
 export async function getSellerStoreSnapshot(sellerId: string) {
   const seller = await prisma.seller.findUnique({
     where: { id: sellerId },
-    include: { reviews: { select: { rating: true } } },
+    include: { reviews: { where: { hidden: false }, select: { rating: true } } },
   });
   if (!seller) return null;
   return {
