@@ -11,10 +11,10 @@ import SellerFeaturedPanel from "@/components/SellerFeaturedPanel";
 import TagCloud from "@/components/TagCloud";
 import WelcomeModal from "@/components/WelcomeModal";
 import {
-  getAllCategories,
   getAllProducts,
   getAllSellersWithStats,
   getAuctionSlots,
+  getCategoryTree,
   getFeaturedProducts,
 } from "@/lib/queries";
 
@@ -30,12 +30,12 @@ export default async function Home({
   const { page } = await searchParams;
   const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
 
-  const [categories, products, featured, auctionSlots, sellers] = await Promise.all([
-    getAllCategories(),
+  const [products, featured, auctionSlots, sellers, categoryTree] = await Promise.all([
     getAllProducts(),
     getFeaturedProducts(),
     getAuctionSlots(),
     getAllSellersWithStats(),
+    getCategoryTree(),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
@@ -45,11 +45,12 @@ export default async function Home({
     safePage * PAGE_SIZE
   );
 
-  const categoriesWithCount = categories.map((cat) => ({
-    slug: cat.slug,
-    name: cat.name,
-    count: products.filter((p) => p.categorySlug === cat.slug).length,
-  }));
+  // Đếm số sản phẩm theo từng category LÁ — CategoryTabs tự cộng dồn lên
+  // nhóm cha (xem countForNode() trong component đó).
+  const countBySlug: Record<string, number> = {};
+  for (const p of products) {
+    countBySlug[p.categorySlug] = (countBySlug[p.categorySlug] ?? 0) + 1;
+  }
 
   const nextAuctionEndAt = auctionSlots.length
     ? auctionSlots.reduce((soonest, s) =>
@@ -75,7 +76,7 @@ export default async function Home({
           </Reveal>
 
           <Reveal delay={0.05}>
-            <CategoryTabs categories={categoriesWithCount} />
+            <CategoryTabs tree={categoryTree} countBySlug={countBySlug} />
           </Reveal>
 
           <Reveal delay={0.1}>
