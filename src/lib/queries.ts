@@ -49,6 +49,7 @@ function mapProduct(p: ProductWithRelations): Product {
     createdAt: p.createdAt.toISOString(),
     status: p.status as "PENDING" | "APPROVED" | "REJECTED",
     adminNote: p.adminNote,
+    isActive: p.isActive,
     variants: p.variants.map((v) => ({
       id: v.id,
       label: v.label,
@@ -172,7 +173,7 @@ export async function collectDescendantCategoryIds(rootId: string): Promise<stri
 
 export async function getAllProducts(): Promise<Product[]> {
   const rows = await prisma.product.findMany({
-    where: { status: "APPROVED", seller: { suspended: false } },
+    where: { status: "APPROVED", isActive: true, seller: { suspended: false } },
     include: productInclude,
     orderBy: { createdAt: "desc" },
   });
@@ -183,6 +184,7 @@ export async function getFeaturedProducts(limit = 8): Promise<Product[]> {
   const rows = await prisma.product.findMany({
     where: {
       status: "APPROVED",
+      isActive: true,
       seller: { suspended: false },
       OR: [{ hot: true }, { featuredUntil: { gt: new Date() } }],
     },
@@ -211,7 +213,12 @@ export async function getProductsByCategory(
   const categoryIds = await collectDescendantCategoryIds(category.id);
 
   const rows = await prisma.product.findMany({
-    where: { status: "APPROVED", seller: { suspended: false }, categoryId: { in: categoryIds } },
+    where: {
+      status: "APPROVED",
+      isActive: true,
+      seller: { suspended: false },
+      categoryId: { in: categoryIds },
+    },
     include: productInclude,
     orderBy: { createdAt: "desc" },
   });
@@ -224,6 +231,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
   const rows = await prisma.product.findMany({
     where: {
       status: "APPROVED",
+      isActive: true,
       seller: { suspended: false },
       OR: [
         { name: { contains: q, mode: "insensitive" } },
@@ -247,7 +255,7 @@ export async function getProductBySlugDb(
   slug: string
 ): Promise<Product | null> {
   const row = await prisma.product.findUnique({
-    where: { slug, status: "APPROVED", seller: { suspended: false } },
+    where: { slug, status: "APPROVED", isActive: true, seller: { suspended: false } },
     include: productInclude,
   });
   if (!row) return null;
@@ -280,6 +288,7 @@ export async function getRelatedProductsDb(
   const rows = await prisma.product.findMany({
     where: {
       status: "APPROVED",
+      isActive: true,
       seller: { suspended: false },
       category: { slug: product.categorySlug },
       id: { not: product.id },
@@ -305,8 +314,9 @@ export async function getSellerBySlug(slug: string) {
       // status: "APPROVED" — sản phẩm PENDING/REJECTED của seller (từ tính
       // năng "Đăng sản phẩm mới") không được lộ ra trang gian hàng công khai,
       // cùng quy tắc đã áp dụng cho mọi query công khai khác trong file này.
+      // isActive: true — sản phẩm admin đã ẩn cũng biến mất khỏi shop công khai.
       products: {
-        where: { status: "APPROVED" },
+        where: { status: "APPROVED", isActive: true },
         include: productInclude,
         orderBy: { createdAt: "desc" },
       },

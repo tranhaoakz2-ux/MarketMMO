@@ -51,6 +51,12 @@ export type Product = {
   /** "PENDING" | "APPROVED" | "REJECTED" — chỉ có khi fetch qua getMySellerProducts (trang quản lý sản phẩm của seller); các trang public chỉ trả sản phẩm APPROVED nên field này luôn ngầm định "APPROVED" ở đó, không cần set. */
   status?: "PENDING" | "APPROVED" | "REJECTED";
   adminNote?: string | null;
+  /** Admin tự ẩn/hiện sản phẩm đang sống — tách biệt khỏi status. false =
+      admin đã ẩn, seller vẫn thấy được trong trang quản lý của mình kèm ghi
+      chú, nhưng biến mất khỏi mọi nơi công khai. Luôn có giá trị (default
+      true ở DB) vì mapProduct() luôn map field này, không như status/
+      adminNote (chỉ có ý nghĩa cho seller xem sản phẩm của chính mình). */
+  isActive?: boolean;
   /** Đã có kho dữ liệu giao hàng thật (ProductStockItem) hay chưa — chỉ có khi fetch qua getMySellerProducts, áp dụng cho sản phẩm KHÔNG có variant nào. */
   stockManaged?: boolean;
   /** Số bản ghi kho thật còn AVAILABLE (sản phẩm không có variant) — chỉ có khi fetch qua getMySellerProducts. */

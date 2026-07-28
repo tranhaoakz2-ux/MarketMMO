@@ -344,6 +344,12 @@ model Product {
   // không dựa vào default.
   status    String   @default("APPROVED")
   adminNote String?
+  // Admin tự ẩn/hiện 1 sản phẩm ĐANG SỐNG trên sàn — tách biệt hoàn toàn
+  // khỏi `status` (luồng duyệt đăng mới của seller). Cùng pattern
+  // Category.isActive: false = biến mất khỏi mọi query công khai nhưng
+  // seller vẫn thấy trong trang quản lý sản phẩm của mình (kèm ghi chú đã
+  // bị admin ẩn), khác REJECTED (seller coi như sản phẩm không tồn tại).
+  isActive  Boolean  @default(true)
 
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])

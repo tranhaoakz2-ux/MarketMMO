@@ -312,6 +312,11 @@ function ManageModal({
               <StatusBadge tone={STATUS_TONE[status]} dot>
                 {PRODUCT_STATUS_LABEL[status]}
               </StatusBadge>
+              {product.isActive === false && (
+                <StatusBadge tone="danger" dot>
+                  Admin đã ẩn
+                </StatusBadge>
+              )}
             </div>
             <p className="mt-0.5 text-xs text-muted">
               Giá mặc định: {formatVnd(product.price)} · Kho mặc định: {product.stock}
@@ -496,9 +501,16 @@ export default function ProductVariantManager() {
       key: "status",
       header: "Trạng thái",
       render: (p) => (
-        <StatusBadge tone={STATUS_TONE[(p.status ?? "APPROVED") as ProductStatus]} dot>
-          {PRODUCT_STATUS_LABEL[(p.status ?? "APPROVED") as ProductStatus]}
-        </StatusBadge>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <StatusBadge tone={STATUS_TONE[(p.status ?? "APPROVED") as ProductStatus]} dot>
+            {PRODUCT_STATUS_LABEL[(p.status ?? "APPROVED") as ProductStatus]}
+          </StatusBadge>
+          {p.isActive === false && (
+            <StatusBadge tone="danger" dot>
+              Admin đã ẩn
+            </StatusBadge>
+          )}
+        </div>
       ),
     },
     {

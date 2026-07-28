@@ -66,7 +66,7 @@ export default function AdminSidebar({
       label: "Kiểm duyệt",
       groupCount: moderationTotal,
       items: [
-        { href: "/admin/san-pham", icon: PackageSearch, label: "Sản phẩm chờ duyệt", count: counts.pendingProducts },
+        { href: "/admin/san-pham", icon: PackageSearch, label: "Sản phẩm", count: counts.pendingProducts },
         { href: "/admin/danh-muc", icon: Tags, label: "Danh mục mới", count: counts.pendingCategories },
         { href: "/admin/dien-dan", icon: Library, label: "Diễn đàn", count: counts.pendingForumReports },
       ],
