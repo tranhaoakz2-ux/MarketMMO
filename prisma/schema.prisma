@@ -933,3 +933,23 @@ model CommissionRateChange {
 
   @@index([createdAt])
 }
+
+// Cấu hình thanh toán (VNPay/USDT/Ngân hàng) quản lý qua Admin thay vì chỉ
+// .env — key-value đơn giản (8 key cố định: vnpay_tmn_code,
+// vnpay_hash_secret, usdt_trc20_address, usdt_vnd_rate, bank_name,
+// bank_account_number, bank_account_holder, bank_bin), xem
+// src/lib/payment/config.ts. THIẾU dòng hoặc value rỗng = fallback về biến
+// môi trường .env cùng tên — không phá vỡ cấu hình production hiện có, chỉ
+// khi admin chủ động lưu qua /admin/cai-dat mới ghi đè. `value` lưu
+// plaintext (kể cả vnpay_hash_secret) — quyết định có chủ đích, xem
+// PROJECT_MAP.md mục "Việc 3": DB vốn đã lưu nhiều dữ liệu nhạy cảm khác
+// (passwordHash...), không thêm tầng mã hoá mới cho 1 admin duy nhất.
+// `updatedBy` chỉ là tiện ích hiển thị nhanh — AdminAuditLog mới là nguồn
+// audit chính thức (ghi tên key đã đổi, KHÔNG ghi giá trị secret).
+model PaymentConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String?
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}

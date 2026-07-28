@@ -1,13 +1,15 @@
 import crypto from "crypto";
+import { getPaymentConfig } from "@/lib/payment/config";
 
 /**
  * Minimal VNPay "Payment URL" (pay via redirect) integration per the public
  * VNPay merchant spec: https://sandbox.vnpayment.vn/apis/docs/thanh-toan-pay/pay.html
  *
- * Requires VNPAY_TMN_CODE + VNPAY_HASH_SECRET (merchant credentials, issued
- * by VNPay after business registration) — see .env.example. Without them,
- * `isVnpayConfigured()` returns false and callers should fall back to the
- * manual deposit-request flow.
+ * Requires vnpay_tmn_code + vnpay_hash_secret (merchant credentials, issued
+ * by VNPay after business registration) — quản lý qua /admin/cai-dat, fallback
+ * .env (VNPAY_TMN_CODE/VNPAY_HASH_SECRET) nếu admin chưa cấu hình qua DB, xem
+ * src/lib/payment/config.ts. Thiếu cả 2 nguồn thì `isVnpayConfigured()` trả
+ * false và callers nên fallback sang luồng yêu cầu nạp tiền thủ công.
  *
  * Chữ ký HMAC bắt buộc encode theo đúng mẫu Node.js chính thức của VNPay:
  * mã hoá key/value bằng encodeURIComponent RỒI thay "%20" thành "+" (kiểu
@@ -17,8 +19,12 @@ import crypto from "crypto";
  * orderInfo) — lỗi thật đã phát hiện khi rà lại code trước khi dùng key thật.
  */
 
-export function isVnpayConfigured(): boolean {
-  return Boolean(process.env.VNPAY_TMN_CODE && process.env.VNPAY_HASH_SECRET);
+export async function isVnpayConfigured(): Promise<boolean> {
+  const [tmnCode, secret] = await Promise.all([
+    getPaymentConfig("vnpay_tmn_code"),
+    getPaymentConfig("vnpay_hash_secret"),
+  ]);
+  return Boolean(tmnCode && secret);
 }
 
 function vnpEncode(value: string): string {
@@ -38,16 +44,18 @@ function formatVnpayDate(d: Date): string {
   return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
 
-export function createVnpayPaymentUrl(params: {
+export async function createVnpayPaymentUrl(params: {
   amount: number;
   txnRef: string;
   orderInfo: string;
   ipAddr: string;
-}): string {
-  const tmnCode = process.env.VNPAY_TMN_CODE;
-  const secret = process.env.VNPAY_HASH_SECRET;
+}): Promise<string> {
+  const [tmnCode, secret] = await Promise.all([
+    getPaymentConfig("vnpay_tmn_code"),
+    getPaymentConfig("vnpay_hash_secret"),
+  ]);
   if (!tmnCode || !secret) {
-    throw new Error("VNPay chưa được cấu hình (thiếu VNPAY_TMN_CODE/VNPAY_HASH_SECRET).");
+    throw new Error("VNPay chưa được cấu hình (thiếu mã TMN/hash secret).");
   }
 
   const vnpUrl =
@@ -79,8 +87,8 @@ export function createVnpayPaymentUrl(params: {
   return `${vnpUrl}?${signData}&vnp_SecureHash=${secureHash}`;
 }
 
-export function verifyVnpayReturn(query: Record<string, string>): boolean {
-  const secret = process.env.VNPAY_HASH_SECRET;
+export async function verifyVnpayReturn(query: Record<string, string>): Promise<boolean> {
+  const secret = await getPaymentConfig("vnpay_hash_secret");
   if (!secret) return false;
 
   const { vnp_SecureHash, vnp_SecureHashType, ...rest } = query;

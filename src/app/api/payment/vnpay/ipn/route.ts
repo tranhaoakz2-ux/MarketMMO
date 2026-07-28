@@ -17,7 +17,7 @@ const R = (RspCode: string, Message: string) => NextResponse.json({ RspCode, Mes
 
 async function handle(query: Record<string, string>) {
   // 1. Chữ ký
-  if (!verifyVnpayReturn(query)) {
+  if (!(await verifyVnpayReturn(query))) {
     return R("97", "Invalid signature");
   }
 

@@ -7,11 +7,10 @@ export async function POST(req: Request) {
   const { session, error } = await requireUser();
   if (error) return error;
 
-  if (!isVnpayConfigured()) {
+  if (!(await isVnpayConfigured())) {
     return NextResponse.json(
       {
-        error:
-          "VNPay chưa được cấu hình (thiếu VNPAY_TMN_CODE/VNPAY_HASH_SECRET trong .env). Vui lòng dùng nạp tiền thủ công.",
+        error: "VNPay chưa được cấu hình. Vui lòng dùng nạp tiền thủ công.",
       },
       { status: 400 }
     );
@@ -48,7 +47,7 @@ export async function POST(req: Request) {
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
 
   try {
-    const url = createVnpayPaymentUrl({
+    const url = await createVnpayPaymentUrl({
       amount,
       txnRef: tx.id,
       orderInfo: `Nap tien vi MarketMMO - ${tx.id}`,

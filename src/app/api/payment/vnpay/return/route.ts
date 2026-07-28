@@ -11,7 +11,7 @@ export async function GET(req: Request) {
 
   const redirectBase = new URL("/nap-tien", url.origin);
 
-  const valid = verifyVnpayReturn(query);
+  const valid = await verifyVnpayReturn(query);
   if (!valid) {
     redirectBase.searchParams.set("status", "invalid_signature");
     return NextResponse.redirect(redirectBase);

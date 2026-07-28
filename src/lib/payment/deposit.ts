@@ -1,8 +1,11 @@
 // Cấu hình 2 kênh nạp tiền thủ công (thông tin nhận tiền phải là thật —
 // KHÔNG tạo giá trị placeholder giả trông giống số tài khoản/địa chỉ ví thật,
 // vì có thể khiến người dùng chuyển nhầm tiền thật vào nơi không xác định).
-// Theo cùng quy ước env-var-gated như VNPay (xem src/lib/payment/vnpay.ts):
-// thiếu key thì tính năng tự ẩn/disable, không chặn phần còn lại của app.
+// Quản lý qua /admin/cai-dat (bảng PaymentConfig), fallback .env
+// (BANK_NAME/BANK_ACCOUNT_NUMBER/... , USDT_TRC20_ADDRESS/USDT_VND_RATE) nếu
+// admin chưa cấu hình qua DB — xem src/lib/payment/config.ts. Thiếu cả 2
+// nguồn thì tính năng tự ẩn/disable, không chặn phần còn lại của app.
+import { getPaymentConfig } from "@/lib/payment/config";
 
 export type BankInfo = {
   bankName: string;
@@ -12,23 +15,29 @@ export type BankInfo = {
   bin: string | null;
 };
 
-export function getBankInfo(): BankInfo | null {
-  const bankName = process.env.BANK_NAME;
-  const accountNumber = process.env.BANK_ACCOUNT_NUMBER;
-  const accountHolder = process.env.BANK_ACCOUNT_HOLDER;
+export async function getBankInfo(): Promise<BankInfo | null> {
+  const [bankName, accountNumber, accountHolder, bin] = await Promise.all([
+    getPaymentConfig("bank_name"),
+    getPaymentConfig("bank_account_number"),
+    getPaymentConfig("bank_account_holder"),
+    getPaymentConfig("bank_bin"),
+  ]);
   if (!bankName || !accountNumber || !accountHolder) return null;
-  return { bankName, accountNumber, accountHolder, bin: process.env.BANK_BIN || null };
+  return { bankName, accountNumber, accountHolder, bin: bin || null };
 }
 
 export type UsdtInfo = {
   address: string;
-  /** Tỷ giá quy đổi VNĐ / 1 USDT, admin tự cập nhật trong .env theo thị trường. */
+  /** Tỷ giá quy đổi VNĐ / 1 USDT, admin tự cập nhật theo thị trường. */
   rate: number;
 };
 
-export function getUsdtInfo(): UsdtInfo | null {
-  const address = process.env.USDT_TRC20_ADDRESS;
-  const rate = Number(process.env.USDT_VND_RATE);
+export async function getUsdtInfo(): Promise<UsdtInfo | null> {
+  const [address, rateStr] = await Promise.all([
+    getPaymentConfig("usdt_trc20_address"),
+    getPaymentConfig("usdt_vnd_rate"),
+  ]);
+  const rate = Number(rateStr);
   if (!address || !Number.isFinite(rate) || rate <= 0) return null;
   return { address, rate };
 }

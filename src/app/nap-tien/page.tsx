@@ -6,7 +6,12 @@ import Reveal from "@/components/Reveal";
 import { getBankInfo, getUsdtInfo } from "@/lib/payment/deposit";
 import { isVnpayConfigured } from "@/lib/payment/vnpay";
 
-export default function DepositPage() {
+export default async function DepositPage() {
+  const [vnpayEnabled, bankInfo, usdtInfo] = await Promise.all([
+    isVnpayConfigured(),
+    getBankInfo(),
+    getUsdtInfo(),
+  ]);
   return (
     <>
       <Header />
@@ -17,11 +22,7 @@ export default function DepositPage() {
 
         <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6 lg:px-8">
           <Reveal>
-            <DepositPanel
-              vnpayEnabled={isVnpayConfigured()}
-              bankInfo={getBankInfo()}
-              usdtInfo={getUsdtInfo()}
-            />
+            <DepositPanel vnpayEnabled={vnpayEnabled} bankInfo={bankInfo} usdtInfo={usdtInfo} />
           </Reveal>
         </div>
       </main>
@@ -29,6 +30,8 @@ export default function DepositPage() {
     </>
   );
 }
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Nạp tiền — MarketMMO",
