@@ -50,7 +50,7 @@ export default function ProductCard({ product }: { product: Product }) {
             )}
           </div>
 
-          <p className="mt-1.5 line-clamp-1 text-[11px] text-muted">
+          <p className="mt-1.5 line-clamp-1 text-xs font-medium text-foreground/70">
             {product.shortDescription}
           </p>
 

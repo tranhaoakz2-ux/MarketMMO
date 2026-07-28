@@ -98,7 +98,7 @@ export default function CategoryProductCard({ product }: { product: Product }) {
 
         <div className="my-2 border-t border-dashed border-border-c" />
 
-        <p className="line-clamp-2 flex-1 text-sm leading-relaxed text-muted">
+        <p className="line-clamp-2 flex-1 text-base font-medium leading-relaxed text-foreground/70">
           {product.shortDescription}
         </p>
       </div>
