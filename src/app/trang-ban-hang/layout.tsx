@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAuthSession, getSellerForUser } from "@/lib/authz";
+import { getInsuranceFundTarget } from "@/lib/site-config";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Reveal from "@/components/Reveal";
@@ -15,6 +16,8 @@ export default async function SellerDashboardLayout({
 
   const seller = await getSellerForUser(session.user.id);
   if (!seller) redirect("/tro-thanh-nguoi-ban");
+
+  const insuranceFundTarget = await getInsuranceFundTarget();
 
   return (
     <>
@@ -34,6 +37,7 @@ export default async function SellerDashboardLayout({
                 shopName={seller.shopName}
                 verified={seller.verified}
                 insuranceBalance={seller.insuranceBalance}
+                insuranceFundTarget={insuranceFundTarget}
               />
               <div className="min-w-0 flex-1">{children}</div>
             </div>

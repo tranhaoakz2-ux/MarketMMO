@@ -187,6 +187,41 @@ export async function saveProductImage(file: File): Promise<string> {
 }
 
 /**
+ * Lưu ảnh banner trang chủ (Admin > Nội dung trang web) — CÔNG KHAI, cùng
+ * cơ chế với saveProductImage() (Blob public hoặc public/uploads/banners/
+ * khi thiếu token), chỉ khác thư mục lưu. URL trả về ghi thẳng vào
+ * SiteConfig, dùng thẳng trong <Image src=...>.
+ */
+export async function saveBannerImage(file: File): Promise<string> {
+  const ext = ALLOWED_TYPES[file.type];
+  if (!ext) {
+    throw new Error("Chỉ chấp nhận ảnh JPEG, PNG hoặc WebP.");
+  }
+  if (file.size > MAX_UPLOAD_SIZE) {
+    throw new Error("Ảnh vượt quá 5MB.");
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  assertMagicMatches(file.type, buffer); // chống giả mạo Content-Type
+  const filename = `${randomUUID()}.${ext}`;
+
+  if (isBlobConfigured()) {
+    const blob = await put(path.join("banners", filename), buffer, {
+      access: "public",
+      contentType: file.type,
+      addRandomSuffix: true,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+    return blob.url;
+  }
+
+  const absolutePath = path.join(process.cwd(), "public", "uploads", "banners", filename);
+  await mkdir(path.dirname(absolutePath), { recursive: true });
+  await writeFile(absolutePath, buffer);
+  return `/uploads/banners/${filename}`;
+}
+
+/**
  * Lưu ảnh/file đính kèm 1 tin nhắn chat. Tự phân loại IMAGE (ALLOWED_TYPES)
  * hay FILE (ALLOWED_DOC_TYPES) theo mimeType client gửi lên, dùng đúng sàn
  * dung lượng của loại đó — từ chối mọi định dạng khác (bao gồm mọi file

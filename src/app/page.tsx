@@ -17,6 +17,7 @@ import {
   getCategoryTree,
   getFeaturedProducts,
 } from "@/lib/queries";
+import { getBannerImages, getSearchTags } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
 
@@ -30,12 +31,14 @@ export default async function Home({
   const { page } = await searchParams;
   const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
 
-  const [products, featured, auctionSlots, sellers, categoryTree] = await Promise.all([
+  const [products, featured, auctionSlots, sellers, categoryTree, banners, searchTags] = await Promise.all([
     getAllProducts(),
     getFeaturedProducts(),
     getAuctionSlots(),
     getAllSellersWithStats(),
     getCategoryTree(),
+    getBannerImages(),
+    getSearchTags(),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
@@ -64,7 +67,7 @@ export default async function Home({
       <main className="flex-1 bg-background">
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
           <Reveal>
-            <PromoBanner />
+            <PromoBanner leftImages={banners.left} rightImages={banners.right} />
           </Reveal>
 
           <Reveal delay={0.05}>
@@ -113,7 +116,7 @@ export default async function Home({
           </Reveal>
 
           <Reveal delay={0.1}>
-            <TagCloud />
+            <TagCloud tags={searchTags} />
           </Reveal>
         </div>
       </main>

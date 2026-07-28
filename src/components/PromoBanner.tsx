@@ -8,41 +8,18 @@ const ROTATE_INTERVAL_MS = 5000;
 // hơn thì bật lại đúng ảnh cũ (giống hành vi carousel tiêu chuẩn).
 const DRAG_THRESHOLD_RATIO = 0.15;
 
-type BannerImage = { src: string; alt: string; position: string };
+export type BannerImage = { src: string; alt: string };
 
-// Ảnh nguồn (996-1011px rộng) không cùng tỉ lệ khung với khung banner hiện
-// tại (872-877 : 334, rất dẹt ngang do bước thu chiều cao 50% trước đó) —
-// object-cover mặc định crop giữa sẽ cắt mất chữ/logo bên trái ở 2 ảnh hàng
+// Ảnh MẶC ĐỊNH (996-1011px rộng) không cùng tỉ lệ khung với khung banner
+// hiện tại (872-877 : 334, rất dẹt ngang do bước thu chiều cao 50% trước đó)
+// — object-cover mặc định crop giữa sẽ cắt mất chữ/logo bên trái ở ảnh hàng
 // dưới (tỉ lệ ảnh gốc ~3.1:1, rộng hơn khung nên bị crop 2 bên trái-phải) và
-// cắt mất đáy nút CTA ở 2 ảnh hàng trên (tỉ lệ ảnh gốc ~2.25-2.29:1, hẹp hơn
-// khung nên bị crop trên-dưới). Chỉ định `object-top`/`object-left` theo
-// từng ảnh để giữ đúng phần nội dung quan trọng (logo/tiêu đề luôn nằm bên
-// trái hoặc phía trên trong mọi ảnh nguồn) thay vì để crop-giữa mặc định.
-const leftImages: BannerImage[] = [
-  {
-    src: "/banner-home-left-1.jpg",
-    alt: "MarketMMO — Sàn giao dịch MMO #1 Việt Nam, mua bán tài khoản & vật phẩm MMO uy tín, tự động 24/7",
-    position: "object-top",
-  },
-  {
-    src: "/banner-home-left-2.jpg",
-    alt: "MarketMMO — Flash Sale giá sốc mỗi ngày, săn deal cực hời",
-    position: "object-left",
-  },
-];
-
-const rightImages: BannerImage[] = [
-  {
-    src: "/banner-home-right-1.jpg",
-    alt: "MarketMMO — Tất cả sản phẩm kinh nghiệm MMO, uy tín an toàn nhanh chóng",
-    position: "object-top",
-  },
-  {
-    src: "/banner-home-right-2.jpg",
-    alt: "MarketMMO — Giao dịch an toàn, bảo vệ tuyệt đối với hệ thống ký quỹ thông minh",
-    position: "object-left",
-  },
-];
+// cắt mất đáy nút CTA ở ảnh hàng trên (tỉ lệ ảnh gốc ~2.25-2.29:1, hẹp hơn
+// khung nên bị crop trên-dưới). Áp `object-top` cho ảnh đầu (index 0),
+// `object-left` cho ảnh sau (index 1) — CÙNG quy tắc áp dụng cho cả ảnh admin
+// upload thay thế qua /admin/noi-dung (không có cách suy ra crop-hint tối ưu
+// cho ảnh admin tự chọn, đây là mặc định hợp lý nhất giữ nguyên hành vi cũ).
+const POSITION_BY_INDEX = ["object-top", "object-left"];
 
 // Carousel trượt ngang bằng track flex dịch chuyển translateX (không phải
 // crossfade opacity như trước) — tự động trượt sang trái mỗi
@@ -130,7 +107,7 @@ function BannerSlot({
               fill
               draggable={false}
               sizes="(min-width: 640px) 50vw, 100vw"
-              className={`object-cover ${img.position} pointer-events-none`}
+              className={`object-cover ${POSITION_BY_INDEX[i] ?? "object-center"} pointer-events-none`}
               priority={priority && i === 0}
             />
           </div>
@@ -140,7 +117,13 @@ function BannerSlot({
   );
 }
 
-export default function PromoBanner() {
+export default function PromoBanner({
+  leftImages,
+  rightImages,
+}: {
+  leftImages: BannerImage[];
+  rightImages: BannerImage[];
+}) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <BannerSlot images={leftImages} aspectClassName="aspect-[872/334]" priority />

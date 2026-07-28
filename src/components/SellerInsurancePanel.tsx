@@ -3,7 +3,7 @@
 import { Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { formatVnd } from "@/lib/format";
-import { INSURANCE_FUND_TARGET, walletTxStatusLabel, type WalletTxStatus } from "@/lib/constants";
+import { walletTxStatusLabel, type WalletTxStatus } from "@/lib/constants";
 import {
   Button,
   Card,
@@ -29,9 +29,11 @@ const QUICK = [50000, 100000, 200000, 300000];
 export default function SellerInsurancePanel({
   walletBalance,
   insuranceBalance,
+  insuranceFundTarget,
 }: {
   walletBalance: number;
   insuranceBalance: number;
+  insuranceFundTarget: number;
 }) {
   const [amount, setAmount] = useState<number | null>(100000);
   const [loading, setLoading] = useState(false);
@@ -81,7 +83,7 @@ export default function SellerInsurancePanel({
     loadDeposits();
   };
 
-  const progress = Math.min(100, Math.round((insurance / INSURANCE_FUND_TARGET) * 100));
+  const progress = Math.min(100, Math.round((insurance / insuranceFundTarget) * 100));
 
   const columns: Column<Deposit>[] = [
     { key: "time", header: "Thời gian", primary: true, render: (d) => <span className="whitespace-nowrap text-foreground">{new Date(d.createdAt).toLocaleString("vi-VN")}</span> },
@@ -145,7 +147,7 @@ export default function SellerInsurancePanel({
           </div>
           <div>
             <div className="mb-1.5 flex items-center justify-between text-[11px]">
-              <span className="text-muted">Mức gợi ý {formatVnd(INSURANCE_FUND_TARGET)}</span>
+              <span className="text-muted">Mức gợi ý {formatVnd(insuranceFundTarget)}</span>
               <b className="tabular-nums text-foreground">{progress}%</b>
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-surface-alt">

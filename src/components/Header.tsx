@@ -16,6 +16,11 @@ import { useCart } from "@/context/CartContext";
 import { getCategoryIcon, getCategoryIconColor } from "@/lib/categoryIcons";
 import { formatVnd } from "@/lib/format";
 
+// Phải khớp CHÍNH XÁC DEFAULTS.header_ticker_text trong src/lib/site-config.ts
+// (state khởi tạo dùng giá trị này trước khi fetch xong, tránh flash nội dung).
+const DEFAULT_TICKER_TEXT =
+  "🔔 MARKETMMO — Mua bán sản phẩm số phục vụ kiếm tiền online. Mọi giao dịch trên sàn đều hoàn toàn tự động và được ký quỹ an toàn.";
+
 const simpleNavLinks = [
   { label: "Trang chủ", href: "/" },
   { label: "Đơn Hàng", href: "/don-hang" },
@@ -96,6 +101,7 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [categoryTree, setCategoryTree] = useState<CategoryMenuNode[]>([]);
+  const [tickerText, setTickerText] = useState(DEFAULT_TICKER_TEXT);
   const { totalCount } = useCart();
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -110,6 +116,21 @@ export default function Header() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (active && data?.tree) setCategoryTree(data.tree);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Ticker admin sửa qua /admin/noi-dung (SiteConfig.header_ticker_text) —
+  // state khởi tạo SẴN đúng text mặc định hiện tại (khớp SSR, không giật/
+  // không lệch hydration), chỉ âm thầm đổi nếu admin đã cấu hình khác.
+  useEffect(() => {
+    let active = true;
+    fetch("/api/site-config/public")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && data?.tickerText) setTickerText(data.tickerText);
       });
     return () => {
       active = false;
@@ -132,10 +153,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50">
       <div className="hidden overflow-hidden bg-ink py-[3px] text-sm font-normal text-white/70 sm:block">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          🔔 MARKETMMO — Mua bán sản phẩm số phục vụ kiếm tiền online. Mọi
-          giao dịch trên sàn đều hoàn toàn tự động và được ký quỹ an toàn.
-        </div>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">{tickerText}</div>
       </div>
 
       <div className="bg-brand shadow-sm">

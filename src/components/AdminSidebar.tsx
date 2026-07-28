@@ -13,6 +13,7 @@ import {
   Contact,
   Gavel,
   Gift,
+  ImageIcon,
   LayoutGrid,
   Library,
   Lock,
@@ -61,6 +62,7 @@ export default function AdminSidebar({
         { href: "/admin/nguoi-dung", icon: Users, label: "Người dùng" },
         { href: "/admin/nguoi-ban", icon: Store, label: "Người bán" },
         { href: "/admin/don-hang", icon: ShoppingBag, label: "Đơn hàng & Ký quỹ" },
+        { href: "/admin/noi-dung", icon: ImageIcon, label: "Nội dung trang web" },
       ],
     },
     {

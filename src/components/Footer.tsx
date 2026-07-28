@@ -3,8 +3,18 @@
 import { ArrowUp, Music2, Phone } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import LegalNotice from "./LegalNotice";
 import Reveal from "./Reveal";
+
+type FooterContacts = {
+  facebookUrl: string | null;
+  youtubeUrl: string | null;
+  tiktokUrl: string | null;
+  zaloUrl: string | null;
+  messengerUrl: string | null;
+  phone: string | null;
+};
 
 function YoutubeIcon() {
   return (
@@ -49,6 +59,24 @@ const supportLinks = [
 ];
 
 export default function Footer() {
+  // Liên hệ admin sửa qua /admin/noi-dung (SiteConfig.footer_*) — mặc định
+  // chưa cấu hình gì (khớp DEFAULTS rỗng trong src/lib/site-config.ts) nên
+  // icon liên quan ẨN HẲN thay vì link chết "#" như trước, chỉ hiện sau khi
+  // fetch xong VÀ admin đã nhập link/SĐT thật.
+  const [contacts, setContacts] = useState<FooterContacts | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/site-config/public")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && data?.footer) setContacts(data.footer);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <footer className="bg-surface-alt">
       <Reveal>
@@ -77,30 +105,46 @@ export default function Footer() {
                 Nền tảng nhằm kết nối, trao đổi, mua bán trong cộng đồng kiếm
                 tiền online.
               </p>
-              <p className="mt-5 text-sm font-bold">Theo dõi chúng tôi</p>
-              <div className="mt-2 flex gap-2">
-                <a
-                  href="#"
-                  aria-label="Facebook"
-                  className="grid h-9 w-9 place-items-center rounded-full bg-[#1877F2] transition hover:opacity-90"
-                >
-                  <span className="text-sm font-black">f</span>
-                </a>
-                <a
-                  href="#"
-                  aria-label="YouTube"
-                  className="grid h-9 w-9 place-items-center rounded-full bg-[#FF0000] transition hover:opacity-90"
-                >
-                  <YoutubeIcon />
-                </a>
-                <a
-                  href="#"
-                  aria-label="TikTok"
-                  className="grid h-9 w-9 place-items-center rounded-full bg-black transition hover:opacity-90"
-                >
-                  <Music2 className="h-4 w-4" />
-                </a>
-              </div>
+              {(contacts?.facebookUrl || contacts?.youtubeUrl || contacts?.tiktokUrl) && (
+                <>
+                  <p className="mt-5 text-sm font-bold">Theo dõi chúng tôi</p>
+                  <div className="mt-2 flex gap-2">
+                    {contacts?.facebookUrl && (
+                      <a
+                        href={contacts.facebookUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Facebook"
+                        className="grid h-9 w-9 place-items-center rounded-full bg-[#1877F2] transition hover:opacity-90"
+                      >
+                        <span className="text-sm font-black">f</span>
+                      </a>
+                    )}
+                    {contacts?.youtubeUrl && (
+                      <a
+                        href={contacts.youtubeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="YouTube"
+                        className="grid h-9 w-9 place-items-center rounded-full bg-[#FF0000] transition hover:opacity-90"
+                      >
+                        <YoutubeIcon />
+                      </a>
+                    )}
+                    {contacts?.tiktokUrl && (
+                      <a
+                        href={contacts.tiktokUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="TikTok"
+                        className="grid h-9 w-9 place-items-center rounded-full bg-black transition hover:opacity-90"
+                      >
+                        <Music2 className="h-4 w-4" />
+                      </a>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
             <div>
@@ -140,34 +184,44 @@ export default function Footer() {
       </div>
 
       <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-6">
-        <a
-          href="#"
-          aria-label="Nhắn tin Zalo"
-          className="group grid h-16 w-16 shrink-0 place-items-center rounded-full bg-[#0290E3] shadow-lg transition hover:scale-110 hover:shadow-xl"
-        >
-          <span className="motion-safe:group-hover:animate-[icon-bounce_0.6s_ease-in-out]">
-            <ZaloIcon />
-          </span>
-        </a>
-        <a
-          href="#"
-          aria-label="Nhắn tin Messenger"
-          className="group grid h-16 w-16 shrink-0 place-items-center rounded-full bg-[#0083FE] shadow-lg transition hover:scale-110 hover:shadow-xl"
-        >
-          <span className="motion-safe:group-hover:animate-[spin_0.6s_ease-in-out]">
-            <MessengerIcon />
-          </span>
-        </a>
-        <a
-          href="#"
-          aria-label="Gọi điện hỗ trợ"
-          className="group grid h-16 w-16 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#fe470f] via-[#d60428] to-[#a91663] shadow-lg transition hover:scale-110 hover:shadow-xl"
-        >
-          <Phone
-            className="h-8 w-8 origin-top text-white motion-safe:group-hover:animate-[bell-ring_0.6s_ease-in-out]"
-            strokeWidth={2}
-          />
-        </a>
+        {contacts?.zaloUrl && (
+          <a
+            href={contacts.zaloUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Nhắn tin Zalo"
+            className="group grid h-16 w-16 shrink-0 place-items-center rounded-full bg-[#0290E3] shadow-lg transition hover:scale-110 hover:shadow-xl"
+          >
+            <span className="motion-safe:group-hover:animate-[icon-bounce_0.6s_ease-in-out]">
+              <ZaloIcon />
+            </span>
+          </a>
+        )}
+        {contacts?.messengerUrl && (
+          <a
+            href={contacts.messengerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Nhắn tin Messenger"
+            className="group grid h-16 w-16 shrink-0 place-items-center rounded-full bg-[#0083FE] shadow-lg transition hover:scale-110 hover:shadow-xl"
+          >
+            <span className="motion-safe:group-hover:animate-[spin_0.6s_ease-in-out]">
+              <MessengerIcon />
+            </span>
+          </a>
+        )}
+        {contacts?.phone && (
+          <a
+            href={`tel:${contacts.phone}`}
+            aria-label="Gọi điện hỗ trợ"
+            className="group grid h-16 w-16 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#fe470f] via-[#d60428] to-[#a91663] shadow-lg transition hover:scale-110 hover:shadow-xl"
+          >
+            <Phone
+              className="h-8 w-8 origin-top text-white motion-safe:group-hover:animate-[bell-ring_0.6s_ease-in-out]"
+              strokeWidth={2}
+            />
+          </a>
+        )}
 
         <div className="h-px w-8 bg-border-c/60" />
 

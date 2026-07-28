@@ -18,12 +18,7 @@ import {
 import Link from "next/link";
 import SellerOverviewChart from "@/components/SellerOverviewChart";
 import { formatRelativeTime, formatVnd } from "@/lib/format";
-import {
-  INSURANCE_FUND_TARGET,
-  orderStatusLabel,
-  type OrderStatus,
-  type RangeKey,
-} from "@/lib/constants";
+import { orderStatusLabel, type OrderStatus, type RangeKey } from "@/lib/constants";
 
 const RANGES: { key: RangeKey; label: string }[] = [
   { key: "today", label: "Hôm nay" },
@@ -182,6 +177,7 @@ export default function SellerOverviewStats({
   recentOrders,
   attentionCounts,
   storeSnapshot,
+  insuranceFundTarget,
 }: {
   range: RangeKey;
   from?: string;
@@ -203,9 +199,10 @@ export default function SellerOverviewStats({
     avgRating: number;
     reviewCount: number;
   } | null;
+  insuranceFundTarget: number;
 }) {
   const deltaPct = previousRevenue > 0 ? Math.round(((revenueStats.releasedRevenue - previousRevenue) / previousRevenue) * 100) : null;
-  const insurancePct = Math.min(100, Math.round((walletSummary.insuranceBalance / INSURANCE_FUND_TARGET) * 100));
+  const insurancePct = Math.min(100, Math.round((walletSummary.insuranceBalance / insuranceFundTarget) * 100));
   const statusEntries = (["RELEASED", "ESCROW", "DISPUTED", "CANCELLED"] as const).map((k) => ({
     key: k,
     count: orderStatusBreakdown[k],
@@ -290,9 +287,9 @@ export default function SellerOverviewStats({
           label="Quỹ bảo hiểm"
           value={formatVnd(walletSummary.insuranceBalance)}
           sub={
-            walletSummary.insuranceBalance >= INSURANCE_FUND_TARGET
-              ? `Đã vượt mức gợi ý ${formatVnd(INSURANCE_FUND_TARGET)}`
-              : `${insurancePct}% mức gợi ý ${formatVnd(INSURANCE_FUND_TARGET)}`
+            walletSummary.insuranceBalance >= insuranceFundTarget
+              ? `Đã vượt mức gợi ý ${formatVnd(insuranceFundTarget)}`
+              : `${insurancePct}% mức gợi ý ${formatVnd(insuranceFundTarget)}`
           }
         />
       </div>
@@ -448,7 +445,7 @@ export default function SellerOverviewStats({
                   <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px]">
                     <span className="shrink-0 text-muted">Quỹ bảo hiểm</span>
                     <b className="truncate tabular-nums text-foreground">
-                      {formatVnd(storeSnapshot.insuranceBalance)} / {formatVnd(INSURANCE_FUND_TARGET)}
+                      {formatVnd(storeSnapshot.insuranceBalance)} / {formatVnd(insuranceFundTarget)}
                     </b>
                   </div>
                   <div className="h-2.5 overflow-hidden rounded-full bg-surface-alt">

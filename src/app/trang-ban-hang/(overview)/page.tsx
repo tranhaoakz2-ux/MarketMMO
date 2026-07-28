@@ -10,6 +10,7 @@ import {
   getSellerWalletSummary,
 } from "@/lib/queries";
 import { type RangeKey } from "@/lib/constants";
+import { getInsuranceFundTarget } from "@/lib/site-config";
 import SellerOverviewStats from "@/components/SellerOverviewStats";
 
 export const dynamic = "force-dynamic";
@@ -89,6 +90,7 @@ export default async function SellerOverviewPage({
     recentOrders,
     attentionCounts,
     storeSnapshot,
+    insuranceFundTarget,
   ] = await Promise.all([
     getSellerRevenueStats(seller!.id, from, to),
     getSellerRevenueStats(seller!.id, prevFrom, prevTo),
@@ -99,6 +101,7 @@ export default async function SellerOverviewPage({
     getSellerRecentOrders(seller!.id),
     getSellerAttentionCounts(seller!.id),
     getSellerStoreSnapshot(seller!.id),
+    getInsuranceFundTarget(),
   ]);
 
   return (
@@ -115,6 +118,7 @@ export default async function SellerOverviewPage({
       recentOrders={recentOrders}
       attentionCounts={attentionCounts}
       storeSnapshot={storeSnapshot}
+      insuranceFundTarget={insuranceFundTarget}
     />
   );
 }

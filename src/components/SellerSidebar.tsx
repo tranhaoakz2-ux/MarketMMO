@@ -17,7 +17,6 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { formatVnd } from "@/lib/format";
-import { INSURANCE_FUND_TARGET } from "@/lib/constants";
 
 type NavItem = {
   label: string;
@@ -44,10 +43,12 @@ export default function SellerSidebar({
   shopName,
   verified,
   insuranceBalance,
+  insuranceFundTarget,
 }: {
   shopName: string;
   verified: boolean;
   insuranceBalance: number;
+  insuranceFundTarget: number;
 }) {
   const pathname = usePathname();
 
@@ -77,7 +78,7 @@ export default function SellerSidebar({
             <ShieldCheck className="h-3.5 w-3.5 text-brand-dark" /> Quỹ bảo hiểm
           </p>
           <p className="mt-1 text-foreground/80">
-            {formatVnd(insuranceBalance)} / {formatVnd(INSURANCE_FUND_TARGET)} — không bắt buộc,
+            {formatVnd(insuranceBalance)} / {formatVnd(insuranceFundTarget)} — không bắt buộc,
             tăng độ tin cậy gian hàng.
           </p>
         </Link>
