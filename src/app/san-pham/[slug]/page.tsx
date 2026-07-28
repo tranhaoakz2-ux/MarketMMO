@@ -105,73 +105,73 @@ export default async function ProductDetailPage({
           </Reveal>
 
           <Reveal>
-            <div className="flex flex-col gap-4 rounded-2xl border-2 border-brand bg-surface p-4 shadow-sm sm:p-5">
+            <div className="flex flex-col gap-5 rounded-2xl border border-border-c bg-surface p-5 shadow-md sm:p-6">
               <div>
-                <h1 className="text-xl font-black leading-snug text-brand-dark sm:text-[26px]">
+                <h1 className="text-2xl font-black leading-tight tracking-tight text-brand-dark sm:text-[32px]">
                   {product.name}
                 </h1>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-danger sm:text-4xl">
+                <div className="mt-3 flex flex-wrap items-end gap-2.5">
+                  <span className="text-4xl font-black tracking-tight text-danger tabular-nums sm:text-5xl">
                     {product.priceMax
                       ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
                       : formatVnd(product.price)}
                   </span>
                   {product.originalPrice && (
-                    <span className="text-sm text-muted line-through">
+                    <span className="pb-1 text-base text-muted line-through">
                       {formatVnd(product.originalPrice)}
                     </span>
                   )}
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 divide-x divide-border-c border-y border-border-c py-2.5 text-sm text-muted">
-                <span className="flex items-center gap-1 pl-0">
-                  <RatingStars rating={product.rating} />({product.reviewCount}{" "}
-                  đánh giá)
+              <div className="flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-brand-light/40 px-3.5 py-2 text-sm font-bold text-ink">
+                  <RatingStars rating={product.rating} />
+                  <span>({product.reviewCount})</span>
                 </span>
-                <span className="flex items-center gap-1 pl-3">
-                  <PackageCheck className="h-4 w-4 text-sky-600" /> Kho:{" "}
-                  {product.stock}
-                  <RefreshCw className="h-3.5 w-3.5 text-muted/70" />
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-sky-500/10 px-3.5 py-2 text-sm font-bold text-sky-600">
+                  <PackageCheck className="h-4 w-4" /> Kho: {product.stock}
+                  <RefreshCw className="h-3.5 w-3.5 opacity-60" />
                 </span>
-                <span className="flex items-center gap-1 pl-3">
-                  <TrendingUp className="h-4 w-4 text-orange-500" /> Đã bán:{" "}
-                  {product.sold}
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-orange-500/10 px-3.5 py-2 text-sm font-bold text-orange-500">
+                  <TrendingUp className="h-4 w-4" /> Đã bán: {product.sold}
                 </span>
-                <span className="flex items-center gap-1 pl-3 font-semibold text-success">
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-success/10 px-3.5 py-2 text-sm font-bold text-success">
                   <ShieldAlert className="h-4 w-4" /> Khiếu nại: 0.0%
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <Avatar size={28} />
+              <div className="flex flex-wrap items-center gap-2.5 rounded-xl bg-surface-alt px-3.5 py-3">
+                <Avatar size={32} />
                 <Link
                   href={`/shop/${slugifySeller(product.seller)}`}
-                  className="font-bold text-success hover:underline"
+                  className="text-sm font-bold text-success hover:underline"
                 >
-                  Người bán: {product.seller}
+                  {product.seller}
                 </Link>
-                <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-brand">
+                <span className="rounded-full bg-ink px-2.5 py-1 text-[11px] font-bold text-brand">
                   LV {product.sellerLevel}
                 </span>
                 {product.verified && (
-                  <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-bold text-success">
-                    <BadgeCheck className="h-3.5 w-3.5 text-success" /> Đã xác thực
+                  <span className="flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-xs font-bold text-success">
+                    <BadgeCheck className="h-3.5 w-3.5" /> Đã xác thực
                   </span>
                 )}
-                <span className="flex items-center gap-1 text-sm font-semibold text-muted">
-                  <Clock className="h-4 w-4 text-brand-dark" />
+                <span className="flex items-center gap-1 text-xs font-semibold text-muted">
+                  <Clock className="h-3.5 w-3.5 text-brand-dark" />
                   {formatLastActive(product.sellerLastActiveAt)}
                 </span>
-                <span className="flex items-center gap-1 rounded-full bg-info/10 px-2 py-0.5 text-xs font-bold text-info">
-                  <ShieldCheck className="h-3.5 w-3.5 text-info" /> Bảo hiểm:{" "}
+                <span className="ml-auto flex items-center gap-1.5 rounded-full bg-info px-3 py-1.5 text-xs font-black text-white shadow-sm">
+                  <ShieldCheck className="h-4 w-4" /> Bảo hiểm:{" "}
                   {formatVnd(product.sellerInsuranceBalance ?? 0)}
                 </span>
               </div>
 
               {(!product.variants || product.variants.length === 0) && (
-                <div className="rounded-lg bg-brand-light/50 px-3 py-2.5 text-sm font-semibold text-ink">
-                  {product.shortDescription}
+                <div className="rounded-xl bg-brand-light/20 px-4 py-3">
+                  <p className="text-sm font-semibold leading-relaxed text-foreground">
+                    {product.shortDescription}
+                  </p>
                 </div>
               )}
 

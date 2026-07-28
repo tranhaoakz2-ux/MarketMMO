@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, LogIn, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Info, LogIn, ShieldAlert } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -84,9 +84,12 @@ export default function ServiceBuyBox({ product }: { product: Product }) {
 
   if (notConfigured) {
     return (
-      <div className="rounded-lg border border-dashed border-border-c bg-surface-alt px-3 py-4 text-center text-xs text-muted">
-        Dịch vụ này chưa được người bán cấu hình đầy đủ thông tin cần thiết —
-        vui lòng liên hệ người bán hoặc quay lại sau.
+      <div className="flex items-start gap-2.5 rounded-xl border border-info/30 bg-info/10 px-4 py-3.5">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-info" />
+        <p className="text-sm font-medium leading-relaxed text-foreground/90">
+          Dịch vụ này chưa được người bán cấu hình đầy đủ thông tin cần thiết
+          — vui lòng liên hệ người bán hoặc quay lại sau.
+        </p>
       </div>
     );
   }
