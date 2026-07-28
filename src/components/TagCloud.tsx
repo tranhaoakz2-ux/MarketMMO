@@ -14,7 +14,7 @@ const tags = [
 export default function TagCloud() {
   return (
     <div>
-      <h3 className="mb-2 text-xs font-bold uppercase text-muted">
+      <h3 className="mb-2 text-sm font-black uppercase tracking-wide text-foreground">
         Tìm kiếm phổ biến
       </h3>
       <div className="flex flex-wrap gap-2">
@@ -22,7 +22,7 @@ export default function TagCloud() {
           <a
             key={tag}
             href="#"
-            className="rounded-full bg-surface-alt px-3 py-1.5 text-xs font-medium text-muted transition hover:bg-surface hover:text-foreground hover:ring-1 hover:ring-border-c"
+            className="rounded-full bg-surface-alt px-3 py-1.5 text-sm font-semibold text-foreground transition hover:bg-surface hover:text-brand-dark hover:ring-1 hover:ring-border-c"
           >
             {tag}
           </a>
