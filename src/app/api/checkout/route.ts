@@ -4,6 +4,7 @@ import { ESCROW_HOLD_DAYS, SERVICE_DELIVERY_METHODS } from "@/lib/constants";
 import { accrueCommission } from "@/lib/commission";
 import { feeAmountOf, getEffectiveFeePercent } from "@/lib/platform-fee";
 import { computeDiscountAmount, distributeDiscount, isDiscountCodeUsable } from "@/lib/discount";
+import { computeEffectivePrice } from "@/lib/mega-sale";
 import { computeProratedPrice } from "@/lib/prorate";
 import { encryptSensitiveFields } from "@/lib/service-crypto";
 import { splitServiceFieldValues } from "@/lib/service-intake";
@@ -102,6 +103,25 @@ export async function POST(req: Request) {
           variantLabel = variant.label;
         } else if (product.variants.length > 0) {
           throw new Error(`Vui lòng chọn loại sản phẩm cho "${product.name}".`);
+        }
+
+        // Mega Sale (seller tự cấu hình, xem src/lib/mega-sale.ts) — áp dụng
+        // cho GIÁ NIÊM YẾT ngay tại đây, TRƯỚC bước prorate theo hạn dùng bên
+        // dưới (2 cơ chế không đá nhau: prorate co tiếp giá ĐÃ sale theo %
+        // ngày còn lại, không co giá gốc chưa sale). Kiểu FIXED chỉ hợp lệ
+        // cho sản phẩm giá đơn không variant (validate lúc seller cấu hình ở
+        // PATCH /api/seller/products/[productId]) — phòng thủ thêm ở đây:
+        // bỏ qua FIXED nếu đang tính giá 1 variant cụ thể, vì 1 giá cố định
+        // không thể áp chung cho nhiều variant khác giá nhau.
+        const megaSaleAppliesHere = !(item.variantId && product.megaSaleType === "FIXED");
+        if (megaSaleAppliesHere) {
+          unitPrice = computeEffectivePrice(unitPrice, {
+            megaSaleActive: product.megaSaleActive,
+            megaSaleType: product.megaSaleType,
+            megaSalePercent: product.megaSalePercent,
+            megaSaleFixedPrice: product.megaSaleFixedPrice,
+            megaSaleEndsAt: product.megaSaleEndsAt,
+          }).price;
         }
 
         const displayLabel = variantLabel ? `${product.name} - ${variantLabel}` : product.name;

@@ -1,5 +1,6 @@
 import { BadgeCheck, Crown, ShieldCheck, Star } from "lucide-react";
 import Link from "next/link";
+import MegaSaleBadge from "@/components/MegaSaleBadge";
 import ProductThumbnail from "@/components/ProductThumbnail";
 import type { Product } from "@/data/products";
 import { formatVnd } from "@/lib/format";
@@ -35,14 +36,34 @@ export default function CategoryProductCard({ product }: { product: Product }) {
               <Crown className="h-2.5 w-2.5" /> Tài trợ
             </span>
           )}
+          {product.megaSale?.active && (
+            <span className="absolute right-1 top-1">
+              <MegaSaleBadge percentOff={product.megaSale.percentOff} size="sm" />
+            </span>
+          )}
         </div>
         <div className="min-w-0 text-left sm:mt-2 sm:w-full sm:text-center">
           <p className="text-sm font-bold text-success">Tồn kho: {product.stock}</p>
-          <p className="mt-1 text-base font-extrabold text-foreground">
-            {product.priceMax
-              ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
-              : formatVnd(product.price)}
-          </p>
+          {product.megaSale?.active ? (
+            <>
+              <p className="mt-1 text-xs text-muted line-through">
+                {product.priceMax
+                  ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
+                  : formatVnd(product.price)}
+              </p>
+              <p className="text-base font-extrabold text-danger">
+                {product.megaSale.salePriceMax
+                  ? `${formatVnd(product.megaSale.salePrice)} - ${formatVnd(product.megaSale.salePriceMax)}`
+                  : formatVnd(product.megaSale.salePrice)}
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 text-base font-extrabold text-foreground">
+              {product.priceMax
+                ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
+                : formatVnd(product.price)}
+            </p>
+          )}
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { BadgeCheck, Clock, Eye, Flame, PackageCheck, ShieldCheck, Star } from "lucide-react";
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
+import MegaSaleBadge from "@/components/MegaSaleBadge";
 import ProductThumbnail from "@/components/ProductThumbnail";
 import type { Product } from "@/data/products";
 import { formatVnd } from "@/lib/format";
@@ -31,6 +32,11 @@ export default function ProductCard({ product }: { product: Product }) {
           {product.preOrder && (
             <span className="absolute -bottom-1.5 -right-1.5 flex items-center gap-0.5 rounded-full bg-info px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
               <Clock className="h-2.5 w-2.5" /> ĐẶT TRƯỚC
+            </span>
+          )}
+          {product.megaSale?.active && (
+            <span className="absolute -bottom-1.5 -left-1.5">
+              <MegaSaleBadge percentOff={product.megaSale.percentOff} size="sm" />
             </span>
           )}
         </div>
@@ -85,10 +91,27 @@ export default function ProductCard({ product }: { product: Product }) {
             lượt xem
           </span>
         </div>
-        <div className="shrink-0 text-lg font-bold text-danger">
-          {product.priceMax
-            ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
-            : formatVnd(product.price)}
+        <div className="shrink-0 text-right">
+          {product.megaSale?.active ? (
+            <>
+              <p className="text-[11px] leading-none text-muted line-through">
+                {product.priceMax
+                  ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
+                  : formatVnd(product.price)}
+              </p>
+              <p className="text-lg font-bold text-danger">
+                {product.megaSale.salePriceMax
+                  ? `${formatVnd(product.megaSale.salePrice)} - ${formatVnd(product.megaSale.salePriceMax)}`
+                  : formatVnd(product.megaSale.salePrice)}
+              </p>
+            </>
+          ) : (
+            <p className="text-lg font-bold text-danger">
+              {product.priceMax
+                ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
+                : formatVnd(product.price)}
+            </p>
+          )}
         </div>
       </div>
     </Link>

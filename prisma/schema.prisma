@@ -332,6 +332,23 @@ model Product {
   price            Int
   priceMax         Int?
   originalPrice    Int?
+  // Mega Sale — seller TOÀN QUYỀN tự bật/tắt khuyến mãi cho cả sản phẩm
+  // (không phải riêng từng ProductVariant): kiểu "PERCENT" áp đồng loạt lên
+  // price/priceMax/mọi ProductVariant.price của sản phẩm này (cùng 1 tỷ lệ
+  // %, tính real-time — không lưu giá đã giảm riêng cho từng variant); kiểu
+  // "FIXED" chỉ hợp lệ khi sản phẩm là giá đơn thật sự (không priceMax,
+  // không variant). Không có ràng buộc DB nào giới hạn % giảm — chặn ở tầng
+  // API (1-99%) để tránh giá về 0/âm, dùng chung sàn
+  // MIN_ITEM_PRICE_AFTER_DISCOUNT (constants.ts) đã có sẵn cho mã giảm giá.
+  // megaSaleEndsAt null = THỦ CÔNG (seller tự tắt), có giá trị = HẸN GIỜ.
+  // Hết hạn tính REAL-TIME lúc đọc (xem computeEffectivePrice() trong
+  // src/lib/mega-sale.ts), KHÔNG cần cron tự đổi megaSaleActive về false —
+  // an toàn hơn cron vì không có rủi ro "cron lỗi thì giá vẫn sai".
+  megaSaleActive     Boolean   @default(false)
+  megaSaleType       String?
+  megaSalePercent    Int?
+  megaSaleFixedPrice Int?
+  megaSaleEndsAt     DateTime?
   stock            Int      @default(0)
   sold             Int      @default(0)
   views            Int      @default(0)

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import MegaSaleBadge from "@/components/MegaSaleBadge";
 import { useCart } from "@/context/CartContext";
 import type { Product } from "@/data/products";
 import { formatVnd } from "@/lib/format";
@@ -28,7 +29,14 @@ export default function BuyBox({ product }: { product: Product }) {
   const router = useRouter();
 
   const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? null;
-  const effectivePrice = selectedVariant ? selectedVariant.price : product.price;
+  // Giá SAU Mega Sale (nếu đang sale) — variant.salePrice (kiểu PERCENT, đã
+  // tính sẵn trong mapProduct()) hoặc product.megaSale.salePrice cho sản
+  // phẩm không có variant. Đây LÀ giá gửi lên checkout/giỏ hàng — khớp đúng
+  // giá tính tiền thật ở server (POST /api/checkout dùng chung
+  // src/lib/mega-sale.ts), không lệch giữa hiển thị và số tiền bị trừ.
+  const effectivePrice = selectedVariant
+    ? (selectedVariant.salePrice ?? selectedVariant.price)
+    : (product.megaSale?.active ? product.megaSale.salePrice : product.price);
   const effectiveStock = selectedVariant ? selectedVariant.stock : product.stock;
   const hasTimedStock = selectedVariant ? selectedVariant.hasTimedStock : product.hasTimedStock;
   const maxQty = Math.max(1, Math.min(effectiveStock, MAX_QTY_CAP));
@@ -103,16 +111,33 @@ export default function BuyBox({ product }: { product: Product }) {
                 >
                   {v.label}
                   <span className="mt-0.5 block text-xs font-semibold opacity-80">
-                    {outOfStock ? "Hết hàng" : formatVnd(v.price)}
+                    {outOfStock ? (
+                      "Hết hàng"
+                    ) : v.salePrice !== undefined ? (
+                      <>
+                        <span className="mr-1 line-through opacity-70">{formatVnd(v.price)}</span>
+                        {formatVnd(v.salePrice)}
+                      </>
+                    ) : (
+                      formatVnd(v.price)
+                    )}
                   </span>
                 </button>
               );
             })}
           </div>
           {selectedVariant && (
-            <p className="mt-2 text-2xl font-black text-danger">
-              {formatVnd(selectedVariant.price)}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {selectedVariant.salePrice !== undefined && (
+                <>
+                  <MegaSaleBadge percentOff={product.megaSale?.percentOff ?? 0} size="sm" />
+                  <span className="text-sm text-muted line-through">{formatVnd(selectedVariant.price)}</span>
+                </>
+              )}
+              <p className="text-2xl font-black text-danger">
+                {formatVnd(selectedVariant.salePrice ?? selectedVariant.price)}
+              </p>
+            </div>
           )}
         </div>
       )}

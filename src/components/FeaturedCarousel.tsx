@@ -35,8 +35,19 @@ function FeaturedCard({ product }: { product: Product }) {
       </h3>
       <div className="mt-1.5 flex items-center justify-between">
         <p className="text-[15px] font-black text-danger">
-          {formatVnd(product.price)}
-          {product.priceMax ? " -..." : ""}
+          {product.megaSale?.active ? (
+            <>
+              {formatVnd(product.megaSale.salePrice)}
+              <span className="ml-1 text-[11px] font-semibold text-muted line-through">
+                {formatVnd(product.price)}
+              </span>
+            </>
+          ) : (
+            <>
+              {formatVnd(product.price)}
+              {product.priceMax ? " -..." : ""}
+            </>
+          )}
         </p>
         <span className="flex items-center gap-0.5 text-[13px] text-muted">
           <ShoppingBag className="h-[15px] w-[15px]" /> {product.sold}

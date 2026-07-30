@@ -10,6 +10,10 @@ export type ProductVariant = {
   stockAvailable?: number;
   /** Có ≥1 dòng ProductStockItem AVAILABLE với expiresAt khác null hay không — chỉ có khi fetch qua getProductBySlugDb (trang chi tiết công khai), dùng để hiện badge "CÓ THỜI HẠN" ở BuyBox. */
   hasTimedStock?: boolean;
+  /** Giá sau Mega Sale của SẢN PHẨM CHA (kiểu PERCENT áp đồng loạt lên mọi
+      variant — kiểu FIXED không áp cho variant, xem src/lib/mega-sale.ts).
+      undefined = không đang sale, dùng `price` bình thường. */
+  salePrice?: number;
 };
 
 export type Product = {
@@ -73,6 +77,35 @@ export type Product = {
       phẩm này) — chỉ có khi fetch qua getProductBySlugDb. null = sản phẩm
       CHƯA có đơn hàng nào (không phải 0% — UI phải hiện "Chưa có dữ liệu"). */
   disputeStats?: { ratePercent: number; totalOrders: number } | null;
+  /** Mega Sale — seller tự cấu hình (xem field megaSale* trên model Product
+      trong schema.prisma + hàm tính giá dùng chung src/lib/mega-sale.ts).
+      null/active=false = không đang sale, mọi nơi hiện `price`/`priceMax`
+      bình thường như trước — KHÔNG có field này thì coi như không sale.
+      Khi active=true: `salePrice`/`salePriceMax` là giá ĐÃ TÍNH SẴN (song
+      song `price`/`priceMax` gốc để hiện gạch ngang), `percentOff` là % giảm
+      THỰC TẾ sau khi đã chặn sàn tối thiểu (dùng hiện badge "-X%"),
+      `endsAt` (ISO, null = THỦ CÔNG không tự hết hạn) dùng cho đếm ngược
+      (tái dùng AuctionCountdown.tsx). Tính REAL-TIME mỗi lần fetch — KHÔNG
+      cron, hết hạn tự động biến mất ở lần tải trang kế tiếp. */
+  megaSale?: {
+    active: boolean;
+    percentOff: number;
+    endsAt: string | null;
+    salePrice: number;
+    salePriceMax?: number;
+  } | null;
+  /** Cấu hình Mega Sale THÔ (chưa qua tính toán hiệu lực/hết hạn) — CHỈ có
+      khi fetch qua getMySellerProducts (trang quản lý của seller), dùng để
+      điền lại đúng form chỉnh sửa (kể cả khi sale đã hết hạn hẹn giờ, seller
+      vẫn thấy lại % / giá cũ đã đặt để bật lại nhanh). Buyer-facing dùng
+      `megaSale` (đã tính hiệu lực) ở trên, KHÔNG dùng field này. */
+  megaSaleConfig?: {
+    active: boolean;
+    type: "PERCENT" | "FIXED" | null;
+    percent: number | null;
+    fixedPrice: number | null;
+    endsAt: string | null;
+  };
   /** "PRODUCT" | "SERVICE" — mặc định "PRODUCT" nếu không set (seed/mock data cũ). SERVICE = buyer phải cung cấp thông tin (tài khoản/link/mật khẩu...) cho seller thực hiện, xem serviceFields + ServiceIntake trong prisma/schema.prisma. */
   productType?: "PRODUCT" | "SERVICE";
   /** Chỉ có ý nghĩa khi productType="SERVICE" — mã phương thức bàn giao seller chấp nhận (xem SERVICE_DELIVERY_METHODS trong src/lib/constants.ts), buyer chọn 1 trong tập này lúc đặt đơn. */

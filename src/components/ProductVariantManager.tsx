@@ -1,12 +1,14 @@
 "use client";
 
-import { Database, Layers, LogIn, Package, Plus, Store, Trash2, X } from "lucide-react";
+import { Database, Flame, Layers, LogIn, Package, Plus, Store, Trash2, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatVnd } from "@/lib/format";
 import { PRODUCT_STATUS_LABEL, type ProductStatus } from "@/lib/constants";
 import type { Product } from "@/data/products";
+import MegaSaleBadge from "@/components/MegaSaleBadge";
+import MegaSaleModal from "@/components/MegaSaleModal";
 import {
   Card,
   Column,
@@ -401,6 +403,7 @@ export default function ProductVariantManager() {
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [megaSaleId, setMegaSaleId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
@@ -463,6 +466,7 @@ export default function ProductVariantManager() {
   );
   const rejectedWithNote = filtered.filter((p) => p.status === "REJECTED" && p.adminNote);
   const active = products.find((p) => p.id === activeId) ?? null;
+  const megaSaleProduct = products.find((p) => p.id === megaSaleId) ?? null;
 
   const columns: Column<Product>[] = [
     {
@@ -494,7 +498,23 @@ export default function ProductVariantManager() {
         </div>
       ),
     },
-    { key: "price", header: "Giá", align: "right", render: (p) => <span className="whitespace-nowrap font-bold tabular-nums text-danger">{formatVnd(p.price)}</span> },
+    {
+      key: "price",
+      header: "Giá",
+      align: "right",
+      render: (p) =>
+        p.megaSale?.active ? (
+          <div className="flex flex-col items-end gap-0.5">
+            <MegaSaleBadge percentOff={p.megaSale.percentOff} size="sm" />
+            <span className="text-[11px] text-muted line-through">{formatVnd(p.price)}</span>
+            <span className="whitespace-nowrap font-bold tabular-nums text-danger">
+              {formatVnd(p.megaSale.salePrice)}
+            </span>
+          </div>
+        ) : (
+          <span className="whitespace-nowrap font-bold tabular-nums text-danger">{formatVnd(p.price)}</span>
+        ),
+    },
     { key: "stock", header: "Kho", align: "right", render: (p) => <StockCell p={p} /> },
     { key: "sold", header: "Đã bán", align: "right", render: (p) => <span className="tabular-nums text-muted">{p.sold}</span> },
     {
@@ -533,6 +553,17 @@ export default function ProductVariantManager() {
             className="grid h-8 w-8 place-items-center rounded-lg border border-border-c bg-surface text-foreground transition hover:border-brand-dark hover:text-brand-dark"
           >
             <Layers className="h-4 w-4" />
+          </button>
+          <button
+            title="Mega Sale"
+            onClick={() => setMegaSaleId(p.id)}
+            className={`grid h-8 w-8 place-items-center rounded-lg border transition ${
+              p.megaSale?.active
+                ? "border-orange-500 bg-orange-500/10 text-orange-600"
+                : "border-border-c bg-surface text-foreground hover:border-orange-500 hover:text-orange-600"
+            }`}
+          >
+            <Flame className="h-4 w-4" />
           </button>
         </div>
       ),
@@ -579,6 +610,9 @@ export default function ProductVariantManager() {
       )}
 
       {active && <ManageModal product={active} onClose={() => setActiveId(null)} onChanged={load} />}
+      {megaSaleProduct && (
+        <MegaSaleModal product={megaSaleProduct} onClose={() => setMegaSaleId(null)} onChanged={load} />
+      )}
     </Card>
   );
 }

@@ -14,10 +14,12 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Avatar from "@/components/Avatar";
+import AuctionCountdown from "@/components/AuctionCountdown";
 import Breadcrumb from "@/components/Breadcrumb";
 import BuyBox from "@/components/BuyBox";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
+import MegaSaleBadge from "@/components/MegaSaleBadge";
 import ProductCard from "@/components/ProductCard";
 import ProductInfoTabs from "@/components/ProductInfoTabs";
 import ProductThumbnail from "@/components/ProductThumbnail";
@@ -107,21 +109,42 @@ export default async function ProductDetailPage({
           <Reveal>
             <div className="flex flex-col gap-5 rounded-2xl border border-border-c bg-surface p-5 shadow-md sm:p-6">
               <div>
-                <h1 className="text-2xl font-black leading-tight tracking-tight text-brand-dark sm:text-[32px]">
-                  {product.name}
-                </h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl font-black leading-tight tracking-tight text-brand-dark sm:text-[32px]">
+                    {product.name}
+                  </h1>
+                  {product.megaSale?.active && <MegaSaleBadge percentOff={product.megaSale.percentOff} />}
+                </div>
                 <div className="mt-3 flex flex-wrap items-end gap-2.5">
                   <span className="text-4xl font-black tracking-tight text-danger tabular-nums sm:text-5xl">
-                    {product.priceMax
-                      ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
-                      : formatVnd(product.price)}
+                    {product.megaSale?.active
+                      ? product.megaSale.salePriceMax
+                        ? `${formatVnd(product.megaSale.salePrice)} - ${formatVnd(product.megaSale.salePriceMax)}`
+                        : formatVnd(product.megaSale.salePrice)
+                      : product.priceMax
+                        ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
+                        : formatVnd(product.price)}
                   </span>
-                  {product.originalPrice && (
+                  {product.megaSale?.active ? (
                     <span className="pb-1 text-base text-muted line-through">
-                      {formatVnd(product.originalPrice)}
+                      {product.priceMax
+                        ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
+                        : formatVnd(product.price)}
                     </span>
+                  ) : (
+                    product.originalPrice && (
+                      <span className="pb-1 text-base text-muted line-through">
+                        {formatVnd(product.originalPrice)}
+                      </span>
+                    )
                   )}
                 </div>
+                {product.megaSale?.active && product.megaSale.endsAt && (
+                  <div className="mt-2 flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs font-bold text-orange-600">
+                    <Clock className="h-3.5 w-3.5" /> Sale kết thúc sau:{" "}
+                    <AuctionCountdown endAt={product.megaSale.endsAt} size="sm" />
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-2">

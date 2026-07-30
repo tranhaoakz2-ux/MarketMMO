@@ -8,6 +8,7 @@ import {
   type OrderStatus,
   type WalletTxType,
 } from "@/lib/constants";
+import { computeEffectivePrice, type MegaSaleFields } from "@/lib/mega-sale";
 
 const productInclude = {
   category: true,
@@ -17,6 +18,46 @@ const productInclude = {
 } satisfies Prisma.ProductInclude;
 
 type ProductWithRelations = Prisma.ProductGetPayload<{ include: typeof productInclude }>;
+
+// Mega Sale áp dụng lên GIÁ NIÊM YẾT — dùng CHUNG DUY NHẤT với checkout
+// (src/lib/mega-sale.ts) để không đẻ 2 nguồn giá. Kiểu FIXED chỉ có ý nghĩa
+// cho sản phẩm giá đơn (không priceMax, không variant) — validate lúc seller
+// cấu hình; ở đây chỉ áp FIXED cho `price` gốc, KHÔNG áp cho priceMax/variant
+// (đồng bộ đúng quy tắc đã chốt).
+function computeMegaSale(p: ProductWithRelations) {
+  const saleFields: MegaSaleFields = {
+    megaSaleActive: p.megaSaleActive,
+    megaSaleType: p.megaSaleType,
+    megaSalePercent: p.megaSalePercent,
+    megaSaleFixedPrice: p.megaSaleFixedPrice,
+    megaSaleEndsAt: p.megaSaleEndsAt,
+  };
+  const base = computeEffectivePrice(p.price, saleFields);
+  if (!base.isSaleActive) return null;
+  const maxSale = p.priceMax != null ? computeEffectivePrice(p.priceMax, saleFields) : null;
+  return {
+    active: true,
+    percentOff: base.percentOff ?? 0,
+    endsAt: p.megaSaleEndsAt?.toISOString() ?? null,
+    salePrice: base.price,
+    salePriceMax: maxSale?.price,
+  };
+}
+
+// Giá variant sau Mega Sale — CHỈ kiểu PERCENT áp cho variant (kiểu FIXED
+// gắn với đúng 1 mức giá, không có nghĩa khi 1 sản phẩm có nhiều variant giá
+// khác nhau — cùng quy tắc đã áp dụng ở checkout, xem POST /api/checkout).
+function computeVariantSalePrice(p: ProductWithRelations, variantPrice: number): number | undefined {
+  if (!p.megaSaleActive || p.megaSaleType !== "PERCENT") return undefined;
+  const result = computeEffectivePrice(variantPrice, {
+    megaSaleActive: p.megaSaleActive,
+    megaSaleType: p.megaSaleType,
+    megaSalePercent: p.megaSalePercent,
+    megaSaleFixedPrice: p.megaSaleFixedPrice,
+    megaSaleEndsAt: p.megaSaleEndsAt,
+  });
+  return result.isSaleActive ? result.price : undefined;
+}
 
 function mapProduct(p: ProductWithRelations): Product {
   return {
@@ -31,6 +72,7 @@ function mapProduct(p: ProductWithRelations): Product {
     price: p.price,
     priceMax: p.priceMax ?? undefined,
     originalPrice: p.originalPrice ?? undefined,
+    megaSale: computeMegaSale(p),
     // Mặc định "chưa có đánh giá" — attachRealRatings() ghi đè bằng dữ liệu
     // thật từ bảng Review ngay sau mapProduct() ở MỌI hàm export bên dưới.
     // Cố tình KHÔNG đọc p.rating/p.reviewCount (số tĩnh từ seed) nữa — nếu
@@ -61,6 +103,7 @@ function mapProduct(p: ProductWithRelations): Product {
       price: v.price,
       stock: v.stock,
       sold: v.sold,
+      salePrice: computeVariantSalePrice(p, v.price),
     })),
     productType: p.productType as "PRODUCT" | "SERVICE",
     serviceDeliveryMethods: p.serviceDeliveryMethods
@@ -457,6 +500,20 @@ export async function getMySellerProducts(userId: string): Promise<Product[]> {
   });
   const products = await attachRealRatings(rows.map(mapProduct));
   if (products.length === 0) return products;
+
+  // Cấu hình Mega Sale THÔ (chưa qua tính hiệu lực/hết hạn) — chỉ trang quản
+  // lý của seller cần, để điền lại đúng form chỉnh sửa kể cả khi sale đã hết
+  // hạn hẹn giờ. `rows`/`products` CÙNG THỨ TỰ (map trực tiếp, không sort lại).
+  for (let i = 0; i < products.length; i++) {
+    const raw = rows[i];
+    products[i].megaSaleConfig = {
+      active: raw.megaSaleActive,
+      type: raw.megaSaleType as "PERCENT" | "FIXED" | null,
+      percent: raw.megaSalePercent,
+      fixedPrice: raw.megaSaleFixedPrice,
+      endsAt: raw.megaSaleEndsAt?.toISOString() ?? null,
+    };
+  }
 
   // Gắn số liệu kho dữ liệu giao hàng thật (ProductStockItem) — chỉ tính
   // riêng cho trang quản lý sản phẩm của seller, KHÔNG đụng tới mapProduct()
