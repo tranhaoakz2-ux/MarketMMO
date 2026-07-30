@@ -55,7 +55,7 @@ export default function ProductCard({ product }: { product: Product }) {
           </p>
 
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px]">
-            {product.reviewCount > 0 ? (
+            {product.rating !== null && product.reviewCount > 0 ? (
               <span className="flex items-center gap-1 font-semibold text-foreground">
                 <Star className="h-3 w-3 fill-brand text-brand" />
                 {product.rating.toFixed(1)}

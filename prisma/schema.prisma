@@ -257,6 +257,16 @@ model Review {
   seller    Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Đánh giá gắn với 1 SẢN PHẨM cụ thể buyer đã mua — nullable vì review cũ/
+  // review gửi không chọn sản phẩm cụ thể (vd từ trang shop chung) vẫn hợp
+  // lệ, chỉ tính vào rating trung bình của SELLER (ratingStats() trong
+  // queries.ts) chứ KHÔNG tính vào rating của bất kỳ sản phẩm nào. Review
+  // mới gửi từ tab "Đánh giá" ở trang chi tiết sản phẩm luôn có productId —
+  // xem POST /api/reviews. onDelete SetNull: xoá sản phẩm không làm mất
+  // review (vẫn giữ nguyên cho rating gian hàng), chỉ rớt về "không gắn sản
+  // phẩm nào" giống review chung.
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   rating    Int
   comment   String
   createdAt DateTime @default(now())
@@ -269,6 +279,7 @@ model Review {
   hidden    Boolean  @default(false)
 
   @@unique([sellerId, userId])
+  @@index([productId])
 }
 
 model Category {
@@ -388,6 +399,7 @@ model Product {
   variants      ProductVariant[]
   stockItems    ProductStockItem[]
   serviceFields ServiceFieldDefinition[]
+  reviews       Review[]
 }
 
 // Seller tự định nghĩa danh sách field buyer PHẢI nhập khi đặt 1 dịch vụ cụ

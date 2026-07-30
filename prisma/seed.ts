@@ -115,7 +115,12 @@ async function main() {
         stock: p.stock,
         sold: p.sold,
         views: p.views,
-        rating: p.rating,
+        // Cột DB vẫn Float non-null (mặc định 4.5) — chỉ kiểu Product ở tầng
+        // ứng dụng (src/data/products.ts) mới cho phép null (nghĩa là
+        // "chưa có đánh giá thật", tính động qua attachRealRatings() trong
+        // queries.ts). Seed data tĩnh luôn khai số thật nên `?? 4.5` chỉ để
+        // thoả kiểu, không bao giờ thực sự dùng tới.
+        rating: p.rating ?? 4.5,
         reviewCount: p.reviewCount,
         verified: p.verified,
         hot: Boolean(p.hot),

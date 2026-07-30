@@ -24,7 +24,13 @@ export type Product = {
   price: number;
   priceMax?: number;
   originalPrice?: number;
-  rating: number;
+  /** null = chưa có đánh giá THẬT nào cho sản phẩm này (tính động từ bảng
+      Review qua Review.productId, xem attachRealRatings() trong queries.ts)
+      — UI phải hiện "Chưa có đánh giá" thay vì vẽ sao khi null, KHÔNG dùng
+      số mặc định giả. Seed data tĩnh (mảng bên dưới) vẫn khai số cho vui,
+      nhưng mapProduct()/attachRealRatings() luôn ghi đè bằng dữ liệu thật
+      khi fetch qua DB — số seed chỉ còn ý nghĩa lịch sử, không hiển thị. */
+  rating: number | null;
   reviewCount: number;
   stock: number;
   sold: number;

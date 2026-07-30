@@ -26,7 +26,7 @@ import Reveal from "@/components/Reveal";
 import ServiceBuyBox from "@/components/ServiceBuyBox";
 import { formatLastActive, formatVnd } from "@/lib/format";
 import { getRecentForumPosts } from "@/lib/forum";
-import { getProductBySlugDb, getRelatedProductsDb, getSellerReviews } from "@/lib/queries";
+import { getProductBySlugDb, getProductReviews, getRelatedProductsDb } from "@/lib/queries";
 import { slugifySeller } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +42,7 @@ export default async function ProductDetailPage({
 
   const related = await getRelatedProductsDb(product);
   const referencePosts = await getRecentForumPosts(4);
-  const sellerReviews = product.sellerId ? await getSellerReviews(product.sellerId) : [];
+  const productReviews = await getProductReviews(product.id);
 
   return (
     <>
@@ -126,8 +126,14 @@ export default async function ProductDetailPage({
 
               <div className="flex flex-wrap gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-xl bg-brand-light/40 px-3.5 py-2 text-sm font-bold text-ink">
-                  <RatingStars rating={product.rating} />
-                  <span>({product.reviewCount})</span>
+                  {product.rating !== null ? (
+                    <>
+                      <RatingStars rating={product.rating} />
+                      <span>({product.reviewCount})</span>
+                    </>
+                  ) : (
+                    <span>Chưa có đánh giá</span>
+                  )}
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-xl bg-sky-500/10 px-3.5 py-2 text-sm font-bold text-sky-600">
                   <PackageCheck className="h-4 w-4" /> Kho: {product.stock}
@@ -192,7 +198,8 @@ export default async function ProductDetailPage({
               reviewCount={product.reviewCount}
               sellerShopHref={`/shop/${slugifySeller(product.seller)}`}
               sellerId={product.sellerId ?? null}
-              sellerReviews={sellerReviews}
+              productId={product.id}
+              productReviews={productReviews}
             />
           </Reveal>
 

@@ -31,8 +31,13 @@ function mapProduct(p: ProductWithRelations): Product {
     price: p.price,
     priceMax: p.priceMax ?? undefined,
     originalPrice: p.originalPrice ?? undefined,
-    rating: p.rating,
-    reviewCount: p.reviewCount,
+    // Mặc định "chưa có đánh giá" — attachRealRatings() ghi đè bằng dữ liệu
+    // thật từ bảng Review ngay sau mapProduct() ở MỌI hàm export bên dưới.
+    // Cố tình KHÔNG đọc p.rating/p.reviewCount (số tĩnh từ seed) nữa — nếu
+    // 1 hàm nào đó lỡ quên gọi attachRealRatings(), sản phẩm sẽ hiện "chưa
+    // có đánh giá" (an toàn) thay vì số giả (sai).
+    rating: null,
+    reviewCount: 0,
     stock: p.stock,
     sold: p.sold,
     views: p.views,
@@ -70,6 +75,32 @@ function mapProduct(p: ProductWithRelations): Product {
       required: f.required,
     })),
   };
+}
+
+// Ghi đè rating/reviewCount (mặc định null/0 từ mapProduct()) bằng số liệu
+// THẬT tính từ bảng Review theo Review.productId — 1 query groupBy duy nhất
+// cho cả danh sách, không phải N+1. Review.hidden=true (admin đã ẩn) không
+// tính vào, cùng nguyên tắc ratingStats() dùng cho rating gian hàng. Review
+// KHÔNG gắn sản phẩm nào (productId=null, review "chung gian hàng" cũ) tự
+// động bị loại vì không khớp productId nào trong danh sách truyền vào.
+// Gọi ở CUỐI mọi hàm export trả về Product/Product[] — xem mapProduct().
+async function attachRealRatings<T extends { id: string; rating: number | null; reviewCount: number }>(
+  products: T[]
+): Promise<T[]> {
+  if (products.length === 0) return products;
+  const grouped = await prisma.review.groupBy({
+    by: ["productId"],
+    where: { productId: { in: products.map((p) => p.id) }, hidden: false },
+    _avg: { rating: true },
+    _count: { rating: true },
+  });
+  const statsByProductId = new Map(grouped.filter((g) => g.productId).map((g) => [g.productId as string, g]));
+  for (const p of products) {
+    const stats = statsByProductId.get(p.id);
+    p.rating = stats ? Math.round((stats._avg.rating ?? 0) * 10) / 10 : null;
+    p.reviewCount = stats?._count.rating ?? 0;
+  }
+  return products;
 }
 
 // Dùng cho mọi nơi hiển thị công khai (trang chủ, trang danh mục, mega-menu)
@@ -177,7 +208,7 @@ export async function getAllProducts(): Promise<Product[]> {
     include: productInclude,
     orderBy: { createdAt: "desc" },
   });
-  return rows.map(mapProduct);
+  return attachRealRatings(rows.map(mapProduct));
 }
 
 export async function getFeaturedProducts(limit = 8): Promise<Product[]> {
@@ -196,7 +227,7 @@ export async function getFeaturedProducts(limit = 8): Promise<Product[]> {
     orderBy: [{ featuredUntil: { sort: "desc", nulls: "last" } }, { sold: "desc" }],
     take: limit,
   });
-  return rows.map(mapProduct);
+  return attachRealRatings(rows.map(mapProduct));
 }
 
 // Khi categorySlug là 1 nhóm cha (có category con), gộp sản phẩm của MỌI
@@ -222,7 +253,7 @@ export async function getProductsByCategory(
     include: productInclude,
     orderBy: { createdAt: "desc" },
   });
-  return rows.map(mapProduct);
+  return attachRealRatings(rows.map(mapProduct));
 }
 
 export async function searchProducts(query: string): Promise<Product[]> {
@@ -243,7 +274,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
     include: productInclude,
     orderBy: { createdAt: "desc" },
   });
-  return rows.map(mapProduct);
+  return attachRealRatings(rows.map(mapProduct));
 }
 
 // Trang chi tiết sản phẩm CÔNG KHAI — chỉ trả sản phẩm đã duyệt (status
@@ -260,6 +291,7 @@ export async function getProductBySlugDb(
   });
   if (!row) return null;
   const product = mapProduct(row);
+  await attachRealRatings([product]);
 
   // Tín hiệu "có thời hạn" cho BuyBox — 1 query nhỏ RIÊNG chỉ trong hàm này
   // (không đụng `productInclude` dùng chung cho mọi trang listing, tránh
@@ -296,7 +328,7 @@ export async function getRelatedProductsDb(
     include: productInclude,
     take: limit,
   });
-  return rows.map(mapProduct);
+  return attachRealRatings(rows.map(mapProduct));
 }
 
 function ratingStats(reviews: { rating: number }[]) {
@@ -331,6 +363,8 @@ export async function getSellerBySlug(slug: string) {
   });
   if (!seller) return null;
 
+  const products = await attachRealRatings(seller.products.map(mapProduct));
+
   return {
     id: seller.id,
     userId: seller.userId,
@@ -341,7 +375,7 @@ export async function getSellerBySlug(slug: string) {
     verified: seller.verified,
     suspended: seller.suspended,
     createdAt: seller.createdAt,
-    products: seller.products.map(mapProduct),
+    products,
     reviews: seller.reviews.map((r) => ({
       id: r.id,
       userId: r.userId,
@@ -402,7 +436,7 @@ export async function getMySellerProducts(userId: string): Promise<Product[]> {
     include: productInclude,
     orderBy: { createdAt: "desc" },
   });
-  const products = rows.map(mapProduct);
+  const products = await attachRealRatings(rows.map(mapProduct));
   if (products.length === 0) return products;
 
   // Gắn số liệu kho dữ liệu giao hàng thật (ProductStockItem) — chỉ tính
@@ -554,9 +588,13 @@ export async function getSellerOrderItems(sellerId: string, { service }: { servi
 // Công khai — dùng cho tab "Đánh giá" ở trang chi tiết sản phẩm/gian hàng
 // (ProductInfoTabs qua san-pham/[slug]/page.tsx). Review admin đã ẩn KHÔNG
 // hiện ở đây, cùng cách ForumPost bị ẩn biến mất khỏi diễn đàn công khai.
-export async function getSellerReviews(sellerId: string) {
+// Dùng cho tab "ĐÁNH GIÁ" ở trang chi tiết sản phẩm — CHỈ review gắn đúng
+// productId này (Review.productId), khớp với rating/reviewCount thật hiện ở
+// đầu tab (attachRealRatings()) thay vì mượn tạm mọi review của cả gian
+// hàng như trước đây.
+export async function getProductReviews(productId: string) {
   const reviews = await prisma.review.findMany({
-    where: { sellerId, hidden: false },
+    where: { productId, hidden: false },
     include: { user: { select: { name: true, username: true } } },
     orderBy: { createdAt: "desc" },
   });

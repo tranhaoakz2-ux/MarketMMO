@@ -11,7 +11,7 @@ const serviceCategorySlugs = new Set(["boosting", "chatgpt", "youtube"]);
 
 export default function CategoryProductCard({ product }: { product: Product }) {
   const typeLabel = serviceCategorySlugs.has(product.categorySlug) ? "Dịch vụ" : "Sản phẩm";
-  const filledStars = Math.round(product.rating);
+  const filledStars = product.rating !== null ? Math.round(product.rating) : 0;
 
   return (
     <Link
@@ -57,17 +57,23 @@ export default function CategoryProductCard({ product }: { product: Product }) {
         </div>
 
         <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-sm text-foreground/80">
-          <span className="flex items-center gap-0.5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star
-                key={i}
-                className={`h-3.5 w-3.5 ${
-                  i < filledStars ? "fill-brand text-brand" : "fill-border-c text-border-c"
-                }`}
-              />
-            ))}
-          </span>
-          <span>{product.reviewCount} đánh giá</span>
+          {product.rating !== null ? (
+            <>
+              <span className="flex items-center gap-0.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`h-3.5 w-3.5 ${
+                      i < filledStars ? "fill-brand text-brand" : "fill-border-c text-border-c"
+                    }`}
+                  />
+                ))}
+              </span>
+              <span>{product.reviewCount} đánh giá</span>
+            </>
+          ) : (
+            <span className="text-muted">Chưa có đánh giá</span>
+          )}
           <span className="text-muted">|</span>
           <span>
             Đã bán: <b className="font-bold text-success">{product.sold}</b>

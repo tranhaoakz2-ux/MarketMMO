@@ -14,7 +14,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   reviews: "ĐÁNH GIÁ (REVIEWS)",
 };
 
-type SellerReview = {
+type ProductReview = {
   id: string;
   authorName: string;
   rating: number;
@@ -28,14 +28,18 @@ export default function ProductInfoTabs({
   reviewCount,
   sellerShopHref,
   sellerId,
-  sellerReviews,
+  productId,
+  productReviews,
 }: {
   description: string[];
-  rating: number;
+  /** null = chưa có đánh giá THẬT nào cho sản phẩm này — hiện "Chưa có đánh
+      giá" thay vì vẽ sao 0 sao (dễ hiểu nhầm là sản phẩm tệ). */
+  rating: number | null;
   reviewCount: number;
   sellerShopHref: string;
   sellerId: string | null;
-  sellerReviews: SellerReview[];
+  productId: string;
+  productReviews: ProductReview[];
 }) {
   const [tab, setTab] = useState<TabKey>("description");
 
@@ -79,9 +83,15 @@ export default function ProductInfoTabs({
       {tab === "reviews" && (
         <div className="flex flex-col gap-4 p-6 text-sm text-foreground/80">
           <div className="flex items-center gap-2">
-            <RatingStars rating={rating} />
-            <span className="font-bold text-foreground">{rating.toFixed(1)}</span>
-            <span className="text-muted">({reviewCount} đánh giá)</span>
+            {rating !== null ? (
+              <>
+                <RatingStars rating={rating} />
+                <span className="font-bold text-foreground">{rating.toFixed(1)}</span>
+                <span className="text-muted">({reviewCount} đánh giá)</span>
+              </>
+            ) : (
+              <span className="text-muted">Chưa có đánh giá</span>
+            )}
             <Link
               href={sellerShopHref}
               className="ml-auto text-xs font-semibold text-brand-dark hover:underline"
@@ -92,13 +102,13 @@ export default function ProductInfoTabs({
 
           <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
             <div className="flex flex-col gap-3">
-              {sellerReviews.length === 0 ? (
+              {productReviews.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border-c bg-surface-alt p-6 text-center text-sm text-muted">
                   Chưa có bình luận nào — hãy là người đầu tiên chia sẻ trải
                   nghiệm về chất lượng sản phẩm này.
                 </div>
               ) : (
-                sellerReviews.map((review) => (
+                productReviews.map((review) => (
                   <div
                     key={review.id}
                     className="rounded-xl border border-border-c bg-surface-alt p-4"
@@ -119,7 +129,7 @@ export default function ProductInfoTabs({
               )}
             </div>
 
-            {sellerId && <ReviewForm sellerId={sellerId} />}
+            {sellerId && <ReviewForm sellerId={sellerId} productId={productId} />}
           </div>
         </div>
       )}

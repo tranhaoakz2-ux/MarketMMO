@@ -6,7 +6,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function ReviewForm({ sellerId }: { sellerId: string }) {
+export default function ReviewForm({
+  sellerId,
+  productId,
+}: {
+  sellerId: string;
+  /** Có khi form hiện ở trang chi tiết sản phẩm — gắn review vào đúng sản
+      phẩm đó (buộc phải đã mua chính sản phẩm này), khác trang shop chung
+      (không truyền, giữ nguyên hành vi "mua bất kỳ gì từ seller" cũ). */
+  productId?: string;
+}) {
   const { data: session } = useSession();
   const router = useRouter();
 
@@ -47,7 +56,7 @@ export default function ReviewForm({ sellerId }: { sellerId: string }) {
     const res = await fetch("/api/reviews", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sellerId, rating, comment }),
+      body: JSON.stringify({ sellerId, productId, rating, comment }),
     });
     const data = await res.json();
     setLoading(false);
@@ -68,7 +77,9 @@ export default function ReviewForm({ sellerId }: { sellerId: string }) {
       onSubmit={handleSubmit}
       className="rounded-xl border border-border-c bg-surface p-4 shadow-sm"
     >
-      <p className="mb-2 text-sm font-bold text-foreground">Đánh giá gian hàng này</p>
+      <p className="mb-2 text-sm font-bold text-foreground">
+        {productId ? "Đánh giá sản phẩm này" : "Đánh giá gian hàng này"}
+      </p>
 
       <div className="mb-3 flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
