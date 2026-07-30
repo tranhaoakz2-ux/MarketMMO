@@ -277,6 +277,24 @@ export async function searchProducts(query: string): Promise<Product[]> {
   return attachRealRatings(rows.map(mapProduct));
 }
 
+// Tỷ lệ khiếu nại THẬT của 1 sản phẩm = số OrderItem có Dispute (bất kỳ
+// trạng thái nào — OPEN/RESOLVED_*, kể cả khiếu nại admin xử thắng cho
+// seller vẫn tính là "đã có khiếu nại xảy ra", đúng nghĩa tỷ lệ khiếu nại
+// chứ không phải tỷ lệ buyer thắng) / tổng số OrderItem của sản phẩm đó.
+// null khi sản phẩm CHƯA có đơn hàng nào (mẫu số = 0) — UI phải hiện "Chưa
+// có dữ liệu" thay vì "0.0%" (0.0% dễ hiểu nhầm là đã bán nhiều mà không ai
+// khiếu nại, trong khi thực tế là chưa bán được gì).
+async function getProductDisputeStats(
+  productId: string
+): Promise<{ ratePercent: number; totalOrders: number } | null> {
+  const totalOrders = await prisma.orderItem.count({ where: { productId } });
+  if (totalOrders === 0) return null;
+  const disputedOrders = await prisma.orderItem.count({
+    where: { productId, dispute: { isNot: null } },
+  });
+  return { ratePercent: Math.round((disputedOrders / totalOrders) * 1000) / 10, totalOrders };
+}
+
 // Trang chi tiết sản phẩm CÔNG KHAI — chỉ trả sản phẩm đã duyệt (status
 // APPROVED), sản phẩm đang chờ duyệt/bị từ chối trả về null (404) dù đúng
 // slug, tránh khách hàng xem/mua được sản phẩm chưa qua kiểm duyệt. Seller
@@ -292,6 +310,7 @@ export async function getProductBySlugDb(
   if (!row) return null;
   const product = mapProduct(row);
   await attachRealRatings([product]);
+  product.disputeStats = await getProductDisputeStats(product.id);
 
   // Tín hiệu "có thời hạn" cho BuyBox — 1 query nhỏ RIÊNG chỉ trong hàm này
   // (không đụng `productInclude` dùng chung cho mọi trang listing, tránh

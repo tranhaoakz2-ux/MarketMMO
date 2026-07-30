@@ -69,6 +69,10 @@ export type Product = {
   stockAvailable?: number;
   /** Có ≥1 dòng ProductStockItem AVAILABLE với expiresAt khác null hay không (sản phẩm KHÔNG có variant) — chỉ có khi fetch qua getProductBySlugDb. */
   hasTimedStock?: boolean;
+  /** Tỷ lệ khiếu nại THẬT (số OrderItem có Dispute / tổng OrderItem của sản
+      phẩm này) — chỉ có khi fetch qua getProductBySlugDb. null = sản phẩm
+      CHƯA có đơn hàng nào (không phải 0% — UI phải hiện "Chưa có dữ liệu"). */
+  disputeStats?: { ratePercent: number; totalOrders: number } | null;
   /** "PRODUCT" | "SERVICE" — mặc định "PRODUCT" nếu không set (seed/mock data cũ). SERVICE = buyer phải cung cấp thông tin (tài khoản/link/mật khẩu...) cho seller thực hiện, xem serviceFields + ServiceIntake trong prisma/schema.prisma. */
   productType?: "PRODUCT" | "SERVICE";
   /** Chỉ có ý nghĩa khi productType="SERVICE" — mã phương thức bàn giao seller chấp nhận (xem SERVICE_DELIVERY_METHODS trong src/lib/constants.ts), buyer chọn 1 trong tập này lúc đặt đơn. */

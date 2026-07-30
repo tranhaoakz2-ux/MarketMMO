@@ -142,9 +142,21 @@ export default async function ProductDetailPage({
                 <span className="inline-flex items-center gap-1.5 rounded-xl bg-orange-500/10 px-3.5 py-2 text-sm font-bold text-orange-500">
                   <TrendingUp className="h-4 w-4" /> Đã bán: {product.sold}
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-success/10 px-3.5 py-2 text-sm font-bold text-success">
-                  <ShieldAlert className="h-4 w-4" /> Khiếu nại: 0.0%
-                </span>
+                {!product.disputeStats ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-xl bg-surface-alt px-3.5 py-2 text-sm font-bold text-muted">
+                    <ShieldAlert className="h-4 w-4" /> Khiếu nại: Chưa có dữ liệu
+                  </span>
+                ) : (
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-bold ${
+                      product.disputeStats.ratePercent === 0
+                        ? "bg-success/10 text-success"
+                        : "bg-danger/10 text-danger"
+                    }`}
+                  >
+                    <ShieldAlert className="h-4 w-4" /> Khiếu nại: {product.disputeStats.ratePercent.toFixed(1)}%
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5 rounded-xl bg-surface-alt px-3.5 py-3">
