@@ -4,7 +4,16 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function OpenDisputeButton({ orderItemId }: { orderItemId: string }) {
+export default function OpenDisputeButton({
+  orderItemId,
+  variant = "escrow",
+}: {
+  orderItemId: string;
+  /** "post_release" = đơn đã giải ngân, khiếu nại đi thẳng admin (đền bù từ
+      quỹ bảo hiểm seller nếu duyệt) — khác "escrow" (mặc định) vẫn qua bước
+      seller tự bảo hành trước. Chỉ đổi copy hiển thị, cùng 1 API. */
+  variant?: "escrow" | "post_release";
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -47,8 +56,18 @@ export default function OpenDisputeButton({ orderItemId }: { orderItemId: string
   return (
     <div className="mt-1.5 flex w-56 flex-col gap-1.5 rounded-lg border border-danger/30 bg-danger/5 p-2">
       <p className="text-[10px] text-muted">
-        Yêu cầu gửi tới <b className="text-foreground">người bán bảo hành trước</b>. Nếu người bán
-        từ chối hoặc quá 24h, bạn có thể đưa khiếu nại lên sàn.
+        {variant === "post_release" ? (
+          <>
+            Đơn đã giải ngân cho người bán — yêu cầu bảo hành sẽ gửi{" "}
+            <b className="text-foreground">thẳng tới sàn xét duyệt</b>, đền bù (nếu có) trích từ quỹ
+            bảo hiểm của người bán.
+          </>
+        ) : (
+          <>
+            Yêu cầu gửi tới <b className="text-foreground">người bán bảo hành trước</b>. Nếu người bán
+            từ chối hoặc quá 24h, bạn có thể đưa khiếu nại lên sàn.
+          </>
+        )}
       </p>
       <textarea
         value={reason}

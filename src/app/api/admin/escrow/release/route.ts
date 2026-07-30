@@ -32,7 +32,7 @@ export async function POST() {
     const paid = await prisma.$transaction(async (t) => {
       const gate = await t.orderItem.updateMany({
         where: { id: item.id, status: "ESCROW" },
-        data: { status: "RELEASED" },
+        data: { status: "RELEASED", releasedAt: new Date() },
       });
       if (gate.count === 0) return false;
       await purgeServiceIntakeSecrets(t, item.id);

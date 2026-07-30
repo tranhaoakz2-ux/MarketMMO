@@ -6,9 +6,15 @@ import DisputeStatusCell from "@/components/DisputeStatusCell";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import OpenDisputeButton from "@/components/OpenDisputeButton";
+import PostReleaseDisputeStatus from "@/components/PostReleaseDisputeStatus";
 import Reveal from "@/components/Reveal";
 import { auth } from "@/auth";
-import { orderStatusLabel, type OrderStatus } from "@/lib/constants";
+import {
+  orderStatusLabel,
+  POST_RELEASE_WARRANTY_DAYS,
+  type DisputeStatus,
+  type OrderStatus,
+} from "@/lib/constants";
 import { formatVnd } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
@@ -41,6 +47,17 @@ export default async function OrdersPage() {
       const d = item.dispute;
       const rejected = Boolean(d?.warrantyRejectedAt);
       const deadlinePassed = d?.warrantyDeadline ? d.warrantyDeadline <= now : false;
+      // Cửa sổ khiếu nại "bảo hành sau giải ngân" — chỉ áp dụng cho đơn đã
+      // RELEASED, có mốc releasedAt (đơn cũ trước khi thêm cột này thì
+      // không), còn trong hạn, và CHƯA có khiếu nại nào.
+      const warrantyDeadlineAfterRelease = item.releasedAt
+        ? new Date(item.releasedAt.getTime() + POST_RELEASE_WARRANTY_DAYS * 24 * 3600_000)
+        : null;
+      const canOpenPostReleaseWarranty =
+        item.status === "RELEASED" &&
+        !d &&
+        warrantyDeadlineAfterRelease !== null &&
+        now <= warrantyDeadlineAfterRelease;
       return {
         orderId: order.id,
         itemId: item.id,
@@ -52,10 +69,13 @@ export default async function OrdersPage() {
         status: item.status as OrderStatus,
         escrowReleaseAt: item.escrowReleaseAt,
         hasDispute: Boolean(d),
+        canOpenPostReleaseWarranty,
         dispute: d
           ? {
               id: d.id,
-              phase: d.phase as "SELLER_WARRANTY" | "PLATFORM",
+              phase: d.phase as "SELLER_WARRANTY" | "PLATFORM" | "POST_RELEASE_WARRANTY",
+              status: d.status as DisputeStatus,
+              refundAmount: d.refundAmount,
               rejected,
               canEscalate: d.phase === "SELLER_WARRANTY" && (rejected || deadlinePassed),
               deadlineText: d.warrantyDeadline
@@ -151,12 +171,27 @@ export default async function OrdersPage() {
                           {row.status === "DISPUTED" && row.dispute && (
                             <DisputeStatusCell
                               disputeId={row.dispute.id}
-                              phase={row.dispute.phase}
+                              phase={row.dispute.phase as "SELLER_WARRANTY" | "PLATFORM"}
                               rejected={row.dispute.rejected}
                               canEscalate={row.dispute.canEscalate}
                               deadlineText={row.dispute.deadlineText}
                             />
                           )}
+                          {/* Bảo hành sau giải ngân — đơn ĐÃ RELEASED (tiền vào ví
+                              seller), buyer vẫn còn trong hạn POST_RELEASE_WARRANTY_DAYS
+                              và chưa mở khiếu nại nào. */}
+                          {row.status === "RELEASED" && row.canOpenPostReleaseWarranty && (
+                            <OpenDisputeButton orderItemId={row.itemId} variant="post_release" />
+                          )}
+                          {row.status === "RELEASED" &&
+                            row.dispute &&
+                            row.dispute.phase === "POST_RELEASE_WARRANTY" && (
+                              <PostReleaseDisputeStatus
+                                disputeId={row.dispute.id}
+                                status={row.dispute.status}
+                                refundAmount={row.dispute.refundAmount}
+                              />
+                            )}
                         </td>
                       </tr>
                     ))}

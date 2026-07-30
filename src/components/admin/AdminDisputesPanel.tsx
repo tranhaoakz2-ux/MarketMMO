@@ -8,21 +8,22 @@
 // {action:"refund_buyer"|"release_seller"|"partial_refund", refundPercent?}
 // — không đổi 1 dòng logic nghiệp vụ. API route đã có sẵn requireAdmin()
 // (không đụng tới).
-import { Eye, Inbox, Scale, ShieldCheck, X } from "lucide-react";
+import { Eye, Inbox, Scale, Shield, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button, Card, EmptyState, PageHeader, formatVndDemo } from "@/components/admin-demo/AdminDemoKit";
 
 type Dispute = {
   id: string;
   reason: string;
-  status: "OPEN" | "RESOLVED_REFUND" | "RESOLVED_PARTIAL" | "RESOLVED_RELEASE";
+  status: "OPEN" | "RESOLVED_REFUND" | "RESOLVED_PARTIAL" | "RESOLVED_RELEASE" | "RESOLVED_INSURANCE";
+  phase: "PLATFORM" | "POST_RELEASE_WARRANTY";
   createdAt: string;
   openedBy: { email: string | null; username: string | null; name: string | null };
   orderItem: {
     productName: string;
     price: number;
     quantity: number;
-    product: { seller: { shopName: string } } | null;
+    product: { seller: { shopName: string; insuranceBalance: number } } | null;
   };
 };
 
@@ -30,6 +31,7 @@ const RESOLVED_LABEL: Record<string, { label: string; className: string }> = {
   RESOLVED_REFUND: { label: "Đã hoàn toàn bộ", className: "bg-[var(--adm-danger-bg)] text-[var(--adm-danger)]" },
   RESOLVED_PARTIAL: { label: "Đã hoàn một phần", className: "bg-[var(--adm-surface-2)] text-[var(--adm-brand)]" },
   RESOLVED_RELEASE: { label: "Đã giải ngân seller", className: "bg-[var(--adm-success-bg)] text-[var(--adm-success)]" },
+  RESOLVED_INSURANCE: { label: "Đã đền từ quỹ bảo hiểm", className: "bg-[var(--adm-warn-bg)] text-[var(--adm-warn)]" },
 };
 
 // Bấm vào 1 dòng khiếu nại mở modal chi tiết đầy đủ (thay vì action button
@@ -48,12 +50,16 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
   // Hoàn một phần: mở ô nhập % + giá trị (chuỗi để nhập tự do, validate khi gửi).
   const [showPartial, setShowPartial] = useState(false);
   const [partialPct, setPartialPct] = useState("");
+  // Đền từ quỹ bảo hiểm (phase POST_RELEASE_WARRANTY): số tiền nhập tự do,
+  // validate khi gửi (1 đến min(giá trị đơn, số dư bảo hiểm hiện có)).
+  const [insuranceAmount, setInsuranceAmount] = useState("");
 
   const resetModalExtras = () => {
     setDelivered(null);
     setDeliveredEmpty(false);
     setShowPartial(false);
     setPartialPct("");
+    setInsuranceAmount("");
   };
 
   const openDispute = (id: string) => {
@@ -105,14 +111,14 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
 
   const handleAction = async (
     id: string,
-    action: "refund_buyer" | "release_seller" | "partial_refund",
-    refundPercent?: number
+    action: "refund_buyer" | "release_seller" | "partial_refund" | "refund_from_insurance" | "reject_claim",
+    extra?: Record<string, unknown>
   ) => {
     setBusyId(id);
     const res = await fetch(`/api/admin/disputes/${id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(action === "partial_refund" ? { action, refundPercent } : { action }),
+      body: JSON.stringify({ action, ...extra }),
     });
     setBusyId(null);
     if (!res.ok) {
@@ -131,7 +137,19 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
       alert("Tỉ lệ hoàn phải là số nguyên từ 1 đến 99 (%).");
       return;
     }
-    handleAction(active.id, "partial_refund", pct);
+    handleAction(active.id, "partial_refund", { refundPercent: pct });
+  };
+
+  const submitInsuranceRefund = () => {
+    if (!active) return;
+    const lineTotal = active.orderItem.price * active.orderItem.quantity;
+    const cap = Math.min(lineTotal, active.orderItem.product?.seller.insuranceBalance ?? 0);
+    const value = Number(insuranceAmount);
+    if (!Number.isInteger(value) || value < 1 || value > cap) {
+      alert(`Số tiền đền bù phải là số nguyên từ 1 đến ${cap.toLocaleString("vi-VN")}đ.`);
+      return;
+    }
+    handleAction(active.id, "refund_from_insurance", { amount: value });
   };
 
   const openDisputes = disputes.filter((d) => d.status === "OPEN");
@@ -159,7 +177,14 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
                 className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 text-left shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition hover:border-[var(--adm-brand)]/50"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-[var(--adm-text)]">{d.orderItem.productName}</p>
+                  <p className="flex items-center gap-1.5 truncate text-sm font-bold text-[var(--adm-text)]">
+                    {d.orderItem.productName}
+                    {d.phase === "POST_RELEASE_WARRANTY" && (
+                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--adm-warn-bg)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--adm-warn)]">
+                        <Shield className="h-2.5 w-2.5" /> Sau giải ngân
+                      </span>
+                    )}
+                  </p>
                   <p className="truncate text-xs text-[var(--adm-muted)]">
                     Người bán: {d.orderItem.product?.seller.shopName ?? "—"} · Mở bởi{" "}
                     {d.openedBy.name ?? d.openedBy.username ?? d.openedBy.email} ·{" "}
@@ -196,7 +221,14 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-6 shadow-2xl">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-base font-black text-[var(--adm-text)]">{active.orderItem.productName}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-black text-[var(--adm-text)]">{active.orderItem.productName}</h3>
+                  {active.phase === "POST_RELEASE_WARRANTY" && (
+                    <span className="flex items-center gap-1 rounded-full bg-[var(--adm-warn-bg)] px-2 py-0.5 text-[10px] font-bold text-[var(--adm-warn)]">
+                      <Shield className="h-3 w-3" /> Bảo hành sau giải ngân
+                    </span>
+                  )}
+                </div>
                 <p className="mt-0.5 text-xs text-[var(--adm-muted)]">Người bán: {active.orderItem.product?.seller.shopName ?? "—"}</p>
               </div>
               <button onClick={closeModal} className="rounded-full p-1 text-[var(--adm-muted)] hover:bg-white/10">
@@ -260,17 +292,77 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
               )}
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Button variant="danger" disabled={busyId === active.id} onClick={() => handleAction(active.id, "refund_buyer")}>
-                <X className="h-3.5 w-3.5" /> Hoàn toàn bộ
-              </Button>
-              <Button variant="primary" disabled={busyId === active.id} onClick={() => setShowPartial((v) => !v)}>
-                <Scale className="h-3.5 w-3.5" /> Hoàn một phần
-              </Button>
-              <Button variant="success" disabled={busyId === active.id} onClick={() => handleAction(active.id, "release_seller")}>
-                <ShieldCheck className="h-3.5 w-3.5" /> Từ chối · giải ngân seller
-              </Button>
-            </div>
+            {active.phase === "PLATFORM" && (
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Button variant="danger" disabled={busyId === active.id} onClick={() => handleAction(active.id, "refund_buyer")}>
+                  <X className="h-3.5 w-3.5" /> Hoàn toàn bộ
+                </Button>
+                <Button variant="primary" disabled={busyId === active.id} onClick={() => setShowPartial((v) => !v)}>
+                  <Scale className="h-3.5 w-3.5" /> Hoàn một phần
+                </Button>
+                <Button variant="success" disabled={busyId === active.id} onClick={() => handleAction(active.id, "release_seller")}>
+                  <ShieldCheck className="h-3.5 w-3.5" /> Từ chối · giải ngân seller
+                </Button>
+              </div>
+            )}
+
+            {active.phase === "POST_RELEASE_WARRANTY" &&
+              (() => {
+                const lineTotal = active.orderItem.price * active.orderItem.quantity;
+                const insuranceBalance = active.orderItem.product?.seller.insuranceBalance ?? 0;
+                const cap = Math.min(lineTotal, insuranceBalance);
+                const value = Number(insuranceAmount);
+                const valid = Number.isInteger(value) && value >= 1 && value <= cap;
+                return (
+                  <div className="mt-5 flex flex-col gap-3">
+                    <div className="rounded-xl border border-[var(--adm-warn)]/30 bg-[var(--adm-warn-bg)] p-3">
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--adm-warn)]">
+                        Đơn đã giải ngân — quỹ bảo hiểm người bán
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--adm-text)]">
+                        Số dư hiện có: <b className="tabular-nums">{formatVndDemo(insuranceBalance)}</b>
+                        {insuranceBalance < lineTotal && (
+                          <span className="ml-1.5 text-[var(--adm-danger)]">
+                            (không đủ để đền 100% giá trị đơn — {formatVndDemo(lineTotal)})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold uppercase tracking-wide text-[var(--adm-muted)]">
+                        Số tiền đền bù (tối đa {formatVndDemo(cap)})
+                      </label>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={cap}
+                          value={insuranceAmount}
+                          onChange={(e) => setInsuranceAmount(e.target.value)}
+                          placeholder={`VD: ${cap}`}
+                          className="w-40 rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-2.5 py-1.5 text-sm text-[var(--adm-text)] focus:border-[var(--adm-brand)] focus:outline-none"
+                        />
+                        <span className="text-sm text-[var(--adm-muted)]">đ</span>
+                        <Button
+                          variant="danger"
+                          disabled={!valid || cap < 1 || busyId === active.id}
+                          onClick={submitInsuranceRefund}
+                        >
+                          <Shield className="h-3.5 w-3.5" /> Đền từ quỹ bảo hiểm
+                        </Button>
+                        <Button
+                          variant="success"
+                          disabled={busyId === active.id}
+                          onClick={() => handleAction(active.id, "reject_claim")}
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5" /> Từ chối khiếu nại
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
             {showPartial &&
               (() => {

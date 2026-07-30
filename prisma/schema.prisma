@@ -637,6 +637,16 @@ model OrderItem {
   platformFeePercent Float @default(0)
   platformFeeAmount  Int   @default(0)
   createdAt        DateTime @default(now())
+  // Thời điểm giải ngân THẬT (set đúng lúc status chuyển sang RELEASED — xem
+  // POST /api/admin/escrow/release, POST /api/admin/disputes/[id] nhánh
+  // partial_refund/release_seller). KHÁC escrowReleaseAt (chỉ là ngày DỰ
+  // KIẾN tính lúc đặt đơn) — sàn chưa có cron tự động nên ngày giải ngân
+  // thật có thể lệch vài ngày. Dùng để tính cửa sổ khiếu nại "bảo hành sau
+  // giải ngân" (đền bù từ quỹ bảo hiểm seller, xem POST_RELEASE_WARRANTY
+  // trong DisputePhase, src/lib/constants.ts) — null với đơn RELEASED từ
+  // TRƯỚC khi thêm cột này (không backfill), đơn đó không mở được khiếu nại
+  // loại này.
+  releasedAt       DateTime?
 
   dispute       Dispute?
   stockItems    ProductStockItem[]

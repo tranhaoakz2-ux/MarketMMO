@@ -61,6 +61,9 @@ const STATUS_META: Record<string, { tone: Tone; label: string }> = {
   RESOLVED_REFUND: { tone: "danger", label: "Đã hoàn toàn bộ" },
   RESOLVED_PARTIAL: { tone: "info", label: "Đã hoàn một phần" },
   RESOLVED_RELEASE: { tone: "success", label: "Đã giải ngân bạn" },
+  // Khiếu nại "bảo hành sau giải ngân" (phase POST_RELEASE_WARRANTY) — bạn
+  // không tự xử được (đã có tiền), chỉ xem trạng thái admin quyết định.
+  RESOLVED_INSURANCE: { tone: "danger", label: "Đã đền bù từ quỹ bảo hiểm của bạn" },
 };
 
 function metaKey(d: Dispute): keyof typeof STATUS_META {
@@ -136,7 +139,7 @@ export default function SellerDisputesList({ disputes }: { disputes: Dispute[] }
   };
 
   const warranty = disputes.filter((d) => d.status === "OPEN" && d.phase === "SELLER_WARRANTY");
-  const platform = disputes.filter((d) => d.status === "OPEN" && d.phase === "PLATFORM");
+  const platform = disputes.filter((d) => d.status === "OPEN" && d.phase !== "SELLER_WARRANTY");
   const resolved = disputes.filter((d) => d.status !== "OPEN");
 
   return (

@@ -15,7 +15,8 @@ export type WalletTxType =
   | "REFUND"
   | "REFERRAL_BONUS"
   | "WITHDRAW"
-  | "INSURANCE_DEPOSIT";
+  | "INSURANCE_DEPOSIT"
+  | "INSURANCE_PAYOUT";
 
 export type WalletTxStatus = "PENDING" | "CONFIRMED" | "REJECTED";
 
@@ -23,15 +24,31 @@ export type DisputeStatus =
   | "OPEN"
   | "RESOLVED_REFUND"
   | "RESOLVED_PARTIAL"
-  | "RESOLVED_RELEASE";
+  | "RESOLVED_RELEASE"
+  // Đền bù buyer từ quỹ bảo hiểm của seller — CHỈ dùng cho khiếu nại phase
+  // POST_RELEASE_WARRANTY (đơn đã giải ngân, escrow không còn để hoàn). Tách
+  // riêng khỏi RESOLVED_REFUND để audit biết rõ tiền hoàn từ escrow hay từ
+  // quỹ bảo hiểm — xem POST /api/admin/disputes/[id] action refund_from_insurance.
+  | "RESOLVED_INSURANCE";
 
-// Pha xử lý khiếu nại (SECURITY_AUDIT #8 Phần B). Buyer mở → SELLER_WARRANTY
-// (seller có WARRANTY_WINDOW_HOURS để tự xử); hết hạn/bị từ chối → buyer
-// escalate → PLATFORM (admin xử). Seller tự mở đi thẳng PLATFORM.
-export type DisputePhase = "SELLER_WARRANTY" | "PLATFORM";
+// Pha xử lý khiếu nại (SECURITY_AUDIT #8 Phần B). Buyer mở khi đơn còn ESCROW
+// → SELLER_WARRANTY (seller có WARRANTY_WINDOW_HOURS để tự xử); hết hạn/bị
+// từ chối → buyer escalate → PLATFORM (admin xử). Seller tự mở đi thẳng
+// PLATFORM. POST_RELEASE_WARRANTY = buyer mở SAU KHI đơn đã RELEASED (tiền
+// đã vào ví seller) trong vòng POST_RELEASE_WARRANTY_DAYS kể từ
+// OrderItem.releasedAt — đi thẳng admin (seller đã có tiền, không tự bảo
+// hành), admin đền bù (nếu duyệt) TỪ QUỹ BẢO HIỂM của seller thay vì escrow
+// (đã không còn). Xem POST /api/disputes.
+export type DisputePhase = "SELLER_WARRANTY" | "PLATFORM" | "POST_RELEASE_WARRANTY";
 
 // Cửa sổ (giờ) seller được tự bảo hành trước khi buyer escalate lên sàn.
 export const WARRANTY_WINDOW_HOURS = 24;
+
+// Cửa sổ (ngày) buyer được mở khiếu nại "bảo hành sau giải ngân" — tính từ
+// OrderItem.releasedAt. KHÁC WARRANTY_WINDOW_HOURS (đó là SLA seller tự xử
+// khi đơn CÒN escrow, tính bằng giờ). Đơn RELEASED quá lâu (ngoài cửa sổ này)
+// không còn mở khiếu nại loại này được nữa.
+export const POST_RELEASE_WARRANTY_DAYS = 7;
 
 export type ProductStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -135,6 +152,7 @@ export const walletTxTypeLabel: Record<WalletTxType, string> = {
   REFERRAL_BONUS: "Hoa hồng giới thiệu",
   WITHDRAW: "Rút tiền",
   INSURANCE_DEPOSIT: "Nạp quỹ bảo hiểm",
+  INSURANCE_PAYOUT: "Đền bù từ quỹ bảo hiểm",
 };
 
 // Category nào được coi là "dịch vụ" khi seller xem đơn hàng trong Trang Bán
@@ -195,6 +213,7 @@ export const disputeStatusLabel: Record<DisputeStatus, string> = {
   RESOLVED_REFUND: "Đã hoàn toàn bộ cho người mua",
   RESOLVED_PARTIAL: "Đã hoàn một phần",
   RESOLVED_RELEASE: "Đã giải ngân người bán",
+  RESOLVED_INSURANCE: "Đã đền bù từ quỹ bảo hiểm",
 };
 
 // Số tiền tối thiểu 1 mã giảm giá được phép giảm về — không cho phép giảm
