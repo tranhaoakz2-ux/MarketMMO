@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import SellerAvatar from "@/components/SellerAvatar";
 import { formatVnd } from "@/lib/format";
 
 type NavItem = {
@@ -41,11 +42,13 @@ const navItems: NavItem[] = [
 
 export default function SellerSidebar({
   shopName,
+  avatarUrl,
   verified,
   insuranceBalance,
   insuranceFundTarget,
 }: {
   shopName: string;
+  avatarUrl?: string | null;
   verified: boolean;
   insuranceBalance: number;
   insuranceFundTarget: number;
@@ -59,9 +62,12 @@ export default function SellerSidebar({
     <aside className="lg:w-64 lg:shrink-0">
       <div className="rounded-2xl border border-border-c bg-surface p-4 shadow-sm lg:sticky lg:top-4">
         <div className="mb-3 flex items-center gap-2 border-b border-border-c pb-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-ink text-sm font-black text-brand">
-            {shopName.charAt(0).toUpperCase()}
-          </div>
+          <SellerAvatar
+            avatarUrl={avatarUrl}
+            shopName={shopName}
+            size={40}
+            fallbackColorClassName="bg-ink text-brand"
+          />
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-foreground">{shopName}</p>
             <p className="text-xs text-muted">

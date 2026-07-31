@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
-import Avatar from "@/components/Avatar";
 import ProductThumbnail from "@/components/ProductThumbnail";
+import SellerAvatar from "@/components/SellerAvatar";
 import { formatVnd } from "@/lib/format";
 import type { Product } from "@/data/products";
 
@@ -27,7 +27,7 @@ function FeaturedCard({ product }: { product: Product }) {
           {product.featuredViaAuction ? "ĐẤU GIÁ NGAY" : "TÀI TRỢ"}
         </span>
         <div className="absolute -bottom-2 left-2 ring-2 ring-white rounded-full">
-          <Avatar size={25} />
+          <SellerAvatar avatarUrl={product.sellerAvatarUrl} shopName={product.seller} size={25} />
         </div>
       </div>
       <h3 className="mt-[13px] line-clamp-2 text-[15px] font-bold leading-snug text-foreground transition-colors group-hover:text-brand-dark">

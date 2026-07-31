@@ -160,6 +160,10 @@ model Seller {
   description  String
   phone        String?
   facebookLink String?
+  // Ảnh đại diện gian hàng do seller tự upload (Trang Bán Hàng > Tổng quan) —
+  // null = chưa upload, UI tự fallback về chữ cái đầu shopName (xem
+  // src/components/SellerAvatar.tsx, dùng chung mọi nơi hiện avatar seller).
+  avatarUrl   String?
   level       Int      @default(1)
   // Badge "Đã xác thực" hiển thị công khai trên gian hàng — TRƯỚC ĐÂY được
   // set tự động khi admin duyệt xác thực CCCD (model SellerVerification, đã

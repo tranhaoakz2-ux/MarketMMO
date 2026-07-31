@@ -9,6 +9,7 @@ import { AlertTriangle, EyeOff, GripVertical, Package, Store, X } from "lucide-r
 import Image from "next/image";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button, Card, EmptyState, formatVndDemo } from "@/components/admin-demo/AdminDemoKit";
+import SellerAvatar from "@/components/SellerAvatar";
 
 type FeaturedProduct = {
   id: string;
@@ -25,6 +26,7 @@ type FeaturedSeller = {
   id: string;
   slug: string;
   shopName: string;
+  avatarUrl: string | null;
   level: number;
   visible: boolean;
   featuredOrder: number | null;
@@ -247,9 +249,7 @@ export default function AdminFeaturedPanel() {
             busyId={busyId}
             renderItem={(s) => (
               <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[var(--adm-brand)] text-sm font-black text-[#14141f]">
-                  {s.shopName.charAt(0).toUpperCase()}
-                </span>
+                <SellerAvatar avatarUrl={s.avatarUrl} shopName={s.shopName} size={40} shape="square" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-[var(--adm-text)]">{s.shopName}</p>
                   <p className="truncate text-xs text-[var(--adm-muted)]">Level {s.level}</p>

@@ -15,6 +15,7 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Avatar from "@/components/Avatar";
 import RatingStars from "@/components/RatingStars";
+import SellerAvatar from "@/components/SellerAvatar";
 import Reveal from "@/components/Reveal";
 import ReviewForm from "@/components/ReviewForm";
 import ShopProductList from "@/components/ShopProductList";
@@ -51,9 +52,7 @@ export default async function ShopPage({
           <Reveal>
             <div className="-mt-14 flex flex-col gap-4 rounded-2xl border border-border-c bg-surface p-6 shadow-sm sm:flex-row sm:items-center">
               <div className="relative shrink-0">
-                <span className="grid h-20 w-20 place-items-center rounded-2xl bg-brand text-3xl shadow ring-4 ring-surface">
-                  <Store className="h-9 w-9 text-ink" />
-                </span>
+                <SellerAvatar avatarUrl={shop.avatarUrl} shopName={seller} size={80} shape="square" fallback="store" ring />
                 <span className="absolute -bottom-1 -right-1 grid h-6 w-6 place-items-center rounded-full bg-success text-white ring-2 ring-surface">
                   <BadgeCheck className="h-3.5 w-3.5" />
                 </span>

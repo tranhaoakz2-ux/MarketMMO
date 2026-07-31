@@ -1,8 +1,8 @@
 import { BadgeCheck, Clock, Eye, Flame, PackageCheck, ShieldCheck, Star } from "lucide-react";
 import Link from "next/link";
-import Avatar from "@/components/Avatar";
 import MegaSaleBadge from "@/components/MegaSaleBadge";
 import ProductThumbnail from "@/components/ProductThumbnail";
+import SellerAvatar from "@/components/SellerAvatar";
 import type { Product } from "@/data/products";
 import { formatVnd } from "@/lib/format";
 
@@ -47,7 +47,7 @@ export default function ProductCard({ product }: { product: Product }) {
           </h3>
 
           <div className="mt-1.5 flex items-center gap-1.5 text-sm text-muted">
-            <Avatar size={16} />
+            <SellerAvatar avatarUrl={product.sellerAvatarUrl} shopName={product.seller} size={16} />
             <span className="truncate">{product.seller}</span>
             {product.verified && (
               <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-success/10 px-1.5 py-0.5 text-[10px] font-semibold text-success">

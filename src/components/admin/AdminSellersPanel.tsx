@@ -20,11 +20,13 @@ import {
   Textarea,
   formatVndDemo,
 } from "@/components/admin-demo/AdminDemoKit";
+import SellerAvatar from "@/components/SellerAvatar";
 
 type AdminSeller = {
   id: string;
   shopName: string;
   slug: string;
+  avatarUrl: string | null;
   level: number;
   verified: boolean;
   isFeatured: boolean;
@@ -118,20 +120,23 @@ export default function AdminSellersPanel() {
       header: "Gian hàng",
       primary: true,
       render: (s) => (
-        <div className="min-w-0">
-          <Link
-            href={`/shop/${s.slug}`}
-            target="_blank"
-            className="flex max-w-[300px] items-center gap-1 truncate font-bold text-[var(--adm-text)] hover:text-[var(--adm-brand)]"
-          >
-            <span className="truncate">{s.shopName}</span>
-            <ExternalLink className="h-3 w-3 shrink-0" />
-          </Link>
-          <p className="mt-0.5 flex max-w-[300px] items-center gap-1 truncate text-xs text-[var(--adm-muted)]">
-            <span className="truncate">{s.user.email}</span> · LV {s.level}
-            {s.verified && <BadgeCheck className="h-3 w-3 shrink-0 text-[var(--adm-success)]" />}
-            {s.isFeatured && <Pin className="h-3 w-3 shrink-0 text-[var(--adm-brand)]" />}
-          </p>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <SellerAvatar avatarUrl={s.avatarUrl} shopName={s.shopName} size={32} />
+          <div className="min-w-0">
+            <Link
+              href={`/shop/${s.slug}`}
+              target="_blank"
+              className="flex max-w-[300px] items-center gap-1 truncate font-bold text-[var(--adm-text)] hover:text-[var(--adm-brand)]"
+            >
+              <span className="truncate">{s.shopName}</span>
+              <ExternalLink className="h-3 w-3 shrink-0" />
+            </Link>
+            <p className="mt-0.5 flex max-w-[300px] items-center gap-1 truncate text-xs text-[var(--adm-muted)]">
+              <span className="truncate">{s.user.email}</span> · LV {s.level}
+              {s.verified && <BadgeCheck className="h-3 w-3 shrink-0 text-[var(--adm-success)]" />}
+              {s.isFeatured && <Pin className="h-3 w-3 shrink-0 text-[var(--adm-brand)]" />}
+            </p>
+          </div>
         </div>
       ),
     },

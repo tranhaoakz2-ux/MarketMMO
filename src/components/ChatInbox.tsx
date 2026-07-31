@@ -14,13 +14,20 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Avatar from "@/components/Avatar";
+import SellerAvatar from "@/components/SellerAvatar";
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 type ConversationSummary = {
   id: string;
-  otherUser: { id: string; name: string; isSystemBot: boolean; sellerSlug: string | null };
+  otherUser: {
+    id: string;
+    name: string;
+    isSystemBot: boolean;
+    sellerSlug: string | null;
+    sellerAvatarUrl: string | null;
+  };
   lastMessage: string | null;
   lastMessageAt: string;
   unreadCount: number;
@@ -350,7 +357,16 @@ export default function ChatInbox() {
                   selectedId === c.id ? "bg-surface-alt" : ""
                 }`}
               >
-                <Avatar size={48} className="shrink-0" />
+                {c.otherUser.sellerSlug ? (
+                  <SellerAvatar
+                    avatarUrl={c.otherUser.sellerAvatarUrl}
+                    shopName={c.otherUser.name}
+                    size={48}
+                    className="shrink-0"
+                  />
+                ) : (
+                  <Avatar size={48} className="shrink-0" />
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate text-[15px] font-bold text-foreground">{c.otherUser.name}</p>
@@ -395,7 +411,9 @@ export default function ChatInbox() {
                   href={`/shop/${selectedConv.otherUser.sellerSlug}`}
                   className="group flex min-w-0 items-center gap-3"
                 >
-                  <Avatar
+                  <SellerAvatar
+                    avatarUrl={selectedConv.otherUser.sellerAvatarUrl}
+                    shopName={selectedConv.otherUser.name}
                     size={44}
                     className="shrink-0 transition group-hover:ring-2 group-hover:ring-brand-dark"
                   />

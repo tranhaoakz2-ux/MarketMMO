@@ -48,10 +48,10 @@ export async function GET() {
   const sellers = otherUserIds.length
     ? await prisma.seller.findMany({
         where: { userId: { in: otherUserIds } },
-        select: { userId: true, slug: true },
+        select: { userId: true, slug: true, shopName: true, avatarUrl: true },
       })
     : [];
-  const sellerSlugMap = new Map(sellers.map((s) => [s.userId, s.slug]));
+  const sellerMap = new Map(sellers.map((s) => [s.userId, s]));
 
   const result = conversations.map((conv) => {
     const other = conv.userAId === userId ? conv.userB : conv.userA;
@@ -68,7 +68,8 @@ export async function GET() {
         // rút gọn (6 ký tự cuối id) để vẫn phân biệt được người dùng ẩn tên.
         name: other.name ?? other.username ?? `Người dùng #${other.id.slice(-6)}`,
         isSystemBot: other.id === bot.id,
-        sellerSlug: sellerSlugMap.get(other.id) ?? null,
+        sellerSlug: sellerMap.get(other.id)?.slug ?? null,
+        sellerAvatarUrl: sellerMap.get(other.id)?.avatarUrl ?? null,
       },
       lastMessage,
       lastMessageAt: conv.lastMessageAt,

@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Avatar from "@/components/Avatar";
+import SellerAvatar from "@/components/SellerAvatar";
 import AuctionCountdown from "@/components/AuctionCountdown";
 import Breadcrumb from "@/components/Breadcrumb";
 import BuyBox from "@/components/BuyBox";
@@ -183,7 +184,7 @@ export default async function ProductDetailPage({
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5 rounded-xl bg-surface-alt px-3.5 py-3">
-                <Avatar size={32} />
+                <SellerAvatar avatarUrl={product.sellerAvatarUrl} shopName={product.seller} size={32} />
                 <Link
                   href={`/shop/${slugifySeller(product.seller)}`}
                   className="text-sm font-bold text-success hover:underline"

@@ -31,6 +31,7 @@ export async function GET(req: Request) {
       id: s.id,
       shopName: s.shopName,
       slug: s.slug,
+      avatarUrl: s.avatarUrl,
       level: s.level,
       verified: s.verified,
       isFeatured: s.isFeatured,

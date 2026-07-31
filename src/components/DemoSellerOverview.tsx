@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import SellerAvatar from "@/components/SellerAvatar";
 import { formatVnd } from "@/lib/format";
 
 const INSURANCE_TARGET = 300_000;
@@ -460,9 +461,7 @@ export default function DemoSellerOverview() {
             {/* Header sáng, đồng bộ với body — vàng thương hiệu chỉ làm điểm
                 nhấn ở avatar + badge Level, không tô tràn nền. */}
             <div className="flex items-center gap-3 border-b border-border-c bg-surface-alt px-5 py-4">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand text-lg font-black text-ink shadow-sm">
-                {MOCK.store.shopName.charAt(0)}
-              </span>
+              <SellerAvatar avatarUrl={null} shopName={MOCK.store.shopName} size={48} shape="square" />
               <div className="min-w-0">
                 <p className="truncate text-sm font-black text-foreground">{MOCK.store.shopName}</p>
                 <div className="mt-1 flex flex-wrap gap-1.5">

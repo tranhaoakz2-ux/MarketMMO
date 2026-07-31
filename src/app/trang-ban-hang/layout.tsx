@@ -35,6 +35,7 @@ export default async function SellerDashboardLayout({
             <div className="flex flex-col gap-6 lg:flex-row">
               <SellerSidebar
                 shopName={seller.shopName}
+                avatarUrl={seller.avatarUrl}
                 verified={seller.verified}
                 insuranceBalance={seller.insuranceBalance}
                 insuranceFundTarget={insuranceFundTarget}

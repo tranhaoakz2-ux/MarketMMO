@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Star, Store } from "lucide-react";
 
@@ -5,6 +6,7 @@ export type SellerListItem = {
   id: string;
   shopName: string;
   slug: string;
+  avatarUrl?: string | null;
   level: number;
   verified: boolean;
   productCount: number;
@@ -19,9 +21,15 @@ function SellerCard({ seller }: { seller: SellerListItem }) {
       className="group w-[187px] shrink-0 rounded-xl p-[5px] transition hover:-translate-y-0.5 sm:w-[204px]"
     >
       <div className="relative">
-        <span className="grid h-[253px] w-full place-items-center rounded-lg border-2 border-brand bg-surface-alt text-6xl font-black text-foreground/70">
-          {seller.shopName.charAt(0).toUpperCase()}
-        </span>
+        {seller.avatarUrl ? (
+          <span className="relative block h-[253px] w-full overflow-hidden rounded-lg border-2 border-brand bg-surface-alt">
+            <Image src={seller.avatarUrl} alt={seller.shopName} fill sizes="204px" className="object-cover" />
+          </span>
+        ) : (
+          <span className="grid h-[253px] w-full place-items-center rounded-lg border-2 border-brand bg-surface-alt text-6xl font-black text-foreground/70">
+            {seller.shopName.charAt(0).toUpperCase()}
+          </span>
+        )}
         <span
           className={`absolute right-1 top-1 rounded px-2 py-1 text-[11px] font-bold ${
             seller.verified ? "bg-ink text-white" : "bg-brand text-ink"

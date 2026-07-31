@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { get, put } from "@vercel/blob";
+import { del, get, put } from "@vercel/blob";
 
 // Thư mục lưu file đính kèm chat khi chạy ở chế độ ổ đĩa cục bộ (dev hoặc
 // host có filesystem lâu dài) — NGOÀI /public (không public như logo/ảnh sản
@@ -219,6 +219,65 @@ export async function saveBannerImage(file: File): Promise<string> {
   await mkdir(path.dirname(absolutePath), { recursive: true });
   await writeFile(absolutePath, buffer);
   return `/uploads/banners/${filename}`;
+}
+
+// Avatar seller nhỏ hơn ảnh sản phẩm/banner — 3MB đủ dùng, chặn sớm file
+// lớn bất thường (khác MAX_UPLOAD_SIZE 5MB dùng chung cho sản phẩm/banner).
+export const MAX_AVATAR_SIZE = 3 * 1024 * 1024; // 3MB
+
+/**
+ * Lưu avatar gian hàng — CÔNG KHAI, cùng cơ chế saveProductImage()/
+ * saveBannerImage() (Blob public hoặc public/uploads/avatars/ khi thiếu
+ * token), chỉ khác thư mục lưu + sàn dung lượng riêng (3MB).
+ */
+export async function saveSellerAvatar(file: File): Promise<string> {
+  const ext = ALLOWED_TYPES[file.type];
+  if (!ext) {
+    throw new Error("Chỉ chấp nhận ảnh JPEG, PNG hoặc WebP.");
+  }
+  if (file.size > MAX_AVATAR_SIZE) {
+    throw new Error("Ảnh vượt quá 3MB.");
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  assertMagicMatches(file.type, buffer); // chống giả mạo Content-Type
+  const filename = `${randomUUID()}.${ext}`;
+
+  if (isBlobConfigured()) {
+    const blob = await put(path.join("avatars", filename), buffer, {
+      access: "public",
+      contentType: file.type,
+      addRandomSuffix: true,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+    return blob.url;
+  }
+
+  const absolutePath = path.join(process.cwd(), "public", "uploads", "avatars", filename);
+  await mkdir(path.dirname(absolutePath), { recursive: true });
+  await writeFile(absolutePath, buffer);
+  return `/uploads/avatars/${filename}`;
+}
+
+/**
+ * Xoá 1 ảnh CÔNG KHAI cũ (Blob URL hoặc đường dẫn /uploads/... cục bộ) sau
+ * khi đã lưu ảnh mới thành công — dọn rác lưu trữ. CỐ TÌNH best-effort: lỗi
+ * xoá (vd đã bị xoá trước đó, quyền token đổi...) chỉ log, KHÔNG throw —
+ * không được để sự cố dọn dẹp làm hỏng việc đổi avatar đã lưu xong.
+ */
+export async function deletePublicImage(url: string | null | undefined): Promise<void> {
+  if (!url) return;
+  try {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      if (isBlobConfigured()) await del(url, { token: process.env.BLOB_READ_WRITE_TOKEN });
+      return;
+    }
+    if (url.startsWith("/uploads/")) {
+      await unlink(path.join(process.cwd(), "public", url));
+    }
+  } catch (err) {
+    console.error("Không thể xoá ảnh cũ:", err);
+  }
 }
 
 /**

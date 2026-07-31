@@ -16,6 +16,7 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
+import SellerAvatarUploader from "@/components/SellerAvatarUploader";
 import SellerOverviewChart from "@/components/SellerOverviewChart";
 import { formatRelativeTime, formatVnd } from "@/lib/format";
 import { orderStatusLabel, type OrderStatus, type RangeKey } from "@/lib/constants";
@@ -195,6 +196,7 @@ export default function SellerOverviewStats({
     slug: string;
     level: number;
     verified: boolean;
+    avatarUrl: string | null;
     insuranceBalance: number;
     avgRating: number;
     reviewCount: number;
@@ -424,9 +426,7 @@ export default function SellerOverviewStats({
                   hiệu giờ chỉ làm điểm nhấn ở avatar + badge Level, không tô
                   tràn nền. */}
               <div className="flex items-center gap-3 border-b border-border-c bg-surface-alt px-5 py-4">
-                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand text-lg font-black text-ink shadow-sm">
-                  {storeSnapshot.shopName.charAt(0).toUpperCase()}
-                </span>
+                <SellerAvatarUploader shopName={storeSnapshot.shopName} initialAvatarUrl={storeSnapshot.avatarUrl} size={48} shape="square" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-black text-foreground">{storeSnapshot.shopName}</p>
                   <div className="mt-1 flex flex-wrap gap-1.5">

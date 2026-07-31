@@ -41,6 +41,8 @@ export type Product = {
   views: number;
   seller: string;
   sellerLevel: number;
+  /** Avatar gian hàng — null/undefined nếu seller chưa upload (UI fallback chữ cái đầu tên shop, xem SellerAvatar.tsx). Seed/mock data không có ảnh thật. */
+  sellerAvatarUrl?: string | null;
   verified: boolean;
   hot?: boolean;
   /** Chỉ có khi fetch qua getProductBySlugDb (trang chi tiết) — seed/mock data không có seller thật. */
