@@ -254,23 +254,58 @@ export async function getAllProducts(): Promise<Product[]> {
   return attachRealRatings(rows.map(mapProduct));
 }
 
+// "Sản phẩm nổi bật" trang chủ — 3 tầng, KHÔNG BAO GIỜ để trống dưới `limit`
+// (nếu đủ sản phẩm hợp lệ tồn tại trên sàn):
+//   1) Admin tự ghim (Product.isFeatured, sắp theo featuredOrder) — ĐỨNG
+//      TRƯỚC, không giới hạn số lượng ghim, nhưng carousel chỉ hiện `limit`
+//      đầu tiên.
+//   2) Nếu chưa đủ `limit`: điền tiếp bằng ĐÚNG cơ chế cũ (hot=true HOẶC
+//      đang thắng đấu giá vị trí vàng featuredUntil>now) — giữ nguyên
+//      nguyên vẹn tính năng đấu giá đang chạy thật, không hồi quy.
+//   3) Nếu vẫn chưa đủ: điền nốt bằng bán chạy nhất trong số còn lại.
+// Mọi tầng đều lọc status=APPROVED + isActive=true + seller không bị khoá —
+// sản phẩm ẩn/xoá không bao giờ lọt vào dù đã được ghim trước đó, và tự
+// hiện lại đúng vị trí cũ khi được bật lại (không cần thao tác gì thêm vì
+// isFeatured/featuredOrder không đổi khi ẩn/hiện).
 export async function getFeaturedProducts(limit = 8): Promise<Product[]> {
-  const rows = await prisma.product.findMany({
-    where: {
-      status: "APPROVED",
-      isActive: true,
-      seller: { suspended: false },
-      OR: [{ hot: true }, { featuredUntil: { gt: new Date() } }],
-    },
+  const baseWhere = { status: "APPROVED" as const, isActive: true, seller: { suspended: false } };
+
+  const pinned = await prisma.product.findMany({
+    where: { ...baseWhere, isFeatured: true },
     include: productInclude,
-    // Auction winners (non-null featuredUntil) must outrank plain "hot"
-    // sponsored items — without `nulls: "last"`, Postgres sorts NULL first
-    // on DESC, which silently hid auction winners behind `take` once there
-    // were more hot products than the limit.
-    orderBy: [{ featuredUntil: { sort: "desc", nulls: "last" } }, { sold: "desc" }],
-    take: limit,
+    orderBy: [{ featuredOrder: { sort: "asc", nulls: "last" } }],
   });
-  return attachRealRatings(rows.map(mapProduct));
+
+  const pinnedIds = pinned.map((p) => p.id);
+  let remaining = limit - pinned.length;
+
+  let tier2: typeof pinned = [];
+  if (remaining > 0) {
+    tier2 = await prisma.product.findMany({
+      where: {
+        ...baseWhere,
+        id: { notIn: pinnedIds },
+        OR: [{ hot: true }, { featuredUntil: { gt: new Date() } }],
+      },
+      include: productInclude,
+      orderBy: [{ featuredUntil: { sort: "desc", nulls: "last" } }, { sold: "desc" }],
+      take: remaining,
+    });
+    remaining -= tier2.length;
+  }
+
+  let tier3: typeof pinned = [];
+  if (remaining > 0) {
+    const excludeIds = [...pinnedIds, ...tier2.map((p) => p.id)];
+    tier3 = await prisma.product.findMany({
+      where: { ...baseWhere, id: { notIn: excludeIds } },
+      include: productInclude,
+      orderBy: [{ sold: "desc" }],
+      take: remaining,
+    });
+  }
+
+  return attachRealRatings([...pinned, ...tier2, ...tier3].map(mapProduct));
 }
 
 // Khi categorySlug là 1 nhóm cha (có category con), gộp sản phẩm của MỌI
@@ -561,6 +596,60 @@ export async function getAllSellersWithStats() {
   });
 
   return sellers.map((s) => ({
+    id: s.id,
+    shopName: s.shopName,
+    slug: s.slug,
+    description: s.description,
+    level: s.level,
+    verified: s.verified,
+    createdAt: s.createdAt,
+    productCount: s.products.length,
+    ...ratingStats(s.reviews),
+  }));
+}
+
+// "Các Seller Nổi Bật" trang chủ — KHÁC getAllSellersWithStats() ở trên
+// (dùng cho /nguoi-ban, hiện TOÀN BỘ seller, KHÔNG đụng tới): tầng 1 admin
+// tự ghim (Seller.isFeatured, sắp featuredOrder) đứng trước, chưa đủ `limit`
+// thì điền tiếp seller có đánh giá trung bình cao nhất, rồi tới nhiều sản
+// phẩm nhất, rồi tới mới nhất — không có cờ kiểu "hot" cho seller nên dùng
+// bộ tiêu chí này làm proxy hợp lý cho "đáng giới thiệu". Rating tính động
+// (không phải cột DB) nên sắp bằng JS sau khi lấy hết seller còn lại, chấp
+// nhận được vì số seller trên sàn còn nhỏ (không phân trang).
+export async function getFeaturedSellers(limit = 8) {
+  const baseWhere = { suspended: false as const };
+  const includeShape = {
+    products: { select: { id: true } },
+    reviews: { where: { hidden: false }, select: { rating: true } },
+  };
+
+  const pinnedRows = await prisma.seller.findMany({
+    where: { ...baseWhere, isFeatured: true },
+    include: includeShape,
+    orderBy: [{ featuredOrder: { sort: "asc" as const, nulls: "last" as const } }],
+  });
+
+  const pinnedIds = pinnedRows.map((s) => s.id);
+  const remaining = limit - pinnedRows.length;
+
+  let autoFillRows: typeof pinnedRows = [];
+  if (remaining > 0) {
+    const candidates = await prisma.seller.findMany({
+      where: { ...baseWhere, id: { notIn: pinnedIds } },
+      include: includeShape,
+    });
+    autoFillRows = candidates
+      .map((s) => ({ row: s, stats: ratingStats(s.reviews) }))
+      .sort((a, b) => {
+        if (b.stats.avgRating !== a.stats.avgRating) return b.stats.avgRating - a.stats.avgRating;
+        if (b.row.products.length !== a.row.products.length) return b.row.products.length - a.row.products.length;
+        return b.row.createdAt.getTime() - a.row.createdAt.getTime();
+      })
+      .slice(0, remaining)
+      .map((x) => x.row);
+  }
+
+  return [...pinnedRows, ...autoFillRows].map((s) => ({
     id: s.id,
     shopName: s.shopName,
     slug: s.slug,

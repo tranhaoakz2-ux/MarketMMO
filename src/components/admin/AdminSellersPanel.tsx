@@ -5,7 +5,7 @@
 // vẫn THẬT: fetch GET /api/admin/sellers?q=, PATCH /api/admin/sellers/[id]
 // {action:"suspend"|"unsuspend"|"verify"|"unverify", reason?} — không đổi 1
 // dòng logic nghiệp vụ. API route đã có sẵn requireAdmin() (không đụng tới).
-import { BadgeCheck, ExternalLink, Lock, Store, Unlock } from "lucide-react";
+import { BadgeCheck, ExternalLink, Lock, Pin, PinOff, Store, Unlock } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
@@ -27,6 +27,7 @@ type AdminSeller = {
   slug: string;
   level: number;
   verified: boolean;
+  isFeatured: boolean;
   suspended: boolean;
   suspendedReason: string | null;
   insuranceBalance: number;
@@ -100,6 +101,17 @@ export default function AdminSellersPanel() {
     load(q);
   };
 
+  const handleToggleFeatured = async (seller: AdminSeller) => {
+    setBusyId(seller.id);
+    await fetch(`/api/admin/sellers/${seller.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: seller.isFeatured ? "unfeature" : "feature" }),
+    });
+    setBusyId(null);
+    load(q);
+  };
+
   const columns: Column<AdminSeller>[] = [
     {
       key: "shop",
@@ -118,6 +130,7 @@ export default function AdminSellersPanel() {
           <p className="mt-0.5 flex max-w-[300px] items-center gap-1 truncate text-xs text-[var(--adm-muted)]">
             <span className="truncate">{s.user.email}</span> · LV {s.level}
             {s.verified && <BadgeCheck className="h-3 w-3 shrink-0 text-[var(--adm-success)]" />}
+            {s.isFeatured && <Pin className="h-3 w-3 shrink-0 text-[var(--adm-brand)]" />}
           </p>
         </div>
       ),
@@ -138,6 +151,17 @@ export default function AdminSellersPanel() {
         <div className="flex flex-wrap justify-end gap-1.5">
           <Button size="sm" variant={s.verified ? "success" : "secondary"} disabled={busyId === s.id} onClick={() => handleToggleVerified(s)}>
             <BadgeCheck className="h-3.5 w-3.5" /> {s.verified ? "Đã xác thực" : "Đánh dấu"}
+          </Button>
+          <Button size="sm" variant={s.isFeatured ? "primary" : "secondary"} disabled={busyId === s.id} onClick={() => handleToggleFeatured(s)}>
+            {s.isFeatured ? (
+              <>
+                <PinOff className="h-3.5 w-3.5" /> Bỏ ghim
+              </>
+            ) : (
+              <>
+                <Pin className="h-3.5 w-3.5" /> Ghim nổi bật
+              </>
+            )}
           </Button>
           {s.suspended ? (
             <Button size="sm" variant="success" disabled={busyId === s.id} onClick={() => handleUnsuspend(s.id)}>

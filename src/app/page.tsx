@@ -12,10 +12,10 @@ import TagCloud from "@/components/TagCloud";
 import WelcomeModal from "@/components/WelcomeModal";
 import {
   getAllProducts,
-  getAllSellersWithStats,
   getAuctionSlots,
   getCategoryTree,
   getFeaturedProducts,
+  getFeaturedSellers,
 } from "@/lib/queries";
 import { parseProductSortKey, sortProducts } from "@/lib/product-sort";
 import { getBannerImages, getSearchTags } from "@/lib/site-config";
@@ -37,7 +37,7 @@ export default async function Home({
     getAllProducts(),
     getFeaturedProducts(),
     getAuctionSlots(),
-    getAllSellersWithStats(),
+    getFeaturedSellers(),
     getCategoryTree(),
     getBannerImages(),
     getSearchTags(),

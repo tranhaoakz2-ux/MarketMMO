@@ -33,6 +33,7 @@ export async function GET(req: Request) {
       slug: s.slug,
       level: s.level,
       verified: s.verified,
+      isFeatured: s.isFeatured,
       suspended: s.suspended,
       suspendedReason: s.suspendedReason,
       insuranceBalance: s.insuranceBalance,

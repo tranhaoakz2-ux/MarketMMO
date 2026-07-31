@@ -190,6 +190,13 @@ model Seller {
   suspendedReason String?
   suspendedAt     DateTime?
 
+  // Admin tự ghim vào khu "Các Seller Nổi Bật" trang chủ — cùng cơ chế với
+  // Product.isFeatured/featuredOrder (xem getFeaturedSellers() trong
+  // queries.ts). getAllSellersWithStats() (trang /nguoi-ban — danh sách TOÀN
+  // BỘ seller) KHÔNG dùng field này, giữ nguyên hành vi cũ.
+  isFeatured    Boolean @default(false)
+  featuredOrder Int?
+
   products       Product[]
   reviews        Review[]
   auctionBids    AuctionBid[]
@@ -357,6 +364,13 @@ model Product {
   verified         Boolean  @default(false)
   hot              Boolean  @default(false)
   featuredUntil    DateTime?
+  // Admin tự ghim vào khu "Sản phẩm nổi bật" trang chủ (KHÁC hot/featuredUntil
+  // ở trên — 2 cơ chế cũ đó vẫn giữ nguyên làm tầng auto-fill khi số sản
+  // phẩm admin ghim chưa đủ 8, xem getFeaturedProducts() trong queries.ts).
+  // featuredOrder chỉ có giá trị khi isFeatured=true, số nhỏ hơn hiện trước
+  // — admin sắp bằng kéo-thả ở /admin/noi-bat.
+  isFeatured       Boolean  @default(false)
+  featuredOrder    Int?
   createdAt        DateTime @default(now())
   // Seller đánh dấu "sắp có hàng" (Trang Bán Hàng > Đặt trước). Buyer vẫn
   // trả 100% tiền như checkout bình thường (giữ nguyên hệ thống escrow có

@@ -10,6 +10,8 @@ import {
   Loader2,
   Package,
   Pencil,
+  Pin,
+  PinOff,
   Search,
   Trash2,
   X,
@@ -43,6 +45,7 @@ type AdminProduct = {
   isActive: boolean;
   productType: "PRODUCT" | "SERVICE";
   hot: boolean;
+  isFeatured: boolean;
   preOrder: boolean;
   categoryId: string;
   categoryName: string;
@@ -191,6 +194,23 @@ export default function AdminAllProductsPanel() {
     load(q);
   };
 
+  const toggleFeatured = async (p: AdminProduct) => {
+    setBusyId(p.id);
+    setRowError(null);
+    const res = await fetch(`/api/admin/all-products/${p.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isFeatured: !p.isFeatured }),
+    });
+    setBusyId(null);
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setRowError({ id: p.id, message: data?.error ?? "Không thể cập nhật." });
+      return;
+    }
+    load(q);
+  };
+
   const handleDelete = async (p: AdminProduct) => {
     if (!confirm(`Xoá vĩnh viễn sản phẩm "${p.name}"? Hành động này không thể hoàn tác.`)) return;
     setBusyId(p.id);
@@ -248,6 +268,11 @@ export default function AdminAllProductsPanel() {
                         </StatusBadge>
                       )}
                       {p.productType === "SERVICE" && <StatusBadge tone="info">Dịch vụ</StatusBadge>}
+                      {p.isFeatured && (
+                        <StatusBadge tone="warn">
+                          <Pin className="h-2.5 w-2.5" /> Nổi bật
+                        </StatusBadge>
+                      )}
                     </div>
                     <p className="mt-0.5 text-xs text-[var(--adm-muted)]">
                       {p.categoryName} · {p.sellerName} · Kho {p.stock} · Đã bán {p.sold}
@@ -262,6 +287,22 @@ export default function AdminAllProductsPanel() {
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="secondary" onClick={() => openEdit(p)}>
                     <Pencil className="h-3.5 w-3.5" /> Sửa
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={p.isFeatured ? "primary" : "secondary"}
+                    disabled={busyId === p.id}
+                    onClick={() => toggleFeatured(p)}
+                  >
+                    {p.isFeatured ? (
+                      <>
+                        <PinOff className="h-3.5 w-3.5" /> Bỏ ghim
+                      </>
+                    ) : (
+                      <>
+                        <Pin className="h-3.5 w-3.5" /> Ghim nổi bật
+                      </>
+                    )}
                   </Button>
                   <Button
                     size="sm"

@@ -23,6 +23,7 @@ import {
   Scroll,
   Settings,
   ShoppingBag,
+  Sparkles,
   Star,
   Store,
   Tags,
@@ -63,6 +64,7 @@ export default function AdminSidebar({
         { href: "/admin/nguoi-ban", icon: Store, label: "Người bán" },
         { href: "/admin/don-hang", icon: ShoppingBag, label: "Đơn hàng & Ký quỹ" },
         { href: "/admin/noi-dung", icon: ImageIcon, label: "Nội dung trang web" },
+        { href: "/admin/noi-bat", icon: Sparkles, label: "Nổi bật trang chủ" },
       ],
     },
     {

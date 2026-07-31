@@ -47,6 +47,7 @@ export async function GET(req: Request) {
       isActive: p.isActive,
       productType: p.productType,
       hot: p.hot,
+      isFeatured: p.isFeatured,
       preOrder: p.preOrder,
       categoryId: p.categoryId,
       categoryName: p.category.name,

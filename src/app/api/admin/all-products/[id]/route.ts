@@ -34,6 +34,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     hot?: boolean;
     preOrder?: boolean;
     isActive?: boolean;
+    isFeatured?: boolean;
+    featuredOrder?: number | null;
   } = {};
 
   if (typeof body.name === "string") {
@@ -109,6 +111,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (typeof body.preOrder === "boolean") data.preOrder = body.preOrder;
   if (typeof body.isActive === "boolean") data.isActive = body.isActive;
 
+  // Ghim/bỏ ghim "Sản phẩm nổi bật" trang chủ — ghim mới tự gán featuredOrder
+  // = lớn nhất hiện có + 1 (thêm vào CUỐI danh sách đang ghim, admin sắp lại
+  // thứ tự sau ở /admin/noi-bat nếu muốn); bỏ ghim xoá luôn featuredOrder để
+  // không để lại giá trị mồ côi vô nghĩa.
+  if (typeof body.isFeatured === "boolean") {
+    data.isFeatured = body.isFeatured;
+    if (body.isFeatured) {
+      if (!product.isFeatured) {
+        const maxOrder = await prisma.product.aggregate({
+          where: { isFeatured: true },
+          _max: { featuredOrder: true },
+        });
+        data.featuredOrder = (maxOrder._max.featuredOrder ?? -1) + 1;
+      }
+    } else {
+      data.featuredOrder = null;
+    }
+  }
+
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "Không có gì để cập nhật." }, { status: 400 });
   }
@@ -116,7 +137,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   await prisma.product.update({ where: { id }, data });
 
   const action =
-    "isActive" in data ? (data.isActive ? "Hiện lại sản phẩm" : "Ẩn sản phẩm") : "Sửa sản phẩm";
+    "isFeatured" in data
+      ? data.isFeatured
+        ? "Ghim sản phẩm nổi bật"
+        : "Bỏ ghim sản phẩm nổi bật"
+      : "isActive" in data
+        ? data.isActive
+          ? "Hiện lại sản phẩm"
+          : "Ẩn sản phẩm"
+        : "Sửa sản phẩm";
   await logAdminAction({
     adminId: session!.user!.id,
     action,

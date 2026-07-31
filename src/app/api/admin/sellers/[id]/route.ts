@@ -76,5 +76,39 @@ export async function PATCH(
     return NextResponse.json({ ok: true });
   }
 
+  // Ghim/bỏ ghim "Các Seller Nổi Bật" trang chủ — ghim mới tự gán
+  // featuredOrder = lớn nhất hiện có + 1 (thêm vào CUỐI, admin sắp lại thứ
+  // tự sau ở /admin/noi-bat nếu muốn); bỏ ghim xoá featuredOrder.
+  if (action === "feature") {
+    const maxOrder = await prisma.seller.aggregate({
+      where: { isFeatured: true },
+      _max: { featuredOrder: true },
+    });
+    await prisma.seller.update({
+      where: { id },
+      data: { isFeatured: true, featuredOrder: (maxOrder._max.featuredOrder ?? -1) + 1 },
+    });
+    await logAdminAction({
+      adminId: session!.user!.id,
+      action: "Ghim seller nổi bật",
+      targetType: "Seller",
+      targetId: id,
+      detail: seller.shopName,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (action === "unfeature") {
+    await prisma.seller.update({ where: { id }, data: { isFeatured: false, featuredOrder: null } });
+    await logAdminAction({
+      adminId: session!.user!.id,
+      action: "Bỏ ghim seller nổi bật",
+      targetType: "Seller",
+      targetId: id,
+      detail: seller.shopName,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: "Hành động không hợp lệ." }, { status: 400 });
 }
