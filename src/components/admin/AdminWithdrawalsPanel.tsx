@@ -6,6 +6,12 @@
 // /api/admin/withdrawals/[id] {action:"approve"|"reject"} — không đổi 1
 // dòng logic nghiệp vụ (Duyệt chỉ đánh dấu, Từ chối hoàn tiền — đụng tiền
 // thật). API route đã có sẵn requireAdmin() (không đụng tới).
+//
+// Rút USDT (TRC20, method="usdt_trc20"): hiện thêm địa chỉ ví/số USDT/tỷ
+// giá đã khoá lúc seller tạo yêu cầu (KHÔNG tính lại ở đây) + ô nhập TxID
+// on-chain TUỲ CHỌN trước khi bấm Duyệt, lưu vào gatewayRef làm bằng chứng
+// đã chuyển — admin vẫn phải tự tay gửi USDT trước, hệ thống không tự động
+// chuyển tiền ra.
 import { Check, Inbox, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -14,19 +20,28 @@ import {
   type Column,
   DataTable,
   EmptyState,
+  Field,
   ListSkeleton,
   StatusBadge,
   TableSkeleton,
+  TextInput,
   type Tone,
   formatVndDemo,
 } from "@/components/admin-demo/AdminDemoKit";
-import { walletTxStatusLabel, type WalletTxStatus } from "@/lib/constants";
+import { walletMethodLabel, walletTxStatusLabel, type WalletTxStatus } from "@/lib/constants";
 
 type Withdrawal = {
   id: string;
   amount: number;
   status: WalletTxStatus;
+  method: string | null;
   note: string | null;
+  adminNote: string | null;
+  gatewayRef: string | null;
+  withdrawAddress: string | null;
+  usdtAmount: number | null;
+  exchangeRate: number | null;
+  rateSource: string | null;
   createdAt: string;
   user: { email: string | null; username: string | null; name: string | null };
 };
@@ -37,10 +52,16 @@ const toneOf: Record<WalletTxStatus, Tone> = {
   REJECTED: "danger",
 };
 
+const RATE_SOURCE_LABEL: Record<string, string> = {
+  coingecko: "CoinGecko",
+  fallback: "Dự phòng",
+};
+
 export default function AdminWithdrawalsPanel() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [txidDraft, setTxidDraft] = useState<Record<string, string>>({});
 
   const load = async () => {
     setLoading(true);
@@ -60,10 +81,11 @@ export default function AdminWithdrawalsPanel() {
 
   const handleAction = async (id: string, action: "approve" | "reject") => {
     setBusyId(id);
+    const gatewayRef = action === "approve" ? txidDraft[id]?.trim() : undefined;
     await fetch(`/api/admin/withdrawals/${id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({ action, ...(gatewayRef ? { gatewayRef } : {}) }),
     });
     setBusyId(null);
     load();
@@ -78,6 +100,22 @@ export default function AdminWithdrawalsPanel() {
       header: "Người dùng",
       primary: true,
       render: (w) => <span className="truncate font-semibold text-[var(--adm-text)]">{w.user.name ?? w.user.username ?? w.user.email}</span>,
+    },
+    {
+      key: "detail",
+      header: "Chi tiết",
+      render: (w) =>
+        w.method === "usdt_trc20" ? (
+          <div className="max-w-[260px] text-[var(--adm-muted)]">
+            <span className="block truncate font-mono text-[11px]">{w.withdrawAddress}</span>
+            <span className="block text-[11px]">
+              ≈ {w.usdtAmount} USDT @ {w.exchangeRate?.toLocaleString("vi-VN")}đ
+            </span>
+            {w.gatewayRef && <span className="block truncate text-[11px]">TxID: {w.gatewayRef}</span>}
+          </div>
+        ) : (
+          <span className="block max-w-[220px] truncate text-[var(--adm-muted)]">{w.note ?? "—"}</span>
+        ),
     },
     { key: "amount", header: "Số tiền", align: "right", render: (w) => <span className="font-bold tabular-nums text-[var(--adm-text)]">{formatVndDemo(Math.abs(w.amount))}</span> },
     { key: "time", header: "Thời gian", render: (w) => <span className="text-xs text-[var(--adm-muted)]">{new Date(w.createdAt).toLocaleDateString("vi-VN")}</span> },
@@ -96,28 +134,59 @@ export default function AdminWithdrawalsPanel() {
           <Card><EmptyState icon={Inbox} title="Không có yêu cầu rút tiền nào đang chờ duyệt" /></Card>
         ) : (
           <div className="flex flex-col gap-2">
-            {pending.map((w) => (
-              <Card key={w.id} className="flex flex-wrap items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-bold text-[var(--adm-text)]">{w.user.name ?? w.user.username ?? w.user.email}</p>
-                  <p className="text-xs text-[var(--adm-muted)]">{new Date(w.createdAt).toLocaleString("vi-VN")}</p>
-                  {w.note && <p className="mt-1 text-xs text-[var(--adm-muted)]">{w.note}</p>}
-                  <p className="mt-1 text-xs font-semibold text-[var(--adm-brand)]">
-                    Số tiền đã được khoá khỏi ví người bán khi tạo yêu cầu — Từ chối sẽ hoàn lại, Duyệt chỉ đánh dấu
-                    đã chuyển khoản.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-base font-black text-[var(--adm-brand)]">{formatVndDemo(Math.abs(w.amount))}</span>
-                  <Button variant="success" disabled={busyId === w.id} onClick={() => handleAction(w.id, "approve")}>
-                    <Check className="h-3.5 w-3.5" /> Đã chuyển khoản
-                  </Button>
-                  <Button variant="danger" disabled={busyId === w.id} onClick={() => handleAction(w.id, "reject")}>
-                    <X className="h-3.5 w-3.5" /> Từ chối (hoàn tiền)
-                  </Button>
-                </div>
-              </Card>
-            ))}
+            {pending.map((w) => {
+              const isUsdt = w.method === "usdt_trc20";
+              return (
+                <Card key={w.id} className="flex flex-col gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-bold text-[var(--adm-text)]">{w.user.name ?? w.user.username ?? w.user.email}</p>
+                      <p className="text-xs text-[var(--adm-muted)]">
+                        {new Date(w.createdAt).toLocaleString("vi-VN")} · {walletMethodLabel[w.method ?? "bank"] ?? "Chuyển khoản ngân hàng"}
+                      </p>
+                      {isUsdt ? (
+                        <div className="mt-1 text-xs text-[var(--adm-muted)]">
+                          <p className="font-mono">{w.withdrawAddress}</p>
+                          <p>
+                            ≈ <b className="text-[var(--adm-brand)]">{w.usdtAmount} USDT</b> @{" "}
+                            {w.exchangeRate?.toLocaleString("vi-VN")}đ/USDT (nguồn: {RATE_SOURCE_LABEL[w.rateSource ?? ""] ?? w.rateSource}, đã khoá lúc tạo yêu cầu)
+                          </p>
+                        </div>
+                      ) : (
+                        w.note && <p className="mt-1 text-xs text-[var(--adm-muted)]">{w.note}</p>
+                      )}
+                      <p className="mt-1 text-xs font-semibold text-[var(--adm-brand)]">
+                        Số tiền đã được khoá khỏi ví người bán khi tạo yêu cầu — Từ chối sẽ hoàn lại, Duyệt chỉ đánh dấu
+                        đã chuyển{isUsdt ? " USDT" : " khoản"}.
+                      </p>
+                    </div>
+                    <span className="text-base font-black text-[var(--adm-brand)]">{formatVndDemo(Math.abs(w.amount))}</span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    {isUsdt && (
+                      <div className="min-w-[220px] flex-1">
+                        <Field label="TxID on-chain (tuỳ chọn)">
+                          <TextInput
+                            placeholder="Dán mã giao dịch sau khi đã chuyển USDT"
+                            value={txidDraft[w.id] ?? ""}
+                            onChange={(e) => setTxidDraft((prev) => ({ ...prev, [w.id]: e.target.value }))}
+                          />
+                        </Field>
+                      </div>
+                    )}
+                    <div className="ml-auto flex items-center gap-3">
+                      <Button variant="success" disabled={busyId === w.id} onClick={() => handleAction(w.id, "approve")}>
+                        <Check className="h-3.5 w-3.5" /> Đã chuyển{isUsdt ? " USDT" : " khoản"}
+                      </Button>
+                      <Button variant="danger" disabled={busyId === w.id} onClick={() => handleAction(w.id, "reject")}>
+                        <X className="h-3.5 w-3.5" /> Từ chối (hoàn tiền)
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

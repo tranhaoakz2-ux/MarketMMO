@@ -228,4 +228,7 @@ export const walletMethodLabel: Record<string, string> = {
   bank: "Chuyển khoản ngân hàng",
   manual: "Chuyển khoản ngân hàng",
   usdt: "USDT (TRC20)",
+  // Method riêng cho RÚT USDT (khác "usdt" ở trên vốn dùng cho NẠP) — tách
+  // để không lẫn 2 hướng tiền khi lọc/hiển thị theo method.
+  usdt_trc20: "USDT (TRC20)",
 };

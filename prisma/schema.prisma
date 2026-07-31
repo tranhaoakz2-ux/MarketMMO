@@ -807,9 +807,25 @@ model WalletTransaction {
   method      String?
   note        String?
   adminNote   String?
+  // TxID on-chain admin tự nhập lúc duyệt CONFIRMED (bằng chứng đã chuyển
+  // USDT thật) — dùng chung với TxID buyer nhập lúc NẠP USDT (giữ nguyên ý
+  // nghĩa "tham chiếu cổng thanh toán", chỉ khác hướng tiền).
   gatewayRef  String?
   createdAt   DateTime  @default(now())
   confirmedAt DateTime?
+
+  // 4 field dưới CHỈ có giá trị khi type="WITHDRAW" và method="usdt_trc20"
+  // (rút USDT qua mạng TRC20) — null với mọi dòng khác (rút ngân hàng, nạp
+  // tiền...), migration-safe. Tỷ giá + số USDT được KHOÁ tại thời điểm
+  // seller tạo yêu cầu (server tự lấy, không tin số client gửi lên) và
+  // KHÔNG tính lại lúc admin duyệt — admin chuyển đúng usdtAmount đã khoá,
+  // không phụ thuộc tỷ giá biến động sau đó. Xem src/lib/payment/
+  // exchange-rate.ts (nguồn tỷ giá) + src/lib/payment/trc20.ts (validate
+  // địa chỉ).
+  withdrawAddress String? // Ví TRC20 đích seller nhập (đã validate base58check)
+  usdtAmount      Float? // Số USDT quy đổi, khoá lúc tạo yêu cầu
+  exchangeRate    Float? // Tỷ giá VNĐ/USDT dùng để quy đổi, khoá lúc tạo yêu cầu
+  rateSource      String? // "coingecko" | "fallback" — nguồn tỷ giá tại thời điểm khoá
 }
 
 // Chat giữa 2 user bất kỳ (buyer-seller, hoặc user với bot "Hệ Thống" —

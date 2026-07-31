@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, Loader2, Wallet } from "lucide-react";
+import { Banknote, DollarSign, Loader2, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 import { formatVnd } from "@/lib/format";
 import { walletTxStatusLabel, type WalletTxStatus } from "@/lib/constants";
@@ -12,6 +12,7 @@ import {
   EmptyState,
   Field,
   PageHeader,
+  Segmented,
   SectionTitle,
   StatusBadge,
   TextInput,
@@ -22,11 +23,19 @@ type Withdrawal = {
   id: string;
   amount: number;
   status: WalletTxStatus;
+  method: string | null;
   note: string | null;
   createdAt: string;
+  withdrawAddress: string | null;
+  usdtAmount: number | null;
+  exchangeRate: number | null;
+  rateSource: string | null;
+  gatewayRef: string | null;
 };
 
 const QUICK = [100000, 200000, 500000, 1000000];
+const MIN_BANK = 50000;
+const MIN_USDT = 300000;
 
 const STATUS_TONE: Record<WalletTxStatus, Tone> = {
   PENDING: "warn",
@@ -34,16 +43,28 @@ const STATUS_TONE: Record<WalletTxStatus, Tone> = {
   REJECTED: "danger",
 };
 
+const RATE_SOURCE_LABEL: Record<string, string> = {
+  coingecko: "CoinGecko (real-time)",
+  fallback: "Tỷ giá dự phòng (admin cấu hình)",
+};
+
 export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: number }) {
+  const [method, setMethod] = useState<"bank" | "usdt_trc20">("bank");
   const [amount, setAmount] = useState<number | null>(100000);
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
+  const [withdrawAddress, setWithdrawAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [balance, setBalance] = useState(walletBalance);
+
+  const [rate, setRate] = useState<number | null>(null);
+  const [rateSource, setRateSource] = useState<string | null>(null);
+  const [rateLoading, setRateLoading] = useState(false);
+  const [rateError, setRateError] = useState<string | null>(null);
 
   const loadWithdrawals = async () => {
     const res = await fetch("/api/seller/withdraw-request");
@@ -59,28 +80,74 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
     })();
   }, []);
 
+  // Xem trước tỷ giá real-time khi chuyển sang tab USDT — CHỈ hiển thị, tỷ
+  // giá THẬT tính tiền được server tự lấy lại độc lập lúc submit (xem
+  // POST /api/seller/withdraw-request).
+  useEffect(() => {
+    if (method !== "usdt_trc20") return;
+    let cancelled = false;
+    const loadRate = async () => {
+      setRateLoading(true);
+      setRateError(null);
+      try {
+        const res = await fetch("/api/seller/usdt-rate");
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          setRateError(data.error ?? "Không thể lấy tỷ giá.");
+          setRate(null);
+          setRateSource(null);
+        } else {
+          setRate(data.rate);
+          setRateSource(data.source);
+        }
+      } catch {
+        if (!cancelled) setRateError("Không thể lấy tỷ giá.");
+      } finally {
+        if (!cancelled) setRateLoading(false);
+      }
+    };
+    loadRate();
+    return () => {
+      cancelled = true;
+    };
+  }, [method]);
+
+  const usdtPreview = rate && amount ? Math.floor((amount / rate) * 100) / 100 : null;
+
   const handleSubmit = async () => {
-    if (!amount || amount < 50000) {
-      setError("Số tiền rút tối thiểu là 50.000đ.");
-      return;
-    }
-    if (!bankName.trim() || !accountNumber.trim() || !accountHolder.trim()) {
-      setError("Vui lòng nhập đầy đủ thông tin ngân hàng nhận tiền.");
-      return;
-    }
     setError(null);
     setMessage(null);
-    setLoading(true);
 
+    if (method === "bank") {
+      if (!amount || amount < MIN_BANK) {
+        setError(`Số tiền rút tối thiểu là ${formatVnd(MIN_BANK)}.`);
+        return;
+      }
+      if (!bankName.trim() || !accountNumber.trim() || !accountHolder.trim()) {
+        setError("Vui lòng nhập đầy đủ thông tin ngân hàng nhận tiền.");
+        return;
+      }
+    } else {
+      if (!amount || amount < MIN_USDT) {
+        setError(`Số tiền rút USDT tối thiểu là ${formatVnd(MIN_USDT)}.`);
+        return;
+      }
+      if (!withdrawAddress.trim()) {
+        setError("Vui lòng nhập địa chỉ ví USDT (TRC20) nhận tiền.");
+        return;
+      }
+    }
+
+    setLoading(true);
     const res = await fetch("/api/seller/withdraw-request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount,
-        bankName: bankName.trim(),
-        accountNumber: accountNumber.trim(),
-        accountHolder: accountHolder.trim(),
-      }),
+      body: JSON.stringify(
+        method === "bank"
+          ? { method: "bank", amount, bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountHolder: accountHolder.trim() }
+          : { method: "usdt_trc20", amount, withdrawAddress: withdrawAddress.trim() }
+      ),
     });
     const data = await res.json();
     setLoading(false);
@@ -88,8 +155,12 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
       setError(data.error ?? "Không thể tạo yêu cầu rút tiền.");
       return;
     }
-    setMessage("Đã gửi yêu cầu rút tiền — số tiền đã được khoá khỏi ví, chờ admin xử lý.");
-    setBalance((b) => b - amount);
+    setMessage(
+      method === "bank"
+        ? "Đã gửi yêu cầu rút tiền — số tiền đã được khoá khỏi ví, chờ admin xử lý."
+        : `Đã gửi yêu cầu rút ${data.usdtAmount} USDT (tỷ giá ${data.exchangeRate.toLocaleString("vi-VN")}đ/USDT, khoá tại thời điểm tạo) — chờ admin xử lý.`
+    );
+    setBalance((b) => b - (amount ?? 0));
     loadWithdrawals();
   };
 
@@ -100,7 +171,23 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
       primary: true,
       render: (w) => <span className="whitespace-nowrap text-foreground">{new Date(w.createdAt).toLocaleString("vi-VN")}</span>,
     },
-    { key: "bank", header: "Ngân hàng", render: (w) => <span className="block max-w-[240px] truncate text-muted">{w.note ?? "—"}</span> },
+    {
+      key: "detail",
+      header: "Chi tiết",
+      render: (w) =>
+        w.method === "usdt_trc20" ? (
+          <div className="max-w-[280px] text-muted">
+            <span className="block truncate font-mono text-[11px]">{w.withdrawAddress}</span>
+            {w.usdtAmount != null && (
+              <span className="block text-[11px]">
+                ≈ {w.usdtAmount} USDT @ {w.exchangeRate?.toLocaleString("vi-VN")}đ
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="block max-w-[240px] truncate text-muted">{w.note ?? "—"}</span>
+        ),
+    },
     {
       key: "amount",
       header: "Số tiền",
@@ -112,12 +199,27 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Rút tiền" subtitle="Rút số dư ví về tài khoản ngân hàng của bạn. Admin duyệt trong 24h làm việc." />
+      <PageHeader title="Rút tiền" subtitle="Rút số dư ví về ngân hàng hoặc ví USDT (TRC20) của bạn. Admin duyệt tay." />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
         {/* Form */}
         <Card>
           <SectionTitle>Tạo yêu cầu rút tiền</SectionTitle>
+
+          <div className="mb-4">
+            <Segmented
+              value={method}
+              onChange={(v) => {
+                setMethod(v);
+                setError(null);
+                setMessage(null);
+              }}
+              options={[
+                { value: "bank", label: "Ngân hàng" },
+                { value: "usdt_trc20", label: "USDT (TRC20)" },
+              ]}
+            />
+          </div>
 
           <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-muted">Chọn nhanh số tiền</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -135,29 +237,65 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Hoặc nhập số tiền khác" hint="Tối thiểu 50.000đ">
+            <Field label="Hoặc nhập số tiền khác" hint={`Tối thiểu ${formatVnd(method === "bank" ? MIN_BANK : MIN_USDT)}`}>
               <TextInput type="number" value={amount ?? ""} onChange={(e) => setAmount(Number(e.target.value) || null)} placeholder="Nhập số tiền (VNĐ)" />
             </Field>
           </div>
 
-          <div className="mt-4 rounded-xl border border-dashed border-brand-dark/30 bg-brand-light/10 p-4">
-            <p className="mb-3 flex items-center gap-1.5 text-xs font-bold text-foreground">
-              <Banknote className="h-4 w-4 text-brand-dark" /> Thông tin ngân hàng nhận tiền
-            </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Ngân hàng">
-                <TextInput value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="VD: Vietcombank" />
-              </Field>
-              <Field label="Số tài khoản">
-                <TextInput value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="0123456789" />
-              </Field>
-              <div className="sm:col-span-2">
-                <Field label="Chủ tài khoản">
-                  <TextInput value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} placeholder="NGUYEN VAN A" />
+          {method === "bank" ? (
+            <div className="mt-4 rounded-xl border border-dashed border-brand-dark/30 bg-brand-light/10 p-4">
+              <p className="mb-3 flex items-center gap-1.5 text-xs font-bold text-foreground">
+                <Banknote className="h-4 w-4 text-brand-dark" /> Thông tin ngân hàng nhận tiền
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="Ngân hàng">
+                  <TextInput value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="VD: Vietcombank" />
                 </Field>
+                <Field label="Số tài khoản">
+                  <TextInput value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="0123456789" />
+                </Field>
+                <div className="sm:col-span-2">
+                  <Field label="Chủ tài khoản">
+                    <TextInput value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} placeholder="NGUYEN VAN A" />
+                  </Field>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="mt-4 rounded-xl border border-dashed border-brand-dark/30 bg-brand-light/10 p-4">
+              <p className="mb-3 flex items-center gap-1.5 text-xs font-bold text-foreground">
+                <DollarSign className="h-4 w-4 text-brand-dark" /> Thông tin ví USDT (TRC20) nhận tiền
+              </p>
+              <Field label="Địa chỉ ví TRC20" hint="Kiểm tra kỹ — chuyển sai địa chỉ không thể lấy lại.">
+                <TextInput value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)} placeholder="T..." />
+              </Field>
+
+              <div className="mt-3 rounded-lg bg-surface p-3 text-xs">
+                {rateLoading ? (
+                  <span className="flex items-center gap-1.5 text-muted">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang lấy tỷ giá...
+                  </span>
+                ) : rateError ? (
+                  <span className="text-danger">{rateError}</span>
+                ) : rate ? (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-muted">
+                      Tỷ giá: <b className="text-foreground">{rate.toLocaleString("vi-VN")}đ/USDT</b> (nguồn:{" "}
+                      {RATE_SOURCE_LABEL[rateSource ?? ""] ?? rateSource})
+                    </span>
+                    {usdtPreview != null && (
+                      <span className="text-sm font-black text-brand-dark">
+                        {formatVnd(amount ?? 0)} ≈ {usdtPreview} USDT
+                      </span>
+                    )}
+                    <span className="text-[10px] text-muted">
+                      Tỷ giá sẽ được khoá LẠI tại đúng thời điểm bạn bấm gửi yêu cầu (có thể chênh nhẹ so với số xem trước này).
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )}
 
           {error && <p className="mt-3 rounded-lg bg-danger/10 px-3 py-2 text-xs font-semibold text-danger">{error}</p>}
           {message && <p className="mt-3 rounded-lg bg-success/10 px-3 py-2 text-xs font-semibold text-success">{message}</p>}

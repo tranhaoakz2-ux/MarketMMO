@@ -23,13 +23,22 @@ export async function POST(
   }
 
   if (action === "approve") {
+    // gatewayRef TUỲ CHỌN — admin dán mã giao dịch on-chain (TxID) SAU KHI
+    // đã tự tay chuyển USDT, làm bằng chứng đối chiếu (đặc biệt hữu ích cho
+    // rút USDT TRC20). Không bắt buộc — bank withdrawal thường không có gì
+    // để dán vào đây.
+    const gatewayRef =
+      typeof body?.gatewayRef === "string" && body.gatewayRef.trim()
+        ? body.gatewayRef.trim().slice(0, 200)
+        : undefined;
+
     // Tiền đã bị trừ ngay lúc seller tạo yêu cầu (xem
     // api/seller/withdraw-request/route.ts) — duyệt chỉ đổi trạng thái, KHÔNG
     // đụng số dư nữa để tránh trừ tiền 2 lần. Gate CÓ ĐIỀU KIỆN (bug B6) để 2
     // lần bấm không cùng chuyển trạng thái / đua với reject.
     const approved = await prisma.walletTransaction.updateMany({
       where: { id, type: "WITHDRAW", status: "PENDING" },
-      data: { status: "CONFIRMED", confirmedAt: new Date() },
+      data: { status: "CONFIRMED", confirmedAt: new Date(), ...(gatewayRef ? { gatewayRef } : {}) },
     });
     if (approved.count === 0) {
       return NextResponse.json({ error: "Yêu cầu này đã được xử lý." }, { status: 400 });
