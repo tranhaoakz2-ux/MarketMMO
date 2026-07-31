@@ -23,18 +23,35 @@ export async function POST(
   }
 
   if (action === "approve") {
+    // amount TUỲ CHỌN — chỉ dùng cho các bản ghi "chờ xác minh thủ công" do
+    // luồng tự động hoá USDT tạo ra khi verify on-chain thất bại (amount=0
+    // lúc tạo, vì chưa biết số VNĐ đúng) — admin tự đối chiếu Tronscan rồi
+    // nhập đúng số ở đây. Validate dương + nguyên; KHÔNG cho phép override
+    // các yêu cầu bank/vnpay bình thường đã có amount hợp lệ theo cách âm
+    // thầm đổi số — chỉ áp dụng khi override thực sự khác null/undefined.
+    const amountOverride =
+      body?.amount !== undefined && body?.amount !== null ? Number(body.amount) : undefined;
+    if (amountOverride !== undefined && (!Number.isInteger(amountOverride) || amountOverride <= 0)) {
+      return NextResponse.json({ error: "Số tiền nhập không hợp lệ." }, { status: 400 });
+    }
+    const creditAmount = amountOverride ?? tx.amount;
+
     // Gate NGUYÊN TỬ (bug B6): chỉ khi updateMany chuyển được PENDING→CONFIRMED
     // (count===1) mới cộng ví — 2 lần bấm "Duyệt" song song thì chỉ 1 lệnh
     // khớp, lệnh kia count===0 (đã CONFIRMED) → không cộng lần 2.
     const credited = await prisma.$transaction(async (t) => {
       const gate = await t.walletTransaction.updateMany({
         where: { id, type: "DEPOSIT", status: "PENDING" },
-        data: { status: "CONFIRMED", confirmedAt: new Date() },
+        data: {
+          status: "CONFIRMED",
+          confirmedAt: new Date(),
+          ...(amountOverride !== undefined ? { amount: amountOverride } : {}),
+        },
       });
       if (gate.count === 0) return false;
       await t.user.update({
         where: { id: tx.userId },
-        data: { walletBalance: { increment: tx.amount } },
+        data: { walletBalance: { increment: creditAmount } },
       });
       return true;
     });
@@ -46,7 +63,7 @@ export async function POST(
       action: "Duyệt nạp tiền",
       targetType: "WalletTransaction",
       targetId: id,
-      detail: `+${tx.amount}đ cho user ${tx.userId}`,
+      detail: `+${creditAmount}đ cho user ${tx.userId}${amountOverride !== undefined ? " (admin nhập tay)" : ""}`,
     });
     return NextResponse.json({ ok: true });
   }

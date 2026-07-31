@@ -47,21 +47,68 @@ function base58Decode(input: string): Uint8Array | null {
   return new Uint8Array([...new Array(leadingZeros).fill(0), ...bytes]);
 }
 
-export function isValidTrc20Address(address: string): boolean {
+function base58Encode(bytes: Uint8Array): string {
+  let num = ZERO;
+  for (const b of bytes) num = num * BYTE_BASE + BigInt(b);
+  let out = "";
+  while (num > ZERO) {
+    out = BASE58_ALPHABET[Number(num % BASE)] + out;
+    num /= BASE;
+  }
+  let leadingZeros = 0;
+  for (const b of bytes) {
+    if (b === 0) leadingZeros++;
+    else break;
+  }
+  return "1".repeat(leadingZeros) + out;
+}
+
+// Decode + verify base58check, trả về 20 byte địa chỉ THÔ (bỏ version byte
+// + checksum) nếu hợp lệ, null nếu không — dùng chung cho isValidTrc20Address
+// (chỉ cần biết hợp lệ hay không) VÀ trc20AddressToHex (cần lấy đúng 20 byte
+// để so khớp với địa chỉ trong log on-chain, xem src/lib/payment/
+// tron-verify.ts) — 1 nguồn logic decode duy nhất, không lặp lại.
+function decodeAndVerifyTrc20(address: string): Uint8Array | null {
   const trimmed = address.trim();
-  if (!trimmed.startsWith("T") || trimmed.length < 25 || trimmed.length > 40) return false;
+  if (!trimmed.startsWith("T") || trimmed.length < 25 || trimmed.length > 40) return null;
 
   const decoded = base58Decode(trimmed);
-  if (!decoded || decoded.length !== 25) return false; // 1 version + 20 địa chỉ + 4 checksum
+  if (!decoded || decoded.length !== 25) return null; // 1 version + 20 địa chỉ + 4 checksum
 
   const payload = decoded.subarray(0, 21);
   const checksum = decoded.subarray(21, 25);
 
-  if (payload[0] !== TRON_ADDRESS_VERSION_BYTE) return false;
+  if (payload[0] !== TRON_ADDRESS_VERSION_BYTE) return null;
 
   const hash1 = createHash("sha256").update(payload).digest();
   const hash2 = createHash("sha256").update(hash1).digest();
   const expectedChecksum = hash2.subarray(0, 4);
 
-  return Buffer.compare(Buffer.from(checksum), expectedChecksum) === 0;
+  if (Buffer.compare(Buffer.from(checksum), expectedChecksum) !== 0) return null;
+  return payload.subarray(1); // bỏ version byte, chỉ còn đúng 20 byte địa chỉ
+}
+
+export function isValidTrc20Address(address: string): boolean {
+  return decodeAndVerifyTrc20(address) !== null;
+}
+
+// Trả về 20 byte địa chỉ dạng hex thường (không tiền tố "0x"/"41") — dùng để
+// so khớp địa chỉ ví sàn/contract USDT với dữ liệu hex thô trả về từ TronGrid
+// (xem src/lib/payment/tron-verify.ts), tránh phải encode/decode qua lại
+// base58 nhiều lần khi so sánh.
+export function trc20AddressToHex(address: string): string | null {
+  const raw = decodeAndVerifyTrc20(address);
+  return raw ? Buffer.from(raw).toString("hex") : null;
+}
+
+// Chiều ngược lại — 20 byte hex -> địa chỉ T... — dùng khi cần hiển thị lại
+// địa chỉ người gửi (from) lấy được từ log on-chain cho admin xem.
+export function hexToTrc20Address(hex20byte: string): string | null {
+  if (!/^[0-9a-fA-F]{40}$/.test(hex20byte)) return null;
+  const addressBytes = Buffer.from(hex20byte, "hex");
+  const payload = Buffer.concat([Buffer.from([TRON_ADDRESS_VERSION_BYTE]), addressBytes]);
+  const hash1 = createHash("sha256").update(payload).digest();
+  const hash2 = createHash("sha256").update(hash1).digest();
+  const checksum = hash2.subarray(0, 4);
+  return base58Encode(Buffer.concat([payload, checksum]));
 }

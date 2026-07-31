@@ -116,8 +116,6 @@ export default function DepositPanel({
     ? `NAP${session.user.id.slice(-6).toUpperCase()}${codeNonce}`
     : "";
 
-  const usdtAmount = usdtInfo && amount ? amount / usdtInfo.rate : null;
-
   const loadTransactions = async () => {
     const res = await fetch("/api/wallet/transactions");
     if (res.ok) {
@@ -158,14 +156,14 @@ export default function DepositPanel({
   }
 
   const handleSubmit = async () => {
-    if (!amount || amount < 10000) {
-      setError("Số tiền nạp tối thiểu là 10.000đ.");
-      return;
-    }
     setError(null);
     setMessage(null);
 
     if (method === "vnpay") {
+      if (!amount || amount < 10000) {
+        setError("Số tiền nạp tối thiểu là 10.000đ.");
+        return;
+      }
       setLoading(true);
       const res = await fetch("/api/payment/vnpay/create", {
         method: "POST",
@@ -191,8 +189,35 @@ export default function DepositPanel({
         setError("Vui lòng nhập mã giao dịch (TxID) sau khi chuyển USDT.");
         return;
       }
+      setLoading(true);
+      const res = await fetch("/api/wallet/deposit-usdt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ txid: txid.trim() }),
+      });
+      const data = await res.json();
+      setLoading(false);
+      if (!res.ok) {
+        setError(data.error ?? "Không thể gửi yêu cầu nạp tiền.");
+        return;
+      }
+      if (data.pending) {
+        setMessage(data.message ?? "Đang chờ xác minh, liên hệ admin nếu chờ lâu.");
+      } else {
+        setMessage(
+          `Đã xác minh và cộng ${formatVnd(data.credited)} vào ví (${data.usdtAmount} USDT, tỷ giá ${data.rate.toLocaleString("vi-VN")}đ/USDT).`
+        );
+        await update();
+      }
+      setTxid("");
+      loadTransactions();
+      return;
     }
 
+    if (!amount || amount < 10000) {
+      setError("Số tiền nạp tối thiểu là 10.000đ.");
+      return;
+    }
     setLoading(true);
     const res = await fetch("/api/wallet/deposit-request", {
       method: "POST",
@@ -200,11 +225,7 @@ export default function DepositPanel({
       body: JSON.stringify({
         amount,
         method,
-        note:
-          method === "usdt"
-            ? `${usdtAmount?.toFixed(2)} USDT (tỷ giá ${usdtInfo!.rate.toLocaleString("vi-VN")}đ/USDT)`
-            : `Nội dung CK: ${transferCode}`,
-        gatewayRef: method === "usdt" ? txid.trim() : undefined,
+        note: `Nội dung CK: ${transferCode}`,
       }),
     });
     const data = await res.json();
@@ -214,11 +235,8 @@ export default function DepositPanel({
       return;
     }
     setMessage(
-      method === "usdt"
-        ? "Đã gửi yêu cầu nạp USDT. Admin sẽ đối chiếu giao dịch trên Tronscan và duyệt trong ít phút."
-        : "Đã gửi yêu cầu nạp tiền. Vui lòng chuyển khoản đúng nội dung ở trên, admin sẽ duyệt sau khi nhận được."
+      "Đã gửi yêu cầu nạp tiền. Vui lòng chuyển khoản đúng nội dung ở trên, admin sẽ duyệt sau khi nhận được."
     );
-    setTxid("");
     loadTransactions();
     // Tạo mã mới cho lần nạp tiếp theo — tránh dùng lại đúng mã vừa gửi.
     setCodeNonce(randomCodeNonce());
@@ -387,47 +405,53 @@ export default function DepositPanel({
         </div>
 
         <div className="rounded-2xl border border-border-c bg-surface p-5 shadow-sm sm:p-6">
-          <div className="mb-4 flex items-center gap-2.5">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-light text-brand-dark">
-              <Banknote className="h-4 w-4" />
-            </span>
-            <h2 className="text-sm font-black text-foreground">Số tiền nạp</h2>
-          </div>
+          {method !== "usdt" && (
+            <div className="mb-4 flex items-center gap-2.5">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-light text-brand-dark">
+                <Banknote className="h-4 w-4" />
+              </span>
+              <h2 className="text-sm font-black text-foreground">Số tiền nạp</h2>
+            </div>
+          )}
           <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-3 gap-2.5">
-              {quickAmounts.map((value) => (
-                <button
-                  key={value}
-                  onClick={() => setAmount(value)}
-                  className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
-                    amount === value
-                      ? "border-brand-dark bg-brand text-ink shadow-[0_8px_18px_-8px_rgba(224,196,0,0.6)]"
-                      : "border-border-c bg-surface text-foreground hover:border-brand-dark/40 hover:bg-surface-alt"
-                  }`}
-                >
-                  {formatVnd(value)}
-                </button>
-              ))}
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">
-                Hoặc nhập số tiền khác
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  min={10000}
-                  step={10000}
-                  value={amount ?? ""}
-                  onChange={(e) => setAmount(Number(e.target.value) || null)}
-                  placeholder="Nhập số tiền (VNĐ)"
-                  className="w-full rounded-xl border border-border-c bg-surface px-3.5 py-3 text-sm font-semibold text-foreground focus:border-brand-dark focus:outline-none focus:ring-2 focus:ring-brand/20"
-                />
-                <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-muted">
-                  VNĐ
-                </span>
-              </div>
-            </div>
+            {method !== "usdt" && (
+              <>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {quickAmounts.map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => setAmount(value)}
+                      className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
+                        amount === value
+                          ? "border-brand-dark bg-brand text-ink shadow-[0_8px_18px_-8px_rgba(224,196,0,0.6)]"
+                          : "border-border-c bg-surface text-foreground hover:border-brand-dark/40 hover:bg-surface-alt"
+                      }`}
+                    >
+                      {formatVnd(value)}
+                    </button>
+                  ))}
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">
+                    Hoặc nhập số tiền khác
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={10000}
+                      step={10000}
+                      value={amount ?? ""}
+                      onChange={(e) => setAmount(Number(e.target.value) || null)}
+                      placeholder="Nhập số tiền (VNĐ)"
+                      className="w-full rounded-xl border border-border-c bg-surface px-3.5 py-3 text-sm font-semibold text-foreground focus:border-brand-dark focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    />
+                    <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-muted">
+                      VNĐ
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
 
             {method === "bank" && (
               <div className="overflow-hidden rounded-2xl border border-border-c bg-surface-alt/60">
@@ -492,12 +516,12 @@ export default function DepositPanel({
                   <div className="divide-y divide-emerald-500/15">
                     <CopyField label="Địa chỉ ví USDT-TRC20" value={usdtInfo.address} />
                   </div>
-                  <div className="flex items-center justify-between gap-2 border-t border-emerald-500/15 py-3">
-                    <span className="text-xs font-semibold text-muted">Số USDT cần gửi</span>
-                    <span className="text-base font-black text-emerald-600">
-                      ≈ {usdtAmount?.toFixed(2)} USDT
-                    </span>
-                  </div>
+                  <p className="border-t border-emerald-500/15 py-3 text-xs leading-relaxed text-muted">
+                    <b className="text-foreground">Bước 1:</b> Tự chuyển USDT (bất kỳ số lượng nào bạn muốn nạp)
+                    từ ví/sàn của bạn tới địa chỉ trên. <b className="text-foreground">Bước 2:</b> Dán mã giao
+                    dịch (TxID) bên dưới — hệ thống tự đọc đúng số USDT thật đã nhận trên blockchain và quy đổi
+                    ra VNĐ, không cần bạn khai số tiền.
+                  </p>
                   <div className="pb-4">
                     <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">
                       Mã giao dịch (TxID)
@@ -514,7 +538,7 @@ export default function DepositPanel({
 
                 <p className="border-t border-emerald-500/20 bg-emerald-500/10 px-4 py-2.5 text-[11px] font-medium text-emerald-600">
                   Chỉ gửi USDT trên mạng TRC20 (Tron) — gửi sai mạng có thể
-                  mất tiền. Sau khi chuyển, dán mã giao dịch (TxID) ở trên.
+                  mất tiền. Hệ thống xác minh trên blockchain trước khi cộng tiền, có thể mất vài giây.
                 </p>
               </div>
             )}
@@ -532,7 +556,9 @@ export default function DepositPanel({
 
             <button
               onClick={handleSubmit}
-              disabled={!amount || loading || (method === "usdt" && !usdtInfo)}
+              disabled={
+                loading || (method === "usdt" ? !usdtInfo || !txid.trim() : !amount)
+              }
               className="rounded-full bg-brand py-3.5 text-sm font-black text-ink shadow-[0_10px_25px_-8px_rgba(224,196,0,0.55)] transition hover:bg-brand-dark hover:shadow-[0_10px_28px_-6px_rgba(224,196,0,0.65)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
             >
               {loading
@@ -540,7 +566,7 @@ export default function DepositPanel({
                 : method === "vnpay"
                   ? `Nạp ${amount ? formatVnd(amount) : ""}`
                   : method === "usdt"
-                    ? "Tôi đã gửi USDT, xác nhận yêu cầu"
+                    ? "Xác minh & nạp tiền"
                     : "Tôi đã chuyển khoản, xác nhận yêu cầu"}
             </button>
           </div>

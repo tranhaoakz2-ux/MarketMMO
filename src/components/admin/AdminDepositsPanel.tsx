@@ -14,9 +14,11 @@ import {
   type Column,
   DataTable,
   EmptyState,
+  Field,
   ListSkeleton,
   StatusBadge,
   TableSkeleton,
+  TextInput,
   type Tone,
   formatVndDemo,
 } from "@/components/admin-demo/AdminDemoKit";
@@ -43,6 +45,7 @@ export default function AdminDepositsPanel() {
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [manualAmount, setManualAmount] = useState<Record<string, string>>({});
 
   const load = async () => {
     setLoading(true);
@@ -60,12 +63,12 @@ export default function AdminDepositsPanel() {
     })();
   }, []);
 
-  const handleAction = async (id: string, action: "approve" | "reject") => {
+  const handleAction = async (id: string, action: "approve" | "reject", amountOverride?: number) => {
     setBusyId(id);
     await fetch(`/api/admin/deposits/${id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({ action, ...(amountOverride ? { amount: amountOverride } : {}) }),
     });
     setBusyId(null);
     load();
@@ -98,36 +101,67 @@ export default function AdminDepositsPanel() {
           <Card><EmptyState icon={Inbox} title="Không có yêu cầu nào đang chờ duyệt" /></Card>
         ) : (
           <div className="flex flex-col gap-2">
-            {pending.map((d) => (
-              <Card key={d.id} className="flex flex-wrap items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-bold text-[var(--adm-text)]">{d.user.name ?? d.user.username ?? d.user.email}</p>
-                  <p className="text-xs text-[var(--adm-muted)]">
-                    {walletMethodLabel[d.method ?? ""] ?? d.method ?? "—"} · {new Date(d.createdAt).toLocaleString("vi-VN")}
-                  </p>
-                  {d.note && <p className="mt-1 text-xs text-[var(--adm-muted)]">Ghi chú: {d.note}</p>}
-                  {d.method === "usdt" && d.gatewayRef && (
-                    <a
-                      href={`https://tronscan.org/#/transaction/${d.gatewayRef}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-1 flex items-center gap-1 text-xs font-semibold text-[var(--adm-info)] hover:underline"
+            {pending.map((d) => {
+              // Bản ghi fallback do luồng tự động hoá USDT tạo ra khi verify
+              // on-chain thất bại — amount=0 lúc tạo vì chưa biết số VNĐ
+              // đúng, admin phải tự đối chiếu Tronscan rồi nhập tay.
+              const isManualUsdtFallback = d.method === "usdt" && d.amount === 0;
+              const manualValue = manualAmount[d.id] ?? "";
+              const manualNum = Number(manualValue);
+              const manualValid = Number.isInteger(manualNum) && manualNum > 0;
+              return (
+                <Card key={d.id} className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-bold text-[var(--adm-text)]">{d.user.name ?? d.user.username ?? d.user.email}</p>
+                    <p className="text-xs text-[var(--adm-muted)]">
+                      {walletMethodLabel[d.method ?? ""] ?? d.method ?? "—"} · {new Date(d.createdAt).toLocaleString("vi-VN")}
+                    </p>
+                    {d.note && (
+                      <p className={`mt-1 text-xs ${isManualUsdtFallback ? "font-semibold text-[var(--adm-warn)]" : "text-[var(--adm-muted)]"}`}>
+                        {isManualUsdtFallback ? "⚠ " : "Ghi chú: "}
+                        {d.note}
+                      </p>
+                    )}
+                    {d.method === "usdt" && d.gatewayRef && (
+                      <a
+                        href={`https://tronscan.org/#/transaction/${d.gatewayRef}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 flex items-center gap-1 text-xs font-semibold text-[var(--adm-info)] hover:underline"
+                      >
+                        Xem giao dịch trên Tronscan <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {isManualUsdtFallback ? (
+                      <div className="w-40">
+                        <Field label="Số VNĐ (tự xác minh)">
+                          <TextInput
+                            type="number"
+                            placeholder="Nhập số tiền"
+                            value={manualValue}
+                            onChange={(e) => setManualAmount((prev) => ({ ...prev, [d.id]: e.target.value }))}
+                          />
+                        </Field>
+                      </div>
+                    ) : (
+                      <span className="text-base font-black text-[var(--adm-brand)]">{formatVndDemo(d.amount)}</span>
+                    )}
+                    <Button
+                      variant="success"
+                      disabled={busyId === d.id || (isManualUsdtFallback && !manualValid)}
+                      onClick={() => handleAction(d.id, "approve", isManualUsdtFallback ? manualNum : undefined)}
                     >
-                      Xem giao dịch trên Tronscan <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-base font-black text-[var(--adm-brand)]">{formatVndDemo(d.amount)}</span>
-                  <Button variant="success" disabled={busyId === d.id} onClick={() => handleAction(d.id, "approve")}>
-                    <Check className="h-3.5 w-3.5" /> Duyệt
-                  </Button>
-                  <Button variant="danger" disabled={busyId === d.id} onClick={() => handleAction(d.id, "reject")}>
-                    <X className="h-3.5 w-3.5" /> Từ chối
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                      <Check className="h-3.5 w-3.5" /> Duyệt
+                    </Button>
+                    <Button variant="danger" disabled={busyId === d.id} onClick={() => handleAction(d.id, "reject")}>
+                      <X className="h-3.5 w-3.5" /> Từ chối
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
