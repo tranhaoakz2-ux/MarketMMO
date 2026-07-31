@@ -6,7 +6,7 @@
 // {action:"approve"|"reject"} — không đổi 1 dòng logic nghiệp vụ (duyệt
 // nạp tiền là thao tác đụng tiền thật). API route đã có sẵn requireAdmin()
 // (không đụng tới).
-import { Check, ExternalLink, Inbox, X } from "lucide-react";
+import { Check, ExternalLink, Inbox, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Button,
@@ -16,6 +16,7 @@ import {
   EmptyState,
   Field,
   ListSkeleton,
+  SearchInput,
   StatusBadge,
   TableSkeleton,
   TextInput,
@@ -35,17 +36,104 @@ type Deposit = {
   user: { email: string | null; username: string | null; name: string | null };
 };
 
+type SepayUnmatched = {
+  id: string;
+  sepayId: string;
+  gateway: string | null;
+  amount: number;
+  content: string | null;
+  referenceCode: string | null;
+  status: "UNMATCHED" | "RESOLVED" | "IGNORED";
+  createdAt: string;
+};
+
+type AdminUserHit = {
+  id: string;
+  name: string | null;
+  username: string | null;
+  email: string | null;
+};
+
 const toneOf: Record<WalletTxStatus, Tone> = {
   PENDING: "warn",
   CONFIRMED: "success",
   REJECTED: "danger",
 };
 
+// Ô tìm + chọn user để gán 1 giao dịch SePay chưa khớp — tách component
+// riêng vì có state tìm kiếm/debounce cục bộ, không cần đẩy lên panel cha.
+function AssignToUserBox({ onAssign, busy }: { onAssign: (userId: string) => void; busy: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<AdminUserHit[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      setSearching(true);
+      const res = await fetch(`/api/admin/users${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+      if (!cancelled && res.ok) {
+        const data = await res.json();
+        setResults(data.users.slice(0, 8));
+      }
+      if (!cancelled) setSearching(false);
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [q, open]);
+
+  if (!open) {
+    return (
+      <Button variant="secondary" disabled={busy} onClick={() => setOpen(true)}>
+        <Search className="h-3.5 w-3.5" /> Gán cho user
+      </Button>
+    );
+  }
+
+  return (
+    <div className="w-64 rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] p-2">
+      <SearchInput value={q} onChange={setQ} placeholder="Tìm tên/email/username..." />
+      <div className="mt-1.5 max-h-40 overflow-y-auto">
+        {searching ? (
+          <p className="px-1 py-1.5 text-xs text-[var(--adm-muted)]">Đang tìm...</p>
+        ) : results.length === 0 ? (
+          <p className="px-1 py-1.5 text-xs text-[var(--adm-muted)]">Không tìm thấy.</p>
+        ) : (
+          results.map((u) => (
+            <button
+              key={u.id}
+              disabled={busy}
+              onClick={() => onAssign(u.id)}
+              className="block w-full truncate rounded px-1.5 py-1 text-left text-xs text-[var(--adm-text)] hover:bg-[var(--adm-brand-dim)] disabled:opacity-50"
+            >
+              {u.name ?? u.username ?? u.email}
+            </button>
+          ))
+        )}
+      </div>
+      <button
+        onClick={() => setOpen(false)}
+        className="mt-1 w-full rounded px-1.5 py-1 text-left text-[11px] text-[var(--adm-muted)] hover:text-[var(--adm-text)]"
+      >
+        Huỷ
+      </button>
+    </div>
+  );
+}
+
 export default function AdminDepositsPanel() {
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [manualAmount, setManualAmount] = useState<Record<string, string>>({});
+
+  const [unmatched, setUnmatched] = useState<SepayUnmatched[]>([]);
+  const [unmatchedLoading, setUnmatchedLoading] = useState(true);
+  const [unmatchedBusyId, setUnmatchedBusyId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -57,11 +145,33 @@ export default function AdminDepositsPanel() {
     setLoading(false);
   };
 
+  const loadUnmatched = async () => {
+    setUnmatchedLoading(true);
+    const res = await fetch("/api/admin/sepay-unmatched");
+    if (res.ok) {
+      const data = await res.json();
+      setUnmatched(data.transactions);
+    }
+    setUnmatchedLoading(false);
+  };
+
   useEffect(() => {
     (async () => {
       await load();
+      await loadUnmatched();
     })();
   }, []);
+
+  const handleUnmatchedAction = async (id: string, body: Record<string, unknown>) => {
+    setUnmatchedBusyId(id);
+    await fetch(`/api/admin/sepay-unmatched/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setUnmatchedBusyId(null);
+    loadUnmatched();
+  };
 
   const handleAction = async (id: string, action: "approve" | "reject", amountOverride?: number) => {
     setBusyId(id);
@@ -177,6 +287,52 @@ export default function AdminDepositsPanel() {
             rowKey={(d) => d.id}
             empty={<EmptyState icon={Inbox} title="Chưa có giao dịch nào" />}
           />
+        )}
+      </div>
+
+      <div>
+        <h2 className="mb-1 text-sm font-black text-[var(--adm-text)]">
+          {unmatchedLoading ? "Đang tải..." : `Giao dịch SePay chưa khớp lệnh (${unmatched.filter((u) => u.status === "UNMATCHED").length})`}
+        </h2>
+        <p className="mb-3 text-xs text-[var(--adm-muted)]">
+          Webhook SePay báo tiền về nhưng không tìm thấy mã đơn khớp trong nội dung chuyển khoản (buyer quên ghi
+          mã / gõ sai). Tự đối chiếu rồi gán cho đúng người, hoặc bỏ qua nếu không phải tiền nạp.
+        </p>
+        {unmatchedLoading ? (
+          <ListSkeleton />
+        ) : unmatched.filter((u) => u.status === "UNMATCHED").length === 0 ? (
+          <Card><EmptyState icon={Inbox} title="Không có giao dịch SePay nào chưa khớp" /></Card>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {unmatched
+              .filter((u) => u.status === "UNMATCHED")
+              .map((u) => (
+                <Card key={u.id} className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-bold text-[var(--adm-text)]">
+                      {u.gateway ?? "Ngân hàng"} · sepayId {u.sepayId}
+                    </p>
+                    <p className="text-xs text-[var(--adm-muted)]">{new Date(u.createdAt).toLocaleString("vi-VN")}</p>
+                    {u.content && <p className="mt-1 text-xs text-[var(--adm-muted)]">Nội dung: {u.content}</p>}
+                    {u.referenceCode && <p className="text-xs text-[var(--adm-muted)]">Mã tham chiếu NH: {u.referenceCode}</p>}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-base font-black text-[var(--adm-brand)]">{formatVndDemo(u.amount)}</span>
+                    <AssignToUserBox
+                      busy={unmatchedBusyId === u.id}
+                      onAssign={(userId) => handleUnmatchedAction(u.id, { action: "assign", userId })}
+                    />
+                    <Button
+                      variant="danger"
+                      disabled={unmatchedBusyId === u.id}
+                      onClick={() => handleUnmatchedAction(u.id, { action: "ignore" })}
+                    >
+                      <X className="h-3.5 w-3.5" /> Bỏ qua
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+          </div>
         )}
       </div>
     </div>

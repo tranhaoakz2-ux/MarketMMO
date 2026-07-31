@@ -4,13 +4,15 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Reveal from "@/components/Reveal";
 import { getBankInfo, getUsdtInfo } from "@/lib/payment/deposit";
+import { isSepayConfigured } from "@/lib/payment/sepay";
 import { isVnpayConfigured } from "@/lib/payment/vnpay";
 
 export default async function DepositPage() {
-  const [vnpayEnabled, bankInfo, usdtInfo] = await Promise.all([
+  const [vnpayEnabled, bankInfo, usdtInfo, sepayEnabled] = await Promise.all([
     isVnpayConfigured(),
     getBankInfo(),
     getUsdtInfo(),
+    isSepayConfigured(),
   ]);
   return (
     <>
@@ -22,7 +24,7 @@ export default async function DepositPage() {
 
         <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6 lg:px-8">
           <Reveal>
-            <DepositPanel vnpayEnabled={vnpayEnabled} bankInfo={bankInfo} usdtInfo={usdtInfo} />
+            <DepositPanel vnpayEnabled={vnpayEnabled} bankInfo={bankInfo} usdtInfo={usdtInfo} sepayEnabled={sepayEnabled} />
           </Reveal>
         </div>
       </main>

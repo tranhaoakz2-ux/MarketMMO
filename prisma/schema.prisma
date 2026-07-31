@@ -1009,6 +1009,29 @@ model PaymentConfig {
   updatedBy String?
 }
 
+// Giao dịch webhook SePay báo về nhưng KHÔNG khớp được mã đơn (WalletTransaction
+// nào đang PENDING) nào — không có userId để gắn thẳng vào WalletTransaction
+// nên cần bảng riêng. Admin xem tại /admin/nap-tien, tự đối chiếu rồi "Gán
+// cho user" để cộng tiền tay (POST /api/admin/sepay-unmatched/[id]). Dedup
+// theo "sepayId" UNIQUE — khác cơ chế dedup của nhánh KHỚP ĐƯỢC (dùng
+// WalletTransaction.gatewayRef, xem index WalletTransaction_sepay_deposit_
+// txid_key) vì đây là 2 nhánh xử lý tách biệt cho cùng 1 giao dịch SePay.
+model SepayUnmatchedTransaction {
+  id              String    @id @default(cuid())
+  sepayId         String    @unique
+  gateway         String?
+  amount          Int
+  content         String?
+  referenceCode   String?
+  transactionDate DateTime?
+  // UNMATCHED (mới về) | RESOLVED (đã gán cho 1 user) | IGNORED (admin xác
+  // nhận không phải tiền nạp, bỏ qua).
+  status                       String    @default("UNMATCHED")
+  resolvedWalletTransactionId  String?
+  createdAt                    DateTime  @default(now())
+  resolvedAt                   DateTime?
+}
+
 // Nội dung động quản lý qua Admin (/admin/noi-dung) thay vì hardcode trong
 // code — cùng shape với PaymentConfig nhưng tách bảng riêng vì khác domain
 // (nội dung/marketing, không phải cấu hình thanh toán). 13 key cố định, xem

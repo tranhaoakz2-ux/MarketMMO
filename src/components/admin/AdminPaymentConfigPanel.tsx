@@ -34,6 +34,7 @@ export default function AdminPaymentConfigPanel() {
   const [values, setValues] = useState<Partial<Record<PaymentConfigKey, string>>>({});
   const [dirty, setDirty] = useState<Set<PaymentConfigKey>>(new Set());
   const [showSecret, setShowSecret] = useState(false);
+  const [showSepaySecret, setShowSepaySecret] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
 
@@ -116,6 +117,7 @@ export default function AdminPaymentConfigPanel() {
   const vnpayKeys: PaymentConfigKey[] = ["vnpay_tmn_code", "vnpay_hash_secret"];
   const usdtKeys: PaymentConfigKey[] = ["usdt_trc20_address", "usdt_vnd_rate"];
   const bankKeys: PaymentConfigKey[] = ["bank_name", "bank_account_number", "bank_account_holder", "bank_bin"];
+  const sepayKeys: PaymentConfigKey[] = ["sepay_webhook_secret", "sepay_api_key"];
 
   const groupDirty = (keys: PaymentConfigKey[]) => keys.some((k) => dirty.has(k));
 
@@ -283,6 +285,65 @@ export default function AdminPaymentConfigPanel() {
             Lưu
           </Button>
           <Button size="sm" variant="secondary" disabled={saving !== null} onClick={() => restoreToEnv(bankKeys)}>
+            <RotateCcw className="h-3.5 w-3.5" /> Khôi phục .env
+          </Button>
+        </div>
+      </Card>
+
+      {/* SePay */}
+      <Card>
+        <SectionTitle
+          aside={
+            <SourceTag
+              source={
+                config.sepay_webhook_secret.source === "db" || config.sepay_api_key.source === "db"
+                  ? "db"
+                  : config.sepay_webhook_secret.source
+              }
+            />
+          }
+        >
+          SePay (tự động hoá nạp ngân hàng qua webhook)
+        </SectionTitle>
+        <p className="mb-4 text-xs text-[var(--adm-muted)]">
+          Điền 1 trong 2 (hoặc cả 2) tuỳ phương thức xác thực chọn lúc tạo webhook trên dashboard SePay — HMAC-SHA256
+          mạnh hơn, ưu tiên dùng nếu có. Thiếu cả 2 thì webhook fail-closed, buyer vẫn nạp ngân hàng thủ công chờ
+          admin duyệt như trước, không ảnh hưởng gì.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Webhook Secret (HMAC-SHA256)">
+            <div className="relative">
+              <TextInput
+                type={showSepaySecret ? "text" : "password"}
+                value={values.sepay_webhook_secret ?? ""}
+                onChange={(e) => setField("sepay_webhook_secret", e.target.value)}
+                placeholder="Chưa cấu hình"
+                className="pr-9"
+              />
+              <button
+                type="button"
+                onClick={() => setShowSepaySecret((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--adm-muted)] hover:text-[var(--adm-text)]"
+                aria-label={showSepaySecret ? "Ẩn" : "Hiện"}
+              >
+                {showSepaySecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </Field>
+          <Field label="API Key" hint="Chỉ cần nếu chọn xác thực kiểu API Key thay vì HMAC">
+            <TextInput
+              value={values.sepay_api_key ?? ""}
+              onChange={(e) => setField("sepay_api_key", e.target.value)}
+              placeholder="Chưa cấu hình"
+            />
+          </Field>
+        </div>
+        <div className="mt-4 flex items-center gap-2">
+          <Button size="sm" disabled={!groupDirty(sepayKeys) || saving !== null} onClick={() => save(sepayKeys)}>
+            {saving === sepayKeys.join(",") ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            Lưu
+          </Button>
+          <Button size="sm" variant="secondary" disabled={saving !== null} onClick={() => restoreToEnv(sepayKeys)}>
             <RotateCcw className="h-3.5 w-3.5" /> Khôi phục .env
           </Button>
         </div>

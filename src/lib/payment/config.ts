@@ -14,7 +14,9 @@ export type PaymentConfigKey =
   | "bank_name"
   | "bank_account_number"
   | "bank_account_holder"
-  | "bank_bin";
+  | "bank_bin"
+  | "sepay_webhook_secret"
+  | "sepay_api_key";
 
 const ENV_FALLBACK: Record<PaymentConfigKey, string | undefined> = {
   vnpay_tmn_code: process.env.VNPAY_TMN_CODE,
@@ -25,6 +27,13 @@ const ENV_FALLBACK: Record<PaymentConfigKey, string | undefined> = {
   bank_account_number: process.env.BANK_ACCOUNT_NUMBER,
   bank_account_holder: process.env.BANK_ACCOUNT_HOLDER,
   bank_bin: process.env.BANK_BIN,
+  // SePay webhook (POST /api/webhook/sepay) — hỗ trợ CẢ 2 phương thức xác
+  // thực SePay cung cấp, chưa biết bạn sẽ chọn cái nào lúc đăng ký thật:
+  // HMAC-SHA256 (mạnh hơn, ký trên raw body) dùng sepay_webhook_secret, API
+  // Key (đơn giản hơn) dùng sepay_api_key. Thiếu CẢ 2 -> webhook fail-closed
+  // 503, không cộng tiền — xem src/app/api/webhook/sepay/route.ts.
+  sepay_webhook_secret: process.env.SEPAY_WEBHOOK_SECRET,
+  sepay_api_key: process.env.SEPAY_API_KEY,
 };
 
 export const ALL_PAYMENT_CONFIG_KEYS = Object.keys(ENV_FALLBACK) as PaymentConfigKey[];

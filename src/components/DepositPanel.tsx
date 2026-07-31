@@ -97,10 +97,12 @@ export default function DepositPanel({
   vnpayEnabled,
   bankInfo,
   usdtInfo,
+  sepayEnabled,
 }: {
   vnpayEnabled: boolean;
   bankInfo: BankInfo | null;
   usdtInfo: UsdtInfo | null;
+  sepayEnabled: boolean;
 }) {
   const { data: session, status, update } = useSession();
   const [amount, setAmount] = useState<number | null>(100000);
@@ -235,7 +237,9 @@ export default function DepositPanel({
       return;
     }
     setMessage(
-      "Đã gửi yêu cầu nạp tiền. Vui lòng chuyển khoản đúng nội dung ở trên, admin sẽ duyệt sau khi nhận được."
+      sepayEnabled
+        ? "Đã ghi nhận yêu cầu. Chuyển khoản đúng nội dung ở trên — hệ thống sẽ tự động cộng tiền trong vài phút sau khi nhận được."
+        : "Đã gửi yêu cầu nạp tiền. Vui lòng chuyển khoản đúng nội dung ở trên, admin sẽ duyệt sau khi nhận được."
     );
     loadTransactions();
     // Tạo mã mới cho lần nạp tiếp theo — tránh dùng lại đúng mã vừa gửi.
@@ -348,7 +352,9 @@ export default function DepositPanel({
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-foreground">Chuyển khoản ngân hàng</p>
                 <p className="mt-0.5 text-xs text-muted">
-                  Gửi yêu cầu, admin xác nhận sau khi nhận được chuyển khoản
+                  {sepayEnabled
+                    ? "Tự động cộng tiền trong vài phút sau khi chuyển khoản"
+                    : "Gửi yêu cầu, admin xác nhận sau khi nhận được chuyển khoản"}
                 </p>
               </div>
               {method === "bank" && (
@@ -497,8 +503,9 @@ export default function DepositPanel({
                 </div>
 
                 <p className="border-t border-border-c bg-brand-light/30 px-4 py-2.5 text-[11px] font-medium text-brand-dark">
-                  Vui lòng chuyển đúng số tiền và ghi đúng nội dung trên để
-                  yêu cầu được duyệt nhanh hơn.
+                  {sepayEnabled
+                    ? "Bắt buộc ghi đúng nội dung chuyển khoản ở trên để hệ thống tự động khớp và cộng tiền — thiếu/sai nội dung sẽ cần admin xử lý tay, có thể chậm hơn."
+                    : "Vui lòng chuyển đúng số tiền và ghi đúng nội dung trên để yêu cầu được duyệt nhanh hơn."}
                 </p>
               </div>
             )}
