@@ -21,19 +21,29 @@ export default function Pagination({
   totalCount,
   pageSize,
   sectionId = "danh-sach-san-pham",
+  sort,
 }: {
   basePath: string;
   currentPage: number;
   totalCount: number;
   pageSize: number;
   sectionId?: string;
+  /** Giữ nguyên lựa chọn sắp xếp hiện tại khi chuyển trang — optional, mặc
+      định undefined nên các trang chưa dùng sắp xếp (danh-muc, tìm kiếm...)
+      không đổi hành vi gì. */
+  sort?: string;
 }) {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   if (totalPages <= 1) return null;
 
   const page = Math.min(Math.max(1, currentPage), totalPages);
-  const pageHref = (p: number) =>
-    `${p === 1 ? basePath : `${basePath}?page=${p}`}#${sectionId}`;
+  const pageHref = (p: number) => {
+    const params = new URLSearchParams();
+    if (p !== 1) params.set("page", String(p));
+    if (sort) params.set("sort", sort);
+    const qs = params.toString();
+    return `${basePath}${qs ? `?${qs}` : ""}#${sectionId}`;
+  };
   const pages = buildPageList(page, totalPages);
   const from = (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, totalCount);

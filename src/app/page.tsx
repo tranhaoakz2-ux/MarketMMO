@@ -17,6 +17,7 @@ import {
   getCategoryTree,
   getFeaturedProducts,
 } from "@/lib/queries";
+import { parseProductSortKey, sortProducts } from "@/lib/product-sort";
 import { getBannerImages, getSearchTags } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
@@ -26,12 +27,13 @@ const PAGE_SIZE = 36;
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; sort?: string }>;
 }) {
-  const { page } = await searchParams;
+  const { page, sort } = await searchParams;
   const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
+  const sortKey = parseProductSortKey(sort);
 
-  const [products, featured, auctionSlots, sellers, categoryTree, banners, searchTags] = await Promise.all([
+  const [productsRaw, featured, auctionSlots, sellers, categoryTree, banners, searchTags] = await Promise.all([
     getAllProducts(),
     getFeaturedProducts(),
     getAuctionSlots(),
@@ -40,6 +42,7 @@ export default async function Home({
     getBannerImages(),
     getSearchTags(),
   ]);
+  const products = sortProducts(productsRaw, sortKey);
 
   const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
@@ -79,7 +82,7 @@ export default async function Home({
           </Reveal>
 
           <Reveal delay={0.05}>
-            <CategoryTabs tree={categoryTree} countBySlug={countBySlug} />
+            <CategoryTabs tree={categoryTree} countBySlug={countBySlug} sort={sortKey ?? "default"} />
           </Reveal>
 
           <Reveal delay={0.1}>
@@ -112,6 +115,7 @@ export default async function Home({
               currentPage={safePage}
               totalCount={products.length}
               pageSize={PAGE_SIZE}
+              sort={sort}
             />
           </Reveal>
 

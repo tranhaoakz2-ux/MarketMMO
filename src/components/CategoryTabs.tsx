@@ -2,8 +2,10 @@
 
 import { LayoutGrid } from "lucide-react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import type { CategoryTreeNode } from "@/lib/queries";
+import { PRODUCT_SORT_OPTIONS, type ProductSortKey } from "@/lib/product-sort";
 
 // Sentinel slug cho nhóm ảo "Khác" (danh mục lá chưa gán nhóm cha nào) —
 // không trùng với slug thật nào trong DB (slug thật luôn qua slugifyCategory,
@@ -51,10 +53,29 @@ function CategoryChip({
 export default function CategoryTabs({
   tree,
   countBySlug,
+  sort,
 }: {
   tree: CategoryTreeNode[];
   countBySlug: Record<string, number>;
+  sort: ProductSortKey | "default";
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Đổi sắp xếp -> điều hướng sang cùng trang kèm ?sort=..., reset về trang 1
+  // (thứ tự đã đổi thì "trang 3" cũ không còn ý nghĩa) — router.push() ở App
+  // Router là điều hướng mềm (không tải lại cả trang), khớp yêu cầu "sắp xếp
+  // lại NGAY, không load lại trang thô".
+  const handleSortChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === "default") params.delete("sort");
+    else params.set("sort", value);
+    params.delete("page");
+    const qs = params.toString();
+    router.push(`${pathname}${qs ? `?${qs}` : ""}#danh-sach-san-pham`);
+  };
+
   const groups = tree.filter((node) => node.children.length > 0);
   const orphanLeaves = tree.filter((node) => node.children.length === 0);
 
@@ -115,11 +136,16 @@ export default function CategoryTabs({
 
         <label className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-muted">
           Sắp xếp:
-          <select className="rounded-lg border border-border-c bg-surface px-2 py-1 text-xs font-semibold text-foreground focus:outline-none">
-            <option>Mặc định</option>
-            <option>Mới nhất</option>
-            <option>Giá thấp</option>
-            <option>Giá cao</option>
+          <select
+            value={sort}
+            onChange={(e) => handleSortChange(e.target.value)}
+            className="rounded-lg border border-border-c bg-surface px-2 py-1 text-xs font-semibold text-foreground focus:outline-none"
+          >
+            {PRODUCT_SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         </label>
       </div>
