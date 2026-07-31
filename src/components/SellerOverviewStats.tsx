@@ -419,19 +419,25 @@ export default function SellerOverviewStats({
 
           {storeSnapshot && (
             <Card className="overflow-hidden p-0">
-              <div className="flex items-center gap-3 border-b border-border-c bg-gradient-to-br from-ink to-ink-soft px-5 py-4">
-                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand text-lg font-black text-ink">
+              {/* Header sáng, đồng bộ với body — trước đây nền đen
+                  (from-ink to-ink-soft), lạc tông với cả trang. Vàng thương
+                  hiệu giờ chỉ làm điểm nhấn ở avatar + badge Level, không tô
+                  tràn nền. */}
+              <div className="flex items-center gap-3 border-b border-border-c bg-surface-alt px-5 py-4">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand text-lg font-black text-ink shadow-sm">
                   {storeSnapshot.shopName.charAt(0).toUpperCase()}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-white">{storeSnapshot.shopName}</p>
+                  <p className="truncate text-sm font-black text-foreground">{storeSnapshot.shopName}</p>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {storeSnapshot.verified && (
                       <span className="flex items-center gap-1 rounded-full bg-success/20 px-2 py-0.5 text-[10px] font-bold text-success">
                         <BadgeCheck className="h-3 w-3" /> Đã xác thực
                       </span>
                     )}
-                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/80">Level {storeSnapshot.level}</span>
+                    <span className="rounded-full bg-brand/20 px-2 py-0.5 text-[10px] font-bold text-brand-dark">
+                      Level {storeSnapshot.level}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -443,7 +449,9 @@ export default function SellerOverviewStats({
                 </div>
                 <div className="mt-4">
                   <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px]">
-                    <span className="shrink-0 text-muted">Quỹ bảo hiểm</span>
+                    <span className="flex shrink-0 items-center gap-1 text-muted">
+                      <ShieldCheck className="h-3 w-3" /> Quỹ bảo hiểm
+                    </span>
                     <b className="truncate tabular-nums text-foreground">
                       {formatVnd(storeSnapshot.insuranceBalance)} / {formatVnd(insuranceFundTarget)}
                     </b>
@@ -452,7 +460,10 @@ export default function SellerOverviewStats({
                     <div className="h-full rounded-full bg-gradient-to-r from-brand-dark to-brand" style={{ width: `${insurancePct}%` }} />
                   </div>
                 </div>
-                <Link href={shopHref} className="mt-4 flex items-center justify-center gap-1.5 rounded-full border border-border-c py-2.5 text-xs font-bold text-foreground transition hover:bg-surface-alt">
+                <Link
+                  href={shopHref}
+                  className="mt-4 flex items-center justify-center gap-1.5 rounded-full border border-brand-dark/40 bg-brand-light/30 py-2.5 text-xs font-bold text-brand-dark transition hover:bg-brand-light/60"
+                >
                   Xem gian hàng công khai <ChevronRight className="h-3.5 w-3.5" />
                 </Link>
               </div>

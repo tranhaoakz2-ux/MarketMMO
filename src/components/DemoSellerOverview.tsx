@@ -457,19 +457,21 @@ export default function DemoSellerOverview() {
           </Card>
 
           <Card className="overflow-hidden p-0">
-            <div className="flex items-center gap-3 border-b border-border-c bg-gradient-to-br from-ink to-ink-soft px-5 py-4">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand text-lg font-black text-ink">
+            {/* Header sáng, đồng bộ với body — vàng thương hiệu chỉ làm điểm
+                nhấn ở avatar + badge Level, không tô tràn nền. */}
+            <div className="flex items-center gap-3 border-b border-border-c bg-surface-alt px-5 py-4">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand text-lg font-black text-ink shadow-sm">
                 {MOCK.store.shopName.charAt(0)}
               </span>
               <div className="min-w-0">
-                <p className="truncate text-sm font-black text-white">{MOCK.store.shopName}</p>
+                <p className="truncate text-sm font-black text-foreground">{MOCK.store.shopName}</p>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   {MOCK.store.verified && (
                     <span className="flex items-center gap-1 rounded-full bg-success/20 px-2 py-0.5 text-[10px] font-bold text-success">
                       <BadgeCheck className="h-3 w-3" /> Đã xác thực
                     </span>
                   )}
-                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/80">
+                  <span className="rounded-full bg-brand/20 px-2 py-0.5 text-[10px] font-bold text-brand-dark">
                     Level {MOCK.store.level}
                   </span>
                 </div>
@@ -483,7 +485,9 @@ export default function DemoSellerOverview() {
               </div>
               <div className="mt-4">
                 <div className="mb-1.5 flex items-center justify-between text-[11px]">
-                  <span className="text-muted">Quỹ bảo hiểm</span>
+                  <span className="flex items-center gap-1 text-muted">
+                    <ShieldCheck className="h-3 w-3" /> Quỹ bảo hiểm
+                  </span>
                   <b className="tabular-nums text-foreground">
                     {formatVnd(MOCK.store.insuranceBalance)} / {formatVnd(INSURANCE_TARGET)}
                   </b>
@@ -494,7 +498,7 @@ export default function DemoSellerOverview() {
               </div>
               <Link
                 href="/shop/accverse"
-                className="mt-4 flex items-center justify-center gap-1.5 rounded-full border border-border-c py-2.5 text-xs font-bold text-foreground transition hover:bg-surface-alt"
+                className="mt-4 flex items-center justify-center gap-1.5 rounded-full border border-brand-dark/40 bg-brand-light/30 py-2.5 text-xs font-bold text-brand-dark transition hover:bg-brand-light/60"
               >
                 Xem gian hàng công khai <ChevronRight className="h-3.5 w-3.5" />
               </Link>
