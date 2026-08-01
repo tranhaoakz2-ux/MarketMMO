@@ -23,12 +23,10 @@ function countForNode(node: CategoryTreeNode, countBySlug: Record<string, number
 function CategoryChip({
   slug,
   name,
-  emoji,
   count,
 }: {
   slug: string;
   name: string;
-  emoji: string;
   count: number;
 }) {
   return (
@@ -36,7 +34,6 @@ function CategoryChip({
       href={`/danh-muc/${slug}`}
       className="flex items-center gap-1.5 rounded-full bg-surface-alt px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-brand-light"
     >
-      <span className="text-sm leading-none">{emoji}</span>
       {name}
       <span className="text-muted">({count})</span>
     </Link>
@@ -128,7 +125,6 @@ export default function CategoryTabs({
                   : "bg-surface-alt text-muted hover:text-foreground"
               }`}
             >
-              <span className="text-sm normal-case leading-none">{g.emoji}</span>
               {g.name}
             </button>
           ))}
@@ -177,7 +173,6 @@ export default function CategoryTabs({
                   key={child.slug}
                   slug={child.slug}
                   name={child.name}
-                  emoji={child.emoji}
                   count={countForNode(child, countBySlug)}
                 />
               ))}

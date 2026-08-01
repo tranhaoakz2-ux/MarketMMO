@@ -77,7 +77,6 @@ type FormState = {
   mode: "create" | "edit";
   id?: string;
   name: string;
-  emoji: string;
   parentId: string; // "" = không có cha (nhóm gốc)
   sortOrder: string;
 };
@@ -119,7 +118,7 @@ export default function AdminCategoryTreePanel() {
 
   const openCreate = (parentId: string | null) => {
     setFormError(null);
-    setForm({ mode: "create", name: "", emoji: "", parentId: parentId ?? "", sortOrder: "0" });
+    setForm({ mode: "create", name: "", parentId: parentId ?? "", sortOrder: "0" });
   };
 
   const openEdit = (c: FlatCategory) => {
@@ -128,7 +127,6 @@ export default function AdminCategoryTreePanel() {
       mode: "edit",
       id: c.id,
       name: c.name,
-      emoji: c.emoji,
       parentId: c.parentId ?? "",
       sortOrder: String(c.sortOrder),
     });
@@ -142,20 +140,15 @@ export default function AdminCategoryTreePanel() {
   const submitForm = async () => {
     if (!form) return;
     const name = form.name.trim();
-    const emoji = form.emoji.trim();
     const sortOrder = Number.parseInt(form.sortOrder, 10) || 0;
     if (name.length < 2) {
       setFormError("Tên phải từ 2 ký tự trở lên.");
       return;
     }
-    if (!emoji) {
-      setFormError("Vui lòng nhập 1 emoji đại diện.");
-      return;
-    }
 
     setFormBusy(true);
     setFormError(null);
-    const payload = { name, emoji, parentId: form.parentId || null, sortOrder };
+    const payload = { name, parentId: form.parentId || null, sortOrder };
     const res = await fetch(
       form.mode === "create" ? "/api/admin/category-tree" : `/api/admin/category-tree/${form.id}`,
       {
@@ -233,7 +226,6 @@ export default function AdminCategoryTreePanel() {
           ) : (
             <span className="w-4 shrink-0" />
           )}
-          <span className="shrink-0 text-base leading-none">{node.emoji}</span>
           <span className="min-w-0 flex-1">
             <span className={`text-sm ${hasChildren ? "font-black" : "font-semibold"} text-[var(--adm-text)]`}>
               {node.name}
@@ -339,14 +331,6 @@ export default function AdminCategoryTreePanel() {
                   autoFocus
                 />
               </Field>
-              <Field label="Emoji đại diện" hint="Hiện trực tiếp trong sidebar bộ lọc và tiêu đề trang danh mục.">
-                <TextInput
-                  value={form.emoji}
-                  onChange={(e) => setForm({ ...form, emoji: e.target.value })}
-                  maxLength={8}
-                  placeholder="📦"
-                />
-              </Field>
               <Field label="Nhóm cha" hint="Để trống = nhóm gốc (hiện thẳng ở cấp cao nhất trong sidebar).">
                 <Select
                   value={form.parentId}
@@ -355,7 +339,7 @@ export default function AdminCategoryTreePanel() {
                   <option value="">— Không có (nhóm gốc) —</option>
                   {parentOptions.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.emoji} {c.name}
+                      {c.name}
                     </option>
                   ))}
                 </Select>

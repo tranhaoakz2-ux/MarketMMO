@@ -377,7 +377,7 @@ export default function AdminAllProductsPanel() {
                 >
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.emoji} {c.name}
+                      {c.name}
                     </option>
                   ))}
                 </Select>

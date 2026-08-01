@@ -72,7 +72,6 @@ function CategoryTreeRow({
           >
             {active && <Check className="h-3 w-3 text-foreground" strokeWidth={3} />}
           </span>
-          <span className="shrink-0 leading-none">{node.emoji}</span>
           <span
             className={`truncate text-sm ${
               active

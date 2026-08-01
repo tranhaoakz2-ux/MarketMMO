@@ -52,8 +52,8 @@ export async function POST(req: Request) {
   if (name.length < 2 || name.length > 60) {
     return NextResponse.json({ error: "Tên phải từ 2-60 ký tự." }, { status: 400 });
   }
-  if (!emoji || emoji.length > 8) {
-    return NextResponse.json({ error: "Vui lòng nhập 1 emoji đại diện." }, { status: 400 });
+  if (emoji.length > 8) {
+    return NextResponse.json({ error: "Emoji tối đa 8 ký tự." }, { status: 400 });
   }
 
   if (parentId) {
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
     action: parentId ? "Tạo danh mục con" : "Tạo nhóm danh mục cha",
     targetType: "Category",
     targetId: category.id,
-    detail: `${emoji} ${name}`,
+    detail: name,
   });
 
   return NextResponse.json({ id: category.id, slug: category.slug });

@@ -541,7 +541,7 @@ export default function AddProductForm({
               </option>
               {localCategories.map((c) => (
                 <option key={c.id} value={c.id} className="bg-surface text-foreground">
-                  {c.emoji} {c.name}
+                  {c.name}
                 </option>
               ))}
             </select>

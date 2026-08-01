@@ -59,7 +59,6 @@ export default async function CategoryPage({
           <div className="min-w-0 flex-1">
             <Reveal>
               <h1 className="mb-4 flex items-center gap-2 text-2xl font-black text-foreground">
-                <span className="text-2xl leading-none">{category.emoji}</span>
                 {category.name}
               </h1>
             </Reveal>

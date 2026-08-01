@@ -40,7 +40,6 @@ export default function MobileProductAccordion({
                   onClick={onNavigate}
                   className="flex flex-1 items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-alt hover:text-brand-dark"
                 >
-                  <span className="text-base leading-none">{parent.emoji}</span>
                   {parent.name}
                 </Link>
                 {hasChildren && (
@@ -63,7 +62,6 @@ export default function MobileProductAccordion({
                       onClick={onNavigate}
                       className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-foreground/70 hover:bg-surface-alt hover:text-brand-dark"
                     >
-                      <span className="text-sm leading-none">{child.emoji}</span>
                       {child.name}
                     </Link>
                   ))}

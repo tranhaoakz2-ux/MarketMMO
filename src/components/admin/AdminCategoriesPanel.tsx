@@ -71,9 +71,7 @@ export default function AdminCategoriesPanel() {
           {pending.map((c) => (
             <Card key={c.id} className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-bold text-[var(--adm-text)]">
-                  {c.emoji} {c.name}
-                </p>
+                <p className="text-sm font-bold text-[var(--adm-text)]">{c.name}</p>
                 <p className="text-xs text-[var(--adm-muted)]">Đề xuất bởi: {c.proposedBy?.shopName ?? "—"}</p>
               </div>
               <div className="flex gap-2">
