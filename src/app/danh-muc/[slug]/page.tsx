@@ -52,7 +52,10 @@ export default async function CategoryPage({
         </div>
 
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pb-12 sm:px-6 lg:flex-row lg:px-8">
-          <Reveal direction="right" className="lg:sticky lg:top-24 lg:self-start">
+          <Reveal
+            direction="right"
+            className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto lg:pr-1"
+          >
             <CategorySidebar activeSlug={slug} categories={tree} posts={recentPosts} />
           </Reveal>
 
