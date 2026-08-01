@@ -17,11 +17,15 @@ export default function SellerAvatarUploader({
   initialAvatarUrl,
   size = 64,
   shape = "circle",
+  onAvatarChange,
 }: {
   shopName: string;
   initialAvatarUrl: string | null;
   size?: number;
   shape?: "circle" | "square";
+  /** Gọi lại với avatarUrl mới ngay sau khi upload thành công — dùng khi nơi
+      gọi cần đồng bộ state riêng (vd tính % hoàn thiện hồ sơ ở SellerProfilePanel). */
+  onAvatarChange?: (avatarUrl: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
@@ -70,6 +74,7 @@ export default function SellerAvatarUploader({
       return;
     }
     setAvatarUrl(data.avatarUrl);
+    onAvatarChange?.(data.avatarUrl);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setPendingFile(null);

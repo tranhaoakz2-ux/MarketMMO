@@ -164,6 +164,13 @@ model Seller {
   // null = chưa upload, UI tự fallback về chữ cái đầu shopName (xem
   // src/components/SellerAvatar.tsx, dùng chung mọi nơi hiện avatar seller).
   avatarUrl   String?
+  // Hồ sơ cá nhân (Trang Bán Hàng > Hồ sơ cá nhân) — "Lĩnh vực chuyên / cam
+  // kết dịch vụ", đoạn text ngắn tuỳ chọn seller tự khai để tăng độ tin cậy
+  // với buyer. Nullable — không điền vẫn bán hàng bình thường. CỐ TÌNH không
+  // có trường liên hệ cá nhân nào (Facebook/Zalo/Telegram/SĐT/email) ở đây
+  // hay bất kỳ đâu khác trong hồ sơ — giữ giao dịch trong hệ thống, bảo vệ
+  // escrow + phí sàn (xem CLAUDE.md).
+  specialty   String?
   level       Int      @default(1)
   // Badge "Đã xác thực" hiển thị công khai trên gian hàng — TRƯỚC ĐÂY được
   // set tự động khi admin duyệt xác thực CCCD (model SellerVerification, đã

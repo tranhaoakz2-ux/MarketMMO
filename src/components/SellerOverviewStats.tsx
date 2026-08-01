@@ -13,6 +13,7 @@ import {
   Star,
   TrendingDown,
   TrendingUp,
+  UserCircle,
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
@@ -20,6 +21,7 @@ import SellerAvatarUploader from "@/components/SellerAvatarUploader";
 import SellerOverviewChart from "@/components/SellerOverviewChart";
 import { formatRelativeTime, formatVnd } from "@/lib/format";
 import { orderStatusLabel, type OrderStatus, type RangeKey } from "@/lib/constants";
+import { calcSellerProfileCompleteness } from "@/lib/seller-profile";
 
 const RANGES: { key: RangeKey; label: string }[] = [
   { key: "today", label: "Hôm nay" },
@@ -197,6 +199,7 @@ export default function SellerOverviewStats({
     level: number;
     verified: boolean;
     avatarUrl: string | null;
+    specialty: string | null;
     insuranceBalance: number;
     avgRating: number;
     reviewCount: number;
@@ -213,6 +216,7 @@ export default function SellerOverviewStats({
   const hasRevenue = revenueTrend.some((b) => b.value > 0);
   const sparkPoints = hasRevenue ? revenueTrend.map((t) => t.value) : undefined;
   const shopHref = storeSnapshot ? `/shop/${storeSnapshot.slug}` : "#";
+  const profileCompleteness = storeSnapshot ? calcSellerProfileCompleteness(storeSnapshot) : 0;
 
   const attentionItems = [
     { href: "/trang-ban-hang/san-pham", icon: Package, wrap: "bg-brand-light text-brand-dark", title: "Sản phẩm chờ duyệt", sub: "Admin chưa duyệt xong", count: attentionCounts.pendingProducts },
@@ -461,8 +465,23 @@ export default function SellerOverviewStats({
                   </div>
                 </div>
                 <Link
+                  href="/trang-ban-hang/ho-so"
+                  className="mt-4 flex items-center justify-between gap-2 rounded-xl bg-surface-alt px-3 py-2.5 text-xs transition hover:bg-border-c"
+                >
+                  <span className="flex items-center gap-1.5 font-bold text-foreground">
+                    <UserCircle className="h-3.5 w-3.5 text-brand-dark" /> Hồ sơ cá nhân
+                  </span>
+                  <span
+                    className={`font-black tabular-nums ${
+                      profileCompleteness === 100 ? "text-success" : "text-brand-dark"
+                    }`}
+                  >
+                    {profileCompleteness}%
+                  </span>
+                </Link>
+                <Link
                   href={shopHref}
-                  className="mt-4 flex items-center justify-center gap-1.5 rounded-full border border-brand-dark/40 bg-brand-light/30 py-2.5 text-xs font-bold text-brand-dark transition hover:bg-brand-light/60"
+                  className="mt-2 flex items-center justify-center gap-1.5 rounded-full border border-brand-dark/40 bg-brand-light/30 py-2.5 text-xs font-bold text-brand-dark transition hover:bg-brand-light/60"
                 >
                   Xem gian hàng công khai <ChevronRight className="h-3.5 w-3.5" />
                 </Link>

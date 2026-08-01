@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Star,
   Tag,
+  UserCircle,
   Wallet,
   Wrench,
 } from "lucide-react";
@@ -27,6 +28,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: "Tổng quan", href: "/trang-ban-hang", icon: LayoutGrid },
+  { label: "Hồ sơ cá nhân", href: "/trang-ban-hang/ho-so", icon: UserCircle },
   { label: "Sản phẩm", href: "/trang-ban-hang/san-pham", icon: Package },
   { label: "Đơn sản phẩm", href: "/trang-ban-hang/don-san-pham", icon: PackageCheck },
   { label: "Đơn dịch vụ", href: "/trang-ban-hang/don-dich-vu", icon: Wrench },

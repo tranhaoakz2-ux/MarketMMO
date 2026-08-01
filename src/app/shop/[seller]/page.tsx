@@ -80,6 +80,11 @@ export default async function ShopPage({
                 <p className="mt-1.5 max-w-xl text-sm text-muted">
                   {shop.description}
                 </p>
+                {shop.specialty && (
+                  <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-brand-light/40 px-2.5 py-1 text-xs font-semibold text-ink">
+                    🎯 Chuyên: {shop.specialty}
+                  </p>
+                )}
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
                   <span className="flex items-center gap-1">
                     <CalendarDays className="h-3.5 w-3.5" /> Tham gia:{" "}

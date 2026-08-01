@@ -469,6 +469,7 @@ export async function getSellerBySlug(slug: string) {
     shopName: seller.shopName,
     slug: seller.slug,
     description: seller.description,
+    specialty: seller.specialty,
     level: seller.level,
     verified: seller.verified,
     suspended: seller.suspended,
@@ -1049,6 +1050,7 @@ export async function getSellerStoreSnapshot(sellerId: string) {
     level: seller.level,
     verified: seller.verified,
     avatarUrl: seller.avatarUrl,
+    specialty: seller.specialty,
     insuranceBalance: seller.insuranceBalance,
     ...ratingStats(seller.reviews),
   };
