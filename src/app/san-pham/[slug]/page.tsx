@@ -21,6 +21,7 @@ import BuyBox from "@/components/BuyBox";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import MegaSaleBadge from "@/components/MegaSaleBadge";
+import MegaSaleLogo from "@/components/MegaSaleLogo";
 import ProductCard from "@/components/ProductCard";
 import ProductInfoTabs from "@/components/ProductInfoTabs";
 import ProductThumbnail from "@/components/ProductThumbnail";
@@ -69,11 +70,18 @@ export default async function ProductDetailPage({
                   KHO MARKETMMO
                 </span>
                 <button
-                  className="absolute right-0 top-0 z-10 grid h-9 w-9 place-items-center rounded-full bg-surface shadow"
+                  className={`absolute z-10 grid h-9 w-9 place-items-center rounded-full bg-surface shadow ${
+                    product.megaSale?.active ? "bottom-0 right-0" : "right-0 top-0"
+                  }`}
                   aria-label="Thêm vào yêu thích"
                 >
                   <Heart className="h-4 w-4 text-danger" />
                 </button>
+                {product.megaSale?.active && (
+                  <span className="absolute -right-3 -top-3 z-10">
+                    <MegaSaleLogo size={92} />
+                  </span>
+                )}
                 <ProductThumbnail
                   imageUrl={product.imageUrl}
                   categorySlug={product.categorySlug}

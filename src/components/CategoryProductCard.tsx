@@ -1,6 +1,6 @@
 import { BadgeCheck, Crown, ShieldCheck, Star } from "lucide-react";
 import Link from "next/link";
-import MegaSaleBadge from "@/components/MegaSaleBadge";
+import MegaSaleLogo from "@/components/MegaSaleLogo";
 import ProductThumbnail from "@/components/ProductThumbnail";
 import type { Product } from "@/data/products";
 import { formatVnd } from "@/lib/format";
@@ -37,8 +37,8 @@ export default function CategoryProductCard({ product }: { product: Product }) {
             </span>
           )}
           {product.megaSale?.active && (
-            <span className="absolute right-1 top-1">
-              <MegaSaleBadge percentOff={product.megaSale.percentOff} size="sm" />
+            <span className="absolute -right-1.5 -top-1.5">
+              <MegaSaleLogo size={64} className="h-11 w-11 sm:h-16 sm:w-16" />
             </span>
           )}
         </div>

@@ -201,6 +201,25 @@ body {
   }
 }
 
+/* Logo "BIG SALE" đè góc ảnh sản phẩm (MegaSaleLogo.tsx) — nảy nhẹ liên tục
+   để bắt mắt, KHÁC icon-bounce ở trên (chỉ chạy lúc hover) vì logo này luôn
+   hiển thị suốt lúc sale đang diễn ra. `motion-safe:` áp ở nơi dùng class
+   (component) thay vì @media riêng ở đây, cùng quy ước đã có với bell-ring/
+   icon-bounce phía trên. */
+@keyframes sale-pop {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.08) rotate(-3deg);
+  }
+}
+
+.animate-sale-pop {
+  animation: sale-pop 1.6s ease-in-out infinite;
+}
+
 /* Admin Control Center (/admin) — bảng màu tối riêng, cố tình KHÁC hẳn
    vàng-trắng của trang mua sắm để phân biệt rõ "đây là khu vực quản trị"
    (yêu cầu thiết kế "sang trọng", đối chiếu bản demo Artifact đã duyệt).

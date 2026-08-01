@@ -1,6 +1,6 @@
 import { BadgeCheck, Clock, Eye, Flame, PackageCheck, ShieldCheck, Star } from "lucide-react";
 import Link from "next/link";
-import MegaSaleBadge from "@/components/MegaSaleBadge";
+import MegaSaleLogo from "@/components/MegaSaleLogo";
 import ProductThumbnail from "@/components/ProductThumbnail";
 import SellerAvatar from "@/components/SellerAvatar";
 import type { Product } from "@/data/products";
@@ -25,7 +25,11 @@ export default function ProductCard({ product }: { product: Product }) {
             {product.categoryLabel}
           </span>
           {product.hot && (
-            <span className="absolute -right-1.5 -top-1.5 flex items-center gap-0.5 rounded-full bg-danger px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
+            <span
+              className={`absolute flex items-center gap-0.5 rounded-full bg-danger px-1.5 py-0.5 text-[9px] font-bold text-white shadow ${
+                product.megaSale?.active ? "-bottom-1.5 -left-1.5" : "-right-1.5 -top-1.5"
+              }`}
+            >
               <Flame className="h-2.5 w-2.5" /> HOT
             </span>
           )}
@@ -35,8 +39,8 @@ export default function ProductCard({ product }: { product: Product }) {
             </span>
           )}
           {product.megaSale?.active && (
-            <span className="absolute -bottom-1.5 -left-1.5">
-              <MegaSaleBadge percentOff={product.megaSale.percentOff} size="sm" />
+            <span className="absolute -right-2 -top-2">
+              <MegaSaleLogo size={52} className="h-10 w-10 sm:h-[52px] sm:w-[52px]" />
             </span>
           )}
         </div>

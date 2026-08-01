@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
+import MegaSaleLogo from "@/components/MegaSaleLogo";
 import ProductThumbnail from "@/components/ProductThumbnail";
 import SellerAvatar from "@/components/SellerAvatar";
 import { formatVnd } from "@/lib/format";
@@ -20,12 +21,17 @@ function FeaturedCard({ product }: { product: Product }) {
           sizes="204px"
         />
         <span
-          className={`absolute right-1 top-1 rounded px-2 py-1 text-[11px] font-bold ${
-            product.featuredViaAuction ? "bg-ink text-white" : "bg-brand text-ink"
-          }`}
+          className={`absolute rounded px-2 py-1 text-[11px] font-bold ${
+            product.megaSale?.active ? "left-1 top-1" : "right-1 top-1"
+          } ${product.featuredViaAuction ? "bg-ink text-white" : "bg-brand text-ink"}`}
         >
           {product.featuredViaAuction ? "ĐẤU GIÁ NGAY" : "TÀI TRỢ"}
         </span>
+        {product.megaSale?.active && (
+          <span className="absolute -right-2 -top-2">
+            <MegaSaleLogo size={64} className="h-14 w-14 sm:h-16 sm:w-16" />
+          </span>
+        )}
         <div className="absolute -bottom-2 left-2 ring-2 ring-white rounded-full">
           <SellerAvatar avatarUrl={product.sellerAvatarUrl} shopName={product.seller} size={25} />
         </div>
