@@ -109,43 +109,37 @@ export default async function ProductDetailPage({
 
           <Reveal>
             <div className="flex flex-col gap-5 rounded-2xl border border-border-c bg-surface p-5 shadow-md sm:p-6">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl font-black leading-tight tracking-tight text-brand-dark sm:text-[32px]">
-                    {product.name}
-                  </h1>
-                  {product.megaSale?.active && <MegaSaleBadge percentOff={product.megaSale.percentOff} />}
-                </div>
-                <div className="mt-3 flex flex-wrap items-end gap-2.5">
-                  <span className="text-4xl font-black tracking-tight text-danger tabular-nums sm:text-5xl">
-                    {product.megaSale?.active
-                      ? product.megaSale.salePriceMax
-                        ? `${formatVnd(product.megaSale.salePrice)} - ${formatVnd(product.megaSale.salePriceMax)}`
-                        : formatVnd(product.megaSale.salePrice)
-                      : product.priceMax
-                        ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
-                        : formatVnd(product.price)}
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-black leading-tight tracking-tight text-foreground sm:text-[32px]">
+                  {product.name}
+                </h1>
+                {product.megaSale?.active && <MegaSaleBadge percentOff={product.megaSale.percentOff} />}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 rounded-xl bg-surface-alt px-3.5 py-3">
+                <SellerAvatar avatarUrl={product.sellerAvatarUrl} shopName={product.seller} size={32} />
+                <Link
+                  href={`/shop/${slugifySeller(product.seller)}`}
+                  className="text-sm font-bold text-success hover:underline"
+                >
+                  {product.seller}
+                </Link>
+                <span className="rounded-full bg-ink px-2.5 py-1 text-[11px] font-bold text-brand">
+                  LV {product.sellerLevel}
+                </span>
+                {product.verified && (
+                  <span className="flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-xs font-bold text-success">
+                    <BadgeCheck className="h-3.5 w-3.5" /> Đã xác thực
                   </span>
-                  {product.megaSale?.active ? (
-                    <span className="pb-1 text-base text-muted line-through">
-                      {product.priceMax
-                        ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
-                        : formatVnd(product.price)}
-                    </span>
-                  ) : (
-                    product.originalPrice && (
-                      <span className="pb-1 text-base text-muted line-through">
-                        {formatVnd(product.originalPrice)}
-                      </span>
-                    )
-                  )}
-                </div>
-                {product.megaSale?.active && product.megaSale.endsAt && (
-                  <div className="mt-2 flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs font-bold text-orange-600">
-                    <Clock className="h-3.5 w-3.5" /> Sale kết thúc sau:{" "}
-                    <AuctionCountdown endAt={product.megaSale.endsAt} size="sm" />
-                  </div>
                 )}
+                <span className="flex items-center gap-1 text-xs font-semibold text-muted">
+                  <Clock className="h-3.5 w-3.5 text-brand-dark" />
+                  {formatLastActive(product.sellerLastActiveAt)}
+                </span>
+                <span className="ml-auto flex items-center gap-1.5 rounded-full bg-info px-3 py-1.5 text-xs font-black text-white shadow-sm">
+                  <ShieldCheck className="h-4 w-4" /> Bảo hiểm:{" "}
+                  {formatVnd(product.sellerInsuranceBalance ?? 0)}
+                </span>
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -183,30 +177,37 @@ export default async function ProductDetailPage({
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-2.5 rounded-xl bg-surface-alt px-3.5 py-3">
-                <SellerAvatar avatarUrl={product.sellerAvatarUrl} shopName={product.seller} size={32} />
-                <Link
-                  href={`/shop/${slugifySeller(product.seller)}`}
-                  className="text-sm font-bold text-success hover:underline"
-                >
-                  {product.seller}
-                </Link>
-                <span className="rounded-full bg-ink px-2.5 py-1 text-[11px] font-bold text-brand">
-                  LV {product.sellerLevel}
-                </span>
-                {product.verified && (
-                  <span className="flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-xs font-bold text-success">
-                    <BadgeCheck className="h-3.5 w-3.5" /> Đã xác thực
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex flex-wrap items-end justify-end gap-2">
+                  <span className="text-xl font-black tracking-tight text-danger tabular-nums sm:text-2xl">
+                    {product.megaSale?.active
+                      ? product.megaSale.salePriceMax
+                        ? `${formatVnd(product.megaSale.salePrice)} - ${formatVnd(product.megaSale.salePriceMax)}`
+                        : formatVnd(product.megaSale.salePrice)
+                      : product.priceMax
+                        ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
+                        : formatVnd(product.price)}
                   </span>
+                  {product.megaSale?.active ? (
+                    <span className="pb-0.5 text-xs text-muted line-through sm:text-sm">
+                      {product.priceMax
+                        ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
+                        : formatVnd(product.price)}
+                    </span>
+                  ) : (
+                    product.originalPrice && (
+                      <span className="pb-0.5 text-xs text-muted line-through sm:text-sm">
+                        {formatVnd(product.originalPrice)}
+                      </span>
+                    )
+                  )}
+                </div>
+                {product.megaSale?.active && product.megaSale.endsAt && (
+                  <div className="flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs font-bold text-orange-600">
+                    <Clock className="h-3.5 w-3.5" /> Sale kết thúc sau:{" "}
+                    <AuctionCountdown endAt={product.megaSale.endsAt} size="sm" />
+                  </div>
                 )}
-                <span className="flex items-center gap-1 text-xs font-semibold text-muted">
-                  <Clock className="h-3.5 w-3.5 text-brand-dark" />
-                  {formatLastActive(product.sellerLastActiveAt)}
-                </span>
-                <span className="ml-auto flex items-center gap-1.5 rounded-full bg-info px-3 py-1.5 text-xs font-black text-white shadow-sm">
-                  <ShieldCheck className="h-4 w-4" /> Bảo hiểm:{" "}
-                  {formatVnd(product.sellerInsuranceBalance ?? 0)}
-                </span>
               </div>
 
               {(!product.variants || product.variants.length === 0) && (
