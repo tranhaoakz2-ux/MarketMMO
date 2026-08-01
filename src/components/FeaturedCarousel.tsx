@@ -10,8 +10,13 @@ function FeaturedCard({ product }: { product: Product }) {
   return (
     <Link
       href={`/san-pham/${product.slug}`}
-      className="group w-[187px] shrink-0 rounded-xl p-[5px] transition hover:-translate-y-0.5 sm:w-[204px]"
+      className="group relative w-[187px] shrink-0 rounded-xl p-[5px] transition hover:-translate-y-0.5 sm:w-[204px]"
     >
+      {product.megaSale?.active && (
+        <span className="absolute -right-1.5 -top-1.5 z-10">
+          <MegaSaleLogo size={64} className="h-14 w-14 sm:h-16 sm:w-16" />
+        </span>
+      )}
       <div className="relative">
         <ProductThumbnail
           imageUrl={product.imageUrl}
@@ -27,11 +32,6 @@ function FeaturedCard({ product }: { product: Product }) {
         >
           {product.featuredViaAuction ? "ĐẤU GIÁ NGAY" : "TÀI TRỢ"}
         </span>
-        {product.megaSale?.active && (
-          <span className="absolute -right-2 -top-2">
-            <MegaSaleLogo size={64} className="h-14 w-14 sm:h-16 sm:w-16" />
-          </span>
-        )}
         <div className="absolute -bottom-2 left-2 ring-2 ring-white rounded-full">
           <SellerAvatar avatarUrl={product.sellerAvatarUrl} shopName={product.seller} size={25} />
         </div>

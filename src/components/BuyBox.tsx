@@ -91,7 +91,7 @@ export default function BuyBox({ product }: { product: Product }) {
           <span className="mb-1.5 block text-xs font-bold uppercase text-foreground">
             Chọn loại sản phẩm
           </span>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
             {variants.map((v) => {
               const outOfStock = v.stock <= 0;
               const isSelected = v.id === selectedVariantId;

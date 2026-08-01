@@ -64,7 +64,12 @@ export default async function ProductDetailPage({
 
         <div className="mx-auto grid max-w-7xl gap-6 px-4 pb-10 sm:px-6 lg:grid-cols-[380px_1fr] lg:px-8">
           <Reveal direction="right">
-            <div className="rounded-2xl border border-border-c bg-surface p-4 shadow-sm">
+            <div className="relative rounded-2xl border border-border-c bg-surface p-4 shadow-sm">
+              {product.megaSale?.active && (
+                <span className="absolute -right-3 -top-3 z-10">
+                  <MegaSaleLogo size={92} />
+                </span>
+              )}
               <div className="relative">
                 <span className="absolute left-0 top-0 z-10 rounded-md border border-brand bg-ink px-2.5 py-1 text-[11px] font-bold text-brand">
                   KHO MARKETMMO
@@ -77,11 +82,6 @@ export default async function ProductDetailPage({
                 >
                   <Heart className="h-4 w-4 text-danger" />
                 </button>
-                {product.megaSale?.active && (
-                  <span className="absolute -right-3 -top-3 z-10">
-                    <MegaSaleLogo size={92} />
-                  </span>
-                )}
                 <ProductThumbnail
                   imageUrl={product.imageUrl}
                   categorySlug={product.categorySlug}

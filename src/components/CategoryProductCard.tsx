@@ -17,117 +17,119 @@ export default function CategoryProductCard({ product }: { product: Product }) {
   return (
     <Link
       href={`/san-pham/${product.slug}`}
-      className="group flex flex-col overflow-hidden rounded-lg border-2 border-transparent bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand hover:shadow-[0_12px_28px_rgba(229,91,38,0.25),0_4px_10px_rgba(0,0,0,0.05)] sm:flex-row"
+      className="group relative flex flex-col rounded-lg border-2 border-transparent bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand hover:shadow-[0_12px_28px_rgba(229,91,38,0.25),0_4px_10px_rgba(0,0,0,0.05)]"
     >
-      <div className="flex flex-row items-center gap-4 border-b border-dashed border-border-c p-4 sm:w-[220px] sm:shrink-0 sm:flex-col sm:border-b-0 sm:border-r">
-        <div className="relative h-[100px] w-[100px] shrink-0 sm:h-[170px] sm:w-[170px]">
-          <ProductThumbnail
-            imageUrl={product.imageUrl}
-            categorySlug={product.categorySlug}
-            boxClassName="h-full w-full rounded bg-surface-alt ring-1 ring-border-c"
-            iconClassName="h-12 w-12 text-foreground/70 sm:h-16 sm:w-16"
-            sizes="170px"
-          />
-          <span className="absolute left-0 top-0 rounded bg-brand px-1.5 py-[3px] text-[10px] font-extrabold uppercase text-ink">
-            Không trùng
-          </span>
-          {product.hot && (
-            <span className="absolute bottom-1 right-1 flex items-center gap-0.5 rounded bg-brand px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-ink">
-              <Crown className="h-2.5 w-2.5" /> Tài trợ
+      {product.megaSale?.active && (
+        <span className="absolute -right-2.5 -top-2.5 z-10">
+          <MegaSaleLogo size={64} className="h-12 w-12 sm:h-16 sm:w-16" />
+        </span>
+      )}
+      <div className="flex flex-col overflow-hidden rounded-lg sm:flex-row">
+        <div className="flex flex-row items-center gap-4 border-b border-dashed border-border-c p-4 sm:w-[220px] sm:shrink-0 sm:flex-col sm:border-b-0 sm:border-r">
+          <div className="relative h-[100px] w-[100px] shrink-0 sm:h-[170px] sm:w-[170px]">
+            <ProductThumbnail
+              imageUrl={product.imageUrl}
+              categorySlug={product.categorySlug}
+              boxClassName="h-full w-full rounded bg-surface-alt ring-1 ring-border-c"
+              iconClassName="h-12 w-12 text-foreground/70 sm:h-16 sm:w-16"
+              sizes="170px"
+            />
+            <span className="absolute left-0 top-0 rounded bg-brand px-1.5 py-[3px] text-[10px] font-extrabold uppercase text-ink">
+              Không trùng
             </span>
-          )}
-          {product.megaSale?.active && (
-            <span className="absolute -right-1.5 -top-1.5">
-              <MegaSaleLogo size={64} className="h-11 w-11 sm:h-16 sm:w-16" />
-            </span>
-          )}
-        </div>
-        <div className="min-w-0 text-left sm:mt-2 sm:w-full sm:text-center">
-          <p className="text-sm font-bold text-success">Tồn kho: {product.stock}</p>
-          {product.megaSale?.active ? (
-            <>
-              <p className="mt-1 text-xs text-muted line-through">
+            {product.hot && (
+              <span className="absolute bottom-1 right-1 flex items-center gap-0.5 rounded bg-brand px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-ink">
+                <Crown className="h-2.5 w-2.5" /> Tài trợ
+              </span>
+            )}
+          </div>
+          <div className="min-w-0 text-left sm:mt-2 sm:w-full sm:text-center">
+            <p className="text-sm font-bold text-success">Tồn kho: {product.stock}</p>
+            {product.megaSale?.active ? (
+              <>
+                <p className="mt-1 text-xs text-muted line-through">
+                  {product.priceMax
+                    ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
+                    : formatVnd(product.price)}
+                </p>
+                <p className="text-base font-extrabold text-danger">
+                  {product.megaSale.salePriceMax
+                    ? `${formatVnd(product.megaSale.salePrice)} - ${formatVnd(product.megaSale.salePriceMax)}`
+                    : formatVnd(product.megaSale.salePrice)}
+                </p>
+              </>
+            ) : (
+              <p className="mt-1 text-base font-extrabold text-foreground">
                 {product.priceMax
                   ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
                   : formatVnd(product.price)}
               </p>
-              <p className="text-base font-extrabold text-danger">
-                {product.megaSale.salePriceMax
-                  ? `${formatVnd(product.megaSale.salePrice)} - ${formatVnd(product.megaSale.salePriceMax)}`
-                  : formatVnd(product.megaSale.salePrice)}
-              </p>
-            </>
-          ) : (
-            <p className="mt-1 text-base font-extrabold text-foreground">
-              {product.priceMax
-                ? `${formatVnd(product.price)} - ${formatVnd(product.priceMax)}`
-                : formatVnd(product.price)}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="flex min-w-0 flex-1 flex-col p-5">
-        <div className="mb-2">
-          <span className="mr-1.5 inline-block rounded bg-brand px-2 py-0.5 align-middle text-xs font-bold text-ink">
-            {typeLabel}
-          </span>
-          <span className="text-lg font-bold text-foreground group-hover:text-brand-dark">
-            {product.name}
-          </span>
+            )}
+          </div>
         </div>
 
-        <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-sm text-foreground/80">
-          {product.rating !== null ? (
-            <>
-              <span className="flex items-center gap-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`h-3.5 w-3.5 ${
-                      i < filledStars ? "fill-brand text-brand" : "fill-border-c text-border-c"
-                    }`}
-                  />
-                ))}
-              </span>
-              <span>{product.reviewCount} đánh giá</span>
-            </>
-          ) : (
-            <span className="text-muted">Chưa có đánh giá</span>
-          )}
-          <span className="text-muted">|</span>
-          <span>
-            Đã bán: <b className="font-bold text-success">{product.sold}</b>
-          </span>
-          {!!product.sellerInsuranceBalance && (
-            <>
-              <span className="text-muted">|</span>
-              <span className="flex items-center gap-1 text-info">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Bảo hiểm: {formatVnd(product.sellerInsuranceBalance)}
-              </span>
-            </>
-          )}
+        <div className="flex min-w-0 flex-1 flex-col p-5">
+          <div className="mb-2">
+            <span className="mr-1.5 inline-block rounded bg-brand px-2 py-0.5 align-middle text-xs font-bold text-ink">
+              {typeLabel}
+            </span>
+            <span className="text-lg font-bold text-foreground group-hover:text-brand-dark">
+              {product.name}
+            </span>
+          </div>
+
+          <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-sm text-foreground/80">
+            {product.rating !== null ? (
+              <>
+                <span className="flex items-center gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-3.5 w-3.5 ${
+                        i < filledStars ? "fill-brand text-brand" : "fill-border-c text-border-c"
+                      }`}
+                    />
+                  ))}
+                </span>
+                <span>{product.reviewCount} đánh giá</span>
+              </>
+            ) : (
+              <span className="text-muted">Chưa có đánh giá</span>
+            )}
+            <span className="text-muted">|</span>
+            <span>
+              Đã bán: <b className="font-bold text-success">{product.sold}</b>
+            </span>
+            {!!product.sellerInsuranceBalance && (
+              <>
+                <span className="text-muted">|</span>
+                <span className="flex items-center gap-1 text-info">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Bảo hiểm: {formatVnd(product.sellerInsuranceBalance)}
+                </span>
+              </>
+            )}
+          </div>
+
+          <div className="mb-2 flex flex-wrap items-center gap-1.5 text-sm text-muted">
+            <span>Người bán:</span>
+            <span className="font-bold text-success">{product.seller}</span>
+            {product.verified && (
+              <>
+                <span className="text-muted">|</span>
+                <span className="flex items-center gap-0.5 rounded-full bg-brand px-1.5 py-0.5 text-xs font-bold text-ink">
+                  <BadgeCheck className="h-3.5 w-3.5" /> Đã xác thực
+                </span>
+              </>
+            )}
+          </div>
+
+          <div className="my-2 border-t border-dashed border-border-c" />
+
+          <p className="line-clamp-2 min-h-[3.25rem] flex-1 text-base font-semibold leading-relaxed text-foreground/85">
+            {product.shortDescription}
+          </p>
         </div>
-
-        <div className="mb-2 flex flex-wrap items-center gap-1.5 text-sm text-muted">
-          <span>Người bán:</span>
-          <span className="font-bold text-success">{product.seller}</span>
-          {product.verified && (
-            <>
-              <span className="text-muted">|</span>
-              <span className="flex items-center gap-0.5 rounded-full bg-brand px-1.5 py-0.5 text-xs font-bold text-ink">
-                <BadgeCheck className="h-3.5 w-3.5" /> Đã xác thực
-              </span>
-            </>
-          )}
-        </div>
-
-        <div className="my-2 border-t border-dashed border-border-c" />
-
-        <p className="line-clamp-2 min-h-[3.25rem] flex-1 text-base font-semibold leading-relaxed text-foreground/85">
-          {product.shortDescription}
-        </p>
       </div>
     </Link>
   );
