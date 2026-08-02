@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/authz";
 import { saveBannerImage } from "@/lib/uploads";
 
-const VALID_SLOTS = ["banner_left_1", "banner_left_2", "banner_right_1", "banner_right_2"];
-
-// Upload 1 ảnh banner mới — trả về URL, KHÔNG tự ghi vào SiteConfig (client
-// gọi tiếp PATCH /api/admin/site-config với { updates: { [slot]: url } } để
-// lưu, đồng bộ với luồng "Lưu"/"Khôi phục .env" chung của các field khác).
+// Upload 1 ảnh banner mới — trả về URL, KHÔNG tự ghi vào HomeBanner (client
+// gọi tiếp POST/PATCH /api/admin/home-banners với { imageUrl: url } để lưu).
+// Thay cho /api/admin/site-config/upload-image cũ (gắn cứng theo 4 slot
+// SiteConfig, đã bỏ cùng hệ thống banner cũ) — dùng lại nguyên
+// saveBannerImage() vốn đã generic, không cần đổi gì ở lib/uploads.ts.
 export async function POST(req: Request) {
   const { error } = await requireAdmin();
   if (error) return error;
@@ -14,11 +14,6 @@ export async function POST(req: Request) {
   const form = await req.formData().catch(() => null);
   if (!form) {
     return NextResponse.json({ error: "Dữ liệu không hợp lệ." }, { status: 400 });
-  }
-
-  const slot = String(form.get("slot") ?? "");
-  if (!VALID_SLOTS.includes(slot)) {
-    return NextResponse.json({ error: "Vị trí banner không hợp lệ." }, { status: 400 });
   }
 
   const file = form.get("file");

@@ -1059,18 +1059,45 @@ model SepayUnmatchedTransaction {
 
 // Nội dung động quản lý qua Admin (/admin/noi-dung) thay vì hardcode trong
 // code — cùng shape với PaymentConfig nhưng tách bảng riêng vì khác domain
-// (nội dung/marketing, không phải cấu hình thanh toán). 13 key cố định, xem
+// (nội dung/marketing, không phải cấu hình thanh toán). 9 key cố định, xem
 // src/lib/site-config.ts: insurance_fund_target, header_ticker_text,
 // footer_facebook_url, footer_youtube_url, footer_tiktok_url,
 // footer_zalo_url, footer_messenger_url, footer_phone, search_tags (JSON
-// mảng chuỗi), banner_left_1, banner_left_2, banner_right_1, banner_right_2
-// (URL ảnh banner, upload qua saveBannerImage() trong src/lib/uploads.ts).
-// THIẾU dòng/value rỗng = tự dùng giá trị mặc định hiện có trong code làm
-// fallback — không phá vỡ giao diện hiện tại.
+// mảng chuỗi). THIẾU dòng/value rỗng = tự dùng giá trị mặc định hiện có
+// trong code làm fallback — không phá vỡ giao diện hiện tại.
+//
+// Banner trang chủ TRƯỚC ĐÂY nằm ở đây (4 key banner_left_1/2/right_1/2,
+// chỉ lưu URL ảnh) — đã chuyển hẳn sang model HomeBanner (bên dưới) để hỗ
+// trợ số lượng slide động + tiêu đề/mô tả/CTA riêng từng slide. 4 dòng cũ
+// (nếu admin từng cấu hình) vẫn còn trong bảng này nhưng không còn được đọc.
 model SiteConfig {
   id        String   @id @default(cuid())
   key       String   @unique
   value     String?
   updatedAt DateTime @updatedAt
   updatedBy String?
+}
+
+// Banner trang chủ động (Admin > Nội dung trang web, AdminHomeBannerPanel) —
+// slot "LARGE" (banner lớn bên trái, nhiều dòng = nhiều slide, sortOrder
+// quyết định thứ tự trượt) | "SMALL_1" | "SMALL_2" (2 banner nhỏ cố định bên
+// phải, mỗi slot chỉ giữ đúng 1 dòng). imageUrl null = seller/admin CHƯA gán
+// ảnh riêng, UI tự fallback về phong cách mặc định trong code (nền màu +
+// icon + chữ) — cùng nguyên tắc migration-safe đã dùng xuyên suốt dự án.
+// title/description/ctaLabel/ctaHref cũng đều nullable, thiếu thì dùng chữ
+// mặc định khớp phong cách mặc định đó (xem DEFAULT_* trong
+// src/lib/home-banners.ts).
+model HomeBanner {
+  id          String   @id @default(cuid())
+  slot        String
+  sortOrder   Int      @default(0)
+  imageUrl    String?
+  title       String?
+  description String?
+  ctaLabel    String?
+  ctaHref     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([slot])
 }

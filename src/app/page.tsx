@@ -4,8 +4,8 @@ import FeaturedProductsPanel from "@/components/FeaturedProductsPanel";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Pagination from "@/components/Pagination";
+import HomePromoBanner from "@/components/HomePromoBanner";
 import ProductCard from "@/components/ProductCard";
-import PromoBanner from "@/components/PromoBanner";
 import Reveal from "@/components/Reveal";
 import SellerFeaturedPanel from "@/components/SellerFeaturedPanel";
 import TagCloud from "@/components/TagCloud";
@@ -18,7 +18,8 @@ import {
   getFeaturedSellers,
 } from "@/lib/queries";
 import { parseProductSortKey, sortProducts } from "@/lib/product-sort";
-import { getBannerImages, getSearchTags } from "@/lib/site-config";
+import { getHomeBanners } from "@/lib/home-banners";
+import { getSearchTags } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function Home({
     getAuctionSlots(),
     getFeaturedSellers(),
     getCategoryTree(),
-    getBannerImages(),
+    getHomeBanners(),
     getSearchTags(),
   ]);
   const products = sortProducts(productsRaw, sortKey);
@@ -70,7 +71,7 @@ export default async function Home({
       <main className="flex-1 bg-background">
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
           <Reveal>
-            <PromoBanner leftImages={banners.left} rightImages={banners.right} />
+            <HomePromoBanner large={banners.large} small1={banners.small1} small2={banners.small2} />
           </Reveal>
 
           <Reveal delay={0.05}>

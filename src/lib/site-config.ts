@@ -14,11 +14,7 @@ export type SiteConfigKey =
   | "footer_zalo_url"
   | "footer_messenger_url"
   | "footer_phone"
-  | "search_tags"
-  | "banner_left_1"
-  | "banner_left_2"
-  | "banner_right_1"
-  | "banner_right_2";
+  | "search_tags";
 
 // Mặc định hiện có trong code TRƯỚC khi có SiteConfig — giữ nguyên y hệt để
 // không đổi giao diện cho tới khi admin chủ động sửa.
@@ -44,10 +40,6 @@ const DEFAULTS: Record<SiteConfigKey, string> = {
     "Proxy",
     "Thuê Gmail",
   ]),
-  banner_left_1: "/banner-home-left-1.jpg",
-  banner_left_2: "/banner-home-left-2.jpg",
-  banner_right_1: "/banner-home-right-1.jpg",
-  banner_right_2: "/banner-home-right-2.jpg",
 };
 
 export const ALL_SITE_CONFIG_KEYS = Object.keys(DEFAULTS) as SiteConfigKey[];
@@ -82,38 +74,6 @@ export async function getSiteConfigWithSource(): Promise<
     result[key] = dbValue ? { value: dbValue, source: "db" } : { value: DEFAULTS[key], source: "default" };
   }
   return result;
-}
-
-export type ResolvedBanners = {
-  left: { src: string; alt: string }[];
-  right: { src: string; alt: string }[];
-};
-
-const BANNER_ALT: Record<"banner_left_1" | "banner_left_2" | "banner_right_1" | "banner_right_2", string> = {
-  banner_left_1: "MarketMMO — Sàn giao dịch MMO #1 Việt Nam, mua bán tài khoản & vật phẩm MMO uy tín, tự động 24/7",
-  banner_left_2: "MarketMMO — Flash Sale giá sốc mỗi ngày, săn deal cực hời",
-  banner_right_1: "MarketMMO — Tất cả sản phẩm kinh nghiệm MMO, uy tín an toàn nhanh chóng",
-  banner_right_2: "MarketMMO — Giao dịch an toàn, bảo vệ tuyệt đối với hệ thống ký quỹ thông minh",
-};
-
-/** Dùng cho trang chủ (Server Component) — ảnh banner 4 khung, đã resolve DB/mặc định. */
-export async function getBannerImages(): Promise<ResolvedBanners> {
-  const [left1, left2, right1, right2] = await Promise.all([
-    getSiteConfigValue("banner_left_1"),
-    getSiteConfigValue("banner_left_2"),
-    getSiteConfigValue("banner_right_1"),
-    getSiteConfigValue("banner_right_2"),
-  ]);
-  return {
-    left: [
-      { src: left1, alt: BANNER_ALT.banner_left_1 },
-      { src: left2, alt: BANNER_ALT.banner_left_2 },
-    ],
-    right: [
-      { src: right1, alt: BANNER_ALT.banner_right_1 },
-      { src: right2, alt: BANNER_ALT.banner_right_2 },
-    ],
-  };
 }
 
 /** Dùng cho trang chủ (Server Component) — danh sách tag tìm kiếm phổ biến. */

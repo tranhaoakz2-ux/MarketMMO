@@ -1,10 +1,13 @@
 "use client";
 
-// Panel sửa nội dung động trang web (banner/ticker/tag tìm kiếm/liên hệ
-// footer/mức quỹ bảo hiểm gợi ý) — thay hardcode trong code bằng bảng
-// SiteConfig, cùng cơ chế fallback-về-mặc-định đã dùng ở AdminPaymentConfigPanel.
-import { AlertTriangle, CheckCircle2, Loader2, Plus, RotateCcw, Save, Upload, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+// Panel sửa nội dung động trang web (ticker/tag tìm kiếm/liên hệ footer/mức
+// quỹ bảo hiểm gợi ý) — thay hardcode trong code bằng bảng SiteConfig, cùng
+// cơ chế fallback-về-mặc-định đã dùng ở AdminPaymentConfigPanel. Banner
+// trang chủ TÁCH RIÊNG sang AdminHomeBannerPanel (model HomeBanner, hỗ trợ
+// số lượng slide động + tiêu đề/mô tả/CTA — SiteConfig chỉ lưu được URL ảnh
+// đơn, không đủ cho thiết kế banner mới).
+import { AlertTriangle, CheckCircle2, Loader2, Plus, RotateCcw, Save, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button, Card, Field, SectionTitle, StatusBadge, TextInput, Textarea } from "@/components/admin-demo/AdminDemoKit";
 import type { SiteConfigKey, SiteConfigSource } from "@/lib/site-config";
 
@@ -25,13 +28,6 @@ function SourceTag({ source }: { source: SiteConfigSource }) {
   );
 }
 
-const BANNER_SLOTS: { key: SiteConfigKey; label: string }[] = [
-  { key: "banner_left_1", label: "Trái — ảnh 1" },
-  { key: "banner_left_2", label: "Trái — ảnh 2" },
-  { key: "banner_right_1", label: "Phải — ảnh 1" },
-  { key: "banner_right_2", label: "Phải — ảnh 2" },
-];
-
 const FOOTER_FIELDS: { key: SiteConfigKey; label: string; placeholder: string }[] = [
   { key: "footer_facebook_url", label: "Facebook", placeholder: "https://facebook.com/..." },
   { key: "footer_youtube_url", label: "YouTube", placeholder: "https://youtube.com/..." },
@@ -50,7 +46,6 @@ export default function AdminSiteContentPanel() {
   const [tagsDirty, setTagsDirty] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
-  const fileInputRefs = useRef<Partial<Record<SiteConfigKey, HTMLInputElement | null>>>({});
 
   const load = async () => {
     const res = await fetch("/api/admin/site-config");
@@ -137,22 +132,6 @@ export default function AdminSiteContentPanel() {
     if (ok) setTagsDirty(false);
   };
 
-  const uploadBanner = async (slot: SiteConfigKey, file: File) => {
-    setSaving(`upload:${slot}`);
-    setMessage(null);
-    const form = new FormData();
-    form.append("slot", slot);
-    form.append("file", file);
-    const res = await fetch("/api/admin/site-config/upload-image", { method: "POST", body: form });
-    const data = await res.json().catch(() => null);
-    if (!res.ok) {
-      setSaving(null);
-      setMessage({ tone: "danger", text: data?.error ?? "Không thể tải ảnh lên." });
-      return;
-    }
-    await save({ [slot]: data.url });
-  };
-
   if (!config) {
     return (
       <Card>
@@ -181,58 +160,6 @@ export default function AdminSiteContentPanel() {
           {message.text}
         </div>
       )}
-
-      {/* Banner trang chủ */}
-      <Card>
-        <SectionTitle>Banner trang chủ</SectionTitle>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {BANNER_SLOTS.map((slot) => (
-            <div key={slot.key} className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[var(--adm-text)]">{slot.label}</span>
-                <SourceTag source={config[slot.key].source} />
-              </div>
-              {/* eslint-disable-next-line @next/next/no-img-element -- ảnh admin-only, URL bất kỳ (Blob/local), không cần next/image tối ưu */}
-              <img
-                src={values[slot.key] || config[slot.key].value}
-                alt={slot.label}
-                className="h-24 w-full rounded-lg border border-[var(--adm-border)] object-cover"
-              />
-              <input
-                ref={(el) => {
-                  fileInputRefs.current[slot.key] = el;
-                }}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) uploadBanner(slot.key, file);
-                  e.target.value = "";
-                }}
-              />
-              <div className="flex gap-1.5">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={saving !== null}
-                  onClick={() => fileInputRefs.current[slot.key]?.click()}
-                >
-                  {saving === `upload:${slot.key}` ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Upload className="h-3.5 w-3.5" />
-                  )}
-                  Tải ảnh
-                </Button>
-                <Button size="sm" variant="secondary" disabled={saving !== null} onClick={() => restoreKeys([slot.key])}>
-                  <RotateCcw className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
 
       {/* Ticker */}
       <Card>
