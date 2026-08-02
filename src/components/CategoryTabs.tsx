@@ -136,12 +136,31 @@ export default function CategoryTabs({
     // thể đổi trạng thái tràn — tính lại ngay không cần đợi sự kiện resize.
   }, [updateScrollButtons, allGroups.length]);
 
+  // Bỏ qua lần chạy đầu tiên (mount) — chỉ cuộn khi NGƯỜI DÙNG chủ động bấm
+  // chọn tab khác. Cố tình KHÔNG dùng Element.scrollIntoView() dù có set
+  // inline/block "nearest": bug thật đã gặp — scrollIntoView vẫn có thể kéo
+  // theo cuộn DỌC cả trang (qua mọi ancestor scroll container, kể cả
+  // window) ngay lúc mount, khiến trang chủ mở lên bị nhảy thẳng xuống giữa
+  // trang thay vì ở đầu. Thay bằng tính toán scrollLeft thủ công + gọi
+  // scrollBy() TRỰC TIẾP trên đúng container ngang (tabsScrollRef) — không
+  // đụng tới bất kỳ trục dọc/ancestor nào, an toàn tuyệt đối với cuộn trang.
+  const isFirstRender = useRef(true);
   useEffect(() => {
-    tabRefs.current[activeGroupSlug]?.scrollIntoView({
-      behavior: "smooth",
-      inline: "nearest",
-      block: "nearest",
-    });
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const container = tabsScrollRef.current;
+    const tab = tabRefs.current[activeGroupSlug];
+    if (!container || !tab) return;
+    const containerRect = container.getBoundingClientRect();
+    const tabRect = tab.getBoundingClientRect();
+    const EDGE_PADDING = 16;
+    if (tabRect.left < containerRect.left) {
+      container.scrollBy({ left: tabRect.left - containerRect.left - EDGE_PADDING, behavior: "smooth" });
+    } else if (tabRect.right > containerRect.right) {
+      container.scrollBy({ left: tabRect.right - containerRect.right + EDGE_PADDING, behavior: "smooth" });
+    }
   }, [activeGroupSlug]);
 
   const scrollTabsBy = (direction: 1 | -1) => {
