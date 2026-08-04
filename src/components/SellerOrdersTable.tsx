@@ -35,6 +35,7 @@ type ServiceIntakeSummary = {
 type SellerOrderItem = {
   id: string;
   orderId: string;
+  orderCode: string;
   productName: string;
   variantLabel: string | null;
   categoryName: string;
@@ -130,7 +131,7 @@ export default function SellerOrdersTable({
           (status === "ALL" || o.status === status) &&
           (o.productName.toLowerCase().includes(q.toLowerCase()) ||
             o.buyerName.toLowerCase().includes(q.toLowerCase()) ||
-            o.orderId.toLowerCase().includes(q.toLowerCase()))
+            o.orderCode.toLowerCase().includes(q.toLowerCase()))
       ),
     [items, q, status]
   );
@@ -148,7 +149,7 @@ export default function SellerOrdersTable({
           <p className="max-w-[320px] truncate font-semibold text-foreground">{o.productName}</p>
           <p className="truncate text-[11px] text-muted">
             {o.variantLabel ? `${o.variantLabel} · ` : ""}
-            {o.categoryName} · SL {o.quantity} · #{o.orderId.slice(-8).toUpperCase()}
+            {o.categoryName} · SL {o.quantity} · {o.orderCode}
           </p>
         </div>
       ),

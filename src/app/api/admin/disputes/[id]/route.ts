@@ -115,6 +115,8 @@ export async function POST(
           status: "CONFIRMED",
           note: `Hoàn một phần (${refundPercent}%) khiếu nại đơn #${item.orderId} — ${item.productName}`,
           confirmedAt: new Date(),
+          orderId: item.orderId,
+          orderItemId: item.id,
         },
       });
       // Giải ngân phần seller giữ (đã trừ phí sàn theo tỉ lệ).
@@ -133,6 +135,8 @@ export async function POST(
               ? `Giải ngân phần còn lại sau hoàn ${refundPercent}% đơn #${item.orderId} — ${item.productName} (đã trừ phí sàn ${feeProp}đ)`
               : `Giải ngân phần còn lại sau hoàn ${refundPercent}% đơn #${item.orderId} — ${item.productName}`,
           confirmedAt: new Date(),
+          orderId: item.orderId,
+          orderItemId: item.id,
         },
       });
       return true;
@@ -191,6 +195,8 @@ export async function POST(
               ? `Giải ngân sau khiếu nại đơn #${item.orderId} — ${item.productName} (đã trừ phí sàn ${platformFee}đ)`
               : `Giải ngân sau khiếu nại đơn #${item.orderId} — ${item.productName}`,
           confirmedAt: new Date(),
+          orderId: item.orderId,
+          orderItemId: item.id,
         },
       });
       return true;
@@ -279,6 +285,8 @@ export async function POST(
             status: "CONFIRMED",
             note: `Đền bù bảo hiểm khiếu nại sau giải ngân đơn #${item.orderId} — ${item.productName}`,
             confirmedAt: new Date(),
+            orderId: item.orderId,
+            orderItemId: item.id,
           },
         });
         await t.walletTransaction.create({
@@ -289,6 +297,8 @@ export async function POST(
             status: "CONFIRMED",
             note: `Trừ quỹ bảo hiểm đền bù khiếu nại đơn #${item.orderId} — ${item.productName}`,
             confirmedAt: new Date(),
+            orderId: item.orderId,
+            orderItemId: item.id,
           },
         });
         return "ok";

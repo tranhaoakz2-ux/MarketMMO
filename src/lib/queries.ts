@@ -730,6 +730,7 @@ export async function getSellerOrderItems(sellerId: string, { service }: { servi
   return rows.map((item) => ({
     id: item.id,
     orderId: item.orderId,
+    orderCode: item.order.orderCode,
     productName: item.productName,
     variantLabel: item.variantLabel,
     categoryName: item.product.category.name,
@@ -811,6 +812,7 @@ export async function getSellerPreOrderItems(sellerId: string) {
   return rows.map((item) => ({
     id: item.id,
     orderId: item.orderId,
+    orderCode: item.order.orderCode,
     productName: item.productName,
     variantLabel: item.variantLabel,
     categoryName: item.product.category.name,
@@ -1240,9 +1242,21 @@ const ORDERS_PAGE_SIZE = 30;
 
 // Trang Admin > Đơn hàng & Ký quỹ — duyệt TOÀN BỘ OrderItem trên nền tảng
 // (không giới hạn theo seller như trang seller dashboard), lọc theo status
-// tuỳ chọn, phân trang đơn giản (page 1-based).
-export async function getAdminOrderItems(status: OrderStatus | "ALL", page: number) {
-  const where = status === "ALL" ? {} : { status };
+// tuỳ chọn, phân trang đơn giản (page 1-based). `orderCode` (tuỳ chọn) — admin
+// dán mã buyer cung cấp qua chat hỗ trợ (AUDIT LỖ HỔNG 1) để tra thẳng ra
+// đúng đơn, BỎ QUA bộ lọc status khi có (buyer có thể hỏi về đơn ở bất kỳ
+// trạng thái nào) — so khớp KHÔNG phân biệt hoa/thường vì buyer có thể gõ
+// nhầm kiểu chữ.
+export async function getAdminOrderItems(
+  status: OrderStatus | "ALL",
+  page: number,
+  orderCode?: string
+) {
+  const where = orderCode
+    ? { order: { orderCode: { equals: orderCode.trim(), mode: "insensitive" as const } } }
+    : status === "ALL"
+      ? {}
+      : { status };
   const [items, total] = await Promise.all([
     prisma.orderItem.findMany({
       where,
@@ -1261,6 +1275,7 @@ export async function getAdminOrderItems(status: OrderStatus | "ALL", page: numb
     items: items.map((i) => ({
       id: i.id,
       orderId: i.orderId,
+      orderCode: i.order.orderCode,
       productName: i.productName,
       variantLabel: i.variantLabel,
       quantity: i.quantity,

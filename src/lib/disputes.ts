@@ -58,6 +58,9 @@ export async function fullRefundDispute(
         status: "CONFIRMED",
         note: `Hoàn toàn bộ khiếu nại đơn #${item.orderId} — ${item.productName}`,
         confirmedAt: new Date(),
+        // AUDIT LỖ HỔNG 1 — khoá ngoại thật, theo ĐÚNG dòng hàng bị khiếu nại.
+        orderId: item.orderId,
+        orderItemId: item.id,
       },
     });
     return true;

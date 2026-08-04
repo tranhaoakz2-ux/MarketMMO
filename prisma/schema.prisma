@@ -623,6 +623,12 @@ model ProductStockItem {
 
 model Order {
   id          String   @id @default(cuid())
+  // Mã đơn dễ đọc/tra cứu, dạng "DH-XXXXXX" (xem src/lib/order-code.ts) — CHỈ
+  // để hiển thị/tra cứu (lịch sử đơn, khiếu nại, admin tra theo mã buyer cung
+  // cấp qua chat hỗ trợ). KHÔNG thay id nội bộ làm khoá chính — id ngẫu nhiên
+  // (cuid) vẫn là khoá chính vì lý do bảo mật (mã dễ đọc mà đoán được thì
+  // không nên dùng làm khoá chính). AUDIT LỊCH SỬ ĐƠN HÀNG — LỖ HỔNG 1.
+  orderCode   String   @unique
   buyerId     String
   buyer       User     @relation(fields: [buyerId], references: [id])
   totalAmount Int
@@ -638,6 +644,10 @@ model Order {
   // POST /api/checkout với status PENDING, chốt (ELIGIBLE/CANCELLED) khi đơn
   // giải ngân xong (xem src/lib/commission.ts).
   referralCommission ReferralCommission?
+  // Mọi dòng tiền liên quan đơn này (PURCHASE/PAYOUT/REFUND/INSURANCE_PAYOUT)
+  // — khoá ngoại thật, thay cho việc chỉ nối qua chuỗi tự do trong `note`
+  // trước đây (AUDIT LỖ HỔNG 1).
+  walletTransactions WalletTransaction[]
 }
 
 model OrderItem {
@@ -693,6 +703,9 @@ model OrderItem {
   dispute       Dispute?
   stockItems    ProductStockItem[]
   serviceIntake ServiceIntake?
+  // Dòng tiền GẮN ĐÚNG dòng hàng này (PAYOUT/REFUND/INSURANCE_PAYOUT theo
+  // từng OrderItem) — AUDIT LỖ HỔNG 1.
+  walletTransactions WalletTransaction[]
 }
 
 // Khiếu nại (Trang Bán Hàng > Khiếu nại) — buyer hoặc seller mở trên 1
@@ -838,6 +851,20 @@ model WalletTransaction {
   gatewayRef  String?
   createdAt   DateTime  @default(now())
   confirmedAt DateTime?
+
+  // Khoá ngoại thật tới đơn hàng liên quan (AUDIT LỖ HỔNG 1 — trước đây chỉ
+  // nối qua chuỗi tự do trong `note`, không JOIN được, không đáng tin cậy
+  // làm bằng chứng). null với DEPOSIT/WITHDRAW (không gắn đơn nào).
+  // PURCHASE (thanh toán cả đơn lúc checkout) chỉ gắn orderId, KHÔNG gắn
+  // orderItemId (áp dụng cho toàn đơn, không phải 1 dòng hàng cụ thể).
+  // PAYOUT/REFUND/INSURANCE_PAYOUT (theo từng dòng hàng — giải ngân/hoàn
+  // tiền/đền bảo hiểm) gắn CẢ HAI. ON DELETE SET NULL: sổ cái tiền không
+  // bao giờ được mất dòng nào dù Order/OrderItem phía kia có bị xoá (hiện
+  // không có route nào xoá, đây là lớp phòng thủ).
+  orderId     String?
+  order       Order?     @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderItemId String?
+  orderItem   OrderItem? @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
 
   // 4 field dưới CHỈ có giá trị khi type="WITHDRAW" và method="usdt_trc20"
   // (rút USDT qua mạng TRC20) — null với mọi dòng khác (rút ngân hàng, nạp

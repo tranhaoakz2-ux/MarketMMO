@@ -60,6 +60,7 @@ export default async function OrdersPage() {
         now <= warrantyDeadlineAfterRelease;
       return {
         orderId: order.id,
+        orderCode: order.orderCode,
         itemId: item.id,
         productName: item.productName,
         variantLabel: item.variantLabel,
@@ -128,8 +129,8 @@ export default async function OrdersPage() {
                         key={row.itemId}
                         className="border-b border-border-c last:border-0 hover:bg-surface-alt"
                       >
-                        <td className="px-4 py-3 font-mono text-xs text-muted">
-                          {row.orderId.slice(-8).toUpperCase()}
+                        <td className="px-4 py-3 font-mono text-xs font-bold text-foreground">
+                          {row.orderCode}
                         </td>
                         <td className="max-w-[220px] px-4 py-3">
                           <p className="truncate font-semibold text-foreground">{row.productName}</p>

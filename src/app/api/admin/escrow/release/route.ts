@@ -51,6 +51,9 @@ export async function POST() {
               ? `Giải ngân đơn #${item.orderId} — ${item.productName} (đã trừ phí sàn ${platformFee}đ)`
               : `Giải ngân đơn hàng #${item.orderId} — ${item.productName}`,
           confirmedAt: new Date(),
+          // AUDIT LỖ HỔNG 1 — khoá ngoại thật, theo ĐÚNG dòng hàng được giải ngân.
+          orderId: item.orderId,
+          orderItemId: item.id,
         },
       });
       return true;

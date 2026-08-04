@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { requireUser } from "@/lib/authz";
 import { ESCROW_HOLD_DAYS, SERVICE_DELIVERY_METHODS } from "@/lib/constants";
 import { accrueCommission } from "@/lib/commission";
 import { feeAmountOf, getEffectiveFeePercent } from "@/lib/platform-fee";
 import { computeDiscountAmount, distributeDiscount, isDiscountCodeUsable } from "@/lib/discount";
 import { computeEffectivePrice } from "@/lib/mega-sale";
+import { generateOrderCode, ORDER_CODE_MAX_RETRIES } from "@/lib/order-code";
 import { computeProratedPrice } from "@/lib/prorate";
 import { encryptSensitiveFields } from "@/lib/service-crypto";
 import { splitServiceFieldValues } from "@/lib/service-intake";
@@ -37,8 +39,15 @@ export async function POST(req: Request) {
     }
   }
 
-  try {
-    const order = await prisma.$transaction(async (tx) => {
+  // orderCode sinh MỖI LẦN THỬ, ngoài phạm vi transaction bên trong — nếu
+  // trùng (unique-violation P2002 trên orderCode, xác suất cực thấp nhưng
+  // vẫn xử lý cho chắc, xem src/lib/order-code.ts), Postgres đã huỷ toàn bộ
+  // transaction đó, phải retry lại TOÀN BỘ chứ không thể "đổi mã rồi thử lại
+  // tại chỗ" như ensureReferralCode() (hàm đó không nằm trong transaction).
+  for (let attempt = 0; attempt < ORDER_CODE_MAX_RETRIES; attempt++) {
+    const orderCode = generateOrderCode();
+    try {
+      const order = await prisma.$transaction(async (tx) => {
       const products = await tx.product.findMany({
         where: { id: { in: items.map((i) => i.productId) } },
         include: { variants: true },
@@ -369,6 +378,7 @@ export async function POST(req: Request) {
 
       const createdOrder = await tx.order.create({
         data: {
+          orderCode,
           buyerId: buyer.id,
           totalAmount: total,
           status: "ESCROW",
@@ -491,6 +501,10 @@ export async function POST(req: Request) {
           status: "CONFIRMED",
           note: `Thanh toán đơn hàng #${createdOrder.id}`,
           confirmedAt: new Date(),
+          // AUDIT LỖ HỔNG 1 — khoá ngoại thật (không chỉ nối qua note). Áp
+          // dụng cho CẢ đơn (không phải 1 dòng hàng cụ thể) nên chỉ gắn
+          // orderId, không gắn orderItemId.
+          orderId: createdOrder.id,
         },
       });
 
@@ -510,11 +524,26 @@ export async function POST(req: Request) {
       }
 
       return createdOrder;
-    });
+      });
 
-    return NextResponse.json({ orderId: order.id });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Tạo đơn hàng thất bại.";
-    return NextResponse.json({ error: message }, { status: 400 });
+      return NextResponse.json({ orderId: order.id, orderCode: order.orderCode });
+    } catch (err) {
+      // Trùng orderCode (P2002 trên đúng cột này) — thử lại với mã mới thay
+      // vì trả lỗi ngay, xác suất cực thấp nên retry gần như luôn thành
+      // công ở lần thứ 2. Mọi lỗi khác (kể cả hết lượt retry) trả lỗi bình
+      // thường như trước.
+      const isOrderCodeCollision =
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002" &&
+        Array.isArray((err.meta as { target?: unknown })?.target) &&
+        (err.meta!.target as string[]).includes("orderCode");
+      if (isOrderCodeCollision && attempt < ORDER_CODE_MAX_RETRIES - 1) {
+        continue;
+      }
+      const message = err instanceof Error ? err.message : "Tạo đơn hàng thất bại.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
   }
+
+  return NextResponse.json({ error: "Tạo đơn hàng thất bại, vui lòng thử lại." }, { status: 500 });
 }

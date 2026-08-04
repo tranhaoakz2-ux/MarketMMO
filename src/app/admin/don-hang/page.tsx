@@ -33,7 +33,7 @@ const toneOf: Record<OrderStatus, Tone> = {
 export default async function AdminOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; page?: string }>;
+  searchParams: Promise<{ status?: string; page?: string; code?: string }>;
 }) {
   await requireAdminPage();
   const params = await searchParams;
@@ -41,11 +41,17 @@ export default async function AdminOrdersPage({
     | OrderStatus
     | "ALL";
   const page = Math.max(1, Number(params.page) || 1);
+  const code = params.code?.trim() || undefined;
 
-  const { items, total, totalPages } = await getAdminOrderItems(status, page);
+  const { items, total, totalPages } = await getAdminOrderItems(status, page, code);
   type OrderRow = (typeof items)[number];
 
   const columns: Column<OrderRow>[] = [
+    {
+      key: "code",
+      header: "Mã đơn",
+      render: (i) => <span className="whitespace-nowrap font-mono text-xs font-bold text-[var(--adm-text)]">{i.orderCode}</span>,
+    },
     {
       key: "product",
       header: "Sản phẩm",
@@ -81,20 +87,49 @@ export default async function AdminOrdersPage({
         actions={<AdminEscrowReleaseButton />}
       />
 
-      <div className="flex flex-wrap items-center gap-1 rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] p-1">
-        {statusFilters.map((f) => (
-          <Link
-            key={f.key}
-            href={`/admin/don-hang${f.key === "ALL" ? "" : `?status=${f.key}`}`}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
-              status === f.key
-                ? "bg-[var(--adm-brand)] text-[#14141f]"
-                : "text-[var(--adm-muted)] hover:text-[var(--adm-text)]"
-            }`}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-1 rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] p-1">
+          {statusFilters.map((f) => (
+            <Link
+              key={f.key}
+              href={`/admin/don-hang${f.key === "ALL" ? "" : `?status=${f.key}`}`}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
+                !code && status === f.key
+                  ? "bg-[var(--adm-brand)] text-[#14141f]"
+                  : "text-[var(--adm-muted)] hover:text-[var(--adm-text)]"
+              }`}
+            >
+              {f.label}
+            </Link>
+          ))}
+        </div>
+
+        {/* Tra cứu đơn theo mã (AUDIT LỖ HỔNG 1) — admin dán mã buyer cung
+            cấp qua chat/hỗ trợ ngoài luồng để nhảy thẳng tới đúng đơn, bỏ
+            qua bộ lọc trạng thái. */}
+        <form action="/admin/don-hang" method="GET" className="flex items-center gap-1.5">
+          <input
+            type="text"
+            name="code"
+            defaultValue={code ?? ""}
+            placeholder="Tra cứu mã đơn (DH-XXXXXX)"
+            className="w-52 rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3.5 py-1.5 text-xs font-semibold text-[var(--adm-text)] placeholder:text-[var(--adm-muted)] focus:outline-none"
+          />
+          <button
+            type="submit"
+            className="rounded-full bg-[var(--adm-brand)] px-3.5 py-1.5 text-xs font-bold text-[#14141f] transition hover:opacity-90"
           >
-            {f.label}
-          </Link>
-        ))}
+            Tra cứu
+          </button>
+          {code && (
+            <Link
+              href="/admin/don-hang"
+              className="rounded-full border border-[var(--adm-border)] px-3 py-1.5 text-xs font-bold text-[var(--adm-muted)] transition hover:text-[var(--adm-text)]"
+            >
+              Xoá
+            </Link>
+          )}
+        </form>
       </div>
 
       <DataTable
