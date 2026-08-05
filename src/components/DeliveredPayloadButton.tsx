@@ -21,7 +21,19 @@ const TONE_CLASS: Record<"danger" | "warn" | "safe", string> = {
 // "buyer đã xem lúc nào" TRƯỚC khi trả nội dung (AUDIT LỊCH SỬ ĐƠN HÀNG —
 // LỖ HỔNG 2). `deliveredExpiresAt` trả về là JSON mảng CÙNG thứ tự index với
 // deliveredPayload — phần tử null nghĩa là đơn vị đó không có hạn.
-export default function DeliveredPayloadButton({ orderItemId }: { orderItemId: string }) {
+//
+// `mode="guide"` (TUT-Trick — nội dung hướng dẫn nhiều đoạn) đổi cách hiển
+// thị: khối văn bản đọc được đầy đủ (`whitespace-pre-wrap`) thay vì chip
+// `<code>` bị `truncate` 1 dòng (phù hợp cho "email|password" ngắn, nhưng
+// sẽ cắt cụt 1 bài hướng dẫn dài) — vẫn dùng chung 100% API/log phía trên,
+// chỉ khác phần render.
+export default function DeliveredPayloadButton({
+  orderItemId,
+  mode = "credential",
+}: {
+  orderItemId: string;
+  mode?: "credential" | "guide";
+}) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +86,8 @@ export default function DeliveredPayloadButton({ orderItemId }: { orderItemId: s
         onClick={handleOpen}
         className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-success hover:underline"
       >
-        <PackageOpen className="h-3 w-3" /> Xem thông tin đã giao
+        <PackageOpen className="h-3 w-3" />
+        {mode === "guide" ? "Xem hướng dẫn đầy đủ" : "Xem thông tin đã giao"}
       </button>
     );
   }
@@ -94,6 +107,37 @@ export default function DeliveredPayloadButton({ orderItemId }: { orderItemId: s
         <button
           onClick={() => setOpen(false)}
           className="text-[10px] font-semibold text-muted hover:underline"
+        >
+          Ẩn đi
+        </button>
+      </div>
+    );
+  }
+
+  if (mode === "guide") {
+    return (
+      <div className="mt-1.5 flex w-80 flex-col gap-1.5 rounded-lg border border-success/30 bg-success/5 p-2.5">
+        {contents.map((content, idx) => (
+          <div key={idx} className="flex items-start justify-between gap-2 rounded border border-border-c bg-surface p-2.5">
+            <p className="min-w-0 flex-1 whitespace-pre-wrap text-[12px] leading-relaxed text-foreground">
+              {content}
+            </p>
+            <button
+              onClick={() => handleCopy(content, idx)}
+              className="shrink-0 rounded p-1 text-muted hover:bg-surface-alt hover:text-foreground"
+              aria-label="Sao chép"
+            >
+              {copiedIndex === idx ? (
+                <Check className="h-3 w-3 text-success" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+            </button>
+          </div>
+        ))}
+        <button
+          onClick={() => setOpen(false)}
+          className="self-start text-[10px] font-semibold text-muted hover:underline"
         >
           Ẩn đi
         </button>

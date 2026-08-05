@@ -103,6 +103,10 @@ export async function POST(req: Request) {
         // trừ đơn vị hàng có sẵn) — Product.stock của dịch vụ luôn để 0 và
         // KHÔNG được dùng để chặn/trừ như sản phẩm thường.
         const isService = product.productType === "SERVICE";
+        // TUT_TRICK: bán nội dung hướng dẫn CỐ ĐỊNH, lặp lại vô hạn cho nhiều
+        // buyer — cũng không có khái niệm "tồn kho" như dịch vụ (không claim/
+        // tiêu hao ProductStockItem, không trừ Product.stock có điều kiện).
+        const isTutTrick = product.productType === "TUT_TRICK";
 
         if (item.variantId) {
           variant = product.variants.find((v) => v.id === item.variantId);
@@ -210,6 +214,24 @@ export async function POST(req: Request) {
             }, 0);
             unitPrice = Math.floor(lineTotal / item.quantity);
           }
+        } else if (isTutTrick) {
+          // TUT_TRICK: nội dung hướng dẫn CỐ ĐỊNH, bán được nhiều lần cho
+          // nhiều buyer khác nhau — KHÔNG claim/tiêu hao gì, set thẳng
+          // deliveredPayload từ Product.tutTrickContent mỗi lần mua (y hệt
+          // cơ chế deliveredPayload của kho thật, chỉ khác là nội dung không
+          // đổi qua từng lượt bán). Ép quantity=1 — mua nhiều "bản" cùng 1
+          // bài hướng dẫn không có ý nghĩa, giống quy tắc đã áp cho dịch vụ.
+          if (item.quantity !== 1) {
+            throw new Error(
+              `"${displayLabel}" là nội dung hướng dẫn — chỉ mua được số lượng 1 mỗi lần.`
+            );
+          }
+          if (!product.tutTrickContent) {
+            throw new Error(
+              `"${displayLabel}" chưa có nội dung hướng dẫn, vui lòng liên hệ người bán.`
+            );
+          }
+          deliveredPayload = JSON.stringify([product.tutTrickContent]);
         } else if (!product.preOrder && !isService) {
           if (item.variantId) {
             if (variant!.stock < item.quantity) {
@@ -306,7 +328,7 @@ export async function POST(req: Request) {
           // Chỉ cần trừ kho có điều kiện khi dùng kho số học + không preOrder +
           // không phải dịch vụ (dịch vụ không có tồn kho để trừ).
           // Kho thật đã claim nguyên tử ở trên; preOrder cho phép âm.
-          guardLegacyStock: stockItemTotal === 0 && !product.preOrder && !isService,
+          guardLegacyStock: stockItemTotal === 0 && !product.preOrder && !isService && !isTutTrick,
         });
       }
 

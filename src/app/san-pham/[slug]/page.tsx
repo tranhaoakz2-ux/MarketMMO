@@ -28,6 +28,7 @@ import ProductThumbnail from "@/components/ProductThumbnail";
 import RatingStars from "@/components/RatingStars";
 import Reveal from "@/components/Reveal";
 import ServiceBuyBox from "@/components/ServiceBuyBox";
+import TutTrickBuyBox from "@/components/TutTrickBuyBox";
 import { formatLastActive, formatVnd } from "@/lib/format";
 import { getRecentForumPosts } from "@/lib/forum";
 import { getProductBySlugDb, getProductReviews, getRelatedProductsDb } from "@/lib/queries";
@@ -228,6 +229,8 @@ export default async function ProductDetailPage({
 
               {product.productType === "SERVICE" ? (
                 <ServiceBuyBox product={product} />
+              ) : product.productType === "TUT_TRICK" ? (
+                <TutTrickBuyBox product={product} />
               ) : (
                 <BuyBox product={product} />
               )}

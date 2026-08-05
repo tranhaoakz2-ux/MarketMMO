@@ -90,6 +90,9 @@ export default async function OrdersPage() {
         // qua POST /api/orders/[itemId]/reveal-delivered (ghi log mỗi lần
         // xem). AUDIT LỊCH SỬ ĐƠN HÀNG — LỖ HỔNG 2.
         hasDeliveredPayload: item.deliveredPayload !== null,
+        // TUT_TRICK: nội dung hướng dẫn nhiều đoạn — DeliveredPayloadButton
+        // hiện dạng khối văn bản đầy đủ thay vì chip credential 1 dòng.
+        isTutTrick: item.product?.productType === "TUT_TRICK",
       };
     })
   );
@@ -147,7 +150,10 @@ export default async function OrdersPage() {
                               xem/copy tiếp — quyết định (a), SECURITY_AUDIT #8,
                               nay enforce luôn ở server (xem reveal-delivered). */}
                           {row.hasDeliveredPayload && row.status !== "CANCELLED" && (
-                            <DeliveredPayloadButton orderItemId={row.itemId} />
+                            <DeliveredPayloadButton
+                              orderItemId={row.itemId}
+                              mode={row.isTutTrick ? "guide" : "credential"}
+                            />
                           )}
                         </td>
                         <td className="px-4 py-3 text-muted">{row.seller}</td>

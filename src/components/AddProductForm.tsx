@@ -128,10 +128,14 @@ export default function AddProductForm({
   // hẳn khối "Phiên bản/Kho dữ liệu giao hàng thật" (dành cho PRODUCT, nơi
   // SELLER giao sẵn nội dung) khi chọn Dịch vụ — 2 khái niệm không áp dụng
   // cùng lúc cho 1 sản phẩm trong phạm vi tính năng này.
-  const [productType, setProductType] = useState<"PRODUCT" | "SERVICE">("PRODUCT");
+  const [productType, setProductType] = useState<"PRODUCT" | "SERVICE" | "TUT_TRICK">("PRODUCT");
   const [serviceDeliveryMethods, setServiceDeliveryMethods] = useState<ServiceDeliveryMethod[]>([]);
   const [credentialViewWindowHours, setCredentialViewWindowHours] = useState("");
   const [serviceFields, setServiceFields] = useState<DraftServiceField[]>([]);
+  // TUT-Trick: nội dung hướng dẫn ĐẦY ĐỦ (quy trình, cách làm) — riêng tư,
+  // chỉ mở cho buyer đã mua (xem Product.tutTrickContent). KHÁC "Mô tả chi
+  // tiết" (description, vẫn giữ làm teaser public giới thiệu, không lộ đáp án).
+  const [tutTrickContent, setTutTrickContent] = useState("");
 
   const toggleServiceDeliveryMethod = (method: ServiceDeliveryMethod) => {
     setServiceDeliveryMethods((prev) =>
@@ -272,6 +276,7 @@ export default function AddProductForm({
     setServiceDeliveryMethods([]);
     setCredentialViewWindowHours("");
     setServiceFields([]);
+    setTutTrickContent("");
   };
 
   // Đăng sản phẩm + phiên bản + nhập kho TRONG CÙNG 1 LẦN GỬI — thay vì phải
@@ -312,6 +317,13 @@ export default function AddProductForm({
         }
       }
     }
+    if (productType === "TUT_TRICK") {
+      const len = tutTrickContent.trim().length;
+      if (len < 20 || len > 20000) {
+        setError("Nội dung hướng dẫn phải từ 20-20.000 ký tự.");
+        return;
+      }
+    }
 
     setLoading(true);
     const form = new FormData();
@@ -341,6 +353,9 @@ export default function AddProductForm({
           }))
         )
       );
+    }
+    if (productType === "TUT_TRICK") {
+      form.append("tutTrickContent", tutTrickContent.trim());
     }
 
     const res = await fetch("/api/seller/products", { method: "POST", body: form });
@@ -449,7 +464,7 @@ export default function AddProductForm({
 
       <div>
         <label className="mb-1.5 block text-sm font-semibold text-foreground">Loại sản phẩm</label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <button
             type="button"
             onClick={() => setProductType("PRODUCT")}
@@ -476,6 +491,20 @@ export default function AddProductForm({
             Dịch vụ
             <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
               Buyer cung cấp thông tin để seller thực hiện
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setProductType("TUT_TRICK")}
+            className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
+              productType === "TUT_TRICK"
+                ? "border-brand bg-brand text-ink"
+                : "border-border-c bg-surface text-foreground hover:border-brand-dark"
+            }`}
+          >
+            TUT-Trick
+            <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
+              Bán nội dung hướng dẫn, kiến thức (bán được nhiều lần)
             </span>
           </button>
         </div>
@@ -807,6 +836,27 @@ export default function AddProductForm({
           </div>
         )}
       </div>
+      )}
+
+      {productType === "TUT_TRICK" && (
+        <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
+          <p className="text-sm font-bold text-foreground">Nội dung hướng dẫn đầy đủ</p>
+          <p className="text-[11px] text-muted">
+            Quy trình / cách làm chi tiết — CHỈ hiện cho buyer SAU KHI đã mua.
+            &ldquo;Mô tả chi tiết&rdquo; bên dưới vẫn công khai, dùng để giới
+            thiệu bài hướng dẫn nói về gì (không lộ đáp án).
+          </p>
+          <textarea
+            required
+            minLength={20}
+            maxLength={20000}
+            rows={6}
+            value={tutTrickContent}
+            onChange={(e) => setTutTrickContent(e.target.value)}
+            placeholder={"Viết đầy đủ quy trình/cách làm, ví dụ:\nBước 1: ...\nBước 2: ...\nLưu ý: ..."}
+            className="mt-2 w-full rounded-lg border border-border-c px-3 py-2.5 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+          />
+        </div>
       )}
 
       {productType === "SERVICE" && (
