@@ -25,7 +25,12 @@ export async function GET(
     select: {
       id: true,
       orderItem: {
-        select: { orderId: true, productName: true, deliveredPayload: true },
+        select: {
+          id: true,
+          orderId: true,
+          productName: true,
+          deliveredPayload: true,
+        },
       },
     },
   });
@@ -45,5 +50,24 @@ export async function GET(
     },
   });
 
-  return NextResponse.json({ deliveredPayload: dispute.orderItem.deliveredPayload });
+  // Buyer đã tự xem nội dung này bao nhiêu lần (qua POST
+  // /api/orders/[orderItemId]/reveal-delivered) — tín hiệu tham khảo khi
+  // phân xử khiếu nại: buyer đã xem nhiều lần trước khi khiếu nại là bằng
+  // chứng đáng cân nhắc. AUDIT LỊCH SỬ ĐƠN HÀNG — LỖ HỔNG 2.
+  const [buyerViewCount, lastView] = await Promise.all([
+    prisma.deliveredPayloadAccessLog.count({
+      where: { orderItemId: dispute.orderItem.id },
+    }),
+    prisma.deliveredPayloadAccessLog.findFirst({
+      where: { orderItemId: dispute.orderItem.id },
+      orderBy: { viewedAt: "desc" },
+      select: { viewedAt: true },
+    }),
+  ]);
+
+  return NextResponse.json({
+    deliveredPayload: dispute.orderItem.deliveredPayload,
+    buyerViewCount,
+    buyerLastViewedAt: lastView?.viewedAt ?? null,
+  });
 }

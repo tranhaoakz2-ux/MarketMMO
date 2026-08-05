@@ -47,6 +47,10 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
   const [delivered, setDelivered] = useState<string[] | null>(null);
   const [deliveredLoading, setDeliveredLoading] = useState(false);
   const [deliveredEmpty, setDeliveredEmpty] = useState(false);
+  // Buyer đã tự xem nội dung này bao nhiêu lần/lần gần nhất — tín hiệu tham
+  // khảo khi phân xử (AUDIT LỊCH SỬ ĐƠN HÀNG — LỖ HỔNG 2). null = chưa tải.
+  const [buyerViewCount, setBuyerViewCount] = useState<number | null>(null);
+  const [buyerLastViewedAt, setBuyerLastViewedAt] = useState<string | null>(null);
   // Hoàn một phần: mở ô nhập % + giá trị (chuỗi để nhập tự do, validate khi gửi).
   const [showPartial, setShowPartial] = useState(false);
   const [partialPct, setPartialPct] = useState("");
@@ -57,6 +61,8 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
   const resetModalExtras = () => {
     setDelivered(null);
     setDeliveredEmpty(false);
+    setBuyerViewCount(null);
+    setBuyerLastViewedAt(null);
     setShowPartial(false);
     setPartialPct("");
     setInsuranceAmount("");
@@ -89,6 +95,8 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
       }
       setDelivered(lines);
       setDeliveredEmpty(lines.length === 0);
+      setBuyerViewCount(typeof data.buyerViewCount === "number" ? data.buyerViewCount : 0);
+      setBuyerLastViewedAt(data.buyerLastViewedAt ?? null);
     }
     setDeliveredLoading(false);
   };
@@ -277,19 +285,29 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
                 <p className="mt-1 text-[11px] text-[var(--adm-muted)]">
                   Ẩn mặc định. Mỗi lần bấm xem đều được ghi vào Nhật ký hoạt động (ai/đơn nào/lúc nào).
                 </p>
-              ) : deliveredEmpty ? (
-                <p className="mt-1 text-xs text-[var(--adm-muted)]">
-                  Đơn này không có nội dung giao tự động (kho thật) — có thể là sản phẩm giao thủ công.
-                </p>
               ) : (
-                <div className="mt-2 flex flex-col gap-1.5">
-                  {delivered.map((line, i) => (
-                    <code key={i} className="block break-all rounded bg-[var(--adm-surface)] px-2 py-1 text-[11px] text-[var(--adm-text)]">
-                      {line}
-                    </code>
-                  ))}
-                </div>
+                <p className="mt-1 text-[11px] text-[var(--adm-muted)]">
+                  {buyerViewCount === 0
+                    ? "Buyer chưa từng xem nội dung đã giao."
+                    : `Buyer đã xem ${buyerViewCount} lần, gần nhất lúc ${
+                        buyerLastViewedAt ? new Date(buyerLastViewedAt).toLocaleString("vi-VN") : "—"
+                      }.`}
+                </p>
               )}
+              {delivered !== null &&
+                (deliveredEmpty ? (
+                  <p className="mt-1 text-xs text-[var(--adm-muted)]">
+                    Đơn này không có nội dung giao tự động (kho thật) — có thể là sản phẩm giao thủ công.
+                  </p>
+                ) : (
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {delivered.map((line, i) => (
+                      <code key={i} className="block break-all rounded bg-[var(--adm-surface)] px-2 py-1 text-[11px] text-[var(--adm-text)]">
+                        {line}
+                      </code>
+                    ))}
+                  </div>
+                ))}
             </div>
 
             {active.phase === "PLATFORM" && (

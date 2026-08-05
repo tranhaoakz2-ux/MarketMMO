@@ -94,6 +94,9 @@ model User {
   commissionRateChanges CommissionRateChange[]
   feeSchedulesCreated  PlatformFeeSchedule[] @relation("FeeScheduleCreatedBy")
   feeChanges           PlatformFeeChange[]   @relation("FeeChangedBy")
+  // Audit: mỗi lần buyer xem nội dung giao hàng thật (OrderItem.deliveredPayload)
+  // — AUDIT LỊCH SỬ ĐƠN HÀNG LỖ HỔNG 2, xem model DeliveredPayloadAccessLog.
+  deliveredPayloadAccessLogs DeliveredPayloadAccessLog[]
 }
 
 // Quên mật khẩu: mã OTP 6 số lưu dạng SHA-256 hash (không lưu mã gốc) để dữ
@@ -706,6 +709,30 @@ model OrderItem {
   // Dòng tiền GẮN ĐÚNG dòng hàng này (PAYOUT/REFUND/INSURANCE_PAYOUT theo
   // từng OrderItem) — AUDIT LỖ HỔNG 1.
   walletTransactions WalletTransaction[]
+  // Audit: mỗi lần buyer xem nội dung giao hàng thật của dòng hàng này —
+  // AUDIT LỖ HỔNG 2, xem model DeliveredPayloadAccessLog.
+  deliveredPayloadAccessLogs DeliveredPayloadAccessLog[]
+}
+
+// Audit: buyer nào đã xem nội dung giao hàng thật (OrderItem.deliveredPayload
+// — tài khoản/mật khẩu/mã kích hoạt) của 1 dòng hàng, lúc nào — mirror
+// ServiceCredentialAccessLog (chiều seller xem dữ liệu buyer cung cấp), chiều
+// ngược lại. Mỗi lần xem (kể cả xem lại) ghi thêm 1 dòng, KHÔNG ghi đè —
+// append-only, không có route sửa/xoá nào. Ghi qua POST
+// /api/orders/[orderItemId]/reveal-delivered, fail-closed: ghi log thất bại
+// thì KHÔNG trả nội dung (mirror GET /api/admin/disputes/[id]/delivered).
+// AUDIT LỊCH SỬ ĐƠN HÀNG — LỖ HỔNG 2.
+model DeliveredPayloadAccessLog {
+  id          String    @id @default(cuid())
+  orderItemId String
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  buyerId     String
+  buyer       User      @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  viewedAt    DateTime  @default(now())
+  ipAddress   String?
+
+  @@index([orderItemId])
+  @@index([buyerId])
 }
 
 // Khiếu nại (Trang Bán Hàng > Khiếu nại) — buyer hoặc seller mở trên 1

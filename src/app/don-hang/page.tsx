@@ -84,8 +84,11 @@ export default async function OrdersPage() {
                 : null,
             }
           : null,
-        deliveredPayload: item.deliveredPayload,
-        deliveredExpiresAt: item.deliveredExpiresAt,
+        // KHÔNG gửi deliveredPayload/deliveredExpiresAt thẳng trong SSR nữa —
+        // nội dung tài khoản/mật khẩu chỉ trả về khi buyer thực sự bấm "Xem"
+        // qua POST /api/orders/[itemId]/reveal-delivered (ghi log mỗi lần
+        // xem). AUDIT LỊCH SỬ ĐƠN HÀNG — LỖ HỔNG 2.
+        hasDeliveredPayload: item.deliveredPayload !== null,
       };
     })
   );
@@ -137,15 +140,13 @@ export default async function OrdersPage() {
                           {row.variantLabel && (
                             <p className="truncate text-xs text-brand-dark">{row.variantLabel}</p>
                           )}
-                          {/* Ẩn nội dung đã giao khi đơn đã HOÀN TOÀN BỘ tiền
-                              (status CANCELLED — nguồn duy nhất là full refund
-                              khiếu nại). Buyer đã nhận lại 100% thì không còn
-                              quyền xem/copy tiếp — quyết định (a), SECURITY_AUDIT #8. */}
-                          {row.deliveredPayload && row.status !== "CANCELLED" && (
-                            <DeliveredPayloadButton
-                              deliveredPayload={row.deliveredPayload}
-                              deliveredExpiresAt={row.deliveredExpiresAt}
-                            />
+                          {/* Ẩn nút xem khi đơn đã HOÀN TOÀN BỘ tiền (status
+                              CANCELLED — nguồn duy nhất là full refund khiếu
+                              nại). Buyer đã nhận lại 100% thì không còn quyền
+                              xem/copy tiếp — quyết định (a), SECURITY_AUDIT #8,
+                              nay enforce luôn ở server (xem reveal-delivered). */}
+                          {row.hasDeliveredPayload && row.status !== "CANCELLED" && (
+                            <DeliveredPayloadButton orderItemId={row.itemId} />
                           )}
                         </td>
                         <td className="px-4 py-3 text-muted">{row.seller}</td>

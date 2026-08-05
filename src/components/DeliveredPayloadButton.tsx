@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, PackageOpen } from "lucide-react";
+import { Check, Copy, Loader2, PackageOpen } from "lucide-react";
 import { useState } from "react";
 import { formatDaysRemaining } from "@/lib/format";
 
@@ -12,38 +12,55 @@ const TONE_CLASS: Record<"danger" | "warn" | "safe", string> = {
 
 // Hiện nội dung giao hàng thật (tài khoản/mã kích hoạt...) đã được hệ thống
 // tự động gán cho đơn hàng này lúc checkout — xem model ProductStockItem +
-// OrderItem.deliveredPayload. Chỉ render khi deliveredPayload có giá trị
-// (sản phẩm/phiên bản có dùng kho thật); đơn hàng cũ/sản phẩm chưa nhập kho
-// thật thì không có nút này, giữ nguyên hành vi cũ. `deliveredExpiresAt`
-// (nếu có) là JSON mảng CÙNG thứ tự index với deliveredPayload — phần tử
-// null nghĩa là đơn vị đó không có hạn (xem OrderItem.deliveredExpiresAt).
-export default function DeliveredPayloadButton({
-  deliveredPayload,
-  deliveredExpiresAt,
-}: {
-  deliveredPayload: string;
-  deliveredExpiresAt?: string | null;
-}) {
+// OrderItem.deliveredPayload. Chỉ render khi cha truyền vào (hasDeliveredPayload
+// ở /don-hang), tức sản phẩm/phiên bản có dùng kho thật.
+//
+// KHÔNG nhận deliveredPayload qua prop nữa (trước đây nhúng thẳng vào SSR —
+// nội dung đã có sẵn trong HTML dù buyer chưa bấm xem). Giờ bấm "Xem" mới
+// gọi POST /api/orders/[orderItemId]/reveal-delivered — server ghi lại
+// "buyer đã xem lúc nào" TRƯỚC khi trả nội dung (AUDIT LỊCH SỬ ĐƠN HÀNG —
+// LỖ HỔNG 2). `deliveredExpiresAt` trả về là JSON mảng CÙNG thứ tự index với
+// deliveredPayload — phần tử null nghĩa là đơn vị đó không có hạn.
+export default function DeliveredPayloadButton({ orderItemId }: { orderItemId: string }) {
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [contents, setContents] = useState<string[]>([]);
+  const [expiresAtList, setExpiresAtList] = useState<(string | null)[]>([]);
 
-  let contents: string[] = [];
-  try {
-    const parsed = JSON.parse(deliveredPayload);
-    contents = Array.isArray(parsed) ? parsed : [String(parsed)];
-  } catch {
-    contents = [deliveredPayload];
-  }
-
-  let expiresAtList: (string | null)[] = [];
-  if (deliveredExpiresAt) {
-    try {
-      const parsed = JSON.parse(deliveredExpiresAt);
-      expiresAtList = Array.isArray(parsed) ? parsed : [];
-    } catch {
-      expiresAtList = [];
+  const handleOpen = async () => {
+    setOpen(true);
+    setLoading(true);
+    setError(null);
+    const res = await fetch(`/api/orders/${orderItemId}/reveal-delivered`, { method: "POST" });
+    const data = await res.json().catch(() => null);
+    setLoading(false);
+    if (!res.ok) {
+      setError(data?.error ?? "Không thể tải nội dung đã giao.");
+      return;
     }
-  }
+
+    let parsedContents: string[] = [];
+    try {
+      const parsed = JSON.parse(data.deliveredPayload);
+      parsedContents = Array.isArray(parsed) ? parsed : [String(parsed)];
+    } catch {
+      parsedContents = [data.deliveredPayload];
+    }
+    setContents(parsedContents);
+
+    let parsedExpiry: (string | null)[] = [];
+    if (data.deliveredExpiresAt) {
+      try {
+        const parsed = JSON.parse(data.deliveredExpiresAt);
+        parsedExpiry = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        parsedExpiry = [];
+      }
+    }
+    setExpiresAtList(parsedExpiry);
+  };
 
   const handleCopy = async (text: string, idx: number) => {
     await navigator.clipboard.writeText(text);
@@ -54,11 +71,33 @@ export default function DeliveredPayloadButton({
   if (!open) {
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
         className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-success hover:underline"
       >
         <PackageOpen className="h-3 w-3" /> Xem thông tin đã giao
       </button>
+    );
+  }
+
+  if (loading) {
+    return (
+      <p className="mt-1.5 flex items-center gap-1.5 text-[10px] text-muted">
+        <Loader2 className="h-3 w-3 animate-spin" /> Đang tải...
+      </p>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mt-1.5 flex flex-col items-start gap-1">
+        <p className="rounded bg-danger/10 px-2 py-1 text-[10px] font-semibold text-danger">{error}</p>
+        <button
+          onClick={() => setOpen(false)}
+          className="text-[10px] font-semibold text-muted hover:underline"
+        >
+          Ẩn đi
+        </button>
+      </div>
     );
   }
 
