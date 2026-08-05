@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { decryptSensitiveFields } from "@/lib/service-crypto";
 
 function clientIp(req: Request): string {
   const xff = req.headers.get("x-forwarded-for");
@@ -36,7 +37,9 @@ export async function POST(
       status: true,
       deliveredPayload: true,
       deliveredExpiresAt: true,
+      deliveredPayloadEncryption: true,
       order: { select: { buyerId: true } },
+      product: { select: { productType: true, toolUsageGuide: true } },
     },
   });
 
@@ -59,6 +62,31 @@ export async function POST(
     );
   }
 
+  // TOOL: credential mã hoá at-rest — giải mã NGAY TRƯỚC KHI TRẢ VỀ, chỉ ở
+  // đây, không lưu bản đã giải mã ở đâu khác. Lỗi giải mã (khoá đổi/dữ liệu
+  // hỏng) → 500 chung chung, KHÔNG lộ chi tiết lỗi gốc.
+  let deliveredPayload = item.deliveredPayload;
+  if (item.deliveredPayloadEncryption) {
+    try {
+      const contents: string[] = JSON.parse(item.deliveredPayload!);
+      const encryptionMeta: ({ iv: string; authTag: string } | null)[] = JSON.parse(
+        item.deliveredPayloadEncryption
+      );
+      const decrypted = contents.map((content, i) => {
+        const meta = encryptionMeta[i];
+        if (!meta) return content;
+        return decryptSensitiveFields({ ciphertext: content, iv: meta.iv, authTag: meta.authTag })
+          .content;
+      });
+      deliveredPayload = JSON.stringify(decrypted);
+    } catch {
+      return NextResponse.json(
+        { error: "Không thể giải mã thông tin — vui lòng liên hệ hỗ trợ." },
+        { status: 500 }
+      );
+    }
+  }
+
   await prisma.deliveredPayloadAccessLog.create({
     data: {
       orderItemId: item.id,
@@ -68,7 +96,10 @@ export async function POST(
   });
 
   return NextResponse.json({
-    deliveredPayload: item.deliveredPayload,
+    deliveredPayload,
     deliveredExpiresAt: item.deliveredExpiresAt,
+    // TOOL: quy trình sử dụng đầy đủ — plaintext, gửi kèm credential đã giải
+    // mã trong CÙNG response (1 lượt xem = 1 dòng log, đủ cho cả 2 phần).
+    usageGuide: item.product?.productType === "TOOL" ? item.product.toolUsageGuide : undefined,
   });
 }

@@ -453,6 +453,14 @@ model Product {
   // field có sẵn) vẫn public — dùng làm teaser giới thiệu, không lộ đáp án.
   tutTrickContent String?
 
+  // productType="TOOL" (dùng chung cho Tool lẫn AI Agent — phân biệt qua
+  // Category, không tách productType riêng) — bán quy trình sử dụng + kho
+  // credential mã hoá (kiểu B: mỗi buyer 1 credential riêng, có tồn kho,
+  // TÁI DÙNG nguyên ProductVariant/ProductStockItem của Sản phẩm kho). Quy
+  // trình sử dụng ĐẦY ĐỦ — plaintext nhưng PRIVATE/gated, cùng nguyên tắc
+  // tutTrickContent ở trên (không đưa vào mapProduct()/Product public).
+  toolUsageGuide String?
+
   orderItems    OrderItem[]
   auctionBids   AuctionBid[]
   variants      ProductVariant[]
@@ -611,8 +619,14 @@ model ProductStockItem {
   variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
   // Nội dung giao hàng thật (email:password, mã kích hoạt...) — seller tự
   // nhập, không validate format cụ thể vì mỗi category 1 kiểu dữ liệu khác
-  // nhau (Gmail vs Discord vs Steam key vs gold...).
+  // nhau (Gmail vs Discord vs Steam key vs gold...). Với sản phẩm TOOL
+  // (productType="TOOL"), field này là CIPHERTEXT (AES-256-GCM, tái dùng
+  // src/lib/service-crypto.ts) thay vì plaintext — xem contentEncryption.
   content String
+  // JSON {iv, authTag, keyVersion} khi `content` ở trên là ciphertext (chỉ
+  // sản phẩm TOOL) — null nghĩa là `content` vẫn plaintext như trước (Sản
+  // phẩm kho/TUT-Trick không đụng field này, không hồi tố dữ liệu cũ).
+  contentEncryption String?
   // "AVAILABLE" | "SOLD" — chuyển sang SOLD NGAY khi bị claim trong
   // transaction checkout (không đợi tới lúc gắn xong orderItemId) để chặn
   // đúng trường hợp giỏ hàng có 2 dòng trùng productId+variantId (client gửi
@@ -698,6 +712,13 @@ model OrderItem {
   // đơn vị đó không có hạn). null khi deliveredPayload cũng null (sản phẩm
   // chưa dùng kho thật) — không phá vỡ đơn hàng cũ.
   deliveredExpiresAt String?
+  // JSON MẢNG {iv,authTag,keyVersion}|null, CÙNG THỨ TỰ INDEX với
+  // deliveredPayload — có giá trị khi (các) đơn vị claim được là credential
+  // TOOL đã mã hoá (copy nguyên từ ProductStockItem.contentEncryption lúc
+  // claim). null = deliveredPayload hoàn toàn plaintext như trước (Sản phẩm
+  // kho/TUT-Trick/Dịch vụ không đụng field này). Giải mã CHỈ trong
+  // POST /api/orders/[id]/reveal-delivered, không lưu bản đã giải mã ở đâu.
+  deliveredPayloadEncryption String?
   // PHÍ SÀN — snapshot FREEZE tại thời điểm đặt đơn (tính hoàn toàn ở server
   // trên giá SAU giảm giá của dòng hàng này). Đổi % phí về sau KHÔNG hồi tố
   // đơn cũ vì đã lưu cứng ở đây. Giải ngân cho seller = price*quantity −

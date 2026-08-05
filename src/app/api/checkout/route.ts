@@ -70,6 +70,9 @@ export async function POST(req: Request) {
         // Snapshot ngày hết hạn của (các) đơn vị đã claim — JSON mảng cùng
         // cấu trúc/thứ tự với deliveredPayload, null nếu không dùng kho thật.
         deliveredExpiresAt: string | null;
+        // TOOL: metadata mã hoá {iv,authTag,keyVersion}|null theo từng đơn vị
+        // — JSON mảng cùng thứ tự với deliveredPayload, null nếu không mã hoá.
+        deliveredPayloadEncryption: string | null;
         // Dữ liệu buyer cung cấp cho dòng hàng DỊCH VỤ (xem model
         // ServiceIntake) — null nếu không phải dịch vụ. Tạo SAU khi có
         // orderItem.id nên chỉ mang theo dữ liệu đã chuẩn bị sẵn (mã hoá rồi)
@@ -153,6 +156,7 @@ export async function POST(req: Request) {
         let deliveredPayload: string | null = null;
 
         let deliveredExpiresAt: string | null = null;
+        let deliveredPayloadEncryption: string | null = null;
 
         if (stockItemTotal > 0) {
           // Chế độ kho thật: BẮT BUỘC "claim" đủ số lượng bản ghi AVAILABLE
@@ -167,9 +171,15 @@ export async function POST(req: Request) {
           // cron/job nền, chỉ là điều kiện lọc tính lại mỗi lần checkout
           // (xem model ProductStockItem, mục "Thời hạn sử dụng sản phẩm").
           const claimed = await tx.$queryRaw<
-            { id: string; content: string; expiresAt: Date | null; nominalTermDays: number | null }[]
+            {
+              id: string;
+              content: string;
+              contentEncryption: string | null;
+              expiresAt: Date | null;
+              nominalTermDays: number | null;
+            }[]
           >`
-            SELECT id, content, "expiresAt", "nominalTermDays" FROM "ProductStockItem"
+            SELECT id, content, "contentEncryption", "expiresAt", "nominalTermDays" FROM "ProductStockItem"
             WHERE "productId" = ${product.id}
               AND "variantId" IS NOT DISTINCT FROM ${item.variantId ?? null}
               AND status = 'AVAILABLE'
@@ -196,6 +206,16 @@ export async function POST(req: Request) {
           deliveredExpiresAt = JSON.stringify(
             claimed.map((c) => c.expiresAt?.toISOString() ?? null)
           );
+          // TOOL: mang nguyên metadata mã hoá của (các) credential vừa claim
+          // sang OrderItem — content ở deliveredPayload vẫn là ciphertext,
+          // CHỈ giải mã trong POST /api/orders/[id]/reveal-delivered. null
+          // cho mọi dòng không mã hoá (Sản phẩm kho/TUT-Trick — hành vi cũ).
+          const hasAnyEncrypted = claimed.some((c) => c.contentEncryption !== null);
+          deliveredPayloadEncryption = hasAnyEncrypted
+            ? JSON.stringify(
+                claimed.map((c) => (c.contentEncryption ? JSON.parse(c.contentEncryption) : null))
+              )
+            : null;
 
           // Prorate giá theo từng đơn vị CÓ thời hạn (đơn vị không thời hạn
           // giữ nguyên unitPrice gốc). Cộng thành lineTotal rồi floor-chia
@@ -324,6 +344,7 @@ export async function POST(req: Request) {
           claimedStockItemIds,
           deliveredPayload,
           deliveredExpiresAt,
+          deliveredPayloadEncryption,
           serviceIntakeData,
           // Chỉ cần trừ kho có điều kiện khi dùng kho số học + không preOrder +
           // không phải dịch vụ (dịch vụ không có tồn kho để trừ).
@@ -439,6 +460,7 @@ export async function POST(req: Request) {
             escrowReleaseAt,
             deliveredPayload: item.deliveredPayload,
             deliveredExpiresAt: item.deliveredExpiresAt,
+            deliveredPayloadEncryption: item.deliveredPayloadEncryption,
             platformFeePercent: feePercent,
             platformFeeAmount,
           },

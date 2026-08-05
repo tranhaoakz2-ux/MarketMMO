@@ -108,8 +108,8 @@ export type Product = {
     fixedPrice: number | null;
     endsAt: string | null;
   };
-  /** "PRODUCT" | "SERVICE" | "TUT_TRICK" — mặc định "PRODUCT" nếu không set (seed/mock data cũ). SERVICE = buyer phải cung cấp thông tin (tài khoản/link/mật khẩu...) cho seller thực hiện. TUT_TRICK = bán nội dung hướng dẫn/kiến thức, bán lặp lại vô hạn cho nhiều buyer — nội dung đầy đủ (Product.tutTrickContent) KHÔNG có ở đây (cố tình không map vào Product public), chỉ mở qua deliveredPayload sau khi mua. */
-  productType?: "PRODUCT" | "SERVICE" | "TUT_TRICK";
+  /** "PRODUCT" | "SERVICE" | "TUT_TRICK" | "TOOL" — mặc định "PRODUCT" nếu không set (seed/mock data cũ). SERVICE = buyer phải cung cấp thông tin (tài khoản/link/mật khẩu...) cho seller thực hiện. TUT_TRICK = bán nội dung hướng dẫn/kiến thức, bán lặp lại vô hạn cho nhiều buyer. TOOL = Tool/AI Agent — kho credential MÃ HOÁ (kiểu B, tái dùng ProductVariant/ProductStockItem) + quy trình sử dụng, dùng chung BuyBox như PRODUCT. Nội dung đầy đủ (tutTrickContent/toolUsageGuide) KHÔNG có ở đây (cố tình không map vào Product public), chỉ mở qua deliveredPayload sau khi mua. */
+  productType?: "PRODUCT" | "SERVICE" | "TUT_TRICK" | "TOOL";
   /** Chỉ có ý nghĩa khi productType="SERVICE" — mã phương thức bàn giao seller chấp nhận (xem SERVICE_DELIVERY_METHODS trong src/lib/constants.ts), buyer chọn 1 trong tập này lúc đặt đơn. */
   serviceDeliveryMethods?: string[];
   /** Chỉ có ý nghĩa khi productType="SERVICE" — số giờ seller được xem field nhạy cảm sau khi "Nhận đơn", undefined = dùng mặc định SERVICE_CREDENTIAL_DEFAULT_WINDOW_HOURS. */

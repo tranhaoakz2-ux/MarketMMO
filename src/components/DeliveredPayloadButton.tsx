@@ -27,12 +27,18 @@ const TONE_CLASS: Record<"danger" | "warn" | "safe", string> = {
 // `<code>` bị `truncate` 1 dòng (phù hợp cho "email|password" ngắn, nhưng
 // sẽ cắt cụt 1 bài hướng dẫn dài) — vẫn dùng chung 100% API/log phía trên,
 // chỉ khác phần render.
+//
+// `mode="tool"` (Tool/AI Agent) kết hợp CẢ HAI: quy trình sử dụng (khối văn
+// bản như "guide") HIỂN THỊ TRƯỚC, rồi tới credential đã giải mã (chip như
+// "credential") — server (reveal-delivered) đã tự giải mã sẵn, component
+// này không biết/không cần biết gì về mã hoá, chỉ render `usageGuide` +
+// `deliveredPayload` (plaintext) như bình thường.
 export default function DeliveredPayloadButton({
   orderItemId,
   mode = "credential",
 }: {
   orderItemId: string;
-  mode?: "credential" | "guide";
+  mode?: "credential" | "guide" | "tool";
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -40,6 +46,7 @@ export default function DeliveredPayloadButton({
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [contents, setContents] = useState<string[]>([]);
   const [expiresAtList, setExpiresAtList] = useState<(string | null)[]>([]);
+  const [usageGuide, setUsageGuide] = useState<string | null>(null);
 
   const handleOpen = async () => {
     setOpen(true);
@@ -72,6 +79,7 @@ export default function DeliveredPayloadButton({
       }
     }
     setExpiresAtList(parsedExpiry);
+    setUsageGuide(typeof data.usageGuide === "string" ? data.usageGuide : null);
   };
 
   const handleCopy = async (text: string, idx: number) => {
@@ -87,7 +95,11 @@ export default function DeliveredPayloadButton({
         className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-success hover:underline"
       >
         <PackageOpen className="h-3 w-3" />
-        {mode === "guide" ? "Xem hướng dẫn đầy đủ" : "Xem thông tin đã giao"}
+        {mode === "guide"
+          ? "Xem hướng dẫn đầy đủ"
+          : mode === "tool"
+            ? "Xem quy trình + tài khoản"
+            : "Xem thông tin đã giao"}
       </button>
     );
   }
@@ -114,9 +126,20 @@ export default function DeliveredPayloadButton({
     );
   }
 
-  if (mode === "guide") {
+  if (mode === "guide" || mode === "tool") {
     return (
       <div className="mt-1.5 flex w-80 flex-col gap-1.5 rounded-lg border border-success/30 bg-success/5 p-2.5">
+        {mode === "tool" && usageGuide && (
+          <div className="rounded border border-border-c bg-surface p-2.5">
+            <p className="mb-1 text-[10px] font-bold uppercase text-muted">Quy trình sử dụng</p>
+            <p className="whitespace-pre-wrap text-[12px] leading-relaxed text-foreground">
+              {usageGuide}
+            </p>
+          </div>
+        )}
+        {mode === "tool" && (
+          <p className="text-[10px] font-bold uppercase text-muted">Tài khoản của bạn</p>
+        )}
         {contents.map((content, idx) => (
           <div key={idx} className="flex items-start justify-between gap-2 rounded border border-border-c bg-surface p-2.5">
             <p className="min-w-0 flex-1 whitespace-pre-wrap text-[12px] leading-relaxed text-foreground">

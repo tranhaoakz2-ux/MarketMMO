@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSeller } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { encryptSensitiveFields } from "@/lib/service-crypto";
 
 const MAX_LINE_LENGTH = 500;
 const MAX_LINES_PER_REQUEST = 500;
@@ -123,6 +124,38 @@ export async function POST(
     expiresAtByLine = parsed;
   }
 
+  // TOOL: credential PHẢI mã hoá at-rest (tái dùng AES-256-GCM của Dịch vụ,
+  // src/lib/service-crypto.ts) — fail-closed, mã hoá TOÀN BỘ dòng TRƯỚC khi
+  // chạm DB, lỗi bất kỳ dòng nào (thường là thiếu SERVICE_CREDENTIAL_ENCRYPTION_KEY)
+  // chặn cả request, không ghi nửa vời. Sản phẩm/phiên bản khác (PRODUCT/
+  // TUT_TRICK) giữ nguyên hành vi cũ 100% — content vẫn plaintext.
+  let encryptedLines: { content: string; encryption: string }[] | null = null;
+  if (product.productType === "TOOL") {
+    try {
+      encryptedLines = lines.map((line) => {
+        const blob = encryptSensitiveFields({ content: line });
+        return {
+          content: blob.ciphertext,
+          encryption: JSON.stringify({
+            iv: blob.iv,
+            authTag: blob.authTag,
+            keyVersion: blob.keyVersion,
+          }),
+        };
+      });
+    } catch {
+      // KHÔNG log chi tiết lỗi gốc (an toàn — không có gì nhạy cảm ở đây vì
+      // chưa ghi DB, nhưng giữ cùng quy ước thận trọng với mọi lỗi crypto).
+      return NextResponse.json(
+        {
+          error:
+            "Hệ thống chưa sẵn sàng nhận kho credential TOOL lúc này (thiếu cấu hình mã hoá), vui lòng liên hệ hỗ trợ.",
+        },
+        { status: 500 }
+      );
+    }
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.productStockItem.createMany({
       data: lines.map((content, i) => {
@@ -130,7 +163,8 @@ export async function POST(
         return {
           productId,
           variantId,
-          content,
+          content: encryptedLines ? encryptedLines[i].content : content,
+          contentEncryption: encryptedLines ? encryptedLines[i].encryption : null,
           status: "AVAILABLE",
           expiresAt,
           nominalTermDays: expiresAt ? nominalTermDays : null,

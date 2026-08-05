@@ -106,7 +106,7 @@ function mapProduct(p: ProductWithRelations): Product {
       sold: v.sold,
       salePrice: computeVariantSalePrice(p, v.price),
     })),
-    productType: p.productType as "PRODUCT" | "SERVICE" | "TUT_TRICK",
+    productType: p.productType as "PRODUCT" | "SERVICE" | "TUT_TRICK" | "TOOL",
     serviceDeliveryMethods: p.serviceDeliveryMethods
       ? (JSON.parse(p.serviceDeliveryMethods) as string[])
       : undefined,
@@ -715,10 +715,15 @@ export async function getSellerOrderItems(sellerId: string, { service }: { servi
             ],
           }
         : {
-            // TUT_TRICK (bán nội dung hướng dẫn) gộp chung tab "Đơn sản
-            // phẩm" — không phải dịch vụ seller "thực hiện", chỉ là 1 dòng
-            // hàng giao nội dung như Sản phẩm kho.
-            OR: [{ productType: "PRODUCT" }, { productType: "TUT_TRICK" }],
+            // TUT_TRICK (nội dung hướng dẫn) và TOOL (kho credential mã
+            // hoá) gộp chung tab "Đơn sản phẩm" — không phải dịch vụ seller
+            // "thực hiện", chỉ là 1 dòng hàng giao nội dung/credential như
+            // Sản phẩm kho.
+            OR: [
+              { productType: "PRODUCT" },
+              { productType: "TUT_TRICK" },
+              { productType: "TOOL" },
+            ],
             category: { slug: { notIn: SERVICE_CATEGORY_SLUGS } },
           },
     },

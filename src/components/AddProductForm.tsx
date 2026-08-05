@@ -128,7 +128,9 @@ export default function AddProductForm({
   // hẳn khối "Phiên bản/Kho dữ liệu giao hàng thật" (dành cho PRODUCT, nơi
   // SELLER giao sẵn nội dung) khi chọn Dịch vụ — 2 khái niệm không áp dụng
   // cùng lúc cho 1 sản phẩm trong phạm vi tính năng này.
-  const [productType, setProductType] = useState<"PRODUCT" | "SERVICE" | "TUT_TRICK">("PRODUCT");
+  const [productType, setProductType] = useState<"PRODUCT" | "SERVICE" | "TUT_TRICK" | "TOOL">(
+    "PRODUCT"
+  );
   const [serviceDeliveryMethods, setServiceDeliveryMethods] = useState<ServiceDeliveryMethod[]>([]);
   const [credentialViewWindowHours, setCredentialViewWindowHours] = useState("");
   const [serviceFields, setServiceFields] = useState<DraftServiceField[]>([]);
@@ -136,6 +138,12 @@ export default function AddProductForm({
   // chỉ mở cho buyer đã mua (xem Product.tutTrickContent). KHÁC "Mô tả chi
   // tiết" (description, vẫn giữ làm teaser public giới thiệu, không lộ đáp án).
   const [tutTrickContent, setTutTrickContent] = useState("");
+  // Tool/AI Agent: quy trình sử dụng ĐẦY ĐỦ — riêng tư, cùng nguyên tắc
+  // tutTrickContent ở trên. Credential (tài khoản/mật khẩu tool) KHÔNG có
+  // field riêng — dùng LẠI nguyên khối "Phiên bản/Kho dữ liệu giao hàng
+  // thật" đã có cho PRODUCT (mở thêm cho TOOL bên dưới), server tự mã hoá
+  // từng dòng khi productType="TOOL" (xem POST .../stock).
+  const [toolUsageGuide, setToolUsageGuide] = useState("");
 
   const toggleServiceDeliveryMethod = (method: ServiceDeliveryMethod) => {
     setServiceDeliveryMethods((prev) =>
@@ -277,6 +285,7 @@ export default function AddProductForm({
     setCredentialViewWindowHours("");
     setServiceFields([]);
     setTutTrickContent("");
+    setToolUsageGuide("");
   };
 
   // Đăng sản phẩm + phiên bản + nhập kho TRONG CÙNG 1 LẦN GỬI — thay vì phải
@@ -324,6 +333,13 @@ export default function AddProductForm({
         return;
       }
     }
+    if (productType === "TOOL") {
+      const len = toolUsageGuide.trim().length;
+      if (len < 20 || len > 20000) {
+        setError("Quy trình sử dụng phải từ 20-20.000 ký tự.");
+        return;
+      }
+    }
 
     setLoading(true);
     const form = new FormData();
@@ -356,6 +372,9 @@ export default function AddProductForm({
     }
     if (productType === "TUT_TRICK") {
       form.append("tutTrickContent", tutTrickContent.trim());
+    }
+    if (productType === "TOOL") {
+      form.append("toolUsageGuide", toolUsageGuide.trim());
     }
 
     const res = await fetch("/api/seller/products", { method: "POST", body: form });
@@ -464,7 +483,7 @@ export default function AddProductForm({
 
       <div>
         <label className="mb-1.5 block text-sm font-semibold text-foreground">Loại sản phẩm</label>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <button
             type="button"
             onClick={() => setProductType("PRODUCT")}
@@ -505,6 +524,20 @@ export default function AddProductForm({
             TUT-Trick
             <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
               Bán nội dung hướng dẫn, kiến thức (bán được nhiều lần)
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setProductType("TOOL")}
+            className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
+              productType === "TOOL"
+                ? "border-brand bg-brand text-ink"
+                : "border-border-c bg-surface text-foreground hover:border-brand-dark"
+            }`}
+          >
+            Tool / AI Agent
+            <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
+              Quy trình sử dụng + kho tài khoản tool (mã hoá)
             </span>
           </button>
         </div>
@@ -665,14 +698,17 @@ export default function AddProductForm({
         </div>
       </div>
 
-      {productType === "PRODUCT" && (
+      {(productType === "PRODUCT" || productType === "TOOL") && (
       <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-bold text-foreground">Phiên bản / Gói (tuỳ chọn)</p>
+            <p className="text-sm font-bold text-foreground">
+              {productType === "TOOL" ? "Phiên bản / Gói + Kho tài khoản tool" : "Phiên bản / Gói (tuỳ chọn)"}
+            </p>
             <p className="text-[11px] text-muted">
-              Chỉ điền nếu sản phẩm có nhiều loại/gói giá khác nhau. Bỏ qua
-              nếu chỉ bán 1 loại duy nhất.
+              {productType === "TOOL"
+                ? "Kho dữ liệu giao hàng bên dưới sẽ TỰ ĐỘNG MÃ HOÁ trước khi lưu (mỗi buyer nhận 1 tài khoản tool riêng, không ai nhận trùng)."
+                : "Chỉ điền nếu sản phẩm có nhiều loại/gói giá khác nhau. Bỏ qua nếu chỉ bán 1 loại duy nhất."}
             </p>
           </div>
           <button
@@ -779,13 +815,17 @@ export default function AddProductForm({
         {variants.length === 0 && (
           <div className="mt-3">
             <label className="mb-1 block text-sm font-semibold text-foreground">
-              Kho dữ liệu giao hàng thật (tuỳ chọn)
+              {productType === "TOOL" ? "Kho tài khoản tool" : "Kho dữ liệu giao hàng thật (tuỳ chọn)"}
             </label>
             <textarea
               value={baseStockItems}
               onChange={(e) => setBaseStockItems(e.target.value)}
               rows={3}
-              placeholder={"Mỗi dòng là 1 sản phẩm sẽ giao TỰ ĐỘNG cho khách, ví dụ:\nemail1@gmail.com|MatKhau123|MaKhoiPhuc\nemail2@gmail.com|MatKhau456|MaKhoiPhuc"}
+              placeholder={
+                productType === "TOOL"
+                  ? "Mỗi dòng là 1 tài khoản tool sẽ giao TỰ ĐỘNG cho khách (sẽ được MÃ HOÁ), ví dụ:\ntool1@example.com|MatKhau123\ntool2@example.com|MatKhau456"
+                  : "Mỗi dòng là 1 sản phẩm sẽ giao TỰ ĐỘNG cho khách, ví dụ:\nemail1@gmail.com|MatKhau123|MaKhoiPhuc\nemail2@gmail.com|MatKhau456|MaKhoiPhuc"
+              }
               className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             />
             <p className="mt-1 text-[11px] leading-relaxed text-foreground/70">
@@ -854,6 +894,29 @@ export default function AddProductForm({
             value={tutTrickContent}
             onChange={(e) => setTutTrickContent(e.target.value)}
             placeholder={"Viết đầy đủ quy trình/cách làm, ví dụ:\nBước 1: ...\nBước 2: ...\nLưu ý: ..."}
+            className="mt-2 w-full rounded-lg border border-border-c px-3 py-2.5 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+          />
+        </div>
+      )}
+
+      {productType === "TOOL" && (
+        <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
+          <p className="text-sm font-bold text-foreground">Quy trình sử dụng đầy đủ</p>
+          <p className="text-[11px] text-muted">
+            Hướng dẫn cách dùng tool/AI Agent (đăng nhập, cấu hình, lưu ý) —
+            CHỈ hiện cho buyer SAU KHI đã mua, cùng lúc với tài khoản tool ở
+            khối &ldquo;Kho tài khoản tool&rdquo; bên trên. &ldquo;Mô tả chi
+            tiết&rdquo; bên dưới vẫn công khai, dùng để giới thiệu tool làm
+            được gì.
+          </p>
+          <textarea
+            required
+            minLength={20}
+            maxLength={20000}
+            rows={6}
+            value={toolUsageGuide}
+            onChange={(e) => setToolUsageGuide(e.target.value)}
+            placeholder={"Viết đầy đủ quy trình sử dụng, ví dụ:\nBước 1: Đăng nhập bằng tài khoản đã nhận...\nBước 2: ...\nLưu ý: ..."}
             className="mt-2 w-full rounded-lg border border-border-c px-3 py-2.5 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
           />
         </div>

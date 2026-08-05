@@ -79,12 +79,14 @@ export async function POST(req: Request) {
   // Dịch vụ: buyer phải cung cấp thông tin (tài khoản/link/mật khẩu...) cho
   // seller thực hiện — xem model ServiceFieldDefinition. TUT_TRICK: bán nội
   // dung hướng dẫn/kiến thức, bán lặp lại vô hạn — xem Product.tutTrickContent.
+  // TOOL: Tool/AI Agent — kho credential MÃ HOÁ (kiểu B, dùng chung
+  // ProductVariant/ProductStockItem như PRODUCT) + quy trình sử dụng.
   // productType mặc định "PRODUCT" nếu client không gửi (form cũ/chưa cập nhật UI).
   const productTypeRaw = String(form.get("productType") ?? "PRODUCT").trim().toUpperCase();
-  if (!["PRODUCT", "SERVICE", "TUT_TRICK"].includes(productTypeRaw)) {
+  if (!["PRODUCT", "SERVICE", "TUT_TRICK", "TOOL"].includes(productTypeRaw)) {
     return NextResponse.json({ error: "Loại sản phẩm không hợp lệ." }, { status: 400 });
   }
-  const productType = productTypeRaw as "PRODUCT" | "SERVICE" | "TUT_TRICK";
+  const productType = productTypeRaw as "PRODUCT" | "SERVICE" | "TUT_TRICK" | "TOOL";
 
   let serviceDeliveryMethods: string[] = [];
   let credentialViewWindowHours: number | null = null;
@@ -190,6 +192,20 @@ export async function POST(req: Request) {
     tutTrickContent = raw;
   }
 
+  // TOOL: quy trình sử dụng ĐẦY ĐỦ — riêng tư, cùng nguyên tắc tutTrickContent
+  // ở trên (credential mã hoá RIÊNG, xem POST /api/seller/products/[id]/stock).
+  let toolUsageGuide: string | null = null;
+  if (productType === "TOOL") {
+    const raw = String(form.get("toolUsageGuide") ?? "").trim();
+    if (raw.length < 20 || raw.length > 20000) {
+      return NextResponse.json(
+        { error: "Quy trình sử dụng phải từ 20-20.000 ký tự." },
+        { status: 400 }
+      );
+    }
+    toolUsageGuide = raw;
+  }
+
   // Chỉ cho gán vào danh mục APPROVED hoặc PENDING (đang chờ duyệt) — chặn hẳn
   // category REJECTED (hoặc không tồn tại) để sản phẩm không treo ở danh mục đã
   // bị từ chối/ẩn. Nhất quán với getSellerVisibleCategories() dùng cho dropdown.
@@ -239,6 +255,7 @@ export async function POST(req: Request) {
           productType === "SERVICE" ? JSON.stringify(serviceDeliveryMethods) : null,
         credentialViewWindowHours: productType === "SERVICE" ? credentialViewWindowHours : null,
         tutTrickContent,
+        toolUsageGuide,
       },
     });
     if (productType === "SERVICE") {

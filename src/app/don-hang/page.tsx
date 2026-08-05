@@ -93,6 +93,9 @@ export default async function OrdersPage() {
         // TUT_TRICK: nội dung hướng dẫn nhiều đoạn — DeliveredPayloadButton
         // hiện dạng khối văn bản đầy đủ thay vì chip credential 1 dòng.
         isTutTrick: item.product?.productType === "TUT_TRICK",
+        // TOOL: quy trình sử dụng + credential đã giải mã, hiện cả 2 trong
+        // cùng 1 panel (xem DeliveredPayloadButton mode="tool").
+        isTool: item.product?.productType === "TOOL",
       };
     })
   );
@@ -152,7 +155,7 @@ export default async function OrdersPage() {
                           {row.hasDeliveredPayload && row.status !== "CANCELLED" && (
                             <DeliveredPayloadButton
                               orderItemId={row.itemId}
-                              mode={row.isTutTrick ? "guide" : "credential"}
+                              mode={row.isTutTrick ? "guide" : row.isTool ? "tool" : "credential"}
                             />
                           )}
                         </td>
