@@ -10,6 +10,7 @@ import {
   type ServiceDeliveryMethod,
 } from "@/lib/constants";
 import { formatVnd } from "@/lib/format";
+import OrderStatusTimeline from "@/components/OrderStatusTimeline";
 import {
   Button,
   Column,
@@ -179,6 +180,7 @@ export default function SellerOrdersTable({
           {o.status === "ESCROW" && (
             <span className="text-[10px] text-muted">Giải ngân: {o.escrowReleaseAt.toLocaleDateString("vi-VN")}</span>
           )}
+          <OrderStatusTimeline orderItemId={o.id} />
         </div>
       ),
     },

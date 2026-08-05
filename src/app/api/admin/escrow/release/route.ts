@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { logAdminAction } from "@/lib/audit";
 import { finalizeOrderCommission } from "@/lib/commission";
+import { logOrderStatusChange } from "@/lib/order-status-history";
 import { purgeServiceIntakeSecrets } from "@/lib/service-intake";
 
 export async function POST() {
@@ -35,6 +36,13 @@ export async function POST() {
         data: { status: "RELEASED", releasedAt: new Date() },
       });
       if (gate.count === 0) return false;
+      await logOrderStatusChange(t, {
+        orderItemId: item.id,
+        fromStatus: "ESCROW",
+        toStatus: "RELEASED",
+        actor: { type: "ADMIN", id: session!.user!.id },
+        note: "Giải ngân ký quỹ đến hạn",
+      });
       await purgeServiceIntakeSecrets(t, item.id);
       await t.user.update({
         where: { id: seller.userId },

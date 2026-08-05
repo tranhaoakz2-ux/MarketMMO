@@ -39,7 +39,7 @@ export async function POST(
   }
 
   if (action === "refund") {
-    const result = await fullRefundDispute(id);
+    const result = await fullRefundDispute(id, { type: "SELLER", id: seller!.userId });
     if (!result || !result.done) {
       return NextResponse.json({ error: "Khiếu nại vừa được cập nhật, vui lòng tải lại." }, { status: 400 });
     }

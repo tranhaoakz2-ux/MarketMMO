@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { finalizeOrderCommission } from "@/lib/commission";
+import { logOrderStatusChange, type OrderStatusActor } from "@/lib/order-status-history";
 import { purgeServiceIntakeSecrets } from "@/lib/service-intake";
 
 // HOÀN TOÀN BỘ 1 khiếu nại — DÙNG CHUNG cho admin (POST /api/admin/disputes/[id]
@@ -15,6 +16,7 @@ import { purgeServiceIntakeSecrets } from "@/lib/service-intake";
 // gọi: admin chỉ gọi cho phase PLATFORM, seller chỉ cho SELLER_WARRANTY của mình).
 export async function fullRefundDispute(
   disputeId: string,
+  actor: OrderStatusActor,
   opts: { adminNote?: string | null } = {}
 ): Promise<{ done: boolean; amount: number; orderId: string; productName: string } | null> {
   const dispute = await prisma.dispute.findUnique({
@@ -38,6 +40,16 @@ export async function fullRefundDispute(
     });
     if (gate.count === 0) return false;
     await t.orderItem.update({ where: { id: item.id }, data: { status: "CANCELLED" } });
+    // AUDIT LỖ HỔNG 3 — item.status luôn là "DISPUTED" tại đây (gate ở trên
+    // đảm bảo Dispute.status vẫn OPEN, và OrderItem.status luôn được set
+    // DISPUTED cùng lúc với việc mở Dispute — bất biến nghiệp vụ xuyên suốt).
+    await logOrderStatusChange(t, {
+      orderItemId: item.id,
+      fromStatus: item.status,
+      toStatus: "CANCELLED",
+      actor,
+      note: "Hoàn toàn bộ khiếu nại cho buyer (đốt kho đã giao)",
+    });
     // Đơn rời ESCROW an toàn — xoá cứng field nhạy cảm dịch vụ (nếu có, xem
     // model ServiceIntake). No-op cho đơn không phải dịch vụ.
     await purgeServiceIntakeSecrets(t, item.id);

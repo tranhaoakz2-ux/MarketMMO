@@ -6,6 +6,7 @@ import DisputeStatusCell from "@/components/DisputeStatusCell";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import OpenDisputeButton from "@/components/OpenDisputeButton";
+import OrderStatusTimeline from "@/components/OrderStatusTimeline";
 import PostReleaseDisputeStatus from "@/components/PostReleaseDisputeStatus";
 import Reveal from "@/components/Reveal";
 import { auth } from "@/auth";
@@ -194,6 +195,7 @@ export default async function OrdersPage() {
                                 refundAmount={row.dispute.refundAmount}
                               />
                             )}
+                          <OrderStatusTimeline orderItemId={row.itemId} />
                         </td>
                       </tr>
                     ))}

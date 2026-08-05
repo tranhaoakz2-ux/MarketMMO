@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logAdminAction } from "@/lib/audit";
 import { finalizeOrderCommission } from "@/lib/commission";
 import { fullRefundDispute } from "@/lib/disputes";
+import { logOrderStatusChange } from "@/lib/order-status-history";
 import { purgeServiceIntakeSecrets } from "@/lib/service-intake";
 
 export async function POST(
@@ -53,7 +54,7 @@ export async function POST(
   // content đã lộ). OrderItem→CANCELLED (UI ẩn nút xem content — quyết định a).
   // Dùng chung helper fullRefundDispute() với luồng seller tự bảo hành (Phần B).
   if (action === "refund_buyer") {
-    const result = await fullRefundDispute(id, { adminNote });
+    const result = await fullRefundDispute(id, { type: "ADMIN", id: session!.user!.id }, { adminNote });
     if (!result || !result.done) {
       return NextResponse.json({ error: "Khiếu nại này đã được xử lý." }, { status: 400 });
     }
@@ -100,6 +101,13 @@ export async function POST(
       await t.orderItem.update({
         where: { id: item.id },
         data: { status: "RELEASED", releasedAt: new Date() },
+      });
+      await logOrderStatusChange(t, {
+        orderItemId: item.id,
+        fromStatus: item.status,
+        toStatus: "RELEASED",
+        actor: { type: "ADMIN", id: session!.user!.id },
+        note: `Hoàn một phần khiếu nại (${refundPercent}%)`,
       });
       await purgeServiceIntakeSecrets(t, item.id);
       // Hoàn phần cho buyer.
@@ -178,6 +186,13 @@ export async function POST(
       await t.orderItem.update({
         where: { id: item.id },
         data: { status: "RELEASED", releasedAt: new Date() },
+      });
+      await logOrderStatusChange(t, {
+        orderItemId: item.id,
+        fromStatus: item.status,
+        toStatus: "RELEASED",
+        actor: { type: "ADMIN", id: session!.user!.id },
+        note: "Giải ngân khiếu nại cho seller",
       });
       await purgeServiceIntakeSecrets(t, item.id);
       await t.user.update({

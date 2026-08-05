@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authz";
 import { POST_RELEASE_WARRANTY_DAYS, WARRANTY_WINDOW_HOURS } from "@/lib/constants";
+import { logOrderStatusChange } from "@/lib/order-status-history";
 import { prisma } from "@/lib/prisma";
 
 // Buyer HOẶC seller của 1 OrderItem đang ESCROW đều có thể mở khiếu nại —
@@ -62,12 +63,20 @@ export async function POST(req: Request) {
       ? null
       : new Date(Date.now() + WARRANTY_WINDOW_HOURS * 3600_000);
 
-    await prisma.$transaction([
-      prisma.orderItem.update({ where: { id: orderItemId }, data: { status: "DISPUTED" } }),
-      prisma.dispute.create({
+    await prisma.$transaction(async (tx) => {
+      await tx.orderItem.update({ where: { id: orderItemId }, data: { status: "DISPUTED" } });
+      await tx.dispute.create({
         data: { orderItemId, openedById: session!.user.id, reason, phase, warrantyDeadline },
-      }),
-    ]);
+      });
+      // AUDIT LỖ HỔNG 3 — actor là người mở khiếu nại (buyer hoặc seller).
+      await logOrderStatusChange(tx, {
+        orderItemId,
+        fromStatus: "ESCROW",
+        toStatus: "DISPUTED",
+        actor: { type: isSellerOpener ? "SELLER" : "BUYER", id: session!.user.id },
+        note: "Mở khiếu nại",
+      });
+    });
 
     return NextResponse.json({ ok: true });
   }

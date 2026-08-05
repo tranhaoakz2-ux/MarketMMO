@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdminPage } from "@/lib/authz";
 import { type Column, DataTable, EmptyState, PageHeader, StatusBadge, type Tone, formatVndDemo } from "@/components/admin-demo/AdminDemoKit";
 import AdminEscrowReleaseButton from "@/components/admin/AdminEscrowReleaseButton";
+import OrderStatusTimeline from "@/components/OrderStatusTimeline";
 import { getAdminOrderItems } from "@/lib/queries";
 import { orderStatusLabel, type OrderStatus } from "@/lib/constants";
 import { Inbox } from "lucide-react";
@@ -71,7 +72,16 @@ export default async function AdminOrdersPage({
       align: "right",
       render: (i) => <span className="font-bold tabular-nums text-[var(--adm-brand)]">{formatVndDemo(i.price * i.quantity)}</span>,
     },
-    { key: "status", header: "Trạng thái", render: (i) => <StatusBadge tone={toneOf[i.status]} dot>{orderStatusLabel[i.status]}</StatusBadge> },
+    {
+      key: "status",
+      header: "Trạng thái",
+      render: (i) => (
+        <div>
+          <StatusBadge tone={toneOf[i.status]} dot>{orderStatusLabel[i.status]}</StatusBadge>
+          <OrderStatusTimeline orderItemId={i.id} variant="admin" />
+        </div>
+      ),
+    },
     {
       key: "time",
       header: "Thời gian",

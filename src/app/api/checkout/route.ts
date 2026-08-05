@@ -7,6 +7,7 @@ import { feeAmountOf, getEffectiveFeePercent } from "@/lib/platform-fee";
 import { computeDiscountAmount, distributeDiscount, isDiscountCodeUsable } from "@/lib/discount";
 import { computeEffectivePrice } from "@/lib/mega-sale";
 import { generateOrderCode, ORDER_CODE_MAX_RETRIES } from "@/lib/order-code";
+import { logOrderStatusChange } from "@/lib/order-status-history";
 import { computeProratedPrice } from "@/lib/prorate";
 import { encryptSensitiveFields } from "@/lib/service-crypto";
 import { splitServiceFieldValues } from "@/lib/service-intake";
@@ -419,6 +420,15 @@ export async function POST(req: Request) {
             platformFeePercent: feePercent,
             platformFeeAmount,
           },
+        });
+
+        // AUDIT LỖ HỔNG 3 — dòng khởi tạo lịch sử trạng thái (fromStatus null).
+        await logOrderStatusChange(tx, {
+          orderItemId: orderItem.id,
+          fromStatus: null,
+          toStatus: "ESCROW",
+          actor: { type: "BUYER", id: buyer.id },
+          note: "Đặt đơn",
         });
 
         if (item.claimedStockItemIds.length > 0) {
