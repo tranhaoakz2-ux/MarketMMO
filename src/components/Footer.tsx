@@ -98,7 +98,7 @@ export default function Footer() {
                   />
                 </span>
                 <h3 className="text-lg font-black">
-                  MARKET<span className="text-brand">MMO</span>.PRO
+                  MARKET<span className="text-brand">MMO</span>.VN
                 </h3>
               </div>
               <p className="mt-3 max-w-xs text-sm text-white/60">
@@ -152,7 +152,7 @@ export default function Footer() {
                 Đăng ký bán hàng
               </h4>
               <p className="mt-3 max-w-xs text-sm text-white/60">
-                Trở thành đối tác của MarketMMO.PRO để tiếp cận hàng ngàn
+                Trở thành đối tác của marketmmo.vn để tiếp cận hàng ngàn
                 khách hàng và tối ưu doanh thu của bạn.
               </p>
               <Link
@@ -179,7 +179,7 @@ export default function Footer() {
         </Reveal>
 
         <div className="border-t border-white/10 py-4 text-center text-xs text-white/50">
-          © 2026 MARKETMMO.PRO. Tất cả quyền được bảo lưu.
+          © 2026 MARKETMMO.VN. Tất cả quyền được bảo lưu.
         </div>
       </div>
 

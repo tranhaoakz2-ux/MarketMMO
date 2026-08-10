@@ -3,7 +3,7 @@ import LegalPageLayout from "@/components/LegalPageLayout";
 const sections = [
   {
     title: "1. Chấp nhận điều khoản",
-    body: "Khi truy cập và sử dụng MarketMMO.PRO, bạn đồng ý tuân thủ toàn bộ điều khoản dịch vụ này cùng các chính sách liên quan (Chính sách bảo mật, Điều khoản bán hàng). Nếu không đồng ý, vui lòng ngừng sử dụng nền tảng.",
+    body: "Khi truy cập và sử dụng marketmmo.vn, bạn đồng ý tuân thủ toàn bộ điều khoản dịch vụ này cùng các chính sách liên quan (Chính sách bảo mật, Điều khoản bán hàng). Nếu không đồng ý, vui lòng ngừng sử dụng nền tảng.",
   },
   {
     title: "2. Tài khoản người dùng",

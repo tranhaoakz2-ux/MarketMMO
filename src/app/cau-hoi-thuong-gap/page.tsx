@@ -11,15 +11,19 @@ const faqs = [
   },
   {
     q: "Làm sao để nạp tiền vào ví?",
-    a: "Vào mục Nạp tiền, chọn phương thức (chuyển khoản QR/ngân hàng, ví Momo/ZaloPay, thẻ cào, chuyển khoản doanh nghiệp) và số tiền muốn nạp. Số dư ví dùng để mua sản phẩm ngay lập tức, không cần thanh toán lại cho từng đơn.",
+    a: "Vào mục Nạp tiền, chọn phương thức: chuyển khoản ngân hàng hoặc USDT (mạng TRC20) — nhập số tiền/số USDT muốn nạp rồi gửi yêu cầu, admin sẽ xác nhận sau khi nhận được chuyển khoản. Số dư ví dùng để mua sản phẩm ngay lập tức, không cần thanh toán lại cho từng đơn.",
   },
   {
     q: "Sản phẩm có được bảo hành không?",
     a: "Từng sản phẩm có chính sách bảo hành riêng do người bán công bố (hiển thị trong phần thuộc tính/mô tả sản phẩm). Hãy đọc kỹ trước khi mua và liên hệ người bán ngay nếu sản phẩm gặp lỗi trong thời gian bảo hành.",
   },
   {
+    q: "Badge \"Bảo hiểm\" trên trang sản phẩm nghĩa là gì?",
+    a: "Đây là số dư quỹ bảo hiểm mà người bán đã tự nguyện nạp — không bắt buộc, chỉ là tín hiệu uy tín. Nếu phát sinh khiếu nại đủ điều kiện sau khi đơn đã giải ngân, MarketMMO có thể xem xét đền bù cho bạn từ quỹ này, tối đa bằng số dư quỹ hiện có của gian hàng tại thời điểm xử lý — đây không phải khoản bảo đảm cố định cho mọi giao dịch.",
+  },
+  {
     q: "Làm sao để trở thành người bán trên MarketMMO?",
-    a: "Truy cập trang Đăng ký bán hàng, điền thông tin gian hàng và gửi đăng ký. Sau khi được duyệt, bạn có thể đăng sản phẩm, quản lý đơn hàng và nhận thanh toán qua ví.",
+    a: "Truy cập trang Đăng ký bán hàng, điền thông tin gian hàng và gửi đăng ký — gian hàng được kích hoạt ngay, không cần chờ duyệt. Sau đó bạn có thể đăng sản phẩm (mỗi sản phẩm sẽ qua admin kiểm duyệt trước khi hiển thị công khai), quản lý đơn hàng và nhận thanh toán qua ví.",
   },
   {
     q: "Giao dịch trên MarketMMO có an toàn không?",

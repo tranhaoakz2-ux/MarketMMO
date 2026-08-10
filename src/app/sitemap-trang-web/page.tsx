@@ -1,8 +1,8 @@
 import Link from "next/link";
 import LegalPageLayout from "@/components/LegalPageLayout";
-import { categories } from "@/data/categories";
+import { getAllCategories } from "@/lib/queries";
 
-const groups = [
+const staticGroups = [
   {
     title: "Trang chính",
     links: [
@@ -18,13 +18,6 @@ const groups = [
     ],
   },
   {
-    title: "Danh mục sản phẩm",
-    links: categories.map((c) => ({
-      label: c.name,
-      href: `/danh-muc/${c.slug}`,
-    })),
-  },
-  {
     title: "Hỗ trợ & pháp lý",
     links: [
       { label: "Câu hỏi thường gặp", href: "/cau-hoi-thuong-gap" },
@@ -36,7 +29,25 @@ const groups = [
   },
 ];
 
-export default function SitemapPage() {
+// Danh mục lấy từ DB thật (getAllCategories() — cùng hàm trang chủ/mega-menu
+// dùng) thay vì import tĩnh src/data/categories.ts — trước đây sitemap chỉ
+// hiện đúng 10 category seed gốc, không đồng bộ với category do seller tự đề
+// xuất đã được duyệt hay category mới thêm sau này (vd "TUT-Trick", "Tool /
+// AI Agent").
+export default async function SitemapPage() {
+  const categories = await getAllCategories();
+  const groups = [
+    staticGroups[0],
+    {
+      title: "Danh mục sản phẩm",
+      links: categories.map((c) => ({
+        label: c.name,
+        href: `/danh-muc/${c.slug}`,
+      })),
+    },
+    staticGroups[1],
+  ];
+
   return (
     <LegalPageLayout title="Sitemap">
       <div className="grid gap-6 sm:grid-cols-3">
@@ -61,6 +72,8 @@ export default function SitemapPage() {
     </LegalPageLayout>
   );
 }
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Sitemap — MarketMMO",
