@@ -1,6 +1,7 @@
 import { PackageSearch } from "lucide-react";
 import { redirect } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
+import ConfirmReceivedButton from "@/components/ConfirmReceivedButton";
 import DeliveredPayloadButton from "@/components/DeliveredPayloadButton";
 import DisputeStatusCell from "@/components/DisputeStatusCell";
 import Footer from "@/components/Footer";
@@ -10,14 +11,10 @@ import OrderStatusTimeline from "@/components/OrderStatusTimeline";
 import PostReleaseDisputeStatus from "@/components/PostReleaseDisputeStatus";
 import Reveal from "@/components/Reveal";
 import { auth } from "@/auth";
-import {
-  orderStatusLabel,
-  POST_RELEASE_WARRANTY_DAYS,
-  type DisputeStatus,
-  type OrderStatus,
-} from "@/lib/constants";
+import { orderStatusLabel, type DisputeStatus, type OrderStatus } from "@/lib/constants";
 import { formatVnd } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { formatWarrantyRemaining, warrantyRemaining } from "@/lib/warranty";
 
 export const dynamic = "force-dynamic";
 
@@ -48,17 +45,24 @@ export default async function OrdersPage() {
       const d = item.dispute;
       const rejected = Boolean(d?.warrantyRejectedAt);
       const deadlinePassed = d?.warrantyDeadline ? d.warrantyDeadline <= now : false;
-      // Cửa sổ khiếu nại "bảo hành sau giải ngân" — chỉ áp dụng cho đơn đã
-      // RELEASED, có mốc releasedAt (đơn cũ trước khi thêm cột này thì
-      // không), còn trong hạn, và CHƯA có khiếu nại nào.
-      const warrantyDeadlineAfterRelease = item.releasedAt
-        ? new Date(item.releasedAt.getTime() + POST_RELEASE_WARRANTY_DAYS * 24 * 3600_000)
-        : null;
-      const canOpenPostReleaseWarranty =
-        item.status === "RELEASED" &&
-        !d &&
-        warrantyDeadlineAfterRelease !== null &&
-        now <= warrantyDeadlineAfterRelease;
+      // Cửa sổ khiếu nại "bảo hành sau giải ngân" — NGUỒN SỰ THẬT DUY NHẤT
+      // dùng chung với POST /api/disputes (src/lib/warranty.ts). Chỉ áp dụng
+      // cho đơn đã RELEASED và CHƯA có khiếu nại nào.
+      const remaining = warrantyRemaining({
+        warrantyHours: item.warrantyHours,
+        receivedAt: item.receivedAt,
+        warrantyExpiresAt: item.warrantyExpiresAt,
+        releasedAt: item.releasedAt,
+      });
+      const canOpenPostReleaseWarranty = item.status === "RELEASED" && !d && remaining.state === "active";
+      // Nút "Xác nhận đã nhận hàng" — chỉ hiện khi sản phẩm THẬT SỰ có bảo
+      // hành (warrantyHours > 0, không phải bán đứt/đơn cũ chưa snapshot),
+      // buyer chưa xác nhận, và đơn còn ở trạng thái hợp lệ để xác nhận.
+      const canConfirmReceived =
+        item.warrantyHours !== null &&
+        item.warrantyHours > 0 &&
+        !item.receivedAt &&
+        (item.status === "ESCROW" || item.status === "RELEASED");
       return {
         orderId: order.id,
         orderCode: order.orderCode,
@@ -72,6 +76,11 @@ export default async function OrdersPage() {
         escrowReleaseAt: item.escrowReleaseAt,
         hasDispute: Boolean(d),
         canOpenPostReleaseWarranty,
+        canConfirmReceived,
+        // Nhãn đếm ngược "Còn X ngày Y giờ bảo hành" — null khi không có gì
+        // để hiện (bán đứt/đơn cũ chưa release). Tính SẴN Ở SERVER cùng
+        // `now` đã chốt phía trên, tránh lệch giờ server/client.
+        warrantyLabel: formatWarrantyRemaining(remaining),
         dispute: d
           ? {
               id: d.id,
@@ -172,6 +181,25 @@ export default async function OrdersPage() {
                           >
                             {orderStatusLabel[row.status]}
                           </span>
+                          {/* Đếm ngược thời gian bảo hành — hiện bất kể ESCROW/
+                              RELEASED (mốc receivedAt độc lập với việc admin đã
+                              giải ngân hay chưa), null khi bán đứt/đơn cũ. */}
+                          {row.warrantyLabel && (
+                            <p
+                              className={`mt-1 text-[10px] font-semibold ${
+                                row.warrantyLabel.tone === "danger"
+                                  ? "text-danger"
+                                  : row.warrantyLabel.tone === "warn"
+                                    ? "text-brand-dark"
+                                    : "text-muted"
+                              }`}
+                            >
+                              {row.warrantyLabel.label}
+                            </p>
+                          )}
+                          {row.canConfirmReceived && (
+                            <ConfirmReceivedButton orderItemId={row.itemId} />
+                          )}
                           {row.status === "ESCROW" && (
                             <>
                               <p className="mt-1 text-[10px] text-muted">
@@ -190,8 +218,8 @@ export default async function OrdersPage() {
                             />
                           )}
                           {/* Bảo hành sau giải ngân — đơn ĐÃ RELEASED (tiền vào ví
-                              seller), buyer vẫn còn trong hạn POST_RELEASE_WARRANTY_DAYS
-                              và chưa mở khiếu nại nào. */}
+                              seller), buyer vẫn còn trong "Thời gian bảo hành"
+                              (xem warrantyLabel ở trên) và chưa mở khiếu nại nào. */}
                           {row.status === "RELEASED" && row.canOpenPostReleaseWarranty && (
                             <OpenDisputeButton orderItemId={row.itemId} variant="post_release" />
                           )}

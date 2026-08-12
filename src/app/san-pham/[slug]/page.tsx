@@ -6,6 +6,7 @@ import {
   MessageSquare,
   PackageCheck,
   RefreshCw,
+  RotateCcw,
   ShieldAlert,
   ShieldCheck,
   Store,
@@ -33,6 +34,7 @@ import { formatLastActive, formatVnd } from "@/lib/format";
 import { getRecentForumPosts } from "@/lib/forum";
 import { getProductBySlugDb, getProductReviews, getRelatedProductsDb } from "@/lib/queries";
 import { slugifySeller } from "@/lib/slug";
+import { formatProductWarranty } from "@/lib/warranty";
 
 export const dynamic = "force-dynamic";
 
@@ -184,6 +186,16 @@ export default async function ProductDetailPage({
                     <ShieldAlert className="h-4 w-4" /> Khiếu nại: {product.disputeStats.ratePercent.toFixed(1)}%
                   </span>
                 )}
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-bold ${
+                    product.warrantyValue
+                      ? "bg-success/10 text-success"
+                      : "bg-surface-alt text-muted"
+                  }`}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  {formatProductWarranty(product.warrantyValue ?? 0, product.warrantyUnit ?? "day")}
+                </span>
               </div>
 
               <div className="flex flex-col items-end gap-2">

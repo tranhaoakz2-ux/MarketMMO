@@ -11,6 +11,7 @@ import { logOrderStatusChange } from "@/lib/order-status-history";
 import { computeProratedPrice } from "@/lib/prorate";
 import { encryptSensitiveFields } from "@/lib/service-crypto";
 import { splitServiceFieldValues } from "@/lib/service-intake";
+import { toWarrantyHours } from "@/lib/warranty";
 import { prisma } from "@/lib/prisma";
 
 type CheckoutItem = {
@@ -91,6 +92,11 @@ export async function POST(req: Request) {
         // oversell khi 2 buyer mua song song (bug B3). false = đã claim kho
         // thật (đã nguyên tử qua FOR UPDATE SKIP LOCKED) hoặc preOrder (cho âm).
         guardLegacyStock: boolean;
+        // SNAPSHOT bảo hành (Product.warrantyValue/warrantyUnit quy đổi ra
+        // giờ) TẠI THỜI ĐIỂM MUA — xem OrderItem.warrantyHours trong
+        // schema.prisma. Seller sửa lại sản phẩm sau đó KHÔNG ảnh hưởng đơn
+        // đã tạo (chống cướp quyền khiếu nại buyer).
+        warrantyHours: number;
       }[] = [];
 
       for (const item of items) {
@@ -346,6 +352,7 @@ export async function POST(req: Request) {
           deliveredExpiresAt,
           deliveredPayloadEncryption,
           serviceIntakeData,
+          warrantyHours: toWarrantyHours(product.warrantyValue, product.warrantyUnit === "hour" ? "hour" : "day"),
           // Chỉ cần trừ kho có điều kiện khi dùng kho số học + không preOrder +
           // không phải dịch vụ (dịch vụ không có tồn kho để trừ).
           // Kho thật đã claim nguyên tử ở trên; preOrder cho phép âm.
@@ -463,6 +470,7 @@ export async function POST(req: Request) {
             deliveredPayloadEncryption: item.deliveredPayloadEncryption,
             platformFeePercent: feePercent,
             platformFeeAmount,
+            warrantyHours: item.warrantyHours,
           },
         });
 

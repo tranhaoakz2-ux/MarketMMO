@@ -118,6 +118,8 @@ function mapProduct(p: ProductWithRelations): Product {
       inputType: f.inputType as "text" | "url" | "textarea" | "secret",
       required: f.required,
     })),
+    warrantyValue: p.warrantyValue,
+    warrantyUnit: p.warrantyUnit as "hour" | "day",
   };
 }
 

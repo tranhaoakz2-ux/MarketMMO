@@ -122,6 +122,11 @@ export type Product = {
     inputType: "text" | "url" | "textarea" | "secret";
     required: boolean;
   }[];
+  /** Thời gian bảo hành seller khai lúc đăng sản phẩm — AN TOÀN hiển thị
+      công khai (khác tutTrickContent/toolUsageGuide, không phải nội dung
+      riêng tư). warrantyValue=0 nghĩa là "Không bảo hành". */
+  warrantyValue?: number;
+  warrantyUnit?: "hour" | "day";
 };
 
 export const products: Product[] = [

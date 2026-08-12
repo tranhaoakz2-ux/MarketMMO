@@ -5,18 +5,28 @@ import { logAdminAction } from "@/lib/audit";
 import { finalizeOrderCommission } from "@/lib/commission";
 import { logOrderStatusChange } from "@/lib/order-status-history";
 import { purgeServiceIntakeSecrets } from "@/lib/service-intake";
+import { getEffectiveEscrowReleaseAt } from "@/lib/warranty";
 
 export async function POST() {
   const { session, error } = await requireAdmin();
   if (error) return error;
 
+  // escrowReleaseAt <= now() là điều kiện CẦN nhưng chưa ĐỦ — thời gian bảo
+  // hành (nếu buyer đã "Xác nhận đã nhận hàng" và hạn đó dài hơn lịch giải
+  // ngân mặc định) có thể GIA HẠN thêm việc giữ tiền (ESCROW_HOLD_UNTIL_WARRANTY_EXPIRY,
+  // xem getEffectiveEscrowReleaseAt() trong src/lib/warranty.ts) — không bao
+  // giờ RÚT NGẮN, chỉ có thể kéo dài, nên lọc thô bằng escrowReleaseAt trước
+  // rồi lọc chính xác lại từng dòng bên dưới là an toàn (không bỏ sót).
+  const now = new Date();
   const dueItems = await prisma.orderItem.findMany({
-    where: { status: "ESCROW", escrowReleaseAt: { lte: new Date() } },
+    where: { status: "ESCROW", escrowReleaseAt: { lte: now } },
     include: { order: true },
   });
 
   let released = 0;
   for (const item of dueItems) {
+    if (getEffectiveEscrowReleaseAt(item) > now) continue;
+
     const seller = await prisma.seller.findUnique({ where: { id: item.sellerId } });
     if (!seller) continue;
 

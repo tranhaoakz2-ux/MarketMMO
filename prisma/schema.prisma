@@ -395,6 +395,19 @@ model Product {
   // — stock có thể xuống 0/âm, đó là tín hiệu seller đang "nợ hàng" cần giao.
   preOrder         Boolean  @default(false)
 
+  // Thời gian bảo hành seller khai lúc đăng sản phẩm — áp dụng cho MỌI loại
+  // hàng (PRODUCT/SERVICE/TUT_TRICK/TOOL). warrantyValue=0 nghĩa là "Không
+  // bảo hành (bán đứt)". warrantyUnit "hour" | "day" (String tự do, theo
+  // đúng quy ước dự án — không dùng enum Postgres). Đây CHỈ là cấu hình
+  // seller đặt cho sản phẩm — buyer mua thì giá trị được SNAPSHOT sang
+  // OrderItem.warrantyHours ngay lúc checkout (xem model OrderItem), sản
+  // phẩm sửa lại sau đó KHÔNG ảnh hưởng đơn đã mua (chống seller giảm bảo
+  // hành sau khi bán để cướp quyền khiếu nại buyer). Default 0/"day" cho
+  // sản phẩm cũ — không hồi tố ý nghĩa gì, seller cần cập nhật lại nếu muốn
+  // khai báo bảo hành.
+  warrantyValue Int    @default(0)
+  warrantyUnit  String @default("day")
+
   // Ảnh sản phẩm thật do seller tự upload (Vercel Blob URL hoặc đường dẫn
   // /uploads/products/... khi chạy dev local không có BLOB_READ_WRITE_TOKEN
   // — xem saveProductImage() trong src/lib/uploads.ts). null thì UI tự động
@@ -737,6 +750,25 @@ model OrderItem {
   // TRƯỚC khi thêm cột này (không backfill), đơn đó không mở được khiếu nại
   // loại này.
   releasedAt       DateTime?
+
+  // Thời gian bảo hành (LỖ HỔNG KHIẾU NẠI — tính năng "Thời gian bảo hành").
+  // warrantyHours CỐ TÌNH NULLABLE (không default 0) — phân biệt "đơn TỪ
+  // TRƯỚC tính năng này" (NULL, tiếp tục dùng luật CŨ POST_RELEASE_WARRANTY_DAYS
+  // cố định kể từ releasedAt làm dự phòng vĩnh viễn — xem src/lib/warranty.ts)
+  // với "đơn mới, seller chọn bán đứt 0 giờ" (0 thật, KHÔNG có bảo hành sau
+  // giải ngân). SNAPSHOT từ Product.warrantyValue/warrantyUnit tại thời điểm
+  // checkout — sản phẩm gốc bị seller sửa sau đó KHÔNG ảnh hưởng đơn đã mua.
+  warrantyHours Int?
+  // Mốc buyer bấm "Xác nhận đã nhận hàng" — null = chưa xác nhận. Là điểm
+  // NEO bắt đầu tính bảo hành (KHÁC releasedAt — không phụ thuộc admin bấm
+  // giải ngân tay, công bằng hơn vì buyer tự xác nhận ngay khi thực sự nhận
+  // được hàng/dịch vụ).
+  receivedAt DateTime?
+  // = receivedAt + warrantyHours, TÍNH SẴN ngay lúc set receivedAt (đóng
+  // băng, không đổi dù Product.warrantyValue sau này bị seller sửa) — cùng
+  // nguyên tắc ServiceIntake.sensitiveRevealDeadline. null nếu chưa
+  // receivedAt hoặc warrantyHours null (đơn cũ, dùng fallback thay thế).
+  warrantyExpiresAt DateTime?
 
   dispute       Dispute?
   stockItems    ProductStockItem[]

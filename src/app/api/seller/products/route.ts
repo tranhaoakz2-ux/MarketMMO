@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
 import { requireSeller } from "@/lib/authz";
 import {
+  MIN_WARRANTY_HOURS_PRODUCT,
   SERVICE_CREDENTIAL_MAX_WINDOW_HOURS,
   SERVICE_CREDENTIAL_MIN_WINDOW_HOURS,
   SERVICE_DELIVERY_METHODS,
   SERVICE_FIELD_INPUT_TYPES,
+  type WarrantyUnit,
 } from "@/lib/constants";
 import { getMySellerProducts } from "@/lib/queries";
 import { prisma } from "@/lib/prisma";
 import { slugifyFieldKey, slugifyProduct } from "@/lib/slug";
 import { saveProductImage } from "@/lib/uploads";
+import { toWarrantyHours } from "@/lib/warranty";
 
 export async function GET() {
   const { session, error } = await requireSeller();
@@ -206,6 +209,41 @@ export async function POST(req: Request) {
     toolUsageGuide = raw;
   }
 
+  // Thời gian bảo hành (áp dụng cho CẢ 4 loại hàng) — checkbox "Không bảo
+  // hành" gửi noWarranty=true → value=0 tường minh, không phụ thuộc client
+  // gửi đúng warrantyValue=0 hay không. PRODUCT (tài khoản/dữ liệu kho thật)
+  // bị ép tối thiểu MIN_WARRANTY_HOURS_PRODUCT — không cho "bán đứt".
+  const noWarranty = form.get("noWarranty") === "true";
+  let warrantyValue: number;
+  let warrantyUnit: WarrantyUnit;
+  if (noWarranty) {
+    warrantyValue = 0;
+    warrantyUnit = "day";
+  } else {
+    const unitRaw = String(form.get("warrantyUnit") ?? "day").trim().toLowerCase();
+    if (unitRaw !== "hour" && unitRaw !== "day") {
+      return NextResponse.json({ error: "Đơn vị bảo hành không hợp lệ." }, { status: 400 });
+    }
+    warrantyUnit = unitRaw;
+    const num = Number(form.get("warrantyValue"));
+    if (!Number.isInteger(num) || num < 0) {
+      return NextResponse.json(
+        { error: "Thời gian bảo hành phải là số nguyên >= 0." },
+        { status: 400 }
+      );
+    }
+    warrantyValue = num;
+  }
+  const warrantyHoursCheck = toWarrantyHours(warrantyValue, warrantyUnit);
+  if (productType === "PRODUCT" && warrantyHoursCheck < MIN_WARRANTY_HOURS_PRODUCT) {
+    return NextResponse.json(
+      {
+        error: `Sản phẩm (tài khoản/dữ liệu) phải bảo hành tối thiểu ${MIN_WARRANTY_HOURS_PRODUCT} giờ — không áp dụng "Không bảo hành" cho loại hàng này.`,
+      },
+      { status: 400 }
+    );
+  }
+
   // Chỉ cho gán vào danh mục APPROVED hoặc PENDING (đang chờ duyệt) — chặn hẳn
   // category REJECTED (hoặc không tồn tại) để sản phẩm không treo ở danh mục đã
   // bị từ chối/ẩn. Nhất quán với getSellerVisibleCategories() dùng cho dropdown.
@@ -256,6 +294,8 @@ export async function POST(req: Request) {
         credentialViewWindowHours: productType === "SERVICE" ? credentialViewWindowHours : null,
         tutTrickContent,
         toolUsageGuide,
+        warrantyValue,
+        warrantyUnit,
       },
     });
     if (productType === "SERVICE") {

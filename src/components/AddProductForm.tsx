@@ -3,6 +3,7 @@
 import { Check, ImagePlus, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
+  MIN_WARRANTY_HOURS_PRODUCT,
   SERVICE_DELIVERY_METHOD_LABEL,
   SERVICE_DELIVERY_METHODS,
   SERVICE_FIELD_INPUT_TYPE_LABEL,
@@ -10,6 +11,7 @@ import {
   type ServiceDeliveryMethod,
   type ServiceFieldInputType,
 } from "@/lib/constants";
+import { toWarrantyHours } from "@/lib/warranty";
 
 type Category = { id: string; slug: string; name: string; emoji: string };
 
@@ -144,6 +146,22 @@ export default function AddProductForm({
   // thật" đã có cho PRODUCT (mở thêm cho TOOL bên dưới), server tự mã hoá
   // từng dòng khi productType="TOOL" (xem POST .../stock).
   const [toolUsageGuide, setToolUsageGuide] = useState("");
+
+  // Thời gian bảo hành — áp dụng cho CẢ 4 loại hàng (xem Product.warrantyValue/
+  // warrantyUnit trong schema.prisma). "Sản phẩm" (tài khoản/dữ liệu kho
+  // thật) bị ép tối thiểu MIN_WARRANTY_HOURS_PRODUCT, không cho "bán đứt" —
+  // checkbox tự khoá + tắt khi chọn loại này (xem handleProductType bên dưới).
+  const [warrantyValue, setWarrantyValue] = useState("7");
+  const [warrantyUnit, setWarrantyUnit] = useState<"hour" | "day">("day");
+  const [noWarranty, setNoWarranty] = useState(false);
+
+  // Đổi loại sản phẩm — reset noWarranty nếu đang chọn "Sản phẩm" (checkbox
+  // "Không bảo hành" bị khoá/ẩn tác dụng cho loại này, tránh state kẹt lại
+  // true từ lúc còn ở loại khác rồi chuyển sang PRODUCT).
+  const handleProductType = (type: typeof productType) => {
+    setProductType(type);
+    if (type === "PRODUCT") setNoWarranty(false);
+  };
 
   const toggleServiceDeliveryMethod = (method: ServiceDeliveryMethod) => {
     setServiceDeliveryMethods((prev) =>
@@ -286,6 +304,9 @@ export default function AddProductForm({
     setServiceFields([]);
     setTutTrickContent("");
     setToolUsageGuide("");
+    setWarrantyValue("7");
+    setWarrantyUnit("day");
+    setNoWarranty(false);
   };
 
   // Đăng sản phẩm + phiên bản + nhập kho TRONG CÙNG 1 LẦN GỬI — thay vì phải
@@ -340,6 +361,19 @@ export default function AddProductForm({
         return;
       }
     }
+    if (!noWarranty) {
+      const num = Number(warrantyValue);
+      if (!Number.isInteger(num) || num < 0) {
+        setError("Thời gian bảo hành phải là số nguyên >= 0.");
+        return;
+      }
+      if (productType === "PRODUCT" && toWarrantyHours(num, warrantyUnit) < MIN_WARRANTY_HOURS_PRODUCT) {
+        setError(
+          `Sản phẩm (tài khoản/dữ liệu) phải bảo hành tối thiểu ${MIN_WARRANTY_HOURS_PRODUCT} giờ.`
+        );
+        return;
+      }
+    }
 
     setLoading(true);
     const form = new FormData();
@@ -354,6 +388,12 @@ export default function AddProductForm({
     form.append("stock", variants.length === 0 && baseStockItems.trim() ? "0" : stock);
     form.append("image", image);
     form.append("productType", productType);
+    if (noWarranty) {
+      form.append("noWarranty", "true");
+    } else {
+      form.append("warrantyValue", warrantyValue);
+      form.append("warrantyUnit", warrantyUnit);
+    }
     if (productType === "SERVICE") {
       form.append("serviceDeliveryMethods", JSON.stringify(serviceDeliveryMethods));
       if (credentialViewWindowHours.trim()) {
@@ -486,7 +526,7 @@ export default function AddProductForm({
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <button
             type="button"
-            onClick={() => setProductType("PRODUCT")}
+            onClick={() => handleProductType("PRODUCT")}
             className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
               productType === "PRODUCT"
                 ? "border-brand bg-brand text-ink"
@@ -500,7 +540,7 @@ export default function AddProductForm({
           </button>
           <button
             type="button"
-            onClick={() => setProductType("SERVICE")}
+            onClick={() => handleProductType("SERVICE")}
             className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
               productType === "SERVICE"
                 ? "border-brand bg-brand text-ink"
@@ -514,7 +554,7 @@ export default function AddProductForm({
           </button>
           <button
             type="button"
-            onClick={() => setProductType("TUT_TRICK")}
+            onClick={() => handleProductType("TUT_TRICK")}
             className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
               productType === "TUT_TRICK"
                 ? "border-brand bg-brand text-ink"
@@ -528,7 +568,7 @@ export default function AddProductForm({
           </button>
           <button
             type="button"
-            onClick={() => setProductType("TOOL")}
+            onClick={() => handleProductType("TOOL")}
             className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
               productType === "TOOL"
                 ? "border-brand bg-brand text-ink"
@@ -695,6 +735,51 @@ export default function AddProductForm({
               />
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
+        <p className="text-sm font-bold text-foreground">Thời gian bảo hành</p>
+        <p className="text-[11px] text-muted">
+          Buyer chỉ khiếu nại &ldquo;bảo hành sau giải ngân&rdquo; được trong khoảng thời gian
+          này, tính từ lúc buyer xác nhận đã nhận hàng.
+          {productType === "PRODUCT" &&
+            ` Loại "Sản phẩm" bắt buộc tối thiểu ${MIN_WARRANTY_HOURS_PRODUCT} giờ, không áp dụng "Không bảo hành".`}
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <input
+            type="number"
+            min={0}
+            required={!noWarranty}
+            disabled={noWarranty}
+            value={noWarranty ? "" : warrantyValue}
+            onChange={(e) => setWarrantyValue(e.target.value)}
+            placeholder="VD: 7"
+            className="w-24 rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none disabled:bg-surface-alt disabled:text-muted"
+          />
+          <select
+            value={warrantyUnit}
+            onChange={(e) => setWarrantyUnit(e.target.value as "hour" | "day")}
+            disabled={noWarranty}
+            className="rounded-lg border border-border-c bg-surface px-2.5 py-2 text-sm text-foreground focus:border-brand-dark focus:outline-none disabled:bg-surface-alt disabled:text-muted"
+          >
+            <option value="day">Ngày</option>
+            <option value="hour">Giờ</option>
+          </select>
+          <label
+            className={`flex items-center gap-1.5 text-xs font-semibold ${
+              productType === "PRODUCT" ? "text-muted" : "text-foreground"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={noWarranty}
+              disabled={productType === "PRODUCT"}
+              onChange={(e) => setNoWarranty(e.target.checked)}
+              className="h-3.5 w-3.5"
+            />
+            Không bảo hành (bán đứt)
+          </label>
         </div>
       </div>
 

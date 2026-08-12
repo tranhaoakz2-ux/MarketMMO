@@ -1,10 +1,11 @@
-import { BadgeCheck, Clock, Eye, Flame, PackageCheck, ShieldCheck, Star } from "lucide-react";
+import { BadgeCheck, Clock, Eye, Flame, PackageCheck, RotateCcw, ShieldCheck, Star } from "lucide-react";
 import Link from "next/link";
 import MegaSaleLogo from "@/components/MegaSaleLogo";
 import ProductThumbnail from "@/components/ProductThumbnail";
 import SellerAvatar from "@/components/SellerAvatar";
 import type { Product } from "@/data/products";
 import { formatVnd } from "@/lib/format";
+import { formatProductWarranty } from "@/lib/warranty";
 
 export default function ProductCard({ product }: { product: Product }) {
   return (
@@ -79,6 +80,12 @@ export default function ProductCard({ product }: { product: Product }) {
                 <span className="flex items-center gap-1 text-info">
                   <ShieldCheck className="h-3 w-3" />
                   Bảo hiểm: {formatVnd(product.sellerInsuranceBalance)}
+                </span>
+              )}
+              {!!product.warrantyValue && (
+                <span className="flex items-center gap-1 font-semibold text-success">
+                  <RotateCcw className="h-3 w-3" />
+                  {formatProductWarranty(product.warrantyValue, product.warrantyUnit ?? "day")}
                 </span>
               )}
             </div>

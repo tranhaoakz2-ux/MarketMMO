@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authz";
-import { POST_RELEASE_WARRANTY_DAYS, WARRANTY_WINDOW_HOURS } from "@/lib/constants";
+import { WARRANTY_WINDOW_HOURS } from "@/lib/constants";
 import { logOrderStatusChange } from "@/lib/order-status-history";
 import { prisma } from "@/lib/prisma";
+import { formatVnDateTime, isWithinWarranty } from "@/lib/warranty";
 
 // Buyer HOẶC seller của 1 OrderItem đang ESCROW đều có thể mở khiếu nại —
 // chuyển status sang "DISPUTED" để loại khỏi vòng giải ngân tự động
@@ -11,11 +12,14 @@ import { prisma } from "@/lib/prisma";
 //
 // RIÊNG buyer còn mở được 1 loại khiếu nại thứ 2 — "bảo hành sau giải ngân"
 // (POST_RELEASE_WARRANTY) — khi đơn ĐÃ RELEASED (tiền đã vào ví seller),
-// trong vòng POST_RELEASE_WARRANTY_DAYS kể từ OrderItem.releasedAt. Khác
-// luồng ESCROW: đi thẳng admin (seller đã có tiền, không tự bảo hành),
-// KHÔNG đổi OrderItem.status (đơn hàng/doanh thu đã chốt thật, không "lùi"
-// lại), và khi admin duyệt sẽ đền bù từ QUỸ BẢO HIỂM của seller thay vì
-// escrow (đã không còn) — xem POST /api/admin/disputes/[id].
+// còn trong "Thời gian bảo hành" (OrderItem.warrantyHours snapshot lúc mua,
+// tính từ receivedAt — mốc buyer "Xác nhận đã nhận hàng"; đơn TỪ TRƯỚC tính
+// năng này dùng luật cũ POST_RELEASE_WARRANTY_DAYS kể từ releasedAt làm dự
+// phòng — xem src/lib/warranty.ts isWithinWarranty()). Khác luồng ESCROW: đi
+// thẳng admin (seller đã có tiền, không tự bảo hành), KHÔNG đổi
+// OrderItem.status (đơn hàng/doanh thu đã chốt thật, không "lùi" lại), và
+// khi admin duyệt sẽ đền bù từ QUỸ BẢO HIỂM của seller thay vì escrow (đã
+// không còn) — xem POST /api/admin/disputes/[id].
 export async function POST(req: Request) {
   const { session, error } = await requireUser();
   if (error) return error;
@@ -89,22 +93,25 @@ export async function POST(req: Request) {
         { status: 403 }
       );
     }
-    if (!orderItem.releasedAt) {
+    // Cùng nguồn sự thật với /don-hang (isWithinWarranty, src/lib/warranty.ts):
+    // đơn mới dùng warrantyHours snapshot lúc mua (tính từ receivedAt — buyer
+    // chưa "Xác nhận đã nhận hàng" thì CHƯA có cửa sổ nào để mở); đơn TỪ
+    // TRƯỚC tính năng bảo hành (warrantyHours null) tự động fallback về luật
+    // cũ POST_RELEASE_WARRANTY_DAYS kể từ releasedAt — không mất quyền đang có.
+    if (
+      !isWithinWarranty({
+        warrantyHours: orderItem.warrantyHours,
+        receivedAt: orderItem.receivedAt,
+        warrantyExpiresAt: orderItem.warrantyExpiresAt,
+        releasedAt: orderItem.releasedAt,
+      })
+    ) {
+      const detail = orderItem.warrantyExpiresAt
+        ? ` (đã hết hạn lúc ${formatVnDateTime(orderItem.warrantyExpiresAt)})`
+        : "";
       return NextResponse.json(
         {
-          error:
-            "Đơn hàng này chưa có mốc thời gian giải ngân, không thể mở khiếu nại bảo hành sau giải ngân.",
-        },
-        { status: 400 }
-      );
-    }
-    const deadline = new Date(
-      orderItem.releasedAt.getTime() + POST_RELEASE_WARRANTY_DAYS * 24 * 3600_000
-    );
-    if (new Date() > deadline) {
-      return NextResponse.json(
-        {
-          error: `Đã quá ${POST_RELEASE_WARRANTY_DAYS} ngày kể từ khi giải ngân, không thể khiếu nại bảo hành nữa.`,
+          error: `Đơn hàng này đã hết thời gian bảo hành, không thể khiếu nại bảo hành sau giải ngân nữa${detail}.`,
         },
         { status: 400 }
       );

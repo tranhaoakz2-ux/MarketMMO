@@ -48,7 +48,29 @@ export const WARRANTY_WINDOW_HOURS = 24;
 // OrderItem.releasedAt. KHÁC WARRANTY_WINDOW_HOURS (đó là SLA seller tự xử
 // khi đơn CÒN escrow, tính bằng giờ). Đơn RELEASED quá lâu (ngoài cửa sổ này)
 // không còn mở khiếu nại loại này được nữa.
+//
+// LƯU Ý (tính năng "Thời gian bảo hành"): kể từ khi OrderItem.warrantyHours
+// tồn tại, hằng số CỐ ĐỊNH này chỉ còn là DỰ PHÒNG cho đơn TỪ TRƯỚC tính
+// năng đó (warrantyHours = null) — đơn mới dùng warrantyHours snapshot theo
+// từng sản phẩm thay vì con số cố định này. Xem src/lib/warranty.ts.
 export const POST_RELEASE_WARRANTY_DAYS = 7;
+
+// Đơn vị bảo hành seller khai lúc đăng sản phẩm — String tự do (không enum
+// Postgres, theo đúng quy ước dự án).
+export type WarrantyUnit = "hour" | "day";
+
+export const WARRANTY_UNIT_LABEL: Record<WarrantyUnit, string> = {
+  hour: "giờ",
+  day: "ngày",
+};
+
+// Ngưỡng bảo hành tối thiểu (giờ) — CHỈ áp cho productType="PRODUCT" (tài
+// khoản/dữ liệu bán qua kho thật). Dịch vụ/TUT-Trick/Tool cho phép 0 (bán
+// đứt) vì bản chất giao dịch khác (dịch vụ có SLA riêng qua
+// WARRANTY_WINDOW_HOURS, TUT-Trick/Tool là nội dung/quy trình không có khái
+// niệm "hỏng" theo thời gian sử dụng). Để hằng số ở đây thay vì hardcode rải
+// rác — validate ở CẢ API (POST /api/seller/products) lẫn UI (AddProductForm).
+export const MIN_WARRANTY_HOURS_PRODUCT = 24;
 
 export type ProductStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -95,6 +117,15 @@ export const FORUM_CATEGORIES: ForumCategory[] = [
 ];
 
 export const ESCROW_HOLD_DAYS = 3;
+
+// Cờ bật/tắt: giữ ký quỹ đến hết thời gian bảo hành (thay vì chỉ theo
+// escrowReleaseAt cố định ESCROW_HOLD_DAYS) — xem
+// getEffectiveEscrowReleaseAt() trong src/lib/warranty.ts, dùng trong
+// POST /api/admin/escrow/release. BẬT theo yêu cầu — đơn có bảo hành dài
+// hơn ESCROW_HOLD_DAYS sẽ bị giữ tiền lâu hơn lịch giải ngân mặc định.
+// Không giữ vô thời hạn: nếu buyer chưa từng "Xác nhận đã nhận hàng"
+// (warrantyExpiresAt vẫn null), giải ngân vẫn theo đúng escrowReleaseAt cũ.
+export const ESCROW_HOLD_UNTIL_WARRANTY_EXPIRY = true;
 
 // Quên mật khẩu: mã OTP 6 số hết hạn sau ngần này phút kể từ lúc gửi.
 export const PASSWORD_RESET_CODE_EXPIRY_MINUTES = 10;
