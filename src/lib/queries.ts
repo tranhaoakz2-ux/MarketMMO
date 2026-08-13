@@ -609,6 +609,7 @@ export async function getAllSellersWithStats() {
     verified: s.verified,
     avatarUrl: s.avatarUrl,
     createdAt: s.createdAt,
+    insuranceBalance: s.insuranceBalance,
     productCount: s.products.length,
     ...ratingStats(s.reviews),
   }));

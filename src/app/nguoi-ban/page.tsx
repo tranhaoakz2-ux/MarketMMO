@@ -1,16 +1,34 @@
-import { BadgeCheck, Package, Store, UserPlus } from "lucide-react";
+import { Store, UserPlus } from "lucide-react";
 import Link from "next/link";
 import Breadcrumb from "@/components/Breadcrumb";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
-import RatingStars from "@/components/RatingStars";
 import Reveal from "@/components/Reveal";
+import SellerDirectory, { type SellerCardData } from "@/components/SellerDirectory";
 import { getAllSellersWithStats } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function SellerDirectoryPage() {
   const sellers = await getAllSellersWithStats();
+
+  // Format 1 lần ở server (Date -> string/number đơn giản) để component
+  // client bên dưới không phải tự tính lại hay nhận thẳng đối tượng Date.
+  const cards: SellerCardData[] = sellers.map((s) => ({
+    id: s.id,
+    shopName: s.shopName,
+    slug: s.slug,
+    description: s.description,
+    level: s.level,
+    verified: s.verified,
+    avatarUrl: s.avatarUrl,
+    productCount: s.productCount,
+    avgRating: s.avgRating,
+    reviewCount: s.reviewCount,
+    insuranceBalance: s.insuranceBalance,
+    joinedLabel: `Tham gia từ ${String(s.createdAt.getMonth() + 1).padStart(2, "0")}/${s.createdAt.getFullYear()}`,
+    createdAtMs: s.createdAt.getTime(),
+  }));
 
   return (
     <>
@@ -42,7 +60,7 @@ export default async function SellerDirectoryPage() {
             </div>
           </Reveal>
 
-          {sellers.length === 0 ? (
+          {cards.length === 0 ? (
             <Reveal>
               <div className="rounded-xl border border-dashed border-border-c bg-surface p-12 text-center text-sm text-muted">
                 Chưa có gian hàng nào trên hệ thống.
@@ -50,51 +68,7 @@ export default async function SellerDirectoryPage() {
             </Reveal>
           ) : (
             <Reveal delay={0.05}>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {sellers.map((seller) => (
-                  <Link
-                    key={seller.id}
-                    href={`/shop/${seller.slug}`}
-                    className="flex flex-col gap-3 rounded-2xl border border-border-c bg-surface p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand hover:shadow-md"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="relative grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-brand text-xl shadow">
-                        <Store className="h-7 w-7 text-ink" />
-                        {seller.verified && (
-                          <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-success text-white ring-2 ring-surface">
-                            <BadgeCheck className="h-3 w-3" />
-                          </span>
-                        )}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-foreground">
-                          {seller.shopName}
-                        </p>
-                        <span className="mt-0.5 inline-block rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-brand">
-                          Level {seller.level}
-                        </span>
-                      </div>
-                    </div>
-
-                    <p className="line-clamp-2 text-xs text-muted">
-                      {seller.description}
-                    </p>
-
-                    <div className="mt-auto flex items-center justify-between border-t border-border-c pt-3 text-xs">
-                      <span className="flex items-center gap-1 font-semibold text-foreground">
-                        <Package className="h-3.5 w-3.5" /> {seller.productCount} sản phẩm
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <RatingStars rating={seller.avgRating} />
-                        <span className="font-bold text-foreground">
-                          {seller.reviewCount > 0 ? seller.avgRating.toFixed(1) : "—"}
-                        </span>
-                        <span className="text-muted">({seller.reviewCount})</span>
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+              <SellerDirectory sellers={cards} />
             </Reveal>
           )}
         </div>
