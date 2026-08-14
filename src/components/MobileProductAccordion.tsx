@@ -17,12 +17,14 @@ export default function MobileProductAccordion({
   onNavigate: () => void;
 }) {
   const [openSlug, setOpenSlug] = useState<string | null>(null);
-  const triggerHref = tree.length > 0 ? `/danh-muc/${tree[0]!.slug}` : "/";
 
   return (
     <div className="flex flex-col">
+      {/* Bấm mục cha "Sản phẩm" -> trang TẤT CẢ sản phẩm (/danh-muc) — cùng
+          bug/sửa như ProductMegaMenu.tsx (bản desktop), trước đây trỏ cứng
+          vào danh mục đầu cây (Crypto) thay vì trang tổng. */}
       <Link
-        href={triggerHref}
+        href="/danh-muc"
         onClick={onNavigate}
         className="rounded-lg px-2 py-2.5 hover:bg-surface-alt hover:text-brand-dark"
       >

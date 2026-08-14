@@ -21,12 +21,16 @@ export type CategoryMenuNode = {
 // hỗ trợ group đặt tên) — không cần state/JS, giữ đúng triết lý CSS-only
 // hover đã áp dụng cho NavMegaMenu.
 export default function ProductMegaMenu({ tree }: { tree: CategoryMenuNode[] }) {
-  const triggerHref = tree.length > 0 ? `/danh-muc/${tree[0]!.slug}` : "/";
-
   return (
     <div className="group relative flex h-full items-center">
+      {/* Bấm mục cha "Sản phẩm" -> trang TẤT CẢ sản phẩm (/danh-muc, không
+          lọc category nào) — bug thật đã gặp: trước đây trỏ cứng vào
+          `/danh-muc/${tree[0].slug}` (danh mục đầu cây, tình cờ là Crypto),
+          khiến bấm "Sản phẩm" luôn văng vào 1 danh mục cụ thể (có thể rỗng
+          sản phẩm) thay vì trang tổng. Danh mục con trong dropdown bên dưới
+          vẫn trỏ đúng /danh-muc/[slug] riêng của nó, không đổi. */}
       <Link
-        href={triggerHref}
+        href="/danh-muc"
         className="flex items-center gap-1 whitespace-nowrap transition group-hover:text-brand-dark"
       >
         Sản phẩm
