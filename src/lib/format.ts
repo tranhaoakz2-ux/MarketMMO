@@ -33,6 +33,30 @@ export function formatDaysRemaining(
   return { label: `Hạn dùng đến ${dateLabel} (còn ${diffDays} ngày)`, tone: "safe" };
 }
 
+// Nhãn hiển thị "thông tin tài khoản nhận" cho 1 yêu cầu RÚT TIỀN — đọc
+// WalletTransaction.recipientInfo (JSON gộp chung bank/momo/usdt_trc20, xem
+// schema.prisma), fallback về `note` tự do cho yêu cầu CŨ tạo trước khi có
+// cột này (không backfill, không được để vỡ hiển thị lịch sử). Dùng chung
+// cho SellerWithdrawPanel.tsx + AdminWithdrawalsPanel.tsx — tránh lệch cách
+// hiển thị giữa 2 nơi. Nhánh usdt_trc20 KHÔNG dùng hàm này (2 nơi gọi tự
+// hiện address/usdtAmount/tỷ giá riêng, chi tiết hơn 1 dòng chữ).
+export function formatWithdrawRecipient(
+  method: string | null,
+  recipientInfo: string | null,
+  legacyNote: string | null
+): string {
+  if (recipientInfo) {
+    try {
+      const info = JSON.parse(recipientInfo) as Record<string, string>;
+      if (method === "momo") return `MoMo ${info.phone ?? ""} — ${info.holderName ?? ""}`;
+      if (info.bankName) return `${info.bankName} - ${info.accountNumber} - ${info.accountHolder}`;
+    } catch {
+      // JSON hỏng (không nên xảy ra) — rơi xuống dùng note cũ bên dưới.
+    }
+  }
+  return legacyNote ?? "—";
+}
+
 export function formatLastActive(date: Date | string | null | undefined): string {
   if (!date) return "Chưa hoạt động";
   const d = typeof date === "string" ? new Date(date) : date;

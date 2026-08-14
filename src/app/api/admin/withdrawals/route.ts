@@ -18,6 +18,7 @@ export async function GET() {
       note: true,
       adminNote: true,
       gatewayRef: true,
+      recipientInfo: true,
       withdrawAddress: true,
       usdtAmount: true,
       exchangeRate: true,

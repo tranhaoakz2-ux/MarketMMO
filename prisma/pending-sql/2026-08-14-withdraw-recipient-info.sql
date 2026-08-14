@@ -1,0 +1,16 @@
+-- Hoàn thiện hệ thống Rút tiền — gộp thông tin tài khoản nhận (bank/momo/usdt)
+-- vào 1 cột JSON chung thay vì lai giữa `note` tự do (bank) và cột riêng
+-- (`withdrawAddress`, chỉ usdt) — thêm phương thức mới sau này (Zalo Pay,
+-- Viettel Money...) chỉ cần thêm code xử lý, không cần đổi schema nữa.
+--
+-- Dự án dùng `prisma db push` (không migrations) — BẠN tự áp file này lên
+-- Neon TRƯỚC, sau đó báo lại để tôi sync schema.prisma + `npx prisma generate`
+-- (KHÔNG `db push`/`migrate`). Idempotent — chạy lại an toàn.
+--
+-- Nullable, KHÔNG backfill — yêu cầu rút tiền cũ (trước cột này) vẫn đọc được
+-- bình thường qua `note` (bank cũ) / `withdrawAddress` (usdt, cột này VẪN
+-- GIỮ NGUYÊN không đổi — usdtAmount/exchangeRate/rateSource là dữ liệu tính
+-- toán quy đổi, không chỉ là "thông tin tài khoản nhận" nên không gộp vào
+-- đây, chỉ nhân đôi mỗi địa chỉ ví sang recipientInfo để UI admin có 1 đường
+-- đọc chung cho cả 3 phương thức).
+ALTER TABLE "WalletTransaction" ADD COLUMN IF NOT EXISTS "recipientInfo" TEXT;

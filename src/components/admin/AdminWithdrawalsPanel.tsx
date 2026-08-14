@@ -29,6 +29,7 @@ import {
   formatVndDemo,
 } from "@/components/admin-demo/AdminDemoKit";
 import { walletMethodLabel, walletTxStatusLabel, type WalletTxStatus } from "@/lib/constants";
+import { formatWithdrawRecipient } from "@/lib/format";
 
 type Withdrawal = {
   id: string;
@@ -36,6 +37,7 @@ type Withdrawal = {
   status: WalletTxStatus;
   method: string | null;
   note: string | null;
+  recipientInfo: string | null;
   adminNote: string | null;
   gatewayRef: string | null;
   withdrawAddress: string | null;
@@ -114,7 +116,9 @@ export default function AdminWithdrawalsPanel() {
             {w.gatewayRef && <span className="block truncate text-[11px]">TxID: {w.gatewayRef}</span>}
           </div>
         ) : (
-          <span className="block max-w-[220px] truncate text-[var(--adm-muted)]">{w.note ?? "—"}</span>
+          <span className="block max-w-[220px] truncate text-[var(--adm-muted)]">
+            {formatWithdrawRecipient(w.method, w.recipientInfo, w.note)}
+          </span>
         ),
     },
     { key: "amount", header: "Số tiền", align: "right", render: (w) => <span className="font-bold tabular-nums text-[var(--adm-text)]">{formatVndDemo(Math.abs(w.amount))}</span> },
@@ -153,7 +157,9 @@ export default function AdminWithdrawalsPanel() {
                           </p>
                         </div>
                       ) : (
-                        w.note && <p className="mt-1 text-xs text-[var(--adm-muted)]">{w.note}</p>
+                        <p className="mt-1 text-xs text-[var(--adm-muted)]">
+                          {formatWithdrawRecipient(w.method, w.recipientInfo, w.note)}
+                        </p>
                       )}
                       <p className="mt-1 text-xs font-semibold text-[var(--adm-brand)]">
                         Số tiền đã được khoá khỏi ví người bán khi tạo yêu cầu — Từ chối sẽ hoàn lại, Duyệt chỉ đánh dấu

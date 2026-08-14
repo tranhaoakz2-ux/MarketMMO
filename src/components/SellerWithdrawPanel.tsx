@@ -1,8 +1,8 @@
 "use client";
 
-import { Banknote, DollarSign, Loader2, Wallet } from "lucide-react";
+import { Banknote, Clock, DollarSign, Loader2, Smartphone, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
-import { formatVnd } from "@/lib/format";
+import { formatVnd, formatWithdrawRecipient } from "@/lib/format";
 import { walletTxStatusLabel, type WalletTxStatus } from "@/lib/constants";
 import {
   Button,
@@ -25,6 +25,7 @@ type Withdrawal = {
   status: WalletTxStatus;
   method: string | null;
   note: string | null;
+  recipientInfo: string | null;
   createdAt: string;
   withdrawAddress: string | null;
   usdtAmount: number | null;
@@ -49,11 +50,13 @@ const RATE_SOURCE_LABEL: Record<string, string> = {
 };
 
 export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: number }) {
-  const [method, setMethod] = useState<"bank" | "usdt_trc20">("bank");
+  const [method, setMethod] = useState<"bank" | "momo" | "usdt_trc20">("bank");
   const [amount, setAmount] = useState<number | null>(100000);
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
+  const [momoPhone, setMomoPhone] = useState("");
+  const [momoHolderName, setMomoHolderName] = useState("");
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,6 +131,15 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
         setError("Vui lòng nhập đầy đủ thông tin ngân hàng nhận tiền.");
         return;
       }
+    } else if (method === "momo") {
+      if (!amount || amount < MIN_BANK) {
+        setError(`Số tiền rút tối thiểu là ${formatVnd(MIN_BANK)}.`);
+        return;
+      }
+      if (!momoPhone.trim() || !momoHolderName.trim()) {
+        setError("Vui lòng nhập đầy đủ số điện thoại và tên chủ tài khoản MoMo.");
+        return;
+      }
     } else {
       if (!amount || amount < MIN_USDT) {
         setError(`Số tiền rút USDT tối thiểu là ${formatVnd(MIN_USDT)}.`);
@@ -146,7 +158,9 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
       body: JSON.stringify(
         method === "bank"
           ? { method: "bank", amount, bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountHolder: accountHolder.trim() }
-          : { method: "usdt_trc20", amount, withdrawAddress: withdrawAddress.trim() }
+          : method === "momo"
+            ? { method: "momo", amount, phone: momoPhone.trim(), holderName: momoHolderName.trim() }
+            : { method: "usdt_trc20", amount, withdrawAddress: withdrawAddress.trim() }
       ),
     });
     const data = await res.json();
@@ -156,9 +170,9 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
       return;
     }
     setMessage(
-      method === "bank"
-        ? "Đã gửi yêu cầu rút tiền — số tiền đã được khoá khỏi ví, chờ admin xử lý."
-        : `Đã gửi yêu cầu rút ${data.usdtAmount} USDT (tỷ giá ${data.exchangeRate.toLocaleString("vi-VN")}đ/USDT, khoá tại thời điểm tạo) — chờ admin xử lý.`
+      method === "usdt_trc20"
+        ? `Đã gửi yêu cầu rút ${data.usdtAmount} USDT (tỷ giá ${data.exchangeRate.toLocaleString("vi-VN")}đ/USDT, khoá tại thời điểm tạo) — chờ admin xử lý.`
+        : "Đã gửi yêu cầu rút tiền — số tiền đã được khoá khỏi ví, chờ admin xử lý."
     );
     setBalance((b) => b - (amount ?? 0));
     loadWithdrawals();
@@ -185,7 +199,9 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
             )}
           </div>
         ) : (
-          <span className="block max-w-[240px] truncate text-muted">{w.note ?? "—"}</span>
+          <span className="block max-w-[240px] truncate text-muted">
+            {formatWithdrawRecipient(w.method, w.recipientInfo, w.note)}
+          </span>
         ),
     },
     {
@@ -199,7 +215,7 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Rút tiền" subtitle="Rút số dư ví về ngân hàng hoặc ví USDT (TRC20) của bạn. Admin duyệt tay." />
+      <PageHeader title="Rút tiền" subtitle="Rút số dư ví về ngân hàng, MoMo hoặc ví USDT (TRC20) của bạn. Admin duyệt tay." />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
         {/* Form */}
@@ -216,6 +232,7 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
               }}
               options={[
                 { value: "bank", label: "Ngân hàng" },
+                { value: "momo", label: "MoMo" },
                 { value: "usdt_trc20", label: "USDT (TRC20)" },
               ]}
             />
@@ -237,12 +254,12 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Hoặc nhập số tiền khác" hint={`Tối thiểu ${formatVnd(method === "bank" ? MIN_BANK : MIN_USDT)}`}>
+            <Field label="Hoặc nhập số tiền khác" hint={`Tối thiểu ${formatVnd(method === "usdt_trc20" ? MIN_USDT : MIN_BANK)}`}>
               <TextInput type="number" value={amount ?? ""} onChange={(e) => setAmount(Number(e.target.value) || null)} placeholder="Nhập số tiền (VNĐ)" />
             </Field>
           </div>
 
-          {method === "bank" ? (
+          {method === "bank" && (
             <div className="mt-4 rounded-xl border border-dashed border-brand-dark/30 bg-brand-light/10 p-4">
               <p className="mb-3 flex items-center gap-1.5 text-xs font-bold text-foreground">
                 <Banknote className="h-4 w-4 text-brand-dark" /> Thông tin ngân hàng nhận tiền
@@ -261,7 +278,25 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
                 </div>
               </div>
             </div>
-          ) : (
+          )}
+
+          {method === "momo" && (
+            <div className="mt-4 rounded-xl border border-dashed border-brand-dark/30 bg-brand-light/10 p-4">
+              <p className="mb-3 flex items-center gap-1.5 text-xs font-bold text-foreground">
+                <Smartphone className="h-4 w-4 text-brand-dark" /> Thông tin ví MoMo nhận tiền
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="Số điện thoại MoMo">
+                  <TextInput value={momoPhone} onChange={(e) => setMomoPhone(e.target.value)} placeholder="0912345678" />
+                </Field>
+                <Field label="Chủ tài khoản">
+                  <TextInput value={momoHolderName} onChange={(e) => setMomoHolderName(e.target.value)} placeholder="NGUYEN VAN A" />
+                </Field>
+              </div>
+            </div>
+          )}
+
+          {method === "usdt_trc20" && (
             <div className="mt-4 rounded-xl border border-dashed border-brand-dark/30 bg-brand-light/10 p-4">
               <p className="mb-3 flex items-center gap-1.5 text-xs font-bold text-foreground">
                 <DollarSign className="h-4 w-4 text-brand-dark" /> Thông tin ví USDT (TRC20) nhận tiền
@@ -320,6 +355,27 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
             <div className="p-4 text-xs text-muted">
               Khi gửi yêu cầu, số tiền được <b className="text-foreground">khoá khỏi ví ngay</b> để tránh tiêu trùng,
               chờ admin duyệt. Bị từ chối sẽ hoàn lại đủ.
+            </div>
+          </Card>
+
+          {/* Đang chờ rút — suy ra thuần phía client từ danh sách đã fetch
+              (withdrawals status=PENDING), KHÔNG cần API/cột DB riêng vì số
+              tiền đã bị trừ hẳn khỏi walletBalance ngay lúc tạo yêu cầu. */}
+          <Card padding="p-0" className="overflow-hidden">
+            <div className="p-5">
+              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-muted">
+                <Clock className="h-3.5 w-3.5" /> Đang chờ rút
+              </p>
+              <p className="mt-2 text-2xl font-black tabular-nums text-foreground">
+                {formatVnd(
+                  withdrawals
+                    .filter((w) => w.status === "PENDING")
+                    .reduce((sum, w) => sum + Math.abs(w.amount), 0)
+                )}
+              </p>
+              <p className="mt-1 text-[11px] text-muted">
+                {withdrawals.filter((w) => w.status === "PENDING").length} yêu cầu đang chờ admin xử lý
+              </p>
             </div>
           </Card>
         </div>

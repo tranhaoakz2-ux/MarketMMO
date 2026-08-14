@@ -1027,6 +1027,17 @@ model WalletTransaction {
   usdtAmount      Float? // Số USDT quy đổi, khoá lúc tạo yêu cầu
   exchangeRate    Float? // Tỷ giá VNĐ/USDT dùng để quy đổi, khoá lúc tạo yêu cầu
   rateSource      String? // "coingecko" | "fallback" — nguồn tỷ giá tại thời điểm khoá
+
+  // Thông tin tài khoản nhận CHO RÚT TIỀN (type="WITHDRAW") — JSON gộp
+  // CHUNG cho mọi phương thức (bank: {bankName,accountNumber,accountHolder},
+  // momo: {phone,holderName}, usdt_trc20: {address} — nhân đôi từ
+  // withdrawAddress ở trên để trang admin có 1 đường đọc chung cho cả 3
+  // phương thức, KHÔNG thay thế 3 cột usdt* phía trên vì đó là dữ liệu tính
+  // toán quy đổi, không chỉ là "thông tin tài khoản nhận"). Nullable, KHÔNG
+  // backfill — yêu cầu rút cũ (trước cột này) đọc fallback qua `note`
+  // (bank cũ) / `withdrawAddress` (usdt cũ), xem SellerWithdrawPanel.tsx +
+  // AdminWithdrawalsPanel.tsx.
+  recipientInfo String?
 }
 
 // Chat giữa 2 user bất kỳ (buyer-seller, hoặc user với bot "Hệ Thống" —
