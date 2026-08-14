@@ -1,4 +1,5 @@
 import { Info, ListFilter } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
 import CategoryProductCard from "@/components/CategoryProductCard";
@@ -9,10 +10,10 @@ import Pagination from "@/components/Pagination";
 import Reveal from "@/components/Reveal";
 import { getRecentForumPosts } from "@/lib/forum";
 import { getCategoryBySlug, getCategoryTree, getProductsByCategory } from "@/lib/queries";
+import { LISTING_SORT_OPTIONS, parseListingSortKey } from "@/lib/product-listing-sort";
 
 export const dynamic = "force-dynamic";
 
-const sortOptions = ["Mới nhất", "Bán chạy", "Giá ↑", "Giá ↓"];
 const PAGE_SIZE = 24;
 
 export default async function CategoryPage({
@@ -20,16 +21,17 @@ export default async function CategoryPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; sort?: string }>;
 }) {
   const { slug } = await params;
-  const { page } = await searchParams;
+  const { page, sort: rawSort } = await searchParams;
   const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
+  const sort = parseListingSortKey(rawSort);
 
   const [category, tree] = await Promise.all([getCategoryBySlug(slug), getCategoryTree()]);
   if (!category) notFound();
 
-  const items = await getProductsByCategory(slug);
+  const items = await getProductsByCategory(slug, sort);
   const recentPosts = await getRecentForumPosts(6);
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
@@ -84,17 +86,22 @@ export default async function CategoryPage({
 
             <Reveal delay={0.05}>
               <div className="mb-4 flex items-center gap-6 border-b border-border-c">
-                {sortOptions.map((option, i) => (
-                  <button
-                    key={option}
+                {LISTING_SORT_OPTIONS.map((option) => (
+                  <Link
+                    key={option.value}
+                    href={
+                      option.value === "newest"
+                        ? `/danh-muc/${slug}`
+                        : `/danh-muc/${slug}?sort=${option.value}`
+                    }
                     className={`-mb-px cursor-pointer border-b-2 pb-3 text-[15px] font-semibold transition ${
-                      i === 0
+                      sort === option.value
                         ? "border-brand text-brand-dark"
                         : "border-transparent text-muted hover:text-foreground"
                     }`}
                   >
-                    {option}
-                  </button>
+                    {option.label}
+                  </Link>
                 ))}
               </div>
             </Reveal>
@@ -131,6 +138,7 @@ export default async function CategoryPage({
                   currentPage={safePage}
                   totalCount={items.length}
                   pageSize={PAGE_SIZE}
+                  sort={sort === "newest" ? undefined : sort}
                 />
               </div>
             </Reveal>

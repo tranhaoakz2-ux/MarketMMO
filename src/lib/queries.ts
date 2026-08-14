@@ -9,6 +9,7 @@ import {
   type WalletTxType,
 } from "@/lib/constants";
 import { computeEffectivePrice, type MegaSaleFields } from "@/lib/mega-sale";
+import { applyListingSort, type ListingSortKey } from "@/lib/product-listing-sort";
 
 const productInclude = {
   category: true,
@@ -250,13 +251,19 @@ export async function collectDescendantCategoryIds(rootId: string): Promise<stri
   return ids;
 }
 
-export async function getAllProducts(): Promise<Product[]> {
+// `sort` áp dụng cho trang "Tất cả sản phẩm" (/danh-muc) — "newest"/
+// "bestselling" sắp ĐÚNG Ở TẦNG DB (orderBy), "price_asc"/"price_desc" sắp
+// SAU khi map (giá hiển thị thực tế/mega sale là giá trị tính ra, không
+// phải cột thô) qua applyListingSort(), xem src/lib/product-listing-sort.ts.
+// Mặc định (không truyền/"newest") giữ NGUYÊN hành vi cũ — createdAt desc.
+export async function getAllProducts(sort?: ListingSortKey): Promise<Product[]> {
   const rows = await prisma.product.findMany({
     where: { status: "APPROVED", isActive: true, seller: { suspended: false } },
     include: productInclude,
-    orderBy: { createdAt: "desc" },
+    orderBy: sort === "bestselling" ? { sold: "desc" } : { createdAt: "desc" },
   });
-  return attachRealRatings(rows.map(mapProduct));
+  const products = await attachRealRatings(rows.map(mapProduct));
+  return applyListingSort(products, sort ?? "newest");
 }
 
 // "Sản phẩm nổi bật" trang chủ — 3 tầng, KHÔNG BAO GIỜ để trống dưới `limit`
@@ -316,8 +323,13 @@ export async function getFeaturedProducts(limit = 8): Promise<Product[]> {
 // Khi categorySlug là 1 nhóm cha (có category con), gộp sản phẩm của MỌI
 // category con cháu (đệ quy) — khi là category lá, hành vi y hệt trước đây
 // (chỉ sản phẩm gán trực tiếp vào đúng category đó).
+// `sort` — cùng quy ước với getAllProducts() ở trên, dùng cho
+// /danh-muc/[slug]. Lọc theo danh mục (kể cả danh mục con, xem
+// collectDescendantCategoryIds) áp dụng TRƯỚC, sắp xếp áp dụng SAU — chọn
+// danh mục + đổi sắp xếp cùng lúc vẫn đúng cả hai.
 export async function getProductsByCategory(
-  categorySlug: string
+  categorySlug: string,
+  sort?: ListingSortKey
 ): Promise<Product[]> {
   const category = await prisma.category.findUnique({
     where: { slug: categorySlug },
@@ -334,9 +346,10 @@ export async function getProductsByCategory(
       categoryId: { in: categoryIds },
     },
     include: productInclude,
-    orderBy: { createdAt: "desc" },
+    orderBy: sort === "bestselling" ? { sold: "desc" } : { createdAt: "desc" },
   });
-  return attachRealRatings(rows.map(mapProduct));
+  const products = await attachRealRatings(rows.map(mapProduct));
+  return applyListingSort(products, sort ?? "newest");
 }
 
 export async function searchProducts(query: string): Promise<Product[]> {

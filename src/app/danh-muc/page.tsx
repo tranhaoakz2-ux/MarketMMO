@@ -1,4 +1,5 @@
 import { Info, ListFilter } from "lucide-react";
+import Link from "next/link";
 import Breadcrumb from "@/components/Breadcrumb";
 import CategoryProductCard from "@/components/CategoryProductCard";
 import CategorySidebar from "@/components/CategorySidebar";
@@ -8,10 +9,10 @@ import Pagination from "@/components/Pagination";
 import Reveal from "@/components/Reveal";
 import { getRecentForumPosts } from "@/lib/forum";
 import { getAllProducts, getCategoryTree } from "@/lib/queries";
+import { LISTING_SORT_OPTIONS, parseListingSortKey } from "@/lib/product-listing-sort";
 
 export const dynamic = "force-dynamic";
 
-const sortOptions = ["Mới nhất", "Bán chạy", "Giá ↑", "Giá ↓"];
 const PAGE_SIZE = 24;
 
 // Trang "Tất cả sản phẩm" — đích của nút "Tất cả" trong sidebar Bộ lọc
@@ -23,13 +24,14 @@ const PAGE_SIZE = 24;
 export default async function AllProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; sort?: string }>;
 }) {
-  const { page } = await searchParams;
+  const { page, sort: rawSort } = await searchParams;
   const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
+  const sort = parseListingSortKey(rawSort);
 
   const [items, tree, recentPosts] = await Promise.all([
-    getAllProducts(),
+    getAllProducts(sort),
     getCategoryTree(),
     getRecentForumPosts(6),
   ]);
@@ -76,17 +78,18 @@ export default async function AllProductsPage({
 
             <Reveal delay={0.05}>
               <div className="mb-4 flex items-center gap-6 border-b border-border-c">
-                {sortOptions.map((option, i) => (
-                  <button
-                    key={option}
+                {LISTING_SORT_OPTIONS.map((option) => (
+                  <Link
+                    key={option.value}
+                    href={option.value === "newest" ? "/danh-muc" : `/danh-muc?sort=${option.value}`}
                     className={`-mb-px cursor-pointer border-b-2 pb-3 text-[15px] font-semibold transition ${
-                      i === 0
+                      sort === option.value
                         ? "border-brand text-brand-dark"
                         : "border-transparent text-muted hover:text-foreground"
                     }`}
                   >
-                    {option}
-                  </button>
+                    {option.label}
+                  </Link>
                 ))}
               </div>
             </Reveal>
@@ -123,6 +126,7 @@ export default async function AllProductsPage({
                   currentPage={safePage}
                   totalCount={items.length}
                   pageSize={PAGE_SIZE}
+                  sort={sort === "newest" ? undefined : sort}
                 />
               </div>
             </Reveal>
