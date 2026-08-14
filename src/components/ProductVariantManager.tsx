@@ -560,7 +560,7 @@ export default function ProductVariantManager() {
             className={`grid h-8 w-8 place-items-center rounded-lg border transition ${
               p.megaSale?.active
                 ? "border-orange-500 bg-orange-500/10 text-orange-600"
-                : "border-border-c bg-surface text-foreground hover:border-orange-500 hover:text-orange-600"
+                : "border-border-c bg-surface text-foreground hover:border-brand-dark hover:text-brand-dark"
             }`}
           >
             <Flame className="h-4 w-4" />
