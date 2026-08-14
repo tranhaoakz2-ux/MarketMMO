@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdminPage } from "@/lib/authz";
 import { type Column, DataTable, EmptyState, PageHeader, StatusBadge, type Tone, formatVndDemo } from "@/components/admin-demo/AdminDemoKit";
 import AdminEscrowReleaseButton from "@/components/admin/AdminEscrowReleaseButton";
+import AdminPreOrderRefundButton from "@/components/admin/AdminPreOrderRefundButton";
 import OrderStatusTimeline from "@/components/OrderStatusTimeline";
 import { getAdminOrderItems } from "@/lib/queries";
 import { orderStatusLabel, type OrderStatus } from "@/lib/constants";
@@ -94,7 +95,12 @@ export default async function AdminOrdersPage({
       <PageHeader
         title="Đơn hàng & Ký quỹ"
         subtitle={`Duyệt toàn bộ ${total} mục đơn hàng trên nền tảng — lọc theo trạng thái, giải ngân ký quỹ đến hạn.`}
-        actions={<AdminEscrowReleaseButton />}
+        actions={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <AdminPreOrderRefundButton />
+            <AdminEscrowReleaseButton />
+          </div>
+        }
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">

@@ -44,6 +44,7 @@ export async function POST(
         deliveredPayload: true,
         deliveredExpiresAt: true,
         deliveredPayloadEncryption: true,
+        isPreOrder: true,
         order: { select: { buyerId: true } },
         product: { select: { productType: true, toolUsageGuide: true } },
       },
@@ -55,9 +56,18 @@ export async function POST(
       return { kind: "not_found" as const };
     }
     // Đơn đã hoàn 100% tiền (CANCELLED — nguồn duy nhất là hoàn tiền toàn bộ
-    // khiếu nại) thì buyer mất quyền xem/copy tiếp — giữ đúng luật hiện có.
+    // khiếu nại HOẶC quá hạn/tự huỷ đặt trước) thì buyer mất quyền xem/copy
+    // tiếp — giữ đúng luật hiện có.
     if (item.status === "CANCELLED") {
       return { kind: "cancelled" as const };
+    }
+    // Đặt trước CHƯA ĐƯỢC GIAO — không có gì để lộ, và TUYỆT ĐỐI không được
+    // set receivedAt/bắt đầu bảo hành trên thứ chưa nhận (đây chính là lỗ
+    // hổng "nhận hàng khống" đã phát hiện ở bản đặt trước cũ). Chỉ buyer chủ
+    // động gọi route này KHI CHƯA có nút hiện trên UI (gọi thẳng API) mới rơi
+    // vào nhánh này trong điều kiện bình thường.
+    if (item.isPreOrder && item.deliveredPayload === null) {
+      return { kind: "not_delivered_yet" as const };
     }
 
     // Idempotent (no-op nếu đã set trước đó) — KHÔNG set khi DISPUTED (vẫn
@@ -80,6 +90,12 @@ export async function POST(
   if (result.kind === "cancelled") {
     return NextResponse.json(
       { error: "Đơn hàng đã được hoàn tiền toàn bộ, không thể xem lại nội dung đã giao." },
+      { status: 400 }
+    );
+  }
+  if (result.kind === "not_delivered_yet") {
+    return NextResponse.json(
+      { error: "Đơn đặt trước này chưa được người bán giao, chưa có gì để xem." },
       { status: 400 }
     );
   }

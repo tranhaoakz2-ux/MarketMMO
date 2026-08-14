@@ -54,6 +54,9 @@ export type Product = {
   variants?: ProductVariant[];
   /** Seller đánh dấu "sắp có hàng" — checkout bỏ qua kiểm tra tồn kho cho sản phẩm này. */
   preOrder?: boolean;
+  /** Thời gian giao hàng seller CAM KẾT khi bật preOrder — null nếu chưa cấu hình. */
+  preOrderDeliveryValue?: number | null;
+  preOrderDeliveryUnit?: "hour" | "day";
   /** ID thật của Seller (DB) — chỉ có khi fetch qua getProductBySlugDb, dùng để tải/gửi đánh giá gian hàng ngay trong tab "Đánh giá" ở trang chi tiết sản phẩm. */
   sellerId?: string;
   /** Ảnh thật do seller upload lúc đăng sản phẩm — null/undefined thì UI fallback về icon category (xem ProductThumbnail.tsx). */

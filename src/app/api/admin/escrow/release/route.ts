@@ -25,6 +25,17 @@ export async function POST() {
 
   let released = 0;
   for (const item of dueItems) {
+    // CHẶN RÒ TIỀN ĐẶT TRƯỚC (ưu tiên #1, xây lại 2026-08-14): đơn đặt trước
+    // mà seller CHƯA GIAO (deliveredPayload vẫn null) TUYỆT ĐỐI không được
+    // giải ngân — dù escrowReleaseAt đã qua (với đơn đặt trước, escrowReleaseAt
+    // = deliveryDeadline, xem POST /api/checkout). Đơn này chỉ có thể kết
+    // thúc qua 1 trong 2 đường: seller giao trước hạn (POST /api/seller/orders/
+    // [id]/deliver-preorder, nhập xong mới quay lại vòng lặp này bình thường)
+    // hoặc auto-hoàn tiền quá hạn (POST /api/admin/preorders/refund-overdue).
+    // Dùng isPreOrder SNAPSHOT (không join Product.preOrder — seller có thể
+    // tắt cờ đó sau khi bán để né chặn này).
+    if (item.isPreOrder && item.deliveredPayload === null) continue;
+
     // LƯỚI AN TOÀN AUTO-CONFIRM: đơn đã đến hạn giải ngân mà buyer chưa
     // từng bấm lộ hàng (receivedAt null) — tự đánh dấu "đã nhận" để bảo
     // hành bắt đầu tính, tránh treo vô thời hạn nếu buyer không bao giờ bấm.

@@ -97,6 +97,10 @@ export async function POST(req: Request) {
         // schema.prisma. Seller sửa lại sản phẩm sau đó KHÔNG ảnh hưởng đơn
         // đã tạo (chống cướp quyền khiếu nại buyer).
         warrantyHours: number;
+        // Đặt trước — SNAPSHOT Product.preOrder + hạn giao tại thời điểm mua
+        // (xem OrderItem.isPreOrder/deliveryDeadline trong schema.prisma).
+        isPreOrder: boolean;
+        deliveryDeadline: Date | null;
       }[] = [];
 
       for (const item of items) {
@@ -338,6 +342,30 @@ export async function POST(req: Request) {
           };
         }
 
+        // Đặt trước — SNAPSHOT lúc mua (xây lại 2026-08-14). isPreOrder đóng
+        // băng Product.preOrder TẠI THỜI ĐIỂM NÀY (seller đổi cờ này sau khi
+        // bán không ảnh hưởng đơn đã tạo — job giải ngân/hoàn tiền lọc theo
+        // OrderItem.isPreOrder, không join ngược Product). Vẫn snapshot dù
+        // dòng hàng này claim được kho thật ngay (deliveredPayload khác null)
+        // — trường hợp đó tự nhiên được coi là "đã giao" ở mọi nơi kiểm tra
+        // `deliveredPayload === null`, không cần tắt isPreOrder riêng.
+        const isPreOrder = product.preOrder;
+        let deliveryDeadline: Date | null = null;
+        if (isPreOrder) {
+          if (product.preOrderDeliveryValue === null) {
+            throw new Error(
+              `"${displayLabel}" đang bật đặt trước nhưng người bán chưa cấu hình thời gian giao — vui lòng liên hệ người bán hoặc chọn sản phẩm khác.`
+            );
+          }
+          // toWarrantyHours() chỉ là hàm thuần {value,unit} -> giờ, dùng lại
+          // được cho thời gian giao (không có gì đặc thù "bảo hành" trong đó).
+          const deliveryHours = toWarrantyHours(
+            product.preOrderDeliveryValue,
+            product.preOrderDeliveryUnit === "hour" ? "hour" : "day"
+          );
+          deliveryDeadline = new Date(Date.now() + deliveryHours * 3600_000);
+        }
+
         total += unitPrice * item.quantity;
         itemsToCreate.push({
           productId: product.id,
@@ -353,6 +381,8 @@ export async function POST(req: Request) {
           deliveredPayloadEncryption,
           serviceIntakeData,
           warrantyHours: toWarrantyHours(product.warrantyValue, product.warrantyUnit === "hour" ? "hour" : "day"),
+          isPreOrder,
+          deliveryDeadline,
           // Chỉ cần trừ kho có điều kiện khi dùng kho số học + không preOrder +
           // không phải dịch vụ (dịch vụ không có tồn kho để trừ).
           // Kho thật đã claim nguyên tử ở trên; preOrder cho phép âm.
@@ -424,8 +454,11 @@ export async function POST(req: Request) {
         throw new Error("Số dư ví không đủ để thanh toán đơn hàng này.");
       }
 
-      const escrowReleaseAt = new Date();
-      escrowReleaseAt.setDate(escrowReleaseAt.getDate() + ESCROW_HOLD_DAYS);
+      // Mặc định cho đơn THƯỜNG — đơn đặt trước dùng deliveryDeadline riêng
+      // của từng dòng hàng thay cho mốc này (xem trong vòng lặp tạo OrderItem
+      // bên dưới), vì mỗi dòng hàng có thể có thời gian giao khác nhau.
+      const defaultEscrowReleaseAt = new Date();
+      defaultEscrowReleaseAt.setDate(defaultEscrowReleaseAt.getDate() + ESCROW_HOLD_DAYS);
 
       const createdOrder = await tx.order.create({
         data: {
@@ -453,6 +486,16 @@ export async function POST(req: Request) {
         // áp mã giảm giá) × quantity.
         const lineBase = item.price * item.quantity;
         const platformFeeAmount = feeAmountOf(lineBase, feePercent);
+        // Đặt trước: escrowReleaseAt = deliveryDeadline (KHÔNG phải mặc định
+        // ESCROW_HOLD_DAYS) — job giải ngân (POST /api/admin/escrow/release)
+        // dùng chính mốc này để biết khi nào đơn "đến hạn xét duyệt" (rồi tự
+        // chặn giải ngân nếu vẫn chưa giao, xem isPreOrder check ở đó). Sau
+        // khi seller giao + buyer nhận, warrantyExpiresAt (tính từ receivedAt)
+        // sẽ vượt qua mốc này và getEffectiveEscrowReleaseAt() tự gia hạn
+        // đúng theo bảo hành — không cần code riêng cho giai đoạn đó.
+        const escrowReleaseAt = item.isPreOrder && item.deliveryDeadline
+          ? item.deliveryDeadline
+          : defaultEscrowReleaseAt;
         const orderItem = await tx.orderItem.create({
           data: {
             orderId: createdOrder.id,
@@ -471,6 +514,8 @@ export async function POST(req: Request) {
             platformFeePercent: feePercent,
             platformFeeAmount,
             warrantyHours: item.warrantyHours,
+            isPreOrder: item.isPreOrder,
+            deliveryDeadline: item.deliveryDeadline,
           },
         });
 

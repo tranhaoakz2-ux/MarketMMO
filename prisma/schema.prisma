@@ -394,6 +394,15 @@ model Product {
   // sẵn) nhưng POST /api/checkout BỎ QUA kiểm tra tồn kho cho sản phẩm này
   // — stock có thể xuống 0/âm, đó là tín hiệu seller đang "nợ hàng" cần giao.
   preOrder         Boolean  @default(false)
+  // Thời gian giao hàng seller CAM KẾT cho sản phẩm đang bật "Đặt trước" —
+  // bắt buộc nhập khi bật preOrder (xem PATCH /api/seller/products/[productId]).
+  // Nullable — null khi preOrder=false hoặc seller chưa cấu hình. Buyer mua
+  // thì giá trị được SNAPSHOT sang OrderItem.deliveryDeadline ngay lúc
+  // checkout (mốc auto-hoàn tiền nếu seller không giao đúng hạn) — sản phẩm
+  // sửa lại sau đó KHÔNG ảnh hưởng đơn đã mua, cùng nguyên tắc chống cướp
+  // quyền buyer như warrantyValue/warrantyUnit bên dưới.
+  preOrderDeliveryValue Int?
+  preOrderDeliveryUnit  String @default("day")
 
   // Thời gian bảo hành seller khai lúc đăng sản phẩm — áp dụng cho MỌI loại
   // hàng (PRODUCT/SERVICE/TUT_TRICK/TOOL). warrantyValue=0 nghĩa là "Không
@@ -769,6 +778,20 @@ model OrderItem {
   // nguyên tắc ServiceIntake.sensitiveRevealDeadline. null nếu chưa
   // receivedAt hoặc warrantyHours null (đơn cũ, dùng fallback thay thế).
   warrantyExpiresAt DateTime?
+
+  // Đặt trước (pre-order) — xây lại 2026-08-14. isPreOrder ĐÓNG BĂNG việc
+  // đơn này là đặt trước TẠI THỜI ĐIỂM MUA (snapshot từ Product.preOrder) —
+  // job giải ngân/hoàn tiền lọc theo CỘT NÀY, KHÔNG join ngược Product (seller
+  // có thể tắt Product.preOrder sau khi bán để né chặn). Default false —
+  // migration-safe, đơn TỪ TRƯỚC tính năng này giữ false, đi theo luật CŨ
+  // (KHÔNG retroactive, quyết định đã chốt với người dùng).
+  isPreOrder Boolean @default(false)
+  // = thời điểm mua + Product.preOrderDeliveryValue/Unit SNAPSHOT lúc checkout
+  // (sản phẩm sửa lại sau KHÔNG ảnh hưởng đơn đã mua). Mốc auto-hoàn tiền:
+  // quá hạn này mà deliveredPayload vẫn NULL (seller chưa giao) →
+  // POST /api/admin/preorders/refund-overdue tự hoàn 100% cho buyer. null
+  // khi isPreOrder=false.
+  deliveryDeadline DateTime?
 
   dispute       Dispute?
   stockItems    ProductStockItem[]

@@ -21,8 +21,8 @@ export default async function SellerPreOrdersPage() {
       <SellerPreOrderPanel />
 
       <div className="flex flex-col gap-3">
-        <h2 className="text-[13px] font-black text-foreground">Đơn đặt trước đang chờ giao</h2>
-        <SellerOrdersTable items={items} emptyLabel="Chưa có đơn đặt trước nào." />
+        <h2 className="text-[13px] font-black text-foreground">Đơn đặt trước</h2>
+        <SellerOrdersTable items={items} emptyLabel="Chưa có đơn đặt trước nào." showPreOrderColumn />
       </div>
     </div>
   );

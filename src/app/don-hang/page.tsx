@@ -1,6 +1,7 @@
 import { PackageSearch } from "lucide-react";
 import { redirect } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
+import CancelPreOrderButton from "@/components/CancelPreOrderButton";
 import DeliveredPayloadButton from "@/components/DeliveredPayloadButton";
 import DisputeStatusCell from "@/components/DisputeStatusCell";
 import Footer from "@/components/Footer";
@@ -56,6 +57,8 @@ export default async function OrdersPage() {
           warrantyExpiresAt: true,
           releasedAt: true,
           deliveredPayload: true,
+          isPreOrder: true,
+          deliveryDeadline: true,
           product: {
             select: {
               productType: true,
@@ -95,18 +98,27 @@ export default async function OrdersPage() {
         releasedAt: item.releasedAt,
       });
       const canOpenPostReleaseWarranty = item.status === "RELEASED" && !d && remaining.state === "active";
+      // Đặt trước CHƯA ĐƯỢC GIAO — seller chưa set deliveredPayload. Không
+      // có gì để lộ hàng, và buyer còn được huỷ bất kỳ lúc nào (xem
+      // CancelPreOrderButton) — hoàn toàn khác với đơn đã giao/đơn thường.
+      const isUndeliveredPreOrder = item.isPreOrder && item.deliveredPayload === null;
+      const canCancelPreOrder = isUndeliveredPreOrder && item.status === "ESCROW";
       // Còn CẦN nút lộ hàng để "nhận hàng" hay không — sản phẩm THẬT SỰ có
       // bảo hành (warrantyHours > 0, không phải bán đứt/đơn cũ chưa
-      // snapshot), buyer chưa từng bấm, và đơn còn ở trạng thái hợp lệ để
-      // xác nhận. KHÔNG còn nút "Xác nhận đã nhận hàng" riêng — bấm nút lộ
-      // hàng (DeliveredPayloadButton) LẦN ĐẦU giờ tự làm luôn việc này (xem
+      // snapshot), buyer chưa từng bấm, đơn còn ở trạng thái hợp lệ để xác
+      // nhận, VÀ (nếu là đặt trước) đã thực sự được giao — KHÔNG cho lộ hàng
+      // trên 1 đơn đặt trước chưa có gì để giao (chặn "nhận hàng khống",
+      // route reveal-delivered cũng tự chặn lại lần nữa ở server). KHÔNG còn
+      // nút "Xác nhận đã nhận hàng" riêng — bấm nút lộ hàng
+      // (DeliveredPayloadButton) LẦN ĐẦU giờ tự làm luôn việc này (xem
       // POST /api/orders/[orderItemId]/reveal-delivered), kể cả dịch vụ
       // không có nội dung gì để hiện.
       const canReveal =
         item.warrantyHours !== null &&
         item.warrantyHours > 0 &&
         !item.receivedAt &&
-        (item.status === "ESCROW" || item.status === "RELEASED");
+        (item.status === "ESCROW" || item.status === "RELEASED") &&
+        !isUndeliveredPreOrder;
       return {
         orderId: order.id,
         orderCode: order.orderCode,
@@ -121,6 +133,9 @@ export default async function OrdersPage() {
         hasDispute: Boolean(d),
         canOpenPostReleaseWarranty,
         canReveal,
+        isUndeliveredPreOrder,
+        canCancelPreOrder,
+        deliveryDeadline: item.deliveryDeadline,
         // true = OrderItem.receivedAt đã set từ trước — dùng để báo cho
         // DeliveredPayloadButton biết KHÔNG hiện dòng cảnh báo "bấm = tính
         // đã nhận hàng" khi buyer chỉ đang xem lại.
@@ -214,6 +229,11 @@ export default async function OrdersPage() {
                               dịch vụ không có nội dung tự động) — bấm nút này
                               LÀ hành động "nhận hàng" duy nhất trên toàn sàn,
                               thay hẳn nút "Xác nhận đã nhận hàng" cũ. */}
+                          {row.isUndeliveredPreOrder && row.status !== "CANCELLED" && (
+                            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-info/10 px-2 py-0.5 text-[10px] font-bold text-info">
+                              ĐẶT TRƯỚC — chờ người bán giao
+                            </span>
+                          )}
                           {(row.hasDeliveredPayload || row.canReveal) && row.status !== "CANCELLED" && (
                             <DeliveredPayloadButton
                               orderItemId={row.itemId}
@@ -251,7 +271,17 @@ export default async function OrdersPage() {
                               {row.warrantyLabel.label}
                             </p>
                           )}
-                          {row.status === "ESCROW" && (
+                          {row.status === "ESCROW" && row.canCancelPreOrder && (
+                            <>
+                              <p className="mt-1 text-[10px] font-semibold text-brand-dark">
+                                {row.deliveryDeadline && row.deliveryDeadline > new Date()
+                                  ? `Người bán còn hạn giao đến ${row.deliveryDeadline.toLocaleString("vi-VN")}`
+                                  : "Đã quá hạn giao — hệ thống sẽ tự động hoàn tiền"}
+                              </p>
+                              <CancelPreOrderButton orderItemId={row.itemId} />
+                            </>
+                          )}
+                          {row.status === "ESCROW" && !row.canCancelPreOrder && (
                             <>
                               <p className="mt-1 text-[10px] text-muted">
                                 Giải ngân: {row.escrowReleaseAt.toLocaleDateString("vi-VN")}

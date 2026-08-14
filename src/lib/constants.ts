@@ -72,6 +72,15 @@ export const WARRANTY_UNIT_LABEL: Record<WarrantyUnit, string> = {
 // rác — validate ở CẢ API (POST /api/seller/products) lẫn UI (AddProductForm).
 export const MIN_WARRANTY_HOURS_PRODUCT = 24;
 
+// ── Đặt trước (pre-order) — xây lại 2026-08-14 ──
+// Thời gian giao hàng seller CAM KẾT khi bật "Đặt trước" cho 1 sản phẩm
+// (Product.preOrderDeliveryValue/Unit) — validate CẢ API
+// (PATCH /api/seller/products/[productId]) lẫn UI (SellerPreOrderPanel).
+// Trần tối đa để tránh giam tiền buyer trong ký quỹ quá lâu; sàn còn LUÔN
+// giữ nguyên hạn cũ nếu seller không sửa lại (không tự rút ngắn hồi tố).
+export const MIN_PREORDER_DELIVERY_HOURS = 1;
+export const MAX_PREORDER_DELIVERY_HOURS = 30 * 24; // 30 ngày
+
 export type ProductStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {

@@ -89,6 +89,8 @@ function mapProduct(p: ProductWithRelations): Product {
     verified: p.verified,
     hot: p.hot,
     preOrder: p.preOrder,
+    preOrderDeliveryValue: p.preOrderDeliveryValue,
+    preOrderDeliveryUnit: p.preOrderDeliveryUnit as "hour" | "day",
     featuredViaAuction: Boolean(p.featuredUntil && p.featuredUntil > new Date()),
     sellerLastActiveAt: p.seller.user.lastActiveAt?.toISOString() ?? null,
     sellerInsuranceBalance: p.seller.insuranceBalance,
@@ -810,14 +812,32 @@ export async function getMySellerReviews(sellerId: string) {
   }));
 }
 
+// Lọc theo OrderItem.isPreOrder (SNAPSHOT lúc mua) — KHÔNG join
+// Product.preOrder (seller có thể tắt cờ đó sau khi bán). Trả TOÀN BỘ trạng
+// thái (không chỉ ESCROW như trước) — seller cần thấy cả đơn đã giao (chờ
+// buyer nhận/hết bảo hành) lẫn đơn đã bị auto-hoàn tiền do giao trễ hạn,
+// tránh đơn "biến mất" khỏi danh sách ngay khi rời ESCROW (đúng lỗ hổng UX
+// đã phát hiện ở bản đặt trước cũ). `hasDelivered` chỉ là boolean suy ra từ
+// deliveredPayload — KHÔNG đưa nội dung thật vào object trả về.
 export async function getSellerPreOrderItems(sellerId: string) {
   const rows = await prisma.orderItem.findMany({
-    where: { sellerId, product: { preOrder: true }, status: "ESCROW" },
-    include: {
-      product: { include: { category: true } },
-      order: { include: { buyer: { select: { name: true, username: true, email: true } } } },
-    },
+    where: { sellerId, isPreOrder: true },
     orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      orderId: true,
+      productName: true,
+      variantLabel: true,
+      quantity: true,
+      price: true,
+      status: true,
+      escrowReleaseAt: true,
+      createdAt: true,
+      deliveryDeadline: true,
+      deliveredPayload: true,
+      order: { select: { orderCode: true, buyer: { select: { name: true, username: true, email: true } } } },
+      product: { select: { category: { select: { name: true } } } },
+    },
   });
 
   return rows.map((item) => ({
@@ -834,6 +854,8 @@ export async function getSellerPreOrderItems(sellerId: string) {
     status: item.status as OrderStatus,
     escrowReleaseAt: item.escrowReleaseAt,
     createdAt: item.createdAt,
+    deliveryDeadline: item.deliveryDeadline,
+    hasDelivered: item.deliveredPayload !== null,
   }));
 }
 

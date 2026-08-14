@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireSeller } from "@/lib/authz";
-import { MIN_ITEM_PRICE_AFTER_DISCOUNT } from "@/lib/constants";
+import {
+  MAX_PREORDER_DELIVERY_HOURS,
+  MIN_ITEM_PRICE_AFTER_DISCOUNT,
+  MIN_PREORDER_DELIVERY_HOURS,
+} from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
+import { toWarrantyHours } from "@/lib/warranty";
 
 export async function PATCH(
   req: Request,
@@ -122,9 +127,63 @@ export async function PATCH(
     return NextResponse.json({ error: "Dữ liệu không hợp lệ." }, { status: 400 });
   }
 
+  // Bật "Đặt trước" BẮT BUỘC kèm thời gian giao hàng + thời gian bảo hành —
+  // validate min/max ở đây (server, không tin riêng UI). Bảo hành bắt buộc
+  // > 0 khi bật preOrder (dù productType không phải PRODUCT vẫn không cho
+  // "bán đứt" — đơn đặt trước cần cửa sổ bảo hành thật để cơ chế "giữ ký quỹ
+  // đến hết bảo hành" có ý nghĩa bảo vệ buyer sau khi seller giao). Tắt thì
+  // không cần kèm gì (giữ nguyên preOrderDeliveryValue/Unit/warrantyValue cũ
+  // trong DB để seller bật lại không phải nhập lại từ đầu).
+  if (body.preOrder) {
+    const deliveryValue = Number(body.preOrderDeliveryValue);
+    const deliveryUnit = body.preOrderDeliveryUnit === "hour" ? "hour" : "day";
+    if (!Number.isInteger(deliveryValue) || deliveryValue <= 0) {
+      return NextResponse.json(
+        { error: "Vui lòng nhập thời gian giao hàng cam kết hợp lệ." },
+        { status: 400 }
+      );
+    }
+    const deliveryHours = toWarrantyHours(deliveryValue, deliveryUnit);
+    if (deliveryHours < MIN_PREORDER_DELIVERY_HOURS || deliveryHours > MAX_PREORDER_DELIVERY_HOURS) {
+      return NextResponse.json(
+        {
+          error: `Thời gian giao hàng phải từ ${MIN_PREORDER_DELIVERY_HOURS} giờ đến ${Math.round(MAX_PREORDER_DELIVERY_HOURS / 24)} ngày.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const warrantyValue = Number(body.warrantyValue);
+    const warrantyUnit = body.warrantyUnit === "hour" ? "hour" : "day";
+    if (!Number.isInteger(warrantyValue) || warrantyValue <= 0) {
+      return NextResponse.json(
+        { error: "Vui lòng nhập thời gian bảo hành hợp lệ (đặt trước không cho phép bán đứt)." },
+        { status: 400 }
+      );
+    }
+
+    const updated = await prisma.product.update({
+      where: { id: productId },
+      data: {
+        preOrder: true,
+        preOrderDeliveryValue: deliveryValue,
+        preOrderDeliveryUnit: deliveryUnit,
+        warrantyValue,
+        warrantyUnit,
+      },
+    });
+    return NextResponse.json({
+      preOrder: updated.preOrder,
+      preOrderDeliveryValue: updated.preOrderDeliveryValue,
+      preOrderDeliveryUnit: updated.preOrderDeliveryUnit,
+      warrantyValue: updated.warrantyValue,
+      warrantyUnit: updated.warrantyUnit,
+    });
+  }
+
   const updated = await prisma.product.update({
     where: { id: productId },
-    data: { preOrder: body.preOrder },
+    data: { preOrder: false },
   });
 
   return NextResponse.json({ preOrder: updated.preOrder });
