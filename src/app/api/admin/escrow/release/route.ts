@@ -5,27 +5,48 @@ import { logAdminAction } from "@/lib/audit";
 import { finalizeOrderCommission } from "@/lib/commission";
 import { logOrderStatusChange } from "@/lib/order-status-history";
 import { purgeServiceIntakeSecrets } from "@/lib/service-intake";
-import { getEffectiveEscrowReleaseAt } from "@/lib/warranty";
+import { getEffectiveEscrowReleaseAt, markReceivedIfNeeded } from "@/lib/warranty";
 
 export async function POST() {
   const { session, error } = await requireAdmin();
   if (error) return error;
 
   // escrowReleaseAt <= now() là điều kiện CẦN nhưng chưa ĐỦ — thời gian bảo
-  // hành (nếu buyer đã "Xác nhận đã nhận hàng" và hạn đó dài hơn lịch giải
-  // ngân mặc định) có thể GIA HẠN thêm việc giữ tiền (ESCROW_HOLD_UNTIL_WARRANTY_EXPIRY,
-  // xem getEffectiveEscrowReleaseAt() trong src/lib/warranty.ts) — không bao
-  // giờ RÚT NGẮN, chỉ có thể kéo dài, nên lọc thô bằng escrowReleaseAt trước
-  // rồi lọc chính xác lại từng dòng bên dưới là an toàn (không bỏ sót).
+  // hành (nếu buyer đã "nhận hàng" và hạn đó dài hơn lịch giải ngân mặc định)
+  // có thể GIA HẠN thêm việc giữ tiền (ESCROW_HOLD_UNTIL_WARRANTY_EXPIRY, xem
+  // getEffectiveEscrowReleaseAt() trong src/lib/warranty.ts) — không bao giờ
+  // RÚT NGẮN, chỉ có thể kéo dài, nên lọc thô bằng escrowReleaseAt trước rồi
+  // lọc chính xác lại từng dòng bên dưới là an toàn (không bỏ sót).
   const now = new Date();
   const dueItems = await prisma.orderItem.findMany({
     where: { status: "ESCROW", escrowReleaseAt: { lte: now } },
-    include: { order: true },
+    include: { order: true, product: { select: { productType: true } } },
   });
 
   let released = 0;
   for (const item of dueItems) {
-    if (getEffectiveEscrowReleaseAt(item) > now) continue;
+    // LƯỚI AN TOÀN AUTO-CONFIRM: đơn đã đến hạn giải ngân mà buyer chưa
+    // từng bấm lộ hàng (receivedAt null) — tự đánh dấu "đã nhận" để bảo
+    // hành bắt đầu tính, tránh treo vô thời hạn nếu buyer không bao giờ bấm.
+    // CHỈ áp dụng khi ĐÃ THỰC SỰ có gì đó giao (deliveredPayload khác null)
+    // HOẶC là dịch vụ (SERVICE vốn dĩ deliveredPayload luôn null theo thiết
+    // kế, không phải dấu hiệu "chưa giao"). CỐ TÌNH KHÔNG áp dụng cho sản
+    // phẩm/tool/TUT có deliveredPayload null THẬT (seller chưa từng giao) —
+    // đó là lỗ hổng riêng (đặt trước chưa giao hàng vẫn tự giải ngân), giữ
+    // nguyên hiện trạng ở đây, không dùng auto-confirm này để che giấu.
+    let effectiveItem: typeof item = item;
+    if (
+      !item.receivedAt &&
+      item.warrantyHours !== null &&
+      item.warrantyHours > 0 &&
+      (item.deliveredPayload !== null || item.product?.productType === "SERVICE")
+    ) {
+      const receipt = await prisma.$transaction((t) => markReceivedIfNeeded(t, item, now));
+      if (receipt) {
+        effectiveItem = { ...item, receivedAt: receipt.receivedAt, warrantyExpiresAt: receipt.warrantyExpiresAt };
+      }
+    }
+    if (getEffectiveEscrowReleaseAt(effectiveItem) > now) continue;
 
     const seller = await prisma.seller.findUnique({ where: { id: item.sellerId } });
     if (!seller) continue;

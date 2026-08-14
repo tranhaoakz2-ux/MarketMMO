@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import {
   ESCROW_HOLD_UNTIL_WARRANTY_EXPIRY,
   POST_RELEASE_WARRANTY_DAYS,
@@ -105,9 +106,11 @@ export function formatVnDateTime(date: Date): string {
 
 // Giải ngân ký quỹ CÓ ĐỢI hết bảo hành hay không — cờ
 // ESCROW_HOLD_UNTIL_WARRANTY_EXPIRY (constants.ts). Không giữ vô thời hạn:
-// nếu buyer chưa từng "Xác nhận đã nhận hàng" (warrantyExpiresAt vẫn null),
-// vẫn giải ngân theo đúng escrowReleaseAt cũ (lịch ESCROW_HOLD_DAYS mặc
-// định) — không "treo" tiền của seller chỉ vì buyer quên bấm 1 nút.
+// nếu buyer chưa từng "nhận hàng" (warrantyExpiresAt vẫn null — xem
+// markReceivedIfNeeded() bên dưới, mốc này giờ set tự động ngay lúc buyer
+// bấm lộ hàng lần đầu, hoặc tự động qua auto-confirm trong
+// POST /api/admin/escrow/release nếu buyer không bao giờ bấm), vẫn giải
+// ngân theo đúng escrowReleaseAt cũ (lịch ESCROW_HOLD_DAYS mặc định).
 export function getEffectiveEscrowReleaseAt(item: {
   escrowReleaseAt: Date;
   warrantyExpiresAt: Date | null;
@@ -115,4 +118,45 @@ export function getEffectiveEscrowReleaseAt(item: {
   if (!ESCROW_HOLD_UNTIL_WARRANTY_EXPIRY) return item.escrowReleaseAt;
   if (!item.warrantyExpiresAt) return item.escrowReleaseAt;
   return item.warrantyExpiresAt > item.escrowReleaseAt ? item.warrantyExpiresAt : item.escrowReleaseAt;
+}
+
+export type ReceivableOrderItem = {
+  id: string;
+  status: string;
+  receivedAt: Date | null;
+  warrantyHours: number | null;
+};
+
+// Đánh dấu buyer "đã nhận hàng" — mốc NEO DUY NHẤT bắt đầu tính "Thời gian
+// bảo hành" trên toàn sàn (sản phẩm/dịch vụ/tool/TUT-Trick dùng chung đúng
+// 1 hàm này, không tự tính lại logic riêng ở từng nơi). Idempotent (no-op,
+// trả về null nếu đã set trước đó) và chỉ set khi status ESCROW/RELEASED —
+// KHÔNG set khi CANCELLED/DISPUTED (những trạng thái đó không còn ý nghĩa
+// "đã nhận hàng bình thường", khớp luật cũ của route confirm-received đã bỏ).
+//
+// Dùng ở ĐÚNG 2 nơi:
+//   1. POST /api/orders/[orderItemId]/reveal-delivered — buyer bấm lộ hàng
+//      LẦN ĐẦU, trong transaction cùng với việc đọc nội dung trả về.
+//   2. POST /api/admin/escrow/release — lưới an toàn auto-confirm khi đơn
+//      đến hạn giải ngân mà buyer chưa từng bấm lộ hàng (xem điều kiện áp
+//      dụng riêng ở đó — cố tình KHÔNG áp dụng cho mọi trường hợp).
+export async function markReceivedIfNeeded(
+  tx: Prisma.TransactionClient,
+  item: ReceivableOrderItem,
+  now: Date = new Date()
+): Promise<{ receivedAt: Date; warrantyExpiresAt: Date | null } | null> {
+  if (item.receivedAt) return null;
+  if (item.status !== "ESCROW" && item.status !== "RELEASED") return null;
+
+  const warrantyExpiresAt =
+    item.warrantyHours !== null && item.warrantyHours > 0
+      ? new Date(now.getTime() + item.warrantyHours * 3600_000)
+      : null;
+
+  await tx.orderItem.update({
+    where: { id: item.id },
+    data: { receivedAt: now, warrantyExpiresAt },
+  });
+
+  return { receivedAt: now, warrantyExpiresAt };
 }

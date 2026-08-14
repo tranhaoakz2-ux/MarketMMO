@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Copy, Loader2, PackageOpen } from "lucide-react";
+import { AlertTriangle, Check, Copy, Loader2, PackageOpen } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { formatDaysRemaining } from "@/lib/format";
 
@@ -10,16 +11,21 @@ const TONE_CLASS: Record<"danger" | "warn" | "safe", string> = {
   safe: "text-muted",
 };
 
-// Hiện nội dung giao hàng thật (tài khoản/mã kích hoạt...) đã được hệ thống
-// tự động gán cho đơn hàng này lúc checkout — xem model ProductStockItem +
-// OrderItem.deliveredPayload. Chỉ render khi cha truyền vào (hasDeliveredPayload
-// ở /don-hang), tức sản phẩm/phiên bản có dùng kho thật.
+// Hiện nội dung giao hàng thật (tài khoản/mã kích hoạt...) — xem model
+// ProductStockItem + OrderItem.deliveredPayload. Cha quyết định có render
+// hay không (/don-hang: `hasDeliveredPayload || canReveal`, tức có nội dung
+// HOẶC còn cần xác nhận nhận hàng — xem SAO KHÔNG dùng riêng
+// `hasDeliveredPayload` như trước: dịch vụ không có nội dung tự động vẫn
+// cần 1 nút để buyer xác nhận, xem chi tiết dưới).
 //
-// KHÔNG nhận deliveredPayload qua prop nữa (trước đây nhúng thẳng vào SSR —
-// nội dung đã có sẵn trong HTML dù buyer chưa bấm xem). Giờ bấm "Xem" mới
-// gọi POST /api/orders/[orderItemId]/reveal-delivered — server ghi lại
-// "buyer đã xem lúc nào" TRƯỚC khi trả nội dung (AUDIT LỊCH SỬ ĐƠN HÀNG —
-// LỖ HỔNG 2). `deliveredExpiresAt` trả về là JSON mảng CÙNG thứ tự index với
+// KHÔNG nhận deliveredPayload qua prop — bấm "Xem" mới gọi POST
+// /api/orders/[orderItemId]/reveal-delivered. Route đó GIỜ làm 2 việc atomic
+// trong 1 transaction: (1) set OrderItem.receivedAt lần đầu bấm (mốc neo bắt
+// đầu tính bảo hành trên TOÀN SÀN — sản phẩm/dịch vụ/tool/TUT dùng chung,
+// thay hẳn nút "Xác nhận đã nhận hàng" cũ đã bỏ), (2) trả nội dung. Với dịch
+// vụ (không có nội dung tự động), `deliveredPayload` trả về `null` — KHÔNG
+// còn là lỗi, xem nhánh `contents.length === 0 && !usageGuide` bên dưới.
+// `deliveredExpiresAt` trả về là JSON mảng CÙNG thứ tự index với
 // deliveredPayload — phần tử null nghĩa là đơn vị đó không có hạn.
 //
 // `mode="guide"` (TUT-Trick — nội dung hướng dẫn nhiều đoạn) đổi cách hiển
@@ -36,10 +42,17 @@ const TONE_CLASS: Record<"danger" | "warn" | "safe", string> = {
 export default function DeliveredPayloadButton({
   orderItemId,
   mode = "credential",
+  alreadyReceived = false,
 }: {
   orderItemId: string;
   mode?: "credential" | "guide" | "tool";
+  // true = OrderItem.receivedAt đã được set từ trước (lần xem này chỉ là
+  // xem lại) — ẩn dòng cảnh báo "bấm = tính đã nhận hàng" vì không còn đúng
+  // nữa, tránh gây hiểu lầm buyer nghĩ mỗi lần xem lại đều là 1 lần "nhận
+  // hàng" mới.
+  alreadyReceived?: boolean;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +60,7 @@ export default function DeliveredPayloadButton({
   const [contents, setContents] = useState<string[]>([]);
   const [expiresAtList, setExpiresAtList] = useState<(string | null)[]>([]);
   const [usageGuide, setUsageGuide] = useState<string | null>(null);
+  const [noAutoContent, setNoAutoContent] = useState(false);
 
   const handleOpen = async () => {
     setOpen(true);
@@ -60,14 +74,23 @@ export default function DeliveredPayloadButton({
       return;
     }
 
-    let parsedContents: string[] = [];
-    try {
-      const parsed = JSON.parse(data.deliveredPayload);
-      parsedContents = Array.isArray(parsed) ? parsed : [String(parsed)];
-    } catch {
-      parsedContents = [data.deliveredPayload];
+    // deliveredPayload null = dịch vụ/dòng hàng không có nội dung tự động —
+    // buyer vẫn được ghi nhận "đã nhận hàng" ở server, chỉ không có gì để
+    // hiện ở đây.
+    if (data.deliveredPayload === null) {
+      setContents([]);
+      setNoAutoContent(true);
+    } else {
+      let parsedContents: string[] = [];
+      try {
+        const parsed = JSON.parse(data.deliveredPayload);
+        parsedContents = Array.isArray(parsed) ? parsed : [String(parsed)];
+      } catch {
+        parsedContents = [data.deliveredPayload];
+      }
+      setContents(parsedContents);
+      setNoAutoContent(false);
     }
-    setContents(parsedContents);
 
     let parsedExpiry: (string | null)[] = [];
     if (data.deliveredExpiresAt) {
@@ -80,6 +103,13 @@ export default function DeliveredPayloadButton({
     }
     setExpiresAtList(parsedExpiry);
     setUsageGuide(typeof data.usageGuide === "string" ? data.usageGuide : null);
+
+    // Lần bấm đầu tiên vừa set receivedAt ở server — làm mới trang để mốc
+    // đếm ngược bảo hành (tính ở /don-hang, server component) hiện đúng
+    // ngay, không cần buyer tự tải lại. Bỏ qua khi xem lại (đã set từ trước).
+    if (data.justReceived) {
+      router.refresh();
+    }
   };
 
   const handleCopy = async (text: string, idx: number) => {
@@ -90,17 +120,29 @@ export default function DeliveredPayloadButton({
 
   if (!open) {
     return (
-      <button
-        onClick={handleOpen}
-        className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-success hover:underline"
-      >
-        <PackageOpen className="h-3 w-3" />
-        {mode === "guide"
-          ? "Xem hướng dẫn đầy đủ"
-          : mode === "tool"
-            ? "Xem quy trình + tài khoản"
-            : "Xem thông tin đã giao"}
-      </button>
+      <div className="mt-1 flex flex-col items-start gap-1">
+        <button
+          onClick={handleOpen}
+          className="flex items-center gap-1 text-[10px] font-semibold text-success hover:underline"
+        >
+          <PackageOpen className="h-3 w-3" />
+          {mode === "guide"
+            ? "Xem hướng dẫn đầy đủ"
+            : mode === "tool"
+              ? "Xem quy trình + tài khoản"
+              : "Xem thông tin đã giao"}
+        </button>
+        {/* Chỉ hiện cảnh báo khi đây THẬT SỰ sẽ là lần "nhận hàng" đầu tiên —
+            đã nhận từ trước rồi thì bấm lại chỉ là xem lại, không nên nói
+            "sẽ tính là đã nhận hàng" (không còn đúng nữa). */}
+        {!alreadyReceived && (
+          <p className="flex max-w-[220px] items-start gap-1 text-[10px] leading-snug text-muted">
+            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-brand-dark" />
+            Bấm để xem sản phẩm — hành động này được tính là đã nhận hàng và bắt đầu tính thời
+            gian bảo hành.
+          </p>
+        )}
+      </div>
     );
   }
 
@@ -119,6 +161,27 @@ export default function DeliveredPayloadButton({
         <button
           onClick={() => setOpen(false)}
           className="text-[10px] font-semibold text-muted hover:underline"
+        >
+          Ẩn đi
+        </button>
+      </div>
+    );
+  }
+
+  // Dịch vụ (hoặc bất kỳ dòng hàng nào không có nội dung tự động) — buyer đã
+  // được ghi nhận "đã nhận hàng" ở server (xem handleOpen), chỉ không có gì
+  // để hiển thị. Ưu tiên trước cả mode="guide"/"tool" vì đây là trạng thái
+  // dữ liệu, không phải loại sản phẩm.
+  if (noAutoContent) {
+    return (
+      <div className="mt-1.5 flex w-64 flex-col gap-1.5 rounded-lg border border-success/30 bg-success/5 p-2.5">
+        <p className="text-[11px] leading-relaxed text-foreground">
+          Đã xác nhận nhận hàng — dịch vụ do người bán thực hiện trực tiếp, không có nội dung
+          tự động để hiển thị ở đây.
+        </p>
+        <button
+          onClick={() => setOpen(false)}
+          className="self-start text-[10px] font-semibold text-muted hover:underline"
         >
           Ẩn đi
         </button>

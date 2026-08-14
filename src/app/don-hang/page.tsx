@@ -1,7 +1,6 @@
 import { PackageSearch } from "lucide-react";
 import { redirect } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
-import ConfirmReceivedButton from "@/components/ConfirmReceivedButton";
 import DeliveredPayloadButton from "@/components/DeliveredPayloadButton";
 import DisputeStatusCell from "@/components/DisputeStatusCell";
 import Footer from "@/components/Footer";
@@ -29,11 +28,52 @@ export default async function OrdersPage() {
   const session = await auth();
   if (!session?.user) redirect("/dang-nhap?callbackUrl=/don-hang");
 
+  // CHỈ select đúng field trang này cần hiển thị — KHÔNG dùng `include`
+  // (vốn kéo TOÀN BỘ scalar của OrderItem, gồm cả `deliveredPayloadEncryption`
+  // không cần thiết ở đây) — cùng nguyên tắc đã áp dụng ở GET /api/admin/disputes.
+  // `deliveredPayload` VẪN phải select vì cần đọc để suy ra boolean
+  // `hasDeliveredPayload` bên dưới, nhưng GIÁ TRỊ THẬT của nó không bao giờ
+  // được đưa vào `rows`/JSX — nội dung thật CHỈ rời server qua đúng 1 route
+  // POST /api/orders/[orderItemId]/reveal-delivered khi buyer chủ động bấm.
   const orders = await prisma.order.findMany({
     where: { buyerId: session.user.id },
     orderBy: { createdAt: "desc" },
-    include: {
-      items: { include: { product: { include: { seller: true } }, dispute: true } },
+    select: {
+      id: true,
+      orderCode: true,
+      createdAt: true,
+      items: {
+        select: {
+          id: true,
+          productName: true,
+          variantLabel: true,
+          price: true,
+          quantity: true,
+          status: true,
+          escrowReleaseAt: true,
+          warrantyHours: true,
+          receivedAt: true,
+          warrantyExpiresAt: true,
+          releasedAt: true,
+          deliveredPayload: true,
+          product: {
+            select: {
+              productType: true,
+              seller: { select: { shopName: true } },
+            },
+          },
+          dispute: {
+            select: {
+              id: true,
+              phase: true,
+              status: true,
+              refundAmount: true,
+              warrantyRejectedAt: true,
+              warrantyDeadline: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -55,10 +95,14 @@ export default async function OrdersPage() {
         releasedAt: item.releasedAt,
       });
       const canOpenPostReleaseWarranty = item.status === "RELEASED" && !d && remaining.state === "active";
-      // Nút "Xác nhận đã nhận hàng" — chỉ hiện khi sản phẩm THẬT SỰ có bảo
-      // hành (warrantyHours > 0, không phải bán đứt/đơn cũ chưa snapshot),
-      // buyer chưa xác nhận, và đơn còn ở trạng thái hợp lệ để xác nhận.
-      const canConfirmReceived =
+      // Còn CẦN nút lộ hàng để "nhận hàng" hay không — sản phẩm THẬT SỰ có
+      // bảo hành (warrantyHours > 0, không phải bán đứt/đơn cũ chưa
+      // snapshot), buyer chưa từng bấm, và đơn còn ở trạng thái hợp lệ để
+      // xác nhận. KHÔNG còn nút "Xác nhận đã nhận hàng" riêng — bấm nút lộ
+      // hàng (DeliveredPayloadButton) LẦN ĐẦU giờ tự làm luôn việc này (xem
+      // POST /api/orders/[orderItemId]/reveal-delivered), kể cả dịch vụ
+      // không có nội dung gì để hiện.
+      const canReveal =
         item.warrantyHours !== null &&
         item.warrantyHours > 0 &&
         !item.receivedAt &&
@@ -76,7 +120,11 @@ export default async function OrdersPage() {
         escrowReleaseAt: item.escrowReleaseAt,
         hasDispute: Boolean(d),
         canOpenPostReleaseWarranty,
-        canConfirmReceived,
+        canReveal,
+        // true = OrderItem.receivedAt đã set từ trước — dùng để báo cho
+        // DeliveredPayloadButton biết KHÔNG hiện dòng cảnh báo "bấm = tính
+        // đã nhận hàng" khi buyer chỉ đang xem lại.
+        alreadyReceived: item.receivedAt !== null,
         // Nhãn đếm ngược "Còn X ngày Y giờ bảo hành" — null khi không có gì
         // để hiện (bán đứt/đơn cũ chưa release). Tính SẴN Ở SERVER cùng
         // `now` đã chốt phía trên, tránh lệch giờ server/client.
@@ -160,11 +208,17 @@ export default async function OrdersPage() {
                               CANCELLED — nguồn duy nhất là full refund khiếu
                               nại). Buyer đã nhận lại 100% thì không còn quyền
                               xem/copy tiếp — quyết định (a), SECURITY_AUDIT #8,
-                              nay enforce luôn ở server (xem reveal-delivered). */}
-                          {row.hasDeliveredPayload && row.status !== "CANCELLED" && (
+                              nay enforce luôn ở server (xem reveal-delivered).
+                              Hiện nút khi CÓ nội dung để xem (hasDeliveredPayload)
+                              HOẶC còn cần xác nhận nhận hàng (canReveal, vd
+                              dịch vụ không có nội dung tự động) — bấm nút này
+                              LÀ hành động "nhận hàng" duy nhất trên toàn sàn,
+                              thay hẳn nút "Xác nhận đã nhận hàng" cũ. */}
+                          {(row.hasDeliveredPayload || row.canReveal) && row.status !== "CANCELLED" && (
                             <DeliveredPayloadButton
                               orderItemId={row.itemId}
                               mode={row.isTutTrick ? "guide" : row.isTool ? "tool" : "credential"}
+                              alreadyReceived={row.alreadyReceived}
                             />
                           )}
                         </td>
@@ -196,9 +250,6 @@ export default async function OrdersPage() {
                             >
                               {row.warrantyLabel.label}
                             </p>
-                          )}
-                          {row.canConfirmReceived && (
-                            <ConfirmReceivedButton orderItemId={row.itemId} />
                           )}
                           {row.status === "ESCROW" && (
                             <>
