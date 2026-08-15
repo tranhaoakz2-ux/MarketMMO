@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowUp, Music2, Phone } from "lucide-react";
+import { ArrowUp, MessageCircle, Music2, Phone } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import LegalNotice from "./LegalNotice";
 import Reveal from "./Reveal";
@@ -14,6 +15,7 @@ type FooterContacts = {
   zaloUrl: string | null;
   messengerUrl: string | null;
   phone: string | null;
+  telegramUrl: string | null;
 };
 
 function YoutubeIcon() {
@@ -49,6 +51,19 @@ function MessengerIcon() {
   );
 }
 
+// Logo Telegram — cùng nguồn/lý do vector hoá với ZaloIcon/MessengerIcon ở
+// trên (Simple Icons, CC0-1.0). Dùng fill="currentColor" (khác 2 icon trên
+// luôn trắng trên nền màu thương hiệu riêng) vì 2 nút mới (Chat admin +
+// Telegram) dùng chung nền vàng thương hiệu bg-brand + chữ text-ink theo
+// yêu cầu, nên icon ăn theo màu chữ ink thay vì trắng cố định.
+function TelegramIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-8 w-8" fill="currentColor" aria-hidden>
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.96 6.502-1.357 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+    </svg>
+  );
+}
+
 const supportLinks = [
   { label: "Câu hỏi thường gặp", href: "/cau-hoi-thuong-gap" },
   { label: "Tài liệu tích hợp API", href: "/tai-lieu-api" },
@@ -64,18 +79,32 @@ export default function Footer() {
   // icon liên quan ẨN HẲN thay vì link chết "#" như trước, chỉ hiện sau khi
   // fetch xong VÀ admin đã nhập link/SĐT thật.
   const [contacts, setContacts] = useState<FooterContacts | null>(null);
+  // Admin đầu tiên trong hệ thống — đích của nút "Chat với admin" nổi, xem
+  // GET /api/site-config/public. null = chưa tải xong HOẶC không có admin
+  // nào (2 trường hợp đều ẨN nút, không phân biệt — tránh nút chết).
+  const [adminUserId, setAdminUserId] = useState<string | null>(null);
+  const { data: session } = useSession();
 
   useEffect(() => {
     let active = true;
     fetch("/api/site-config/public")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (active && data?.footer) setContacts(data.footer);
+        if (!active || !data) return;
+        if (data.footer) setContacts(data.footer);
+        if (data.adminUserId) setAdminUserId(data.adminUserId);
       });
     return () => {
       active = false;
     };
   }, []);
+
+  // Chính admin đó tự xem site thì ẩn nút (không tự chat với chính mình).
+  const showChatAdmin = adminUserId && session?.user?.id !== adminUserId;
+  const chatTarget = `/tin-nhan?with=${adminUserId}`;
+  const chatHref = session?.user
+    ? chatTarget
+    : `/dang-nhap?callbackUrl=${encodeURIComponent(chatTarget)}`;
 
   return (
     <footer className="bg-surface-alt">
@@ -221,6 +250,41 @@ export default function Footer() {
               strokeWidth={2}
             />
           </a>
+        )}
+
+        {/* Chat với admin (hệ thống tin nhắn thật /tin-nhan, cùng Conversation/
+            Message dùng cho buyer-seller) + Telegram — 2 nút mới, cùng kích
+            thước với nút lên đầu trang, tông vàng thương hiệu riêng (khác
+            màu thương hiệu gốc của Zalo/Messenger/Điện thoại ở trên). */}
+        {showChatAdmin && (
+          <div className="group/tip relative">
+            <Link
+              href={chatHref}
+              aria-label="Chat trực tiếp với admin"
+              className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-brand shadow-lg transition hover:scale-110 hover:bg-brand-dark hover:shadow-xl"
+            >
+              <MessageCircle className="h-8 w-8 text-ink" strokeWidth={2} />
+            </Link>
+            <span className="pointer-events-none absolute right-full top-1/2 mr-3 -translate-y-1/2 translate-x-1 whitespace-nowrap rounded-lg bg-ink px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-lg transition-all duration-200 group-hover/tip:translate-x-0 group-hover/tip:opacity-100">
+              Chat trực tiếp với admin
+            </span>
+          </div>
+        )}
+        {contacts?.telegramUrl && (
+          <div className="group/tip relative">
+            <a
+              href={contacts.telegramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Liên hệ qua Telegram"
+              className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-brand text-ink shadow-lg transition hover:scale-110 hover:bg-brand-dark hover:shadow-xl"
+            >
+              <TelegramIcon />
+            </a>
+            <span className="pointer-events-none absolute right-full top-1/2 mr-3 -translate-y-1/2 translate-x-1 whitespace-nowrap rounded-lg bg-ink px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-lg transition-all duration-200 group-hover/tip:translate-x-0 group-hover/tip:opacity-100">
+              Liên hệ qua Telegram
+            </span>
+          </div>
         )}
 
         <div className="h-px w-8 bg-border-c/60" />

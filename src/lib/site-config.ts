@@ -14,6 +14,7 @@ export type SiteConfigKey =
   | "footer_zalo_url"
   | "footer_messenger_url"
   | "footer_phone"
+  | "footer_telegram_url"
   | "search_tags";
 
 // Mặc định hiện có trong code TRƯỚC khi có SiteConfig — giữ nguyên y hệt để
@@ -28,6 +29,7 @@ const DEFAULTS: Record<SiteConfigKey, string> = {
   footer_zalo_url: "",
   footer_messenger_url: "",
   footer_phone: "",
+  footer_telegram_url: "",
   search_tags: JSON.stringify([
     "Gmail EDU",
     "Hotmail",

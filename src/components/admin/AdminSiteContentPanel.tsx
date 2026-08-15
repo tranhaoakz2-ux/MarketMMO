@@ -35,6 +35,7 @@ const FOOTER_FIELDS: { key: SiteConfigKey; label: string; placeholder: string }[
   { key: "footer_zalo_url", label: "Zalo", placeholder: "https://zalo.me/..." },
   { key: "footer_messenger_url", label: "Messenger", placeholder: "https://m.me/..." },
   { key: "footer_phone", label: "Số điện thoại", placeholder: "0900000000" },
+  { key: "footer_telegram_url", label: "Telegram", placeholder: "https://t.me/..." },
 ];
 
 export default function AdminSiteContentPanel() {
