@@ -12,4 +12,4 @@ export default async function SellerReviewsPage() {
   return <SellerReviewsList reviews={reviews} />;
 }
 
-export const metadata = { title: "Đánh giá — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Đánh Giá — Quản Lý Bán Hàng — MarketMMO" };

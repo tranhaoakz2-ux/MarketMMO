@@ -27,18 +27,18 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { label: "Tổng quan", href: "/trang-ban-hang", icon: LayoutGrid },
-  { label: "Hồ sơ cá nhân", href: "/trang-ban-hang/ho-so", icon: UserCircle },
-  { label: "Sản phẩm", href: "/trang-ban-hang/san-pham", icon: Package },
-  { label: "Đơn sản phẩm", href: "/trang-ban-hang/don-san-pham", icon: PackageCheck },
-  { label: "Đơn dịch vụ", href: "/trang-ban-hang/don-dich-vu", icon: Wrench },
-  { label: "Đặt trước", href: "/trang-ban-hang/dat-truoc", icon: Clock },
-  { label: "Mã giảm giá", href: "/trang-ban-hang/ma-giam-gia", icon: Tag },
-  { label: "Rút tiền", href: "/trang-ban-hang/rut-tien", icon: Wallet },
-  { label: "Quảng bá (Đấu giá)", href: "/trang-ban-hang/quang-ba", icon: Gavel },
-  { label: "Khiếu nại", href: "/trang-ban-hang/khieu-nai", icon: AlertTriangle },
+  { label: "Tổng Quan", href: "/trang-ban-hang", icon: LayoutGrid },
+  { label: "Hồ Sơ Cá Nhân", href: "/trang-ban-hang/ho-so", icon: UserCircle },
+  { label: "Sản Phẩm", href: "/trang-ban-hang/san-pham", icon: Package },
+  { label: "Đơn Sản Phẩm", href: "/trang-ban-hang/don-san-pham", icon: PackageCheck },
+  { label: "Đơn Dịch Vụ", href: "/trang-ban-hang/don-dich-vu", icon: Wrench },
+  { label: "Đặt Trước", href: "/trang-ban-hang/dat-truoc", icon: Clock },
+  { label: "Mã Giảm Giá", href: "/trang-ban-hang/ma-giam-gia", icon: Tag },
+  { label: "Rút Tiền", href: "/trang-ban-hang/rut-tien", icon: Wallet },
+  { label: "Quảng Bá (Đấu Giá)", href: "/trang-ban-hang/quang-ba", icon: Gavel },
+  { label: "Khiếu Nại", href: "/trang-ban-hang/khieu-nai", icon: AlertTriangle },
   { label: "Quỹ Bảo Hiểm", href: "/trang-ban-hang/quy-bao-hiem", icon: ShieldCheck },
-  { label: "Đánh giá", href: "/trang-ban-hang/danh-gia", icon: Star },
+  { label: "Đánh Giá", href: "/trang-ban-hang/danh-gia", icon: Star },
   { label: "Telegram Bot", href: "/trang-ban-hang/telegram-bot", icon: Send },
 ];
 
@@ -83,7 +83,7 @@ export default function SellerSidebar({
           className="mb-3 block rounded-xl border border-dashed border-brand-dark/40 bg-brand-light/25 p-3 text-xs transition hover:bg-brand-light/40"
         >
           <p className="flex items-center gap-1.5 font-bold text-foreground">
-            <ShieldCheck className="h-3.5 w-3.5 text-brand-dark" /> Quỹ bảo hiểm
+            <ShieldCheck className="h-3.5 w-3.5 text-brand-dark" /> Quỹ Bảo Hiểm
           </p>
           <p className="mt-1 text-foreground/80">
             {formatVnd(insuranceBalance)} / {formatVnd(insuranceFundTarget)} — không bắt buộc,

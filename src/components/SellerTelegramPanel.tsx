@@ -128,7 +128,7 @@ export default function SellerTelegramPanel() {
   if (status.pending) {
     return wrap(
       <Card>
-        <SectionTitle>Xác nhận liên kết</SectionTitle>
+        <SectionTitle>Xác Nhận Liên Kết</SectionTitle>
         <p className="mb-3 text-sm text-foreground">
           Đã gửi mã xác nhận tới Chat ID <span className="font-mono font-bold">{status.chatId}</span>. Kiểm tra
           Telegram và nhập mã bên dưới.
@@ -150,7 +150,7 @@ export default function SellerTelegramPanel() {
   // Chưa liên kết — hướng dẫn + nhập Chat ID
   return wrap(
     <Card>
-      <SectionTitle>Cách liên kết</SectionTitle>
+      <SectionTitle>Cách Liên Kết</SectionTitle>
       <ul className="flex flex-col gap-3">
         {STEPS.map((s, i) => (
           <li key={s} className="flex items-start gap-2.5 text-sm text-foreground/80">

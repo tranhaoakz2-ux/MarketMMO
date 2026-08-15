@@ -198,12 +198,12 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Rút tiền" subtitle="Rút số dư ví về ngân hàng hoặc ví USDT (TRC20) của bạn. Admin duyệt tay." />
+      <PageHeader title="Rút Tiền" subtitle="Rút số dư ví về ngân hàng hoặc ví USDT (TRC20) của bạn. Admin duyệt tay." />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
         {/* Form */}
         <Card>
-          <SectionTitle>Tạo yêu cầu rút tiền</SectionTitle>
+          <SectionTitle>Tạo Yêu Cầu Rút Tiền</SectionTitle>
 
           <div className="mb-4 grid grid-cols-2 gap-3">
             {METHOD_OPTIONS.map((opt) => (
@@ -354,7 +354,7 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
 
       {/* Lịch sử */}
       <Card>
-        <SectionTitle>Lịch sử rút tiền</SectionTitle>
+        <SectionTitle>Lịch Sử Rút Tiền</SectionTitle>
         <DataTable
           columns={columns}
           rows={withdrawals}

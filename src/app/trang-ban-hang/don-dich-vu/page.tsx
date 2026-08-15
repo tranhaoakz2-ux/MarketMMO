@@ -13,7 +13,7 @@ export default async function SellerServiceOrdersPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Đơn dịch vụ"
+        title="Đơn Dịch Vụ"
         subtitle="Đơn hàng dịch vụ (buyer cung cấp thông tin để bạn thực hiện) và các danh mục dịch vụ cũ (Boosting, ChatGPT, YouTube)."
       />
       <SellerOrdersTable items={items} emptyLabel="Chưa có đơn hàng dịch vụ nào." showServiceColumn />
@@ -21,4 +21,4 @@ export default async function SellerServiceOrdersPage() {
   );
 }
 
-export const metadata = { title: "Đơn dịch vụ — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Đơn Dịch Vụ — Quản Lý Bán Hàng — MarketMMO" };

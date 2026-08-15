@@ -23,10 +23,10 @@ import {
 } from "@/components/seller-demo/DemoKit";
 
 const FILTERS = [
-  { value: "ALL", label: "Tất cả" },
-  { value: "APPROVED", label: "Đã duyệt" },
-  { value: "PENDING", label: "Chờ duyệt" },
-  { value: "REJECTED", label: "Bị từ chối" },
+  { value: "ALL", label: "Tất Cả" },
+  { value: "APPROVED", label: "Đã Duyệt" },
+  { value: "PENDING", label: "Chờ Duyệt" },
+  { value: "REJECTED", label: "Bị Từ Chối" },
 ];
 
 // Seller nhập hàng loạt dữ liệu giao hàng thật (kho — xem model
@@ -356,7 +356,7 @@ function ManageModal({
         {variants.length > 0 && (
           <div className="flex flex-col gap-2">
             <SectionTitle aside={<span className="text-[11px] text-muted">{variants.length} phiên bản</span>}>
-              Phiên bản
+              Phiên Bản
             </SectionTitle>
             {variants.map((v) => (
               <div key={v.id} className="rounded-lg border border-border-c bg-surface-alt px-3 py-2.5 text-sm">

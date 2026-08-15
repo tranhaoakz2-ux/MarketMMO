@@ -18,7 +18,7 @@ export default function SellerProductsPanel({ categories }: { categories: Catego
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Sản phẩm"
+        title="Sản Phẩm"
         subtitle="Đăng sản phẩm mới (cần admin duyệt), quản lý phiên bản & kho dữ liệu giao hàng."
         actions={
           <Button onClick={() => setShowForm((v) => !v)}>

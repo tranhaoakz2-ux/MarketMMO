@@ -12,4 +12,4 @@ export default async function SellerDisputesPage() {
   return <SellerDisputesList disputes={disputes} />;
 }
 
-export const metadata = { title: "Khiếu nại — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Khiếu Nại — Quản Lý Bán Hàng — MarketMMO" };

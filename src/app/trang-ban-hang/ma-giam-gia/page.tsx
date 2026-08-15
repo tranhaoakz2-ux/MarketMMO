@@ -4,4 +4,4 @@ export default function SellerDiscountCodesPage() {
   return <SellerDiscountCodesPanel />;
 }
 
-export const metadata = { title: "Mã giảm giá — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Mã Giảm Giá — Quản Lý Bán Hàng — MarketMMO" };

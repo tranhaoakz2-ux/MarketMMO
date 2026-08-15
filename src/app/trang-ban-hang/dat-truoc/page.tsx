@@ -14,18 +14,18 @@ export default async function SellerPreOrdersPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Đặt trước"
+        title="Đặt Trước"
         subtitle='Quản lý sản phẩm "sắp có hàng" và theo dõi đơn đặt trước đang chờ giao.'
       />
 
       <SellerPreOrderPanel />
 
       <div className="flex flex-col gap-3">
-        <h2 className="text-[13px] font-black text-foreground">Đơn đặt trước</h2>
+        <h2 className="text-[13px] font-black text-foreground">Đơn Đặt Trước</h2>
         <SellerOrdersTable items={items} emptyLabel="Chưa có đơn đặt trước nào." showPreOrderColumn />
       </div>
     </div>
   );
 }
 
-export const metadata = { title: "Đặt trước — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Đặt Trước — Quản Lý Bán Hàng — MarketMMO" };

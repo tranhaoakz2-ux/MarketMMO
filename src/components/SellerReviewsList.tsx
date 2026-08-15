@@ -38,7 +38,7 @@ export default function SellerReviewsList({ reviews }: { reviews: Review[] }) {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Đánh giá"
+        title="Đánh Giá"
         subtitle="Đánh giá của người mua dành cho gian hàng của bạn (không thể chỉnh sửa/xoá)."
       />
 
@@ -75,7 +75,7 @@ export default function SellerReviewsList({ reviews }: { reviews: Review[] }) {
 
           {/* Danh sách */}
           <div className="flex flex-col gap-3">
-            <SectionTitle>Tất cả đánh giá</SectionTitle>
+            <SectionTitle>Tất Cả Đánh Giá</SectionTitle>
             {reviews.map((r) => (
               <Card key={r.id} className={r.hidden ? "opacity-60" : ""}>
                 <div className="flex items-center justify-between gap-2">

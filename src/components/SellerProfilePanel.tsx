@@ -65,7 +65,7 @@ export default function SellerProfilePanel({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Hồ sơ cá nhân"
+        title="Hồ Sơ Cá Nhân"
         subtitle="Không bắt buộc — điền đầy đủ giúp gian hàng của bạn trông đáng tin cậy hơn với người mua."
       />
 
@@ -143,7 +143,7 @@ export default function SellerProfilePanel({
           <p className="text-[11px] text-muted">
             Tính theo avatar + lĩnh vực chuyên. Chỉ số này chỉ hiện với bạn, không hiện trên gian hàng công khai.
           </p>
-          <SectionTitle>Hiện công khai</SectionTitle>
+          <SectionTitle>Hiện Công Khai</SectionTitle>
           <p className="text-[11px] text-muted">
             Avatar, tên gian hàng, giới thiệu và lĩnh vực chuyên (nếu có) sẽ hiện ở trang gian hàng công khai của bạn
             để người mua xem trước khi quyết định giao dịch.

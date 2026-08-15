@@ -22,4 +22,4 @@ export default async function SellerInsurancePage() {
   );
 }
 
-export const metadata = { title: "Quỹ bảo hiểm — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Quỹ Bảo Hiểm — Quản Lý Bán Hàng — MarketMMO" };

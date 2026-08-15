@@ -81,7 +81,7 @@ const FLOW_STEPS = [
 function FlowSteps() {
   return (
     <Card padding="p-6">
-      <SectionTitle>Quy trình xử lý khiếu nại</SectionTitle>
+      <SectionTitle>Quy Trình Xử Lý Khiếu Nại</SectionTitle>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch">
         {FLOW_STEPS.map((s, i) => (
           <div key={s.title} className="flex flex-col gap-4 sm:flex-1 sm:flex-row sm:items-center">
@@ -145,7 +145,7 @@ export default function SellerDisputesList({ disputes }: { disputes: Dispute[] }
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Khiếu nại"
+        title="Khiếu Nại"
         subtitle="Người mua báo lỗi sẽ qua bạn bảo hành trước (24h). Từ chối hoặc quá hạn thì mới lên sàn."
       />
 
@@ -153,7 +153,7 @@ export default function SellerDisputesList({ disputes }: { disputes: Dispute[] }
 
       {/* Cần bạn xử lý */}
       <div className="flex flex-col gap-3">
-        <SectionTitle>Cần bạn xử lý ({warranty.length})</SectionTitle>
+        <SectionTitle>Cần Bạn Xử Lý ({warranty.length})</SectionTitle>
         {warranty.length === 0 ? (
           <Card>
             <EmptyState icon={ShieldCheck} title="Không có gì cần xử lý">
@@ -212,7 +212,7 @@ export default function SellerDisputesList({ disputes }: { disputes: Dispute[] }
       {/* Đang chờ sàn */}
       {platform.length > 0 && (
         <div className="flex flex-col gap-3">
-          <SectionTitle>Đang chờ sàn xử lý ({platform.length})</SectionTitle>
+          <SectionTitle>Đang Chờ Sàn Xử Lý ({platform.length})</SectionTitle>
           {platform.map((d) => (
             <Card key={d.id}>
               <div className="flex flex-wrap items-start justify-between gap-2">
@@ -240,7 +240,7 @@ export default function SellerDisputesList({ disputes }: { disputes: Dispute[] }
       {/* Lịch sử */}
       {resolved.length > 0 && (
         <div className="flex flex-col gap-3">
-          <SectionTitle>Đã xử lý ({resolved.length})</SectionTitle>
+          <SectionTitle>Đã Xử Lý ({resolved.length})</SectionTitle>
           {resolved.map((d) => (
             <Card key={d.id} className="flex flex-wrap items-center justify-between gap-2">
               <div className="min-w-0">

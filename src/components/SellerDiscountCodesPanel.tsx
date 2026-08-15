@@ -173,13 +173,13 @@ export default function SellerDiscountCodesPanel() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Mã giảm giá"
+        title="Mã Giảm Giá"
         subtitle="Tạo mã áp dụng cho toàn bộ sản phẩm gian hàng bạn. Người mua nhập ở giỏ hàng hoặc mua ngay."
       />
 
       {/* Form tạo mã */}
       <Card className="border-brand-dark/30">
-        <SectionTitle>Tạo mã giảm giá mới</SectionTitle>
+        <SectionTitle>Tạo Mã Giảm Giá Mới</SectionTitle>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Mã (VD: SALE20)">
             <TextInput
@@ -231,7 +231,7 @@ export default function SellerDiscountCodesPanel() {
       {/* Danh sách mã */}
       <Card>
         <SectionTitle aside={!loading ? <span className="text-[11px] text-muted">{codes.length} mã</span> : undefined}>
-          Danh sách mã giảm giá
+          Danh Sách Mã Giảm Giá
         </SectionTitle>
         {loading ? (
           <p className="py-4 text-center text-sm text-muted">Đang tải...</p>

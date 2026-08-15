@@ -7,4 +7,4 @@ export default async function SellerProductsPage() {
   return <SellerProductsPanel categories={categories} />;
 }
 
-export const metadata = { title: "Sản phẩm — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Sản Phẩm — Quản Lý Bán Hàng — MarketMMO" };

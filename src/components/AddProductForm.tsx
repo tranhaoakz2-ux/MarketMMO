@@ -509,7 +509,7 @@ export default function AddProductForm({
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-ink">
             <Plus className="h-4 w-4" />
           </span>
-          <h3 className="text-sm font-black text-foreground">Đăng sản phẩm mới</h3>
+          <h3 className="text-sm font-black text-foreground">Đăng Sản Phẩm Mới</h3>
         </div>
         <button
           type="button"

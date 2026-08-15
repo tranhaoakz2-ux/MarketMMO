@@ -41,7 +41,7 @@ export default async function SellerPromotionPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Quảng bá (Đấu giá)"
+        title="Quảng Bá (Đấu Giá)"
         subtitle="Đấu giá giành vị trí vàng để sản phẩm của bạn hiển thị nổi bật trên trang chủ."
         actions={
           <StatusBadge tone="warn" dot>
@@ -70,7 +70,7 @@ export default async function SellerPromotionPage() {
 
       {/* Lịch */}
       <div>
-        <SectionTitle>Phiên đấu giá — 20:00–22:00 tối Chủ Nhật hàng tuần</SectionTitle>
+        <SectionTitle>Phiên Đấu Giá — 20:00–22:00 tối Chủ Nhật hàng tuần</SectionTitle>
         <Card padding="p-0" className="overflow-hidden">
           <div className="bg-gradient-to-br from-brand to-brand-dark px-4 py-3 text-center">
             <p className="text-sm font-black text-ink">{data.setting.slotCount} vị trí vàng</p>
@@ -100,7 +100,7 @@ export default async function SellerPromotionPage() {
       {data.bids.length > 0 && (
         <div>
           <SectionTitle aside={<span className="text-[11px] text-muted">{data.bids.length} lượt đặt giá</span>}>
-            Bảng xếp hạng phiên này
+            Bảng Xếp Hạng Phiên Này
           </SectionTitle>
           <Card padding="p-0" className="overflow-hidden">
             <div className="flex items-center gap-2 bg-brand px-4 py-2.5 text-sm font-black text-ink">
@@ -155,7 +155,7 @@ export default async function SellerPromotionPage() {
 
       {/* Form đặt giá */}
       <div>
-        <SectionTitle>Đặt giá đấu</SectionTitle>
+        <SectionTitle>Đặt Giá Đấu</SectionTitle>
         <Card>
           <AuctionBidForm
             isOpenNow={data.isOpenNow}
@@ -174,7 +174,7 @@ export default async function SellerPromotionPage() {
       {/* Quyền lợi + hướng dẫn */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card>
-          <SectionTitle aside={<Megaphone className="h-4 w-4 text-brand-dark" />}>Đưa sản phẩm lên vị trí vàng</SectionTitle>
+          <SectionTitle aside={<Megaphone className="h-4 w-4 text-brand-dark" />}>Đưa Sản Phẩm Lên Vị Trí Vàng</SectionTitle>
           <ul className="flex flex-col gap-2 text-sm text-foreground/80">
             {BENEFITS.map((b) => (
               <li key={b} className="flex items-start gap-2">
@@ -184,7 +184,7 @@ export default async function SellerPromotionPage() {
           </ul>
         </Card>
         <Card>
-          <SectionTitle aside={<Info className="h-4 w-4 text-brand-dark" />}>Hướng dẫn tham gia</SectionTitle>
+          <SectionTitle aside={<Info className="h-4 w-4 text-brand-dark" />}>Hướng Dẫn Tham Gia</SectionTitle>
           <ul className="flex flex-col gap-3 text-sm text-foreground/80">
             {GUIDE.map((step, i) => (
               <li key={step} className="flex items-start gap-2.5">
@@ -201,4 +201,4 @@ export default async function SellerPromotionPage() {
   );
 }
 
-export const metadata = { title: "Quảng bá (Đấu giá) — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Quảng Bá (Đấu Giá) — Quản Lý Bán Hàng — MarketMMO" };

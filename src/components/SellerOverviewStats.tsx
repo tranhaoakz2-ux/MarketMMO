@@ -24,11 +24,11 @@ import { orderStatusLabel, type OrderStatus, type RangeKey } from "@/lib/constan
 import { calcSellerProfileCompleteness } from "@/lib/seller-profile";
 
 const RANGES: { key: RangeKey; label: string }[] = [
-  { key: "today", label: "Hôm nay" },
-  { key: "yesterday", label: "Hôm qua" },
-  { key: "7d", label: "7 ngày" },
-  { key: "month", label: "Tháng này" },
-  { key: "last_month", label: "Tháng trước" },
+  { key: "today", label: "Hôm Nay" },
+  { key: "yesterday", label: "Hôm Qua" },
+  { key: "7d", label: "7 Ngày" },
+  { key: "month", label: "Tháng Này" },
+  { key: "last_month", label: "Tháng Trước" },
 ];
 
 const statusDotClass: Record<OrderStatus, string> = {
@@ -230,7 +230,7 @@ export default function SellerOverviewStats({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted">Quản lý bán hàng</p>
-          <h1 className="mt-1 text-3xl font-black tracking-tight text-foreground">Tổng quan</h1>
+          <h1 className="mt-1 text-3xl font-black tracking-tight text-foreground">Tổng Quan</h1>
           <p className="mt-1 text-sm text-muted">Theo dõi dòng tiền, đơn hàng và việc cần xử lý cho gian hàng của bạn.</p>
         </div>
         <div className="flex flex-col items-stretch gap-2 sm:items-end">
@@ -317,13 +317,13 @@ export default function SellerOverviewStats({
         <div className="flex min-w-0 flex-col gap-5">
           <Card>
             <SectionTitle aside={<span className="text-[11px] font-semibold text-muted">{revenueTrend.length > 10 ? "Gộp theo tuần" : "Theo ngày"}</span>}>
-              Doanh số theo thời gian
+              Doanh Số Theo Thời Gian
             </SectionTitle>
             {hasRevenue ? <SellerOverviewChart bars={revenueTrend} /> : <EmptyState icon={BarChart3}>Chưa có doanh số trong kỳ này.</EmptyState>}
           </Card>
 
           <Card>
-            <SectionTitle aside={<span className="text-[11px] text-muted">{statusTotal} đơn trong kỳ</span>}>Trạng thái đơn hàng</SectionTitle>
+            <SectionTitle aside={<span className="text-[11px] text-muted">{statusTotal} đơn trong kỳ</span>}>Trạng Thái Đơn Hàng</SectionTitle>
             {statusTotal === 0 ? (
               <EmptyState icon={PackageX}>Chưa có đơn hàng nào trong kỳ này.</EmptyState>
             ) : (
@@ -347,7 +347,7 @@ export default function SellerOverviewStats({
           </Card>
 
           <Card>
-            <SectionTitle aside={<span className="text-[11px] text-muted">Bấm để xem gian hàng</span>}>Sản phẩm bán chạy</SectionTitle>
+            <SectionTitle aside={<span className="text-[11px] text-muted">Bấm để xem gian hàng</span>}>Sản Phẩm Bán Chạy</SectionTitle>
             {topProducts.length === 0 ? (
               <EmptyState icon={Package}>Chưa có sản phẩm nào bán được trong kỳ này.</EmptyState>
             ) : (
@@ -373,7 +373,7 @@ export default function SellerOverviewStats({
 
           <Card>
             <SectionTitle aside={<Link href="/trang-ban-hang/don-san-pham" className="text-[11px] font-bold text-brand-dark hover:underline">Xem tất cả →</Link>}>
-              Đơn hàng gần đây
+              Đơn Hàng Gần Đây
             </SectionTitle>
             {recentOrders.length === 0 ? (
               <EmptyState icon={PackageX}>Chưa có đơn hàng nào.</EmptyState>
@@ -400,7 +400,7 @@ export default function SellerOverviewStats({
         {/* Cột phải */}
         <div className="flex flex-col gap-5">
           <Card>
-            <SectionTitle>Cần xử lý</SectionTitle>
+            <SectionTitle>Cần Xử Lý</SectionTitle>
             <div className="flex flex-col gap-2.5">
               {attentionItems.map((item) => (
                 <Link key={item.title} href={item.href} className="flex items-center gap-3 rounded-xl bg-surface-alt p-3 transition hover:bg-border-c">
@@ -454,7 +454,7 @@ export default function SellerOverviewStats({
                 <div className="mt-4">
                   <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px]">
                     <span className="flex shrink-0 items-center gap-1 text-muted">
-                      <ShieldCheck className="h-3 w-3" /> Quỹ bảo hiểm
+                      <ShieldCheck className="h-3 w-3" /> Quỹ Bảo Hiểm
                     </span>
                     <b className="truncate tabular-nums text-foreground">
                       {formatVnd(storeSnapshot.insuranceBalance)} / {formatVnd(insuranceFundTarget)}
@@ -469,7 +469,7 @@ export default function SellerOverviewStats({
                   className="mt-4 flex items-center justify-between gap-2 rounded-xl bg-surface-alt px-3 py-2.5 text-xs transition hover:bg-border-c"
                 >
                   <span className="flex items-center gap-1.5 font-bold text-foreground">
-                    <UserCircle className="h-3.5 w-3.5 text-brand-dark" /> Hồ sơ cá nhân
+                    <UserCircle className="h-3.5 w-3.5 text-brand-dark" /> Hồ Sơ Cá Nhân
                   </span>
                   <span
                     className={`font-black tabular-nums ${
@@ -490,7 +490,7 @@ export default function SellerOverviewStats({
           )}
 
           <Card>
-            <SectionTitle>Mẹo tăng doanh số</SectionTitle>
+            <SectionTitle>Mẹo Tăng Doanh Số</SectionTitle>
             <div className="flex flex-col items-center gap-2 py-4 text-center">
               <span className="grid h-12 w-12 place-items-center rounded-2xl bg-surface-alt text-muted">
                 <PackageX className="h-6 w-6" strokeWidth={1.6} />

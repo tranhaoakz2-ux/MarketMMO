@@ -94,14 +94,14 @@ export default function SellerInsurancePanel({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Quỹ bảo hiểm"
+        title="Quỹ Bảo Hiểm"
         subtitle="Không bắt buộc — là tín hiệu tin cậy hiển thị cho người mua, giúp gian hàng uy tín hơn."
       />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
         {/* Form nạp */}
         <Card>
-          <SectionTitle>Nạp quỹ bảo hiểm</SectionTitle>
+          <SectionTitle>Nạp Quỹ Bảo Hiểm</SectionTitle>
           <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-muted">Chọn nhanh số tiền</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {QUICK.map((v) => (
@@ -159,7 +159,7 @@ export default function SellerInsurancePanel({
       </div>
 
       <Card>
-        <SectionTitle>Lịch sử nạp quỹ</SectionTitle>
+        <SectionTitle>Lịch Sử Nạp Quỹ</SectionTitle>
         <DataTable
           columns={columns}
           rows={deposits}

@@ -64,10 +64,10 @@ const STATUS_TONE: Record<OrderStatus, Tone> = {
 };
 
 const FILTERS: { value: string; label: string }[] = [
-  { value: "ALL", label: "Tất cả" },
-  { value: "ESCROW", label: "Đang ký quỹ" },
-  { value: "RELEASED", label: "Hoàn thành" },
-  { value: "DISPUTED", label: "Tranh chấp" },
+  { value: "ALL", label: "Tất Cả" },
+  { value: "ESCROW", label: "Đang Ký Quỹ" },
+  { value: "RELEASED", label: "Hoàn Thành" },
+  { value: "DISPUTED", label: "Tranh Chấp" },
 ];
 
 const PAGE_SIZE = 8;

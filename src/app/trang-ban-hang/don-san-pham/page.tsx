@@ -13,7 +13,7 @@ export default async function SellerProductOrdersPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Đơn sản phẩm"
+        title="Đơn Sản Phẩm"
         subtitle="Đơn hàng thuộc danh mục sản phẩm (tài khoản số, Steam key...)."
       />
       <SellerOrdersTable items={items} emptyLabel="Chưa có đơn hàng sản phẩm nào." />
@@ -21,4 +21,4 @@ export default async function SellerProductOrdersPage() {
   );
 }
 
-export const metadata = { title: "Đơn sản phẩm — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Đơn Sản Phẩm — Quản Lý Bán Hàng — MarketMMO" };

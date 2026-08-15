@@ -105,7 +105,7 @@ export default function SellerPreOrderPanel() {
 
   return (
     <Card>
-      <SectionTitle>Đánh dấu sản phẩm &quot;Đặt trước&quot;</SectionTitle>
+      <SectionTitle>Đánh Dấu Sản Phẩm &quot;Đặt Trước&quot;</SectionTitle>
       <div className="mb-4 flex items-start gap-2 rounded-lg border border-border-c bg-surface-alt px-3 py-2.5 text-xs text-muted">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-dark" />
         Bật cho sản phẩm chưa có sẵn hàng — người mua vẫn thanh toán trước (tiền vào ký quỹ, KHÔNG
