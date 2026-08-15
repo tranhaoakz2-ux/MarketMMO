@@ -73,13 +73,7 @@ function CategoryTreeRow({
             {active && <Check className="h-3 w-3 text-foreground" strokeWidth={3} />}
           </span>
           <span
-            className={`truncate text-sm ${
-              active
-                ? "font-semibold text-foreground"
-                : hasChildren
-                  ? "font-bold text-foreground"
-                  : "text-muted"
-            }`}
+            className={`truncate text-sm text-foreground ${active ? "font-semibold" : "font-bold"}`}
           >
             {node.name}
           </span>
