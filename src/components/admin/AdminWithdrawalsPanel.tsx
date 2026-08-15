@@ -117,7 +117,7 @@ export default function AdminWithdrawalsPanel() {
           </div>
         ) : (
           <span className="block max-w-[220px] truncate text-[var(--adm-muted)]">
-            {formatWithdrawRecipient(w.method, w.recipientInfo, w.note)}
+            {formatWithdrawRecipient(w.recipientInfo, w.note)}
           </span>
         ),
     },
@@ -158,7 +158,7 @@ export default function AdminWithdrawalsPanel() {
                         </div>
                       ) : (
                         <p className="mt-1 text-xs text-[var(--adm-muted)]">
-                          {formatWithdrawRecipient(w.method, w.recipientInfo, w.note)}
+                          {formatWithdrawRecipient(w.recipientInfo, w.note)}
                         </p>
                       )}
                       <p className="mt-1 text-xs font-semibold text-[var(--adm-brand)]">

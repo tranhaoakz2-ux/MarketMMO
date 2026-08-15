@@ -271,15 +271,13 @@ export const walletMethodLabel: Record<string, string> = {
   // Method riêng cho RÚT USDT (khác "usdt" ở trên vốn dùng cho NẠP) — tách
   // để không lẫn 2 hướng tiền khi lọc/hiển thị theo method.
   usdt_trc20: "USDT (TRC20)",
-  // Rút tiền qua MoMo — xem POST /api/seller/withdraw-request.
-  momo: "MoMo",
   // Đơn nạp ngân hàng ĐÃ được webhook SePay tự động xác nhận (khác "bank" —
   // đơn còn PENDING chờ admin duyệt tay vẫn giữ method "bank" cho tới khi
   // khớp được, xem src/app/api/webhook/sepay/route.ts).
   sepay: "Ngân hàng (SePay tự động)",
 };
 
-// Mức rút tiền tối thiểu — dùng chung bank+momo (cùng đơn vị VNĐ); USDT tách
+// Mức rút tiền tối thiểu — dùng cho bank (cùng đơn vị VNĐ); USDT tách
 // riêng vì quy đổi qua tỷ giá thị trường, cần mức sàn khác để tránh phí mạng
 // TRC20 ăn hết giá trị rút. Validate CẢ API (POST /api/seller/withdraw-request)
 // lẫn UI (SellerWithdrawPanel.tsx).

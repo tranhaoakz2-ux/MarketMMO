@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, Clock, DollarSign, Loader2, Smartphone, Wallet } from "lucide-react";
+import { Banknote, Clock, DollarSign, Loader2, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 import { formatVnd, formatWithdrawRecipient } from "@/lib/format";
 import { walletTxStatusLabel, type WalletTxStatus } from "@/lib/constants";
@@ -12,7 +12,6 @@ import {
   EmptyState,
   Field,
   PageHeader,
-  Segmented,
   SectionTitle,
   StatusBadge,
   TextInput,
@@ -44,19 +43,17 @@ const STATUS_TONE: Record<WalletTxStatus, Tone> = {
   REJECTED: "danger",
 };
 
-const RATE_SOURCE_LABEL: Record<string, string> = {
-  coingecko: "CoinGecko (real-time)",
-  fallback: "Tỷ giá dự phòng (admin cấu hình)",
-};
+const METHOD_OPTIONS = [
+  { value: "bank" as const, label: "Ngân hàng" },
+  { value: "usdt_trc20" as const, label: "USDT (TRC20)" },
+];
 
 export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: number }) {
-  const [method, setMethod] = useState<"bank" | "momo" | "usdt_trc20">("bank");
+  const [method, setMethod] = useState<"bank" | "usdt_trc20">("bank");
   const [amount, setAmount] = useState<number | null>(100000);
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
-  const [momoPhone, setMomoPhone] = useState("");
-  const [momoHolderName, setMomoHolderName] = useState("");
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +62,6 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
   const [balance, setBalance] = useState(walletBalance);
 
   const [rate, setRate] = useState<number | null>(null);
-  const [rateSource, setRateSource] = useState<string | null>(null);
   const [rateLoading, setRateLoading] = useState(false);
   const [rateError, setRateError] = useState<string | null>(null);
 
@@ -99,10 +95,8 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
         if (!res.ok) {
           setRateError(data.error ?? "Không thể lấy tỷ giá.");
           setRate(null);
-          setRateSource(null);
         } else {
           setRate(data.rate);
-          setRateSource(data.source);
         }
       } catch {
         if (!cancelled) setRateError("Không thể lấy tỷ giá.");
@@ -131,15 +125,6 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
         setError("Vui lòng nhập đầy đủ thông tin ngân hàng nhận tiền.");
         return;
       }
-    } else if (method === "momo") {
-      if (!amount || amount < MIN_BANK) {
-        setError(`Số tiền rút tối thiểu là ${formatVnd(MIN_BANK)}.`);
-        return;
-      }
-      if (!momoPhone.trim() || !momoHolderName.trim()) {
-        setError("Vui lòng nhập đầy đủ số điện thoại và tên chủ tài khoản MoMo.");
-        return;
-      }
     } else {
       if (!amount || amount < MIN_USDT) {
         setError(`Số tiền rút USDT tối thiểu là ${formatVnd(MIN_USDT)}.`);
@@ -158,9 +143,7 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
       body: JSON.stringify(
         method === "bank"
           ? { method: "bank", amount, bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountHolder: accountHolder.trim() }
-          : method === "momo"
-            ? { method: "momo", amount, phone: momoPhone.trim(), holderName: momoHolderName.trim() }
-            : { method: "usdt_trc20", amount, withdrawAddress: withdrawAddress.trim() }
+          : { method: "usdt_trc20", amount, withdrawAddress: withdrawAddress.trim() }
       ),
     });
     const data = await res.json();
@@ -200,7 +183,7 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
           </div>
         ) : (
           <span className="block max-w-[240px] truncate text-muted">
-            {formatWithdrawRecipient(w.method, w.recipientInfo, w.note)}
+            {formatWithdrawRecipient(w.recipientInfo, w.note)}
           </span>
         ),
     },
@@ -215,27 +198,32 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Rút tiền" subtitle="Rút số dư ví về ngân hàng, MoMo hoặc ví USDT (TRC20) của bạn. Admin duyệt tay." />
+      <PageHeader title="Rút tiền" subtitle="Rút số dư ví về ngân hàng hoặc ví USDT (TRC20) của bạn. Admin duyệt tay." />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
         {/* Form */}
         <Card>
           <SectionTitle>Tạo yêu cầu rút tiền</SectionTitle>
 
-          <div className="mb-4">
-            <Segmented
-              value={method}
-              onChange={(v) => {
-                setMethod(v);
-                setError(null);
-                setMessage(null);
-              }}
-              options={[
-                { value: "bank", label: "Ngân hàng" },
-                { value: "momo", label: "MoMo" },
-                { value: "usdt_trc20", label: "USDT (TRC20)" },
-              ]}
-            />
+          <div className="mb-4 grid grid-cols-2 gap-3">
+            {METHOD_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  setMethod(opt.value);
+                  setError(null);
+                  setMessage(null);
+                }}
+                className={`rounded-2xl border-2 px-5 py-4 text-center text-base font-black transition sm:text-lg ${
+                  method === opt.value
+                    ? "border-brand-dark bg-brand text-ink shadow-sm"
+                    : "border-border-c bg-surface text-foreground hover:bg-surface-alt"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
 
           <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-muted">Chọn nhanh số tiền</p>
@@ -280,22 +268,6 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
             </div>
           )}
 
-          {method === "momo" && (
-            <div className="mt-4 rounded-xl border border-dashed border-brand-dark/30 bg-brand-light/10 p-4">
-              <p className="mb-3 flex items-center gap-1.5 text-xs font-bold text-foreground">
-                <Smartphone className="h-4 w-4 text-brand-dark" /> Thông tin ví MoMo nhận tiền
-              </p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Số điện thoại MoMo">
-                  <TextInput value={momoPhone} onChange={(e) => setMomoPhone(e.target.value)} placeholder="0912345678" />
-                </Field>
-                <Field label="Chủ tài khoản">
-                  <TextInput value={momoHolderName} onChange={(e) => setMomoHolderName(e.target.value)} placeholder="NGUYEN VAN A" />
-                </Field>
-              </div>
-            </div>
-          )}
-
           {method === "usdt_trc20" && (
             <div className="mt-4 rounded-xl border border-dashed border-brand-dark/30 bg-brand-light/10 p-4">
               <p className="mb-3 flex items-center gap-1.5 text-xs font-bold text-foreground">
@@ -305,25 +277,24 @@ export default function SellerWithdrawPanel({ walletBalance }: { walletBalance: 
                 <TextInput value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)} placeholder="T..." />
               </Field>
 
-              <div className="mt-3 rounded-lg bg-surface p-3 text-xs">
+              <div className="mt-3 rounded-lg bg-surface p-4">
                 {rateLoading ? (
-                  <span className="flex items-center gap-1.5 text-muted">
+                  <span className="flex items-center gap-1.5 text-xs text-muted">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang lấy tỷ giá...
                   </span>
                 ) : rateError ? (
-                  <span className="text-danger">{rateError}</span>
+                  <span className="text-xs text-danger">{rateError}</span>
                 ) : rate ? (
-                  <div className="flex flex-col gap-1">
-                    <span className="text-muted">
-                      Tỷ giá: <b className="text-foreground">{rate.toLocaleString("vi-VN")}đ/USDT</b> (nguồn:{" "}
-                      {RATE_SOURCE_LABEL[rateSource ?? ""] ?? rateSource})
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-base font-bold text-foreground">
+                      {rate.toLocaleString("vi-VN")}đ/USDT
                     </span>
                     {usdtPreview != null && (
-                      <span className="text-sm font-black text-brand-dark">
+                      <span className="text-xl font-black text-brand-dark">
                         {formatVnd(amount ?? 0)} ≈ {usdtPreview} USDT
                       </span>
                     )}
-                    <span className="text-[10px] text-muted">
+                    <span className="text-[11px] text-muted">
                       Tỷ giá sẽ được khoá LẠI tại đúng thời điểm bạn bấm gửi yêu cầu (có thể chênh nhẹ so với số xem trước này).
                     </span>
                   </div>

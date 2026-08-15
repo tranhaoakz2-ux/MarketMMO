@@ -7,14 +7,9 @@ import { getSellerWalletHistory } from "@/lib/queries";
 import { getLiveUsdtVndRate } from "@/lib/payment/exchange-rate";
 import { isValidTrc20Address } from "@/lib/payment/trc20";
 
-// SĐT di động Việt Nam — 10 số bắt đầu 0, hoặc +84 theo sau 9 số, đầu số di
-// động hợp lệ (3/5/7/8/9). Không cần chặt chẽ tuyệt đối (đây không phải dữ
-// liệu tính tiền như địa chỉ TRC20) — chỉ chặn lỗi gõ rõ ràng.
-const VN_PHONE_RE = /^(0|\+84)(3|5|7|8|9)\d{8}$/;
-
 // Trừ ví CÓ ĐIỀU KIỆN + nguyên tử (where "walletBalance >= amount" ngay
 // trong lệnh UPDATE) — 2 yêu cầu rút song song (bất kỳ tổ hợp phương thức
-// nào) không thể cùng rút vượt số dư (lệnh sau count=0). Dùng chung cho cả 3
+// nào) không thể cùng rút vượt số dư (lệnh sau count=0). Dùng chung cho cả 2
 // nhánh method để không viết trùng logic đụng tiền ở nhiều nơi.
 async function deductWalletOrThrow(t: Prisma.TransactionClient, userId: string, amount: number) {
   const dec = await t.user.updateMany({
@@ -74,53 +69,6 @@ async function handleBankWithdraw(userId: string, amount: number, body: Record<s
   }
 }
 
-async function handleMomoWithdraw(userId: string, amount: number, body: Record<string, unknown>) {
-  const phone = typeof body.phone === "string" ? body.phone.trim() : "";
-  const holderName = typeof body.holderName === "string" ? body.holderName.trim().slice(0, 100) : "";
-
-  if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount < MIN_WITHDRAW_AMOUNT) {
-    return NextResponse.json(
-      { error: `Số tiền rút tối thiểu là ${MIN_WITHDRAW_AMOUNT.toLocaleString("vi-VN")}đ.` },
-      { status: 400 }
-    );
-  }
-  if (!VN_PHONE_RE.test(phone)) {
-    return NextResponse.json(
-      { error: "Số điện thoại MoMo không hợp lệ. Vui lòng kiểm tra lại." },
-      { status: 400 }
-    );
-  }
-  if (!holderName) {
-    return NextResponse.json(
-      { error: "Vui lòng nhập tên chủ tài khoản MoMo nhận tiền." },
-      { status: 400 }
-    );
-  }
-
-  const recipientInfo = JSON.stringify({ phone, holderName });
-
-  try {
-    const tx = await prisma.$transaction(async (t) => {
-      await deductWalletOrThrow(t, userId, amount);
-      return t.walletTransaction.create({
-        data: {
-          userId,
-          type: "WITHDRAW",
-          amount: -amount,
-          status: "PENDING",
-          method: "momo",
-          recipientInfo,
-        },
-      });
-    });
-
-    return NextResponse.json({ id: tx.id });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Không thể tạo yêu cầu rút tiền.";
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
-}
-
 async function handleUsdtWithdraw(userId: string, amount: number, body: Record<string, unknown>) {
   const address = typeof body.withdrawAddress === "string" ? body.withdrawAddress.trim() : "";
 
@@ -157,7 +105,7 @@ async function handleUsdtWithdraw(userId: string, amount: number, body: Record<s
   }
 
   // recipientInfo NHÂN ĐÔI địa chỉ ví (không thay thế withdrawAddress) — chỉ
-  // để trang admin có 1 đường đọc chung "thông tin tài khoản nhận" cho cả 3
+  // để trang admin có 1 đường đọc chung "thông tin tài khoản nhận" cho cả 2
   // phương thức; usdtAmount/exchangeRate/rateSource vẫn là nguồn sự thật duy
   // nhất cho phần tính toán quy đổi, không đổi.
   const recipientInfo = JSON.stringify({ address });
@@ -196,14 +144,10 @@ export async function POST(req: Request) {
 
   const body = (await req.json().catch(() => null)) ?? {};
   const amount = Number(body.amount);
-  const method =
-    body.method === "usdt_trc20" ? "usdt_trc20" : body.method === "momo" ? "momo" : "bank";
+  const method = body.method === "usdt_trc20" ? "usdt_trc20" : "bank";
 
   if (method === "usdt_trc20") {
     return handleUsdtWithdraw(session!.user.id, amount, body);
-  }
-  if (method === "momo") {
-    return handleMomoWithdraw(session!.user.id, amount, body);
   }
   return handleBankWithdraw(session!.user.id, amount, body);
 }
