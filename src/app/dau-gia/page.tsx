@@ -1,12 +1,4 @@
-import {
-  Award,
-  CheckCircle2,
-  Clock,
-  Flame,
-  Info,
-  Megaphone,
-  TrendingUp,
-} from "lucide-react";
+import { Award, CheckCircle2, Clock, Flame, Info, Megaphone, TrendingUp, Trophy } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumb";
 import AuctionBidForm from "@/components/AuctionBidForm";
 import AuctionCountdown from "@/components/AuctionCountdown";
@@ -14,42 +6,45 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Reveal from "@/components/Reveal";
 import { auth } from "@/auth";
-import { getAuctionSlots, getMySellerProducts } from "@/lib/queries";
+import { getAuctionDisplayData, getMySellerProducts } from "@/lib/queries";
 import { formatVnd } from "@/lib/format";
+import { getNextWindowStart } from "@/lib/auction-schedule";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
+// Đã sửa đúng khớp hành vi thật (trước đây ghi sai "20:00 hàng ngày"/lịch
+// cố định không tồn tại trong code, và câu "ưu tiên hiển thị & tìm kiếm TOP
+// đầu" không đúng — thắng đấu giá CHỈ ảnh hưởng carousel trang chủ, không
+// đụng thứ tự danh mục/tìm kiếm).
 const benefits = [
-  "Hiển thị nổi bật ngay trang chủ. Vị trí 1-4 hiển thị trong 01 tuần. Vị trí 5-6 (Đấu giá ngày) hiển thị trong 01 ngày.",
+  "Hiển thị nổi bật ở carousel Sản phẩm nổi bật trên trang chủ, đúng 1 tuần (tới phiên Chủ Nhật kế tiếp).",
   "Tiếp cận hàng ngàn khách hàng tiềm năng mỗi ngày.",
   "Tăng uy tín thương hiệu và doanh số bán hàng.",
-  "Sản phẩm được ưu tiên hiển thị & tìm kiếm TOP đầu.",
-  "01 vị trí = 01 sản phẩm do bạn tự chọn quảng bá.",
+  "1 vị trí = 1 sản phẩm do bạn tự chọn quảng bá.",
 ];
 
 const guideSteps = [
-  "Đảm bảo ví của bạn có đủ số dư trước khi đặt giá.",
-  "Nhập giá đấu ≥ giá sàn. Mọi người cạnh tranh công bằng, minh bạch.",
-  "Giữ giá cao nhất đến khi phiên kết thúc để chiến thắng.",
-  "Sản phẩm chiến thắng tự động hiển thị tại Vị trí Vàng trên trang chủ khi phiên kết thúc.",
+  "Đảm bảo ví của bạn có đủ số dư — tiền bị KHOÁ khỏi ví ngay khi đặt giá.",
+  "Nhập giá đấu ≥ giá sàn. Chỉ nhận đặt giá từ 20:00 đến 22:00 tối Chủ Nhật.",
+  "Nâng giá bất kỳ lúc nào trong khung giờ để giữ hạng cao hơn.",
+  "22:00 phiên tự chốt: Top N giá cao nhất chờ admin duyệt, còn lại được hoàn tiền ngay.",
 ];
 
 export default async function AuctionPage() {
   const session = await auth();
-  const slots = await getAuctionSlots();
-  const myProducts = session?.user
-    ? await getMySellerProducts(session.user.id)
-    : [];
   const mySeller = session?.user
     ? await prisma.seller.findUnique({ where: { userId: session.user.id } })
     : null;
+  const data = await getAuctionDisplayData(mySeller?.id);
+  const myProducts = session?.user ? await getMySellerProducts(session.user.id) : [];
 
-  const weeklySlots = slots.filter((s) => s.period === "WEEKLY").sort((a, b) => a.position - b.position);
-  const dailySlots = slots.filter((s) => s.period === "DAILY").sort((a, b) => a.position - b.position);
-  const nearestWeekly = weeklySlots[0];
-  const nearestDaily = dailySlots[0];
-  const hasAnyBid = slots.some((s) => s.bidCount > 0);
+  const countdownTarget = data.isOpenNow
+    ? (data.session?.windowEnd ?? data.thisWindow.windowEnd)
+    : getNextWindowStart(data.thisWindow.windowStart);
+
+  const topN = data.bids.slice(0, data.setting.slotCount);
+  const others = data.bids.slice(data.setting.slotCount);
 
   return (
     <>
@@ -75,12 +70,10 @@ export default async function AuctionPage() {
                   </h1>
                   <div className="mt-1 flex flex-wrap items-center justify-center gap-3 text-xs text-white/60 sm:justify-start">
                     <span className="flex items-center gap-1">
-                      <TrendingUp className="h-3.5 w-3.5 text-success" /> Tăng
-                      lượt xem
+                      <TrendingUp className="h-3.5 w-3.5 text-success" /> Tăng lượt xem
                     </span>
                     <span className="flex items-center gap-1">
-                      <Award className="h-3.5 w-3.5 text-brand" /> Bùng nổ
-                      doanh thu
+                      <Award className="h-3.5 w-3.5 text-brand" /> Bùng nổ doanh thu
                     </span>
                   </div>
                 </div>
@@ -89,113 +82,90 @@ export default async function AuctionPage() {
           </Reveal>
 
           <Reveal delay={0.05}>
-            <h2 className="mt-8 mb-4 text-center text-lg font-black uppercase tracking-wide text-foreground">
-              Lịch đấu giá sắp tới
-              <span className="mx-auto mt-1.5 block h-1 w-16 rounded-full bg-brand" />
-            </h2>
-          </Reveal>
-
-          <Reveal delay={0.05}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="overflow-hidden rounded-2xl border border-border-c shadow-sm">
-                <div className="bg-ink px-4 py-2.5 text-center text-sm font-black text-white">
-                  📅 PHIÊN NGÀY (VỊ TRÍ 5 &amp; 6)
-                </div>
-                <div className="flex flex-col items-center gap-2 bg-surface py-6">
-                  <p className="text-xs font-semibold text-muted">
-                    Diễn ra lúc 20:00 hàng ngày
-                  </p>
-                  {nearestDaily ? (
-                    <AuctionCountdown endAt={nearestDaily.endAt} />
-                  ) : (
-                    <span className="text-sm text-muted">Chưa có phiên nào</span>
-                  )}
-                  <span className="rounded-full bg-success/10 px-3 py-1 text-xs font-bold text-success">
-                    Hiển thị trọn 1 ngày
-                  </span>
-                </div>
+            <div className="mt-8 overflow-hidden rounded-2xl border border-border-c shadow-sm">
+              <div className="bg-danger px-4 py-2.5 text-center text-sm font-black text-white">
+                📅 PHIÊN ĐẤU GIÁ VỊ TRÍ VÀNG — 20:00–22:00 TỐI CHỦ NHẬT HÀNG TUẦN
               </div>
-
-              <div className="overflow-hidden rounded-2xl border border-border-c shadow-sm">
-                <div className="bg-danger px-4 py-2.5 text-center text-sm font-black text-white">
-                  📅 PHIÊN TUẦN (VỊ TRÍ 1-4)
-                </div>
-                <div className="flex flex-col items-center gap-2 bg-surface py-6">
-                  <p className="text-xs font-semibold text-muted">
-                    Chủ nhật hàng tuần lúc 20:00
-                  </p>
-                  {nearestWeekly ? (
-                    <AuctionCountdown endAt={nearestWeekly.endAt} />
-                  ) : (
-                    <span className="text-sm text-muted">Chưa có phiên nào</span>
-                  )}
-                  <span className="rounded-full bg-success/10 px-3 py-1 text-xs font-bold text-success">
-                    Hiển thị trọn 1 tuần
-                  </span>
-                </div>
+              <div className="flex flex-col items-center gap-2 bg-surface py-6">
+                <p className="text-xs font-semibold text-muted">
+                  {data.isOpenNow ? "Đang mở nhận giá — kết thúc sau" : "Phiên tiếp theo bắt đầu sau"}
+                </p>
+                <AuctionCountdown endAt={countdownTarget} />
+                <span className="rounded-full bg-success/10 px-3 py-1 text-xs font-bold text-success">
+                  {data.setting.slotCount} vị trí vàng · Thắng hiển thị đúng 1 tuần
+                </span>
               </div>
             </div>
-          </Reveal>
-
-          <Reveal delay={0.1}>
-            <p className="mt-6 text-center text-sm font-semibold text-foreground">
-              🏆 Hãy chuẩn bị sẵn sàng để chiếm vị trí TOP 1!
-            </p>
           </Reveal>
 
           <Reveal delay={0.1}>
             <div className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-surface-alt py-3 text-sm font-bold text-foreground">
               <Clock className="h-4 w-4" />
-              {hasAnyBid ? "PHIÊN ĐANG DIỄN RA — CÓ NGƯỜI ĐẶT GIÁ" : "ĐANG CHỜ LƯỢT ĐẤU GIÁ ĐẦU TIÊN"}
+              {data.isOpenNow
+                ? data.bids.length > 0
+                  ? "PHIÊN ĐANG DIỄN RA — CÓ NGƯỜI ĐẶT GIÁ"
+                  : "PHIÊN ĐANG MỞ — CHỜ LƯỢT ĐẶT GIÁ ĐẦU TIÊN"
+                : data.session?.status === "PENDING_REVIEW"
+                  ? "PHIÊN TUẦN NÀY ĐÃ CHỐT — ĐANG CHỜ ADMIN DUYỆT"
+                  : "NGOÀI GIỜ ĐẤU GIÁ — QUAY LẠI TỐI CHỦ NHẬT"}
             </div>
           </Reveal>
 
-          <Reveal delay={0.1}>
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {slots.map((slot) => (
-                <div
-                  key={slot.id}
-                  className="flex flex-col gap-3 rounded-xl border border-border-c bg-surface p-4 shadow-sm"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="rounded-full bg-brand px-2.5 py-1 text-xs font-black text-ink">
-                      Vị trí #{slot.position}
-                    </span>
-                    <span className="text-xs font-semibold text-muted">
-                      {slot.period === "WEEKLY" ? "Đấu giá tuần" : "Đấu giá ngày"}
-                    </span>
-                  </div>
-
-                  <AuctionCountdown endAt={slot.endAt} size="sm" />
-
-                  <div className="rounded-lg bg-surface-alt p-2.5 text-xs">
-                    {slot.topBid ? (
-                      <>
-                        <p className="font-bold text-foreground">
-                          {formatVnd(slot.topBid.amount)}{" "}
-                          <span className="font-normal text-muted">
-                            ({slot.bidCount} lượt đấu)
-                          </span>
-                        </p>
-                        <p className="mt-0.5 truncate text-muted">
-                          {slot.topBid.productName} — {slot.topBid.sellerName}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-muted">
-                        Chưa có lượt đấu giá · Giá sàn {formatVnd(slot.floorPrice)}
-                      </p>
-                    )}
-                  </div>
-
-                  <AuctionBidForm
-                    slotId={slot.id}
-                    minAmount={Math.max(slot.floorPrice, (slot.topBid?.amount ?? 0) + 1000)}
-                    myProducts={myProducts.map((p) => ({ id: p.id, name: p.name, slug: p.slug }))}
-                    isSeller={Boolean(mySeller)}
-                  />
+          {data.bids.length > 0 && (
+            <Reveal delay={0.1}>
+              <div className="mt-6 overflow-hidden rounded-xl border border-border-c">
+                <div className="flex items-center gap-2 bg-brand px-4 py-2.5 text-sm font-black text-ink">
+                  <Trophy className="h-4 w-4" /> BẢNG XẾP HẠNG PHIÊN NÀY
                 </div>
-              ))}
+                <div className="flex flex-col divide-y divide-border-c bg-surface">
+                  {topN.map((b, i) => (
+                    <div key={b.id} className="flex items-center gap-3 px-4 py-3">
+                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand text-xs font-black text-ink">
+                        {i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-bold text-foreground">{b.productName}</p>
+                        <p className="truncate text-xs text-muted">{b.sellerName}</p>
+                      </div>
+                      <span className="shrink-0 text-sm font-black tabular-nums text-brand-dark">{formatVnd(b.amount)}</span>
+                    </div>
+                  ))}
+                  {others.length > 0 && (
+                    <div className="bg-surface-alt px-4 py-2 text-[11px] font-semibold text-muted">
+                      Ngoài Top {data.setting.slotCount} — chưa đủ hạng thắng
+                    </div>
+                  )}
+                  {others.map((b, i) => (
+                    <div key={b.id} className="flex items-center gap-3 px-4 py-2.5 opacity-70">
+                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-alt text-xs font-bold text-muted">
+                        {topN.length + i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-foreground">{b.productName}</p>
+                        <p className="truncate text-xs text-muted">{b.sellerName}</p>
+                      </div>
+                      <span className="shrink-0 text-sm font-bold tabular-nums text-muted">{formatVnd(b.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
+          )}
+
+          <Reveal delay={0.1}>
+            <div className="mt-6 max-w-md rounded-xl border border-border-c bg-surface p-4 shadow-sm">
+              <p className="mb-3 text-sm font-black text-foreground">Đặt giá đấu</p>
+              <AuctionBidForm
+                isOpenNow={data.isOpenNow}
+                floorPrice={data.setting.floorPrice}
+                myProducts={myProducts.map((p) => ({ id: p.id, name: p.name, slug: p.slug }))}
+                isSeller={Boolean(mySeller)}
+                myBid={
+                  data.myBid
+                    ? { id: data.myBid.id, amount: data.myBid.amount, productSlug: data.myBid.productSlug, status: data.myBid.status }
+                    : null
+                }
+              />
             </div>
           </Reveal>
 

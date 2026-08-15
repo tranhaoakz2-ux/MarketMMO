@@ -12,7 +12,6 @@ import TagCloud from "@/components/TagCloud";
 import WelcomeModal from "@/components/WelcomeModal";
 import {
   getAllProducts,
-  getAuctionSlots,
   getCategoryTree,
   getFeaturedProducts,
   getFeaturedSellers,
@@ -20,6 +19,7 @@ import {
 import { parseProductSortKey, sortProducts } from "@/lib/product-sort";
 import { getHomeBanners } from "@/lib/home-banners";
 import { getSearchTags } from "@/lib/site-config";
+import { getAuctionWindowFor, getNextWindowStart, isWithinAuctionWindow } from "@/lib/auction-schedule";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +34,9 @@ export default async function Home({
   const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
   const sortKey = parseProductSortKey(sort);
 
-  const [productsRaw, featured, auctionSlots, sellers, categoryTree, banners, searchTags] = await Promise.all([
+  const [productsRaw, featured, sellers, categoryTree, banners, searchTags] = await Promise.all([
     getAllProducts(),
     getFeaturedProducts(),
-    getAuctionSlots(),
     getFeaturedSellers(),
     getCategoryTree(),
     getHomeBanners(),
@@ -59,11 +58,12 @@ export default async function Home({
     countBySlug[p.categorySlug] = (countBySlug[p.categorySlug] ?? 0) + 1;
   }
 
-  const nextAuctionEndAt = auctionSlots.length
-    ? auctionSlots.reduce((soonest, s) =>
-        s.endAt < soonest.endAt ? s : soonest
-      ).endAt
-    : null;
+  // Đếm ngược đấu giá vị trí vàng — đúng khớp lịch cố định 20:00–22:00 tối
+  // Chủ Nhật (xem src/lib/auction-schedule.ts): đang mở thì đếm tới lúc
+  // đóng, ngoài giờ thì đếm tới lúc phiên KẾ TIẾP bắt đầu.
+  const auctionOpenNow = isWithinAuctionWindow();
+  const auctionWindow = getAuctionWindowFor();
+  const auctionCountdownAt = auctionOpenNow ? auctionWindow.windowEnd : getNextWindowStart(auctionWindow.windowStart);
 
   return (
     <>
@@ -75,7 +75,7 @@ export default async function Home({
           </Reveal>
 
           <Reveal delay={0.05}>
-            <FeaturedProductsPanel items={featured} nextAuctionEndAt={nextAuctionEndAt} />
+            <FeaturedProductsPanel items={featured} auctionCountdownAt={auctionCountdownAt} auctionOpenNow={auctionOpenNow} />
           </Reveal>
 
           <Reveal delay={0.05}>

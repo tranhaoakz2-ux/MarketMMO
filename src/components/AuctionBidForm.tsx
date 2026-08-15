@@ -8,22 +8,32 @@ import { useState } from "react";
 import { formatVnd } from "@/lib/format";
 
 type MyProduct = { id: string; name: string; slug: string };
+type MyBid = { id: string; amount: number; productSlug: string; status: string } | null;
 
+// Form đặt/nâng giá đấu vị trí vàng — thay thế bản chọn-1-trong-6-slot cũ:
+// giờ chỉ còn ĐÚNG 1 phiên/tuần (20:00–22:00 tối Chủ Nhật), 1 form duy nhất.
+// Nếu seller đã có bid ACTIVE, form hiện sẵn giá hiện tại + chỉ chấp nhận
+// nâng giá (validate cả client lẫn server — server là nguồn sự thật).
 export default function AuctionBidForm({
-  slotId,
-  minAmount,
+  isOpenNow,
+  floorPrice,
   myProducts,
   isSeller,
+  myBid,
 }: {
-  slotId: string;
-  minAmount: number;
+  isOpenNow: boolean;
+  floorPrice: number;
   myProducts: MyProduct[];
   isSeller: boolean;
+  myBid: MyBid;
 }) {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [productId, setProductId] = useState(myProducts[0]?.id ?? "");
+  const minAmount = myBid ? myBid.amount + 1000 : floorPrice;
+  const [productId, setProductId] = useState(
+    myProducts.find((p) => p.slug === myBid?.productSlug)?.id ?? myProducts[0]?.id ?? ""
+  );
   const [amount, setAmount] = useState(minAmount);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +45,7 @@ export default function AuctionBidForm({
     return (
       <Link
         href="/dang-nhap?callbackUrl=/dau-gia"
-        className="flex items-center justify-center gap-1.5 rounded-full border-2 border-ink px-4 py-2 text-xs font-bold text-foreground transition hover:bg-ink hover:text-white dark:border-border-c"
+        className="flex items-center justify-center gap-1.5 rounded-full border-2 border-ink px-4 py-2 text-sm font-bold text-foreground transition hover:bg-ink hover:text-white dark:border-border-c"
       >
         <LogIn className="h-3.5 w-3.5" /> Đăng nhập để đấu giá
       </Link>
@@ -46,7 +56,7 @@ export default function AuctionBidForm({
     return (
       <Link
         href="/tro-thanh-nguoi-ban"
-        className="flex items-center justify-center gap-1.5 rounded-full border-2 border-ink px-4 py-2 text-xs font-bold text-foreground transition hover:bg-ink hover:text-white dark:border-border-c"
+        className="flex items-center justify-center gap-1.5 rounded-full border-2 border-ink px-4 py-2 text-sm font-bold text-foreground transition hover:bg-ink hover:text-white dark:border-border-c"
       >
         <Store className="h-3.5 w-3.5" /> Cần có gian hàng để đấu giá
       </Link>
@@ -54,9 +64,13 @@ export default function AuctionBidForm({
   }
 
   if (myProducts.length === 0) {
+    return <p className="text-sm text-muted">Gian hàng của bạn chưa có sản phẩm nào để đấu giá quảng bá.</p>;
+  }
+
+  if (!isOpenNow) {
     return (
-      <p className="text-xs text-muted">
-        Gian hàng của bạn chưa có sản phẩm nào để đấu giá quảng bá.
+      <p className="rounded-xl border border-dashed border-border-c bg-surface-alt px-4 py-3 text-sm text-muted">
+        Ngoài giờ đấu giá — chỉ nhận đặt giá từ <b className="text-foreground">20:00 đến 22:00 tối Chủ Nhật</b> hàng tuần.
       </p>
     );
   }
@@ -75,7 +89,7 @@ export default function AuctionBidForm({
     const res = await fetch("/api/auction/bids", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slotId, productId, amount }),
+      body: JSON.stringify({ productId, amount }),
     });
     const data = await res.json();
     setLoading(false);
@@ -90,10 +104,15 @@ export default function AuctionBidForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+      {myBid && (
+        <p className="text-xs font-semibold text-brand-dark">
+          Bạn đang đặt {formatVnd(myBid.amount)} — nâng giá để giữ hạng cao hơn.
+        </p>
+      )}
       <select
         value={productId}
         onChange={(e) => setProductId(e.target.value)}
-        className="rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+        className="rounded-lg border border-border-c bg-surface px-2.5 py-2 text-sm text-foreground focus:border-brand-dark focus:outline-none"
       >
         {myProducts.map((p) => (
           <option key={p.id} value={p.id}>
@@ -108,18 +127,19 @@ export default function AuctionBidForm({
           step={1000}
           value={amount}
           onChange={(e) => setAmount(Number(e.target.value) || 0)}
-          className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+          className="w-full rounded-lg border border-border-c bg-surface px-2.5 py-2 text-sm text-foreground focus:border-brand-dark focus:outline-none"
         />
         <button
           type="submit"
           disabled={loading}
-          className="shrink-0 rounded-lg bg-ink px-3 py-2 text-xs font-bold text-white transition hover:bg-ink-soft disabled:opacity-60"
+          className="shrink-0 rounded-lg bg-ink px-3 py-2 text-sm font-bold text-white transition hover:bg-ink-soft disabled:opacity-60"
         >
-          {loading ? "..." : "Đặt giá"}
+          {loading ? "..." : myBid ? "Nâng giá" : "Đặt giá"}
         </button>
       </div>
+      <p className="text-[11px] text-muted">Tối thiểu {formatVnd(minAmount)} — tiền bị khoá khỏi ví ngay khi đặt giá.</p>
       {error && <p className="text-[11px] font-semibold text-danger">{error}</p>}
-      {success && <p className="text-[11px] font-semibold text-success">Đặt giá thành công!</p>}
+      {success && <p className="text-[11px] font-semibold text-success">Đã ghi nhận giá đấu!</p>}
     </form>
   );
 }

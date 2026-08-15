@@ -16,7 +16,13 @@ export type WalletTxType =
   | "REFERRAL_BONUS"
   | "WITHDRAW"
   | "INSURANCE_DEPOSIT"
-  | "INSURANCE_PAYOUT";
+  | "INSURANCE_PAYOUT"
+  // Tiền bị KHOÁ khỏi walletBalance lúc seller đặt/nâng giá đấu vị trí vàng
+  // (status PENDING trong lúc còn khoá) — xem model AuctionBid. Khi admin
+  // duyệt thắng, CHÍNH dòng này đổi type → "PURCHASE" (không tạo dòng mới,
+  // không trừ ví thêm lần nữa vì đã trừ từ lúc khoá). Khi rớt hạng/bị nâng
+  // giá đè/admin từ chối, status đổi PENDING → REJECTED + hoàn lại ví.
+  | "AUCTION_HOLD";
 
 export type WalletTxStatus = "PENDING" | "CONFIRMED" | "REJECTED";
 
@@ -162,6 +168,13 @@ export const DEFAULT_CAP_PERIOD_DAYS = 30;
 export const PLATFORM_FEE_SETTING_ID = "singleton";
 export const DEFAULT_PLATFORM_FEE_PERCENT = 10;
 
+// ── Đấu giá vị trí vàng (xem src/lib/auction.ts + model AuctionSetting/
+// AuctionSession/AuctionBid). Hằng dưới CHỈ là giá trị KHỞI TẠO singleton
+// lần đầu; admin sửa qua Admin > Đấu giá vị trí vàng > Cài đặt.
+export const AUCTION_SETTING_ID = "singleton";
+export const DEFAULT_AUCTION_SLOT_COUNT = 6;
+export const DEFAULT_AUCTION_FLOOR_PRICE = 50000;
+
 export type CommissionStatus = "PENDING" | "ELIGIBLE" | "PAID" | "CANCELLED";
 
 export const commissionStatusLabel: Record<CommissionStatus, string> = {
@@ -193,6 +206,7 @@ export const walletTxTypeLabel: Record<WalletTxType, string> = {
   WITHDRAW: "Rút tiền",
   INSURANCE_DEPOSIT: "Nạp quỹ bảo hiểm",
   INSURANCE_PAYOUT: "Đền bù từ quỹ bảo hiểm",
+  AUCTION_HOLD: "Khoá tiền đấu giá vị trí vàng",
 };
 
 // Category nào được coi là "dịch vụ" khi seller xem đơn hàng trong Trang Bán

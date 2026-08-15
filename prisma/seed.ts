@@ -130,68 +130,15 @@ async function main() {
     });
   }
 
-  console.log("Seeding auction slots (vị trí vàng)...");
-  const now = new Date();
-  const oneDay = 24 * 60 * 60 * 1000;
-  const slotSeed = [
-    { position: 1, period: "WEEKLY", floorPrice: 50000 },
-    { position: 2, period: "WEEKLY", floorPrice: 50000 },
-    { position: 3, period: "WEEKLY", floorPrice: 50000 },
-    { position: 4, period: "WEEKLY", floorPrice: 50000 },
-    { position: 5, period: "DAILY", floorPrice: 20000 },
-    { position: 6, period: "DAILY", floorPrice: 20000 },
-  ];
-  const slotByPosition = new Map<number, string>();
-  for (const s of slotSeed) {
-    const existing = await prisma.auctionSlot.findFirst({
-      where: { position: s.position, status: "OPEN" },
-    });
-    if (existing) {
-      slotByPosition.set(s.position, existing.id);
-      continue;
-    }
-    const durationMs = s.period === "WEEKLY" ? 7 * oneDay : oneDay;
-    const created = await prisma.auctionSlot.create({
-      data: {
-        position: s.position,
-        period: s.period,
-        floorPrice: s.floorPrice,
-        startAt: now,
-        endAt: new Date(now.getTime() + durationMs),
-        status: "OPEN",
-      },
-    });
-    slotByPosition.set(s.position, created.id);
-  }
+  // Đấu giá vị trí vàng (xây lại 2026-08-15): AuctionSetting là singleton
+  // lazy-tạo qua getAuctionSetting() (src/lib/auction.ts) ngay lần đầu có
+  // route đọc tới — KHÔNG seed thủ công (cùng cách PlatformFeeSetting/
+  // CommissionSetting không seed). AuctionSession chỉ tạo lúc có bid THẬT
+  // rơi đúng khung giờ 20:00–22:00 tối Chủ Nhật — không seed phiên/bid giả
+  // vì gắn với mốc thời gian thật (windowStart tính theo lịch hiện tại),
+  // seed 1 phiên "giả" sẽ lệch ngay khi chạy seed vào ngày khác Chủ Nhật.
 
-  console.log("Seeding sample auction bids...");
-  const sampleBids: { position: number; sellerSlug: string; productSlug: string; amount: number }[] = [
-    { position: 1, sellerSlug: "marketmmo-store", productSlug: "combo-10-gmail-random-gia-si", amount: 60000 },
-    { position: 2, sellerSlug: "accverse", productSlug: "facebook-viet-nam-random-reg-lau-nam", amount: 45000 },
-    { position: 5, sellerSlug: "proaccounts", productSlug: "gmail-co-2015-2018-kem-ho-so-google", amount: 25000 },
-  ];
-  for (const b of sampleBids) {
-    const slotId = slotByPosition.get(b.position);
-    if (!slotId) continue;
-    const alreadyBid = await prisma.auctionBid.findFirst({ where: { slotId } });
-    if (alreadyBid) continue;
-    const sellerUser = await prisma.user.findUnique({
-      where: { email: `${b.sellerSlug}@marketmmo.pro` },
-      include: { seller: true },
-    });
-    const product = await prisma.product.findUnique({ where: { slug: b.productSlug } });
-    if (!sellerUser?.seller || !product) continue;
-    await prisma.auctionBid.create({
-      data: {
-        slotId,
-        sellerId: sellerUser.seller.id,
-        productId: product.id,
-        amount: b.amount,
-      },
-    });
-  }
-
-  console.log("Nạp thêm số dư ví demo cho seller (để test đấu giá)...");
+  console.log("Nạp thêm số dư ví demo cho seller...");
   for (const s of sellerSeed) {
     const slug = slugifySeller(s.name);
     const user = await prisma.user.findUnique({ where: { email: `${slug}@marketmmo.pro` } });

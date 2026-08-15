@@ -1,54 +1,42 @@
-import {
-  Award,
-  CheckCircle2,
-  Clock,
-  Flame,
-  Info,
-  Megaphone,
-  TrendingUp,
-} from "lucide-react";
+import { Award, CheckCircle2, Clock, Flame, Info, Megaphone, TrendingUp, Trophy } from "lucide-react";
 import { getAuthSession, getSellerForUser } from "@/lib/authz";
-import { getAuctionSlots, getMySellerProducts } from "@/lib/queries";
+import { getAuctionDisplayData, getMySellerProducts } from "@/lib/queries";
 import { formatVnd } from "@/lib/format";
+import { getNextWindowStart } from "@/lib/auction-schedule";
 import AuctionBidForm from "@/components/AuctionBidForm";
 import AuctionCountdown from "@/components/AuctionCountdown";
-import {
-  Card,
-  PageHeader,
-  SectionTitle,
-  StatusBadge,
-} from "@/components/seller-demo/DemoKit";
+import { Card, PageHeader, SectionTitle, StatusBadge } from "@/components/seller-demo/DemoKit";
 
 export const dynamic = "force-dynamic";
 
 const BENEFITS = [
-  "Hiển thị nổi bật ngay trang chủ — vị trí 1-4 trong 1 tuần, vị trí 5-6 trong 1 ngày.",
+  "Hiển thị nổi bật ở carousel Sản phẩm nổi bật trên trang chủ, đúng 1 tuần (tới phiên Chủ Nhật kế tiếp).",
   "Tiếp cận hàng ngàn khách hàng tiềm năng mỗi ngày.",
   "Tăng uy tín thương hiệu & doanh số bán hàng.",
   "1 vị trí = 1 sản phẩm do bạn tự chọn quảng bá.",
 ];
 
 const GUIDE = [
-  "Đảm bảo ví đủ số dư trước khi đặt giá.",
-  "Nhập giá đấu ≥ giá sàn — cạnh tranh công bằng, minh bạch.",
-  "Giữ giá cao nhất đến khi phiên kết thúc để chiến thắng.",
-  "Sản phẩm thắng tự động lên Vị trí Vàng trang chủ.",
+  "Đảm bảo ví đủ số dư — tiền bị KHOÁ khỏi ví ngay khi đặt giá.",
+  "Nhập giá đấu ≥ giá sàn. Chỉ nhận đặt giá từ 20:00 đến 22:00 tối Chủ Nhật.",
+  "Nâng giá bất kỳ lúc nào trong khung giờ để giữ hạng cao hơn.",
+  "22:00 phiên tự chốt: Top N giá cao nhất chờ admin duyệt, còn lại được hoàn tiền ngay.",
 ];
 
 export default async function SellerPromotionPage() {
   const session = await getAuthSession();
   const seller = await getSellerForUser(session!.user!.id);
-  const [slots, products] = await Promise.all([
-    getAuctionSlots(),
+  const [data, products] = await Promise.all([
+    getAuctionDisplayData(seller?.id),
     getMySellerProducts(session!.user!.id),
   ]);
 
   const myProducts = products.map((p) => ({ id: p.id, name: p.name, slug: p.slug }));
-  const weekly = slots.filter((s) => s.period === "WEEKLY").sort((a, b) => a.position - b.position);
-  const daily = slots.filter((s) => s.period === "DAILY").sort((a, b) => a.position - b.position);
-  const nearestWeekly = weekly[0];
-  const nearestDaily = daily[0];
-  const hasAnyBid = slots.some((s) => s.bidCount > 0);
+  const countdownTarget = data.isOpenNow
+    ? (data.session?.windowEnd ?? data.thisWindow.windowEnd)
+    : getNextWindowStart(data.thisWindow.windowStart);
+  const topN = data.bids.slice(0, data.setting.slotCount);
+  const others = data.bids.slice(data.setting.slotCount);
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,7 +45,7 @@ export default async function SellerPromotionPage() {
         subtitle="Đấu giá giành vị trí vàng để sản phẩm của bạn hiển thị nổi bật trên trang chủ."
         actions={
           <StatusBadge tone="warn" dot>
-            {hasAnyBid ? "Phiên đang diễn ra" : "Đang chờ lượt đầu tiên"}
+            {data.isOpenNow ? "Phiên đang mở" : "Ngoài giờ đấu giá"}
           </StatusBadge>
         }
       />
@@ -82,91 +70,105 @@ export default async function SellerPromotionPage() {
 
       {/* Lịch */}
       <div>
-        <SectionTitle>Lịch đấu giá sắp tới</SectionTitle>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <SectionTitle>Phiên đấu giá — 20:00–22:00 tối Chủ Nhật hàng tuần</SectionTitle>
+        <Card padding="p-0" className="overflow-hidden">
+          <div className="bg-gradient-to-br from-brand to-brand-dark px-4 py-3 text-center">
+            <p className="text-sm font-black text-ink">{data.setting.slotCount} vị trí vàng</p>
+            <p className="text-[11px] text-ink/70">Thắng hiển thị đúng 1 tuần</p>
+          </div>
+          <div className="flex flex-col items-center gap-2 py-6">
+            <p className="text-xs font-semibold text-muted">
+              {data.isOpenNow ? "Đang mở nhận giá — kết thúc sau" : "Phiên tiếp theo bắt đầu sau"}
+            </p>
+            <AuctionCountdown endAt={countdownTarget} />
+          </div>
+        </Card>
+      </div>
+
+      <div className="flex items-center justify-center gap-2 rounded-xl bg-surface-alt py-3 text-sm font-bold text-foreground">
+        <Clock className="h-4 w-4" />
+        {data.isOpenNow
+          ? data.bids.length > 0
+            ? "PHIÊN ĐANG DIỄN RA — CÓ NGƯỜI ĐẶT GIÁ"
+            : "PHIÊN ĐANG MỞ — CHỜ LƯỢT ĐẶT GIÁ ĐẦU TIÊN"
+          : data.session?.status === "PENDING_REVIEW"
+            ? "PHIÊN TUẦN NÀY ĐÃ CHỐT — ĐANG CHỜ ADMIN DUYỆT"
+            : "NGOÀI GIỜ ĐẤU GIÁ — QUAY LẠI TỐI CHỦ NHẬT"}
+      </div>
+
+      {/* Bảng xếp hạng */}
+      {data.bids.length > 0 && (
+        <div>
+          <SectionTitle aside={<span className="text-[11px] text-muted">{data.bids.length} lượt đặt giá</span>}>
+            Bảng xếp hạng phiên này
+          </SectionTitle>
           <Card padding="p-0" className="overflow-hidden">
-            <div className="bg-gradient-to-br from-brand to-brand-dark px-4 py-3 text-center">
-              <p className="text-sm font-black text-ink">📅 PHIÊN NGÀY (VỊ TRÍ 5 & 6)</p>
-              <p className="text-[11px] text-ink/70">20:00 hàng ngày</p>
+            <div className="flex items-center gap-2 bg-brand px-4 py-2.5 text-sm font-black text-ink">
+              <Trophy className="h-4 w-4" /> TOP {data.setting.slotCount}
             </div>
-            <div className="flex flex-col items-center gap-2 py-6">
-              {nearestDaily ? (
-                <AuctionCountdown endAt={nearestDaily.endAt} />
-              ) : (
-                <span className="text-sm text-muted">Chưa có phiên nào</span>
+            <div className="flex flex-col divide-y divide-border-c">
+              {topN.map((b, i) => (
+                <div
+                  key={b.id}
+                  className={`flex items-center gap-3 px-4 py-3 ${b.sellerId === seller?.id ? "bg-brand-light/20" : ""}`}
+                >
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand text-xs font-black text-ink">
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-foreground">{b.productName}</p>
+                    <p className="truncate text-xs text-muted">
+                      {b.sellerName}
+                      {b.sellerId === seller?.id && <span className="ml-1 font-bold text-brand-dark">(Bạn)</span>}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-sm font-black tabular-nums text-brand-dark">{formatVnd(b.amount)}</span>
+                </div>
+              ))}
+              {others.length > 0 && (
+                <div className="bg-surface-alt px-4 py-2 text-[11px] font-semibold text-muted">
+                  Ngoài Top {data.setting.slotCount} — chưa đủ hạng thắng
+                </div>
               )}
-              <StatusBadge tone="success">Hiển thị trọn 1 ngày</StatusBadge>
-            </div>
-          </Card>
-          <Card padding="p-0" className="overflow-hidden">
-            <div className="bg-gradient-to-br from-brand to-brand-dark px-4 py-3 text-center">
-              <p className="text-sm font-black text-ink">📅 PHIÊN TUẦN (VỊ TRÍ 1-4)</p>
-              <p className="text-[11px] text-ink/70">Chủ nhật 20:00</p>
-            </div>
-            <div className="flex flex-col items-center gap-2 py-6">
-              {nearestWeekly ? (
-                <AuctionCountdown endAt={nearestWeekly.endAt} />
-              ) : (
-                <span className="text-sm text-muted">Chưa có phiên nào</span>
-              )}
-              <StatusBadge tone="success">Hiển thị trọn 1 tuần</StatusBadge>
+              {others.map((b, i) => (
+                <div
+                  key={b.id}
+                  className={`flex items-center gap-3 px-4 py-2.5 opacity-70 ${b.sellerId === seller?.id ? "bg-brand-light/10" : ""}`}
+                >
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-alt text-xs font-bold text-muted">
+                    {topN.length + i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">{b.productName}</p>
+                    <p className="truncate text-xs text-muted">
+                      {b.sellerName}
+                      {b.sellerId === seller?.id && <span className="ml-1 font-bold text-brand-dark">(Bạn)</span>}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-sm font-bold tabular-nums text-muted">{formatVnd(b.amount)}</span>
+                </div>
+              ))}
             </div>
           </Card>
         </div>
-      </div>
+      )}
 
-      {/* Các slot */}
+      {/* Form đặt giá */}
       <div>
-        <SectionTitle aside={<span className="text-[11px] text-muted">{slots.length} vị trí</span>}>Các vị trí đang mở</SectionTitle>
-        {slots.length === 0 ? (
-          <Card>
-            <p className="py-6 text-center text-sm text-muted">Hiện chưa có phiên đấu giá nào đang mở.</p>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {slots.map((slot) => (
-              <Card key={slot.id} className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <StatusBadge tone="brand">Vị trí #{slot.position}</StatusBadge>
-                  <span className="text-xs font-semibold text-muted">
-                    {slot.period === "WEEKLY" ? "Đấu giá tuần" : "Đấu giá ngày"}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-                  <Clock className="h-4 w-4 text-brand-dark" />
-                  <AuctionCountdown endAt={slot.endAt} size="sm" />
-                </div>
-
-                <div className="rounded-xl bg-surface-alt p-3 text-xs">
-                  {slot.topBid ? (
-                    <>
-                      <p className="font-black tabular-nums text-foreground">
-                        {formatVnd(slot.topBid.amount)}{" "}
-                        <span className="font-normal text-muted">({slot.bidCount} lượt đấu)</span>
-                      </p>
-                      <p className="mt-0.5 truncate text-muted">
-                        {slot.topBid.productName} — {slot.topBid.sellerName}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-muted">
-                      Chưa có lượt đấu · Giá sàn{" "}
-                      <b className="tabular-nums text-foreground">{formatVnd(slot.floorPrice)}</b>
-                    </p>
-                  )}
-                </div>
-
-                <AuctionBidForm
-                  slotId={slot.id}
-                  minAmount={Math.max(slot.floorPrice, (slot.topBid?.amount ?? 0) + 1000)}
-                  myProducts={myProducts}
-                  isSeller={Boolean(seller)}
-                />
-              </Card>
-            ))}
-          </div>
-        )}
+        <SectionTitle>Đặt giá đấu</SectionTitle>
+        <Card>
+          <AuctionBidForm
+            isOpenNow={data.isOpenNow}
+            floorPrice={data.setting.floorPrice}
+            myProducts={myProducts}
+            isSeller={Boolean(seller)}
+            myBid={
+              data.myBid
+                ? { id: data.myBid.id, amount: data.myBid.amount, productSlug: data.myBid.productSlug, status: data.myBid.status }
+                : null
+            }
+          />
+        </Card>
       </div>
 
       {/* Quyền lợi + hướng dẫn */}

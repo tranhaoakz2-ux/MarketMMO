@@ -25,12 +25,17 @@ function FeaturedCard({ product }: { product: Product }) {
           iconClassName="h-16 w-16 text-foreground/70"
           sizes="204px"
         />
+        {/* 2 nguồn gốc khác nhau, 2 nhãn khác nhau: featuredViaAuction = đang
+            thắng đấu giá vị trí vàng THẬT (Product.featuredUntil > now, xem
+            src/lib/auction.ts approveAuctionBid()); còn lại là admin tự gắn
+            tay (hot/isFeatured) — KHÔNG còn dùng lẫn "ĐẤU GIÁ NGAY"/"TÀI TRỢ"
+            cho cùng 1 khái niệm như trước. */}
         <span
           className={`absolute rounded px-2 py-1 text-[11px] font-bold ${
             product.megaSale?.active ? "left-1 top-1" : "right-1 top-1"
           } ${product.featuredViaAuction ? "bg-ink text-white" : "bg-brand text-ink"}`}
         >
-          {product.featuredViaAuction ? "ĐẤU GIÁ NGAY" : "TÀI TRỢ"}
+          {product.featuredViaAuction ? "VỊ TRÍ VÀNG" : "TÀI TRỢ"}
         </span>
         <div className="absolute -bottom-2 left-2 ring-2 ring-white rounded-full">
           <SellerAvatar avatarUrl={product.sellerAvatarUrl} shopName={product.seller} size={25} />

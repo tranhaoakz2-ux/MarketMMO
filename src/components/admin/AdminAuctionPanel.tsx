@@ -1,377 +1,240 @@
 "use client";
 
-// Panel THẬT "Đấu giá vị trí vàng" — giao diện đồng bộ với bản demo đã
-// duyệt (AdminDemoAuction.tsx), dùng chung AdminDemoKit. TOÀN BỘ dữ
-// liệu/hành vi vẫn THẬT (đụng tiền seller + thay đổi hiển thị trang chủ):
-// fetch GET /api/admin/auction/slots, PATCH .../slots/[id] (giá sàn), POST
-// .../slots/[id]/close-now, POST .../slots/[id]/cancel-bids, POST
-// .../assign (gán thủ công), GET /api/admin/sellers + .../sellers/[id]/
-// products (dropdown liên động) — không đổi 1 dòng logic nghiệp vụ. API
-// route đã có sẵn requireAdmin() (không đụng tới).
-import { Ban, Save, Sparkles, X } from "lucide-react";
+// Panel THẬT "Đấu giá vị trí vàng" — xây lại 2026-08-15 theo mô hình 1 phiên/
+// tuần (20:00–22:00 tối Chủ Nhật) thay cho 6 vị trí cố định cũ. Dữ liệu/hành
+// vi đụng tiền seller thật: GET /api/admin/auction/sessions, GET/PATCH
+// /api/admin/auction-settings, POST /api/admin/auction/close-due (chốt phiên
+// bấm tay — cùng logic với cron), POST /api/admin/auction/bids/[id]/approve
+// và .../reject (duyệt/từ chối từng vị trí Top N).
+import { Check, Gavel, Save, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button, PageHeader, StatusBadge, formatVndDemo } from "@/components/admin-demo/AdminDemoKit";
-import AdminAuctionResolveButton from "@/components/admin/AdminAuctionResolveButton";
+import { Button, Card, EmptyState, Field, PageHeader, StatusBadge, TextInput, formatVndDemo } from "@/components/admin-demo/AdminDemoKit";
 
 type Bid = {
   id: string;
   amount: number;
+  status: "ACTIVE" | "PENDING_APPROVAL" | "WON" | "LOST" | "REJECTED";
+  rank: number | null;
   createdAt: string;
+  decidedAt: string | null;
   sellerName: string;
   sellerSlug: string;
   productName: string;
   productSlug: string;
 };
 
-type Slot = {
+type Session = {
   id: string;
-  position: number;
-  period: "DAILY" | "WEEKLY";
-  floorPrice: number;
-  startAt: string;
-  endAt: string;
-  status: "OPEN" | "CLOSED";
+  windowStart: string;
+  windowEnd: string;
+  status: "OPEN" | "PENDING_REVIEW" | "CLOSED";
+  slotCount: number | null;
+  closedAt: string | null;
   bids: Bid[];
 };
 
-type SellerOption = { id: string; shopName: string };
-type ProductOption = { id: string; name: string };
+const BID_STATUS_TONE: Record<Bid["status"], "brand" | "success" | "danger" | "warn" | "neutral"> = {
+  ACTIVE: "brand",
+  PENDING_APPROVAL: "warn",
+  WON: "success",
+  LOST: "neutral",
+  REJECTED: "danger",
+};
+
+const BID_STATUS_LABEL: Record<Bid["status"], string> = {
+  ACTIVE: "Đang khoá",
+  PENDING_APPROVAL: "Chờ duyệt",
+  WON: "Đã thắng",
+  LOST: "Rớt hạng (đã hoàn)",
+  REJECTED: "Đã từ chối (đã hoàn)",
+};
+
+const SESSION_STATUS_LABEL: Record<Session["status"], string> = {
+  OPEN: "Đang mở",
+  PENDING_REVIEW: "Chờ duyệt",
+  CLOSED: "Đã xong",
+};
 
 export default function AdminAuctionPanel() {
-  const [slots, setSlots] = useState<Slot[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [slotCount, setSlotCount] = useState(6);
+  const [floorPrice, setFloorPrice] = useState(50000);
+  const [settingsBusy, setSettingsBusy] = useState(false);
+  const [settingsMsg, setSettingsMsg] = useState<string | null>(null);
+  const [closeBusy, setCloseBusy] = useState(false);
+  const [closeMsg, setCloseMsg] = useState<string | null>(null);
+  const [bidBusyId, setBidBusyId] = useState<string | null>(null);
 
-  const load = async () => {
+  const loadSessions = async () => {
     setLoading(true);
-    const res = await fetch("/api/admin/auction/slots");
+    const res = await fetch("/api/admin/auction/sessions");
     if (res.ok) {
       const data = await res.json();
-      setSlots(data.slots);
+      setSessions(data.sessions);
     }
     setLoading(false);
   };
 
+  const loadSettings = async () => {
+    const res = await fetch("/api/admin/auction-settings");
+    if (res.ok) {
+      const data = await res.json();
+      setSlotCount(data.slotCount);
+      setFloorPrice(data.floorPrice);
+    }
+  };
+
   useEffect(() => {
     (async () => {
-      await load();
+      await Promise.all([loadSessions(), loadSettings()]);
     })();
   }, []);
 
-  const openSlots = slots.filter((s) => s.status === "OPEN");
-  const weekly = openSlots.filter((s) => s.period === "WEEKLY").sort((a, b) => a.position - b.position);
-  const daily = openSlots.filter((s) => s.period === "DAILY").sort((a, b) => a.position - b.position);
-  const totalBids = openSlots.reduce((sum, s) => sum + s.bids.length, 0);
-  const active = slots.find((s) => s.id === activeId) ?? null;
+  const saveSettings = async () => {
+    setSettingsBusy(true);
+    setSettingsMsg(null);
+    const res = await fetch("/api/admin/auction-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slotCount, floorPrice }),
+    });
+    const data = await res.json();
+    setSettingsBusy(false);
+    setSettingsMsg(res.ok ? "Đã lưu — áp dụng cho lần chốt phiên kế tiếp." : (data.error ?? "Lưu thất bại."));
+  };
+
+  const closeDue = async () => {
+    setCloseBusy(true);
+    setCloseMsg(null);
+    const res = await fetch("/api/admin/auction/close-due", { method: "POST" });
+    const data = await res.json();
+    setCloseBusy(false);
+    setCloseMsg(res.ok ? `Đã chốt ${data.sessionsClosed} phiên đến hạn.` : (data.error ?? "Thất bại."));
+    if (res.ok) loadSessions();
+  };
+
+  const approve = async (bidId: string) => {
+    setBidBusyId(bidId);
+    const res = await fetch(`/api/admin/auction/bids/${bidId}/approve`, { method: "POST" });
+    setBidBusyId(null);
+    if (res.ok) loadSessions();
+  };
+
+  const reject = async (bidId: string) => {
+    if (!confirm("Từ chối vị trí này? Tiền đã khoá sẽ được hoàn lại cho seller.")) return;
+    setBidBusyId(bidId);
+    const res = await fetch(`/api/admin/auction/bids/${bidId}/reject`, { method: "POST" });
+    setBidBusyId(null);
+    if (res.ok) loadSessions();
+  };
+
+  const pendingCount = sessions.reduce(
+    (sum, s) => sum + s.bids.filter((b) => b.status === "PENDING_APPROVAL").length,
+    0
+  );
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Đấu giá vị trí vàng" subtitle="Quản lý 6 vị trí carousel Sản phẩm nổi bật ở trang chủ — xem lịch sử bid, sửa giá sàn, gán thủ công, đóng phiên sớm." />
+      <PageHeader
+        title="Đấu giá vị trí vàng"
+        subtitle="1 phiên/tuần (20:00–22:00 tối Chủ Nhật) — Top N giá cao nhất thắng, tiền khoá ngay lúc đặt giá."
+        actions={pendingCount > 0 ? <StatusBadge tone="warn" dot>{pendingCount} vị trí chờ duyệt</StatusBadge> : undefined}
+      />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MiniStat label="Vị trí đang mở" value={`${openSlots.length}`} />
-        <MiniStat label="Tổng lượt đặt giá" value={`${totalBids}`} />
-        <MiniStat label="Vị trí Tuần" value="#1 – #4" />
-        <MiniStat label="Vị trí Ngày" value="#5 – #6" />
-      </div>
-
-      <AdminAuctionResolveButton onDone={load} />
-
-      <div>
-        <h2 className="mb-3 text-sm font-black text-[var(--adm-text)]">Vị trí Tuần (#1 – #4)</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {weekly.map((s) => (
-            <SlotCard key={s.id} slot={s} onClick={() => setActiveId(s.id)} />
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <h2 className="mb-3 text-sm font-black text-[var(--adm-text)]">Vị trí Ngày (#5 – #6)</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {daily.map((s) => (
-            <SlotCard key={s.id} slot={s} onClick={() => setActiveId(s.id)} />
-          ))}
-        </div>
-      </div>
-
-      {!loading && openSlots.length === 0 && (
-        <p className="text-center text-sm text-[var(--adm-muted)]">Không có vị trí nào đang mở.</p>
-      )}
-
-      {active && (
-        <SlotModal
-          slot={active}
-          onClose={() => setActiveId(null)}
-          onChanged={() => {
-            load();
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
-      <p className="text-[11px] font-semibold text-[var(--adm-muted)]">{label}</p>
-      <p className="mt-0.5 text-lg font-black tabular-nums text-[var(--adm-text)]">{value}</p>
-    </div>
-  );
-}
-
-function SlotCard({ slot, onClick }: { slot: Slot; onClick: () => void }) {
-  const top = slot.bids[0];
-  return (
-    <button
-      onClick={onClick}
-      className="flex flex-col gap-2 rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 text-left shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition hover:border-[var(--adm-brand)]/60"
-    >
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-black text-[var(--adm-brand)]">Vị trí #{slot.position}</span>
-        <StatusBadge tone="neutral">{slot.bids.length} bid</StatusBadge>
-      </div>
-      {top ? (
-        <div>
-          <p className="truncate text-xs font-bold text-[var(--adm-text)]">{top.productName}</p>
-          <p className="truncate text-[11px] text-[var(--adm-muted)]">{top.sellerName}</p>
-          <p className="mt-1 text-sm font-black tabular-nums text-[var(--adm-success)]">{formatVndDemo(top.amount)}</p>
-        </div>
-      ) : (
-        <p className="text-xs text-[var(--adm-muted)]">Chưa có lượt đặt giá</p>
-      )}
-      <p className="text-[10.5px] text-[var(--adm-muted)]">
-        Giá sàn {formatVndDemo(slot.floorPrice)} · Hết hạn {new Date(slot.endAt).toLocaleString("vi-VN")}
-      </p>
-    </button>
-  );
-}
-
-function SlotModal({ slot, onClose, onChanged }: { slot: Slot; onClose: () => void; onChanged: () => void }) {
-  const [floorPrice, setFloorPrice] = useState(slot.floorPrice);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  const [sellers, setSellers] = useState<SellerOption[]>([]);
-  const [sellerId, setSellerId] = useState("");
-  const [products, setProducts] = useState<ProductOption[]>([]);
-  const [productId, setProductId] = useState("");
-  const [chargeSeller, setChargeSeller] = useState(false);
-  const [amount, setAmount] = useState(slot.floorPrice);
-
-  useEffect(() => {
-    (async () => {
-      const res = await fetch("/api/admin/sellers");
-      if (res.ok) {
-        const data = await res.json();
-        setSellers(data.sellers.map((s: { id: string; shopName: string }) => ({ id: s.id, shopName: s.shopName })));
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      setProductId("");
-      setProducts([]);
-      if (!sellerId) return;
-      const res = await fetch(`/api/admin/sellers/${sellerId}/products`);
-      if (res.ok) {
-        const data = await res.json();
-        setProducts(data.products);
-      }
-    })();
-  }, [sellerId]);
-
-  const saveFloorPrice = async () => {
-    setBusy(true);
-    setMsg(null);
-    const res = await fetch(`/api/admin/auction/slots/${slot.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ floorPrice }),
-    });
-    const data = await res.json();
-    setBusy(false);
-    setMsg(res.ok ? "Đã cập nhật giá sàn." : (data.error ?? "Cập nhật thất bại."));
-    if (res.ok) onChanged();
-  };
-
-  const closeNow = async () => {
-    if (!confirm(`Đóng phiên #${slot.position} ngay bây giờ?`)) return;
-    setBusy(true);
-    const res = await fetch(`/api/admin/auction/slots/${slot.id}/close-now`, { method: "POST" });
-    const data = await res.json();
-    setBusy(false);
-    setMsg(res.ok ? (data.won ? "Đã đóng phiên — có người thắng." : "Đã đóng phiên — không có người thắng đủ điều kiện.") : (data.error ?? "Thất bại."));
-    if (res.ok) {
-      onChanged();
-      onClose();
-    }
-  };
-
-  const cancelBids = async () => {
-    if (!confirm(`Huỷ toàn bộ ${slot.bids.length} lượt đặt giá của vị trí #${slot.position}?`)) return;
-    setBusy(true);
-    const res = await fetch(`/api/admin/auction/slots/${slot.id}/cancel-bids`, { method: "POST" });
-    const data = await res.json();
-    setBusy(false);
-    setMsg(res.ok ? `Đã huỷ ${data.cancelled} lượt đặt giá.` : (data.error ?? "Thất bại."));
-    if (res.ok) onChanged();
-  };
-
-  const submitAssign = async () => {
-    if (!productId) return;
-    setBusy(true);
-    setMsg(null);
-    const res = await fetch("/api/admin/auction/assign", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slotId: slot.id, productId, chargeSeller, amount: chargeSeller ? amount : undefined }),
-    });
-    const data = await res.json();
-    setBusy(false);
-    setMsg(res.ok ? "Đã gán thủ công thành công." : (data.error ?? "Gán thất bại."));
-    if (res.ok) {
-      onChanged();
-      onClose();
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-6 shadow-2xl"
-      >
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-base font-black text-[var(--adm-text)]">
-              Vị trí #{slot.position} — {slot.period === "WEEKLY" ? "Tuần" : "Ngày"}
-            </h3>
-            <p className="mt-0.5 text-xs text-[var(--adm-muted)]">
-              {slot.status === "OPEN" ? "Đang mở" : "Đã đóng"} · Hết hạn {new Date(slot.endAt).toLocaleString("vi-VN")}
-            </p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Card>
+          <p className="mb-3 text-xs font-bold uppercase tracking-wide text-[var(--adm-muted)]">Cấu hình</p>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Field label="Số vị trí vàng (N)">
+              <TextInput type="number" value={slotCount} onChange={(e) => setSlotCount(Number(e.target.value))} min={1} max={50} />
+            </Field>
+            <Field label="Giá sàn (đ)">
+              <TextInput type="number" value={floorPrice} onChange={(e) => setFloorPrice(Number(e.target.value))} min={0} step={1000} />
+            </Field>
           </div>
-          <button onClick={onClose} className="rounded-full p-1 text-[var(--adm-muted)] hover:bg-white/10">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+          <div className="mt-3 flex items-center gap-3">
+            <Button variant="secondary" disabled={settingsBusy} onClick={saveSettings}>
+              <Save className="h-3.5 w-3.5" /> Lưu cấu hình
+            </Button>
+            {settingsMsg && <span className="text-xs text-[var(--adm-muted)]">{settingsMsg}</span>}
+          </div>
+        </Card>
 
-        {msg && (
-          <p className="mb-3 rounded-lg bg-[var(--adm-surface-2)] px-3 py-2 text-xs font-semibold text-[var(--adm-text)]">
-            {msg}
+        <Card>
+          <p className="mb-3 text-xs font-bold uppercase tracking-wide text-[var(--adm-muted)]">Chốt phiên đến hạn</p>
+          <p className="mb-3 text-xs text-[var(--adm-muted)]">
+            Tự động chạy mỗi ngày qua cron (23:00 giờ VN) — bấm nút này để chốt ngay khi cần (test, hoặc cron chưa kịp chạy).
+            Idempotent: bấm nhiều lần không chốt trùng, không trừ/hoàn tiền 2 lần.
           </p>
-        )}
-
-        <div className="flex flex-col gap-5">
-          <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--adm-muted)]">Lịch sử đặt giá</p>
-            {slot.bids.length === 0 ? (
-              <p className="text-xs text-[var(--adm-muted)]">Chưa có lượt đặt giá nào.</p>
-            ) : (
-              <div className="flex flex-col gap-1.5">
-                {slot.bids.map((b) => (
-                  <div
-                    key={b.id}
-                    className="flex items-center justify-between gap-2 rounded-lg bg-[var(--adm-surface-2)] px-3 py-2 text-xs"
-                  >
-                    <span className="truncate text-[var(--adm-text)]">
-                      {b.sellerName} — {b.productName}
-                    </span>
-                    <span className="shrink-0 font-bold tabular-nums text-[var(--adm-brand)]">{formatVndDemo(b.amount)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="flex items-center gap-3">
+            <Button variant="primary" disabled={closeBusy} onClick={closeDue}>
+              <Gavel className="h-3.5 w-3.5" /> {closeBusy ? "Đang xử lý..." : "Chốt phiên đến hạn"}
+            </Button>
+            {closeMsg && <span className="text-xs text-[var(--adm-muted)]">{closeMsg}</span>}
           </div>
+        </Card>
+      </div>
 
-          {slot.status === "OPEN" && (
-            <>
-              <div>
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--adm-muted)]">Giá sàn</p>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    value={floorPrice}
-                    onChange={(e) => setFloorPrice(Number(e.target.value))}
-                    className="w-40 rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-1.5 text-sm text-[var(--adm-text)] outline-none"
-                  />
-                  <Button variant="secondary" disabled={busy} onClick={saveFloorPrice}>
-                    <Save className="h-3.5 w-3.5" /> Lưu
-                  </Button>
+      <div>
+        <p className="mb-3 text-sm font-black text-[var(--adm-text)]">
+          {loading ? "Đang tải..." : `Phiên gần đây (${sessions.length})`}
+        </p>
+        {!loading && sessions.length === 0 ? (
+          <Card><EmptyState icon={Gavel} title="Chưa có phiên đấu giá nào" /></Card>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {sessions.map((s) => (
+              <Card key={s.id} className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-black text-[var(--adm-text)]">
+                      {new Date(s.windowStart).toLocaleString("vi-VN")} → {new Date(s.windowEnd).toLocaleTimeString("vi-VN")}
+                    </p>
+                    <p className="text-xs text-[var(--adm-muted)]">
+                      {s.slotCount ?? "?"} vị trí · {s.bids.length} lượt đặt giá
+                    </p>
+                  </div>
+                  <StatusBadge tone={s.status === "OPEN" ? "brand" : s.status === "PENDING_REVIEW" ? "warn" : "success"}>
+                    {SESSION_STATUS_LABEL[s.status]}
+                  </StatusBadge>
                 </div>
-              </div>
 
-              <div>
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--adm-muted)]">
-                  Gán thủ công
-                </p>
-                <div className="flex flex-col gap-2">
-                  <select
-                    value={sellerId}
-                    onChange={(e) => setSellerId(e.target.value)}
-                    className="rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-1.5 text-sm text-[var(--adm-text)] outline-none"
-                  >
-                    <option value="">Chọn gian hàng...</option>
-                    {sellers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.shopName}
-                      </option>
+                {s.bids.length === 0 ? (
+                  <p className="text-xs text-[var(--adm-muted)]">Chưa có lượt đặt giá nào.</p>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {s.bids.map((b) => (
+                      <div
+                        key={b.id}
+                        className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--adm-surface-2)] px-3 py-2 text-xs"
+                      >
+                        <span className="w-6 shrink-0 text-center font-black text-[var(--adm-brand)]">{b.rank ?? "—"}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[var(--adm-text)]">
+                            {b.productName} — <span className="text-[var(--adm-muted)]">{b.sellerName}</span>
+                          </p>
+                        </div>
+                        <span className="shrink-0 font-bold tabular-nums text-[var(--adm-text)]">{formatVndDemo(b.amount)}</span>
+                        <StatusBadge tone={BID_STATUS_TONE[b.status]}>{BID_STATUS_LABEL[b.status]}</StatusBadge>
+                        {b.status === "PENDING_APPROVAL" && (
+                          <div className="flex shrink-0 gap-1.5">
+                            <Button variant="success" disabled={bidBusyId === b.id} onClick={() => approve(b.id)}>
+                              <Check className="h-3 w-3" /> Duyệt
+                            </Button>
+                            <Button variant="danger" disabled={bidBusyId === b.id} onClick={() => reject(b.id)}>
+                              <X className="h-3 w-3" /> Từ chối
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     ))}
-                  </select>
-                  <select
-                    value={productId}
-                    onChange={(e) => setProductId(e.target.value)}
-                    disabled={!sellerId}
-                    className="rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-1.5 text-sm text-[var(--adm-text)] outline-none disabled:opacity-50"
-                  >
-                    <option value="">
-                      {sellerId ? "Chọn sản phẩm..." : "Chọn gian hàng trước"}
-                    </option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                  <label className="flex items-center gap-2 text-xs text-[var(--adm-text)]">
-                    <input
-                      type="checkbox"
-                      checked={chargeSeller}
-                      onChange={(e) => setChargeSeller(e.target.checked)}
-                      className="h-4 w-4 accent-[var(--adm-brand)]"
-                    />
-                    Thu phí seller
-                  </label>
-                  {chargeSeller && (
-                    <input
-                      type="number"
-                      value={amount}
-                      onChange={(e) => setAmount(Number(e.target.value))}
-                      placeholder="Số tiền thu (đ)"
-                      className="rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-1.5 text-sm text-[var(--adm-text)] outline-none"
-                    />
-                  )}
-                  <Button variant="primary" disabled={busy || !productId} onClick={submitAssign}>
-                    <Sparkles className="h-3.5 w-3.5" /> Gán vào vị trí này
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex gap-2 border-t border-[var(--adm-border)] pt-4">
-                <Button variant="secondary" disabled={busy} onClick={closeNow}>
-                  Đóng phiên ngay
-                </Button>
-                {slot.bids.length > 0 && (
-                  <Button variant="danger" disabled={busy} onClick={cancelBids}>
-                    <Ban className="h-3.5 w-3.5" /> Huỷ mọi lượt đặt giá
-                  </Button>
+                  </div>
                 )}
-              </div>
-            </>
-          )}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -10,6 +10,8 @@ import {
 } from "@/lib/constants";
 import { computeEffectivePrice, type MegaSaleFields } from "@/lib/mega-sale";
 import { applyListingSort, type ListingSortKey } from "@/lib/product-listing-sort";
+import { getAuctionSetting, findCurrentWeekSession } from "@/lib/auction";
+import { getAuctionWindowFor, isWithinAuctionWindow } from "@/lib/auction-schedule";
 
 const productInclude = {
   category: true,
@@ -505,44 +507,64 @@ export async function getSellerBySlug(slug: string) {
   };
 }
 
-export async function getAuctionSlots() {
-  const slots = await prisma.auctionSlot.findMany({
-    where: { status: "OPEN" },
-    orderBy: { position: "asc" },
-    include: {
-      _count: { select: { bids: true } },
-      bids: {
-        orderBy: { amount: "desc" },
-        take: 1,
-        include: {
-          seller: { select: { shopName: true, slug: true } },
-          product: { select: { name: true, slug: true } },
-        },
-      },
-    },
-  });
+// Trang /dau-gia + /trang-ban-hang/quang-ba — dữ liệu hiển thị phiên đấu giá
+// vị trí vàng CỦA TUẦN HIỆN TẠI (không tạo phiên mới nếu chưa có, xem
+// findCurrentWeekSession() trong src/lib/auction.ts — chỉ luồng ĐẶT GIÁ mới
+// tạo phiên). `viewerSellerId` (tuỳ chọn) để biết bid nào là "của chính
+// mình" đang xem trang.
+export async function getAuctionDisplayData(viewerSellerId?: string) {
+  const now = new Date();
+  const [setting, session] = await Promise.all([getAuctionSetting(), findCurrentWeekSession(now)]);
+  const thisWindow = getAuctionWindowFor(now);
+  const isOpenNow = isWithinAuctionWindow(now);
 
-  return slots.map((slot) => {
-    const top = slot.bids[0];
-    return {
-      id: slot.id,
-      position: slot.position,
-      period: slot.period as "DAILY" | "WEEKLY",
-      floorPrice: slot.floorPrice,
-      startAt: slot.startAt,
-      endAt: slot.endAt,
-      bidCount: slot._count.bids,
-      topBid: top
-        ? {
-            amount: top.amount,
-            sellerName: top.seller.shopName,
-            sellerSlug: top.seller.slug,
-            productName: top.product.name,
-            productSlug: top.product.slug,
-          }
-        : null,
-    };
-  });
+  type BidRow = {
+    id: string;
+    amount: number;
+    status: string;
+    rank: number | null;
+    sellerId: string;
+    sellerName: string;
+    sellerSlug: string;
+    productName: string;
+    productSlug: string;
+  };
+
+  let bids: BidRow[] = [];
+  if (session) {
+    const rows = await prisma.auctionBid.findMany({
+      where: { sessionId: session.id, status: { in: ["ACTIVE", "PENDING_APPROVAL", "WON"] } },
+      orderBy: [{ amount: "desc" }, { createdAt: "asc" }],
+      include: {
+        seller: { select: { shopName: true, slug: true } },
+        product: { select: { name: true, slug: true } },
+      },
+    });
+    bids = rows.map((b, i) => ({
+      id: b.id,
+      amount: b.amount,
+      status: b.status,
+      rank: b.rank ?? i + 1,
+      sellerId: b.sellerId,
+      sellerName: b.seller.shopName,
+      sellerSlug: b.seller.slug,
+      productName: b.product.name,
+      productSlug: b.product.slug,
+    }));
+  }
+
+  const myBid = viewerSellerId ? (bids.find((b) => b.sellerId === viewerSellerId) ?? null) : null;
+
+  return {
+    setting: { slotCount: setting.slotCount, floorPrice: setting.floorPrice },
+    session: session
+      ? { id: session.id, windowStart: session.windowStart, windowEnd: session.windowEnd, status: session.status }
+      : null,
+    isOpenNow,
+    thisWindow,
+    bids,
+    myBid,
+  };
 }
 
 export async function getMySellerProducts(userId: string): Promise<Product[]> {
@@ -1370,15 +1392,16 @@ export async function getAdminAuditLogPage(page: number) {
   };
 }
 
-// Trang Admin > Đấu giá vị trí vàng — TOÀN BỘ slot (không lọc status như
-// getAuctionSlots() dùng cho trang /dau-gia công khai), kèm đủ lịch sử bid
-// (không chỉ top 1) để admin xem toàn cảnh trước khi gán thủ công/huỷ.
-export async function getAdminAuctionSlots() {
-  const slots = await prisma.auctionSlot.findMany({
-    orderBy: [{ position: "asc" }, { createdAt: "desc" }],
+// Trang Admin > Đấu giá vị trí vàng — N phiên gần nhất (mặc định 12, ~3
+// tháng) kèm ĐẦY ĐỦ bid (mọi trạng thái, không chỉ top N) để admin xem toàn
+// cảnh trước khi duyệt/từ chối.
+export async function getAdminAuctionSessions(limit = 12) {
+  const sessions = await prisma.auctionSession.findMany({
+    orderBy: { windowStart: "desc" },
+    take: limit,
     include: {
       bids: {
-        orderBy: { amount: "desc" },
+        orderBy: [{ amount: "desc" }, { createdAt: "asc" }],
         include: {
           seller: { select: { shopName: true, slug: true } },
           product: { select: { name: true, slug: true } },
@@ -1387,36 +1410,26 @@ export async function getAdminAuctionSlots() {
     },
   });
 
-  // Chỉ giữ slot OPEN mới nhất + 1 vài slot CLOSED gần nhất mỗi vị trí, tránh
-  // trả về toàn bộ lịch sử vô hạn khi hệ thống đã xoay vòng nhiều lần.
-  const byPosition = new Map<number, typeof slots>();
-  for (const s of slots) {
-    const arr = byPosition.get(s.position) ?? [];
-    if (arr.length < 3) arr.push(s);
-    byPosition.set(s.position, arr);
-  }
-
-  return [...byPosition.values()]
-    .flat()
-    .sort((a, b) => a.position - b.position || b.createdAt.getTime() - a.createdAt.getTime())
-    .map((slot) => ({
-      id: slot.id,
-      position: slot.position,
-      period: slot.period as "DAILY" | "WEEKLY",
-      floorPrice: slot.floorPrice,
-      startAt: slot.startAt,
-      endAt: slot.endAt,
-      status: slot.status as "OPEN" | "CLOSED",
-      bids: slot.bids.map((b) => ({
-        id: b.id,
-        amount: b.amount,
-        createdAt: b.createdAt,
-        sellerName: b.seller.shopName,
-        sellerSlug: b.seller.slug,
-        productName: b.product.name,
-        productSlug: b.product.slug,
-      })),
-    }));
+  return sessions.map((session) => ({
+    id: session.id,
+    windowStart: session.windowStart,
+    windowEnd: session.windowEnd,
+    status: session.status as "OPEN" | "PENDING_REVIEW" | "CLOSED",
+    slotCount: session.slotCount,
+    closedAt: session.closedAt,
+    bids: session.bids.map((b) => ({
+      id: b.id,
+      amount: b.amount,
+      status: b.status as "ACTIVE" | "PENDING_APPROVAL" | "WON" | "LOST" | "REJECTED",
+      rank: b.rank,
+      createdAt: b.createdAt,
+      decidedAt: b.decidedAt,
+      sellerName: b.seller.shopName,
+      sellerSlug: b.seller.slug,
+      productName: b.product.name,
+      productSlug: b.product.slug,
+    })),
+  }));
 }
 
 // Trang Admin > Sức khoẻ tài chính — tổng hợp số dư toàn hệ thống tại thời

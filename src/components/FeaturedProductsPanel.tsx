@@ -7,10 +7,12 @@ import type { Product } from "@/data/products";
 
 export default function FeaturedProductsPanel({
   items,
-  nextAuctionEndAt,
+  auctionCountdownAt,
+  auctionOpenNow,
 }: {
   items: Product[];
-  nextAuctionEndAt: Date | null;
+  auctionCountdownAt: Date | null;
+  auctionOpenNow: boolean;
 }) {
   return (
     <div className="rounded-[10px] border border-border-c bg-surface p-4 shadow-sm sm:p-5">
@@ -21,10 +23,10 @@ export default function FeaturedProductsPanel({
         </h2>
 
         <div className="flex flex-wrap items-center gap-2 text-xs sm:gap-3">
-          {nextAuctionEndAt && (
+          {auctionCountdownAt && (
             <span className="flex items-center gap-1.5 font-bold text-danger">
-              ĐẤU GIÁ BẮT ĐẦU SAU
-              <AuctionCountdown endAt={nextAuctionEndAt} size="sm" />
+              {auctionOpenNow ? "ĐẤU GIÁ ĐANG MỞ — KẾT THÚC SAU" : "ĐẤU GIÁ BẮT ĐẦU SAU"}
+              <AuctionCountdown endAt={auctionCountdownAt} size="sm" />
             </span>
           )}
           <Link

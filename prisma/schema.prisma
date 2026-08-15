@@ -244,35 +244,94 @@ model DiscountCode {
   createdAt DateTime  @default(now())
 }
 
-// Đấu giá "vị trí vàng" — seller trả giá để sản phẩm của mình hiện trong
-// carousel "Sản phẩm nổi bật" ở trang chủ trong một khoảng thời gian.
-//   position 1-4: period WEEKLY (1 tuần/phiên)
-//   position 5-6: period DAILY  (1 ngày/phiên)
-// status: "OPEN" | "CLOSED"
-model AuctionSlot {
-  id           String    @id @default(cuid())
-  position     Int
-  period       String
-  floorPrice   Int
-  startAt      DateTime
-  endAt        DateTime
-  status       String    @default("OPEN")
-  winningBidId String?
-  createdAt    DateTime  @default(now())
+// Đấu giá "vị trí vàng" (xây lại 2026-08-15) — seller khoá tiền đặt giá để
+// sản phẩm của mình lọt Top N (N cấu hình được) trong ĐÚNG 1 phiên/tuần
+// (tối Chủ Nhật 20:00–22:00 giờ VN, xem src/lib/auction-schedule.ts) thay vì
+// mô hình cũ "6 vị trí cố định tự xoay vòng, không khoá tiền lúc đặt giá".
+//
+// Cấu hình singleton (id "singleton") — cùng pattern PlatformFeeSetting/
+// CommissionSetting, lazy-tạo lần đầu đọc qua getAuctionSetting()
+// (src/lib/auction.ts), KHÔNG cần seed thủ công.
+model AuctionSetting {
+  id          String   @id
+  // Số vị trí vàng (Top N bid cao nhất thắng) — admin sửa qua UI.
+  slotCount   Int      @default(6)
+  // Giá đấu tối thiểu, áp dụng CHUNG cho mọi bid (thay floorPrice riêng
+  // từng slot của hệ cũ — hệ mới chỉ còn 1 phiên/tuần).
+  floorPrice  Int      @default(50000)
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
+
+// 1 phiên = đúng 1 khung 20:00–22:00 tối Chủ Nhật (giờ Asia/Ho_Chi_Minh),
+// windowStart/windowEnd là mốc UTC quy đổi sẵn. Chỉ được TẠO LƯỜI lúc có bid
+// đầu tiên rơi đúng khung giờ (getOrCreateCurrentSession()) — tuần nào
+// không ai đặt giá thì không có dòng nào, tránh rác dữ liệu. windowStart
+// UNIQUE vừa xác định đúng phiên của tuần nào vừa chặn tạo trùng (2 bid đầu
+// tiên cùng lúc dùng upsert theo cột này).
+//   status: "OPEN" (đang nhận bid) → "PENDING_REVIEW" (đã chốt Top N, còn
+//     bid PENDING_APPROVAL chờ admin) → "CLOSED" (đã duyệt/từ chối hết).
+//   slotCount: N ĐÓNG BĂNG tại đúng lúc chốt phiên (đọc từ AuctionSetting
+//     lúc closeAuctionSession() chạy) — null khi còn OPEN, đổi N sau khi
+//     phiên đã chốt KHÔNG hồi tố phiên đó.
+model AuctionSession {
+  id          String    @id @default(cuid())
+  windowStart DateTime  @unique
+  windowEnd   DateTime
+  status      String    @default("OPEN")
+  slotCount   Int?
+  closedAt    DateTime?
+  createdAt   DateTime  @default(now())
 
   bids AuctionBid[]
 }
 
+// 1 bid của 1 seller trong 1 phiên — @@unique([sessionId, sellerId]): tối đa
+// 1 bid ACTIVE/PENDING_APPROVAL/WON mỗi seller/phiên (đổi ý = nâng giá CÙNG
+// dòng, không tạo dòng mới).
+//
+// amount = số tiền ĐANG BỊ KHOÁ khỏi walletBalance của seller (vá "ghost
+// bid" — hệ cũ không khoá gì lúc đặt giá). holdTransactionId trỏ đúng 1
+// WalletTransaction đại diện khoản khoá HIỆN TẠI (type "AUCTION_HOLD",
+// status PENDING trong lúc còn khoá) — nâng giá = 1 $transaction vừa hoàn
+// khoá cũ (WalletTransaction cũ PENDING→REJECTED + cộng lại walletBalance)
+// vừa khoá mức mới (tạo WalletTransaction mới, trừ walletBalance), UPDATE
+// cột này sang bản ghi mới. Xem POST /api/auction/bids.
+//
+// status:
+//   ACTIVE           phiên đang OPEN, tiền đang khoá, seller còn nâng giá được.
+//   PENDING_APPROVAL phiên đã chốt, lọt Top N, tiền VẪN khoá, chờ admin.
+//   WON              admin đã duyệt — WalletTransaction cùng dòng đổi
+//                     type→"PURCHASE", status PENDING→CONFIRMED (KHÔNG trừ
+//                     ví thêm lần nữa vì đã trừ từ lúc khoá).
+//   LOST             phiên đã chốt, KHÔNG lọt Top N — tự động hoàn tiền
+//                     ngay trong bước chốt phiên (không cần admin).
+//   REJECTED         admin từ chối 1 vị trí trong Top N — đã hoàn tiền.
+//
+// rank: thứ hạng lúc chốt phiên (1 = giá cao nhất, null khi status=ACTIVE).
+// decidedAt/decidedById: mốc + người xử lý WON/REJECTED (null với LOST vì
+// đó là tự động, không phải admin).
 model AuctionBid {
-  id        String      @id @default(cuid())
-  slotId    String
-  slot      AuctionSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
-  sellerId  String
-  seller    Seller      @relation(fields: [sellerId], references: [id])
-  productId String
-  product   Product     @relation(fields: [productId], references: [id])
-  amount    Int
-  createdAt DateTime    @default(now())
+  id                String    @id @default(cuid())
+  sessionId         String
+  session           AuctionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sellerId          String
+  seller            Seller    @relation(fields: [sellerId], references: [id])
+  productId         String
+  product           Product   @relation(fields: [productId], references: [id])
+  amount            Int
+  status            String    @default("ACTIVE")
+  holdTransactionId String?   @unique
+  rank              Int?
+  decidedAt         DateTime?
+  decidedById       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  walletTransactions WalletTransaction[]
+
+  @@unique([sessionId, sellerId])
+  @@index([sessionId, status])
 }
 
 model Review {
@@ -1029,15 +1088,24 @@ model WalletTransaction {
   rateSource      String? // "coingecko" | "fallback" — nguồn tỷ giá tại thời điểm khoá
 
   // Thông tin tài khoản nhận CHO RÚT TIỀN (type="WITHDRAW") — JSON gộp
-  // CHUNG cho mọi phương thức (bank: {bankName,accountNumber,accountHolder},
-  // momo: {phone,holderName}, usdt_trc20: {address} — nhân đôi từ
-  // withdrawAddress ở trên để trang admin có 1 đường đọc chung cho cả 3
+  // CHUNG cho các phương thức không phải USDT (bank:
+  // {bankName,accountNumber,accountHolder}; usdt_trc20: {address} — nhân đôi
+  // từ withdrawAddress ở trên để trang admin có 1 đường đọc chung cho cả 2
   // phương thức, KHÔNG thay thế 3 cột usdt* phía trên vì đó là dữ liệu tính
   // toán quy đổi, không chỉ là "thông tin tài khoản nhận"). Nullable, KHÔNG
   // backfill — yêu cầu rút cũ (trước cột này) đọc fallback qua `note`
   // (bank cũ) / `withdrawAddress` (usdt cũ), xem SellerWithdrawPanel.tsx +
   // AdminWithdrawalsPanel.tsx.
   recipientInfo String?
+
+  // Khoá ngoại tới bid đấu giá vị trí vàng liên quan (type="AUCTION_HOLD"
+  // lúc còn khoá/bị hoàn, hoặc "PURCHASE" sau khi admin duyệt thắng — xem
+  // model AuctionBid) — cùng lý do đã áp dụng cho orderId/orderItemId ở
+  // trên: nối tiền với bid bằng khoá ngoại thật, không parse chuỗi `note`.
+  // null với mọi loại giao dịch khác. ON DELETE SET NULL: sổ cái tiền không
+  // bao giờ mất dòng nào dù AuctionBid phía kia (giả sử) có bị xoá.
+  auctionBidId String?
+  auctionBid   AuctionBid? @relation(fields: [auctionBidId], references: [id], onDelete: SetNull)
 }
 
 // Chat giữa 2 user bất kỳ (buyer-seller, hoặc user với bot "Hệ Thống" —
