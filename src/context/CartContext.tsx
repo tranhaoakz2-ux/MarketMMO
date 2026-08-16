@@ -18,6 +18,14 @@ export type CartLine = {
   seller: string;
   stock: number;
   quantity: number;
+  // Snapshot ảnh + danh mục lúc thêm vào giỏ (giống các field khác ở trên)
+  // — dùng để hiện đúng ảnh thật qua ProductThumbnail ở trang /gio-hang,
+  // categorySlug làm fallback icon khi sản phẩm chưa có ảnh. Cả 2 optional
+  // để tương thích ngược với dòng giỏ hàng cũ đã lưu trong localStorage
+  // TRƯỚC khi thêm field này (ProductThumbnail/getCategoryIcon đều tự
+  // fallback hợp lý khi thiếu).
+  imageUrl?: string | null;
+  categorySlug?: string;
 };
 
 function matchesLine(l: CartLine, productId: string, variantId?: string) {

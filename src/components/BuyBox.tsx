@@ -53,6 +53,8 @@ export default function BuyBox({ product }: { product: Product }) {
         price: effectivePrice,
         seller: product.seller,
         stock: effectiveStock,
+        imageUrl: product.imageUrl,
+        categorySlug: product.categorySlug,
       },
       qty
     );
