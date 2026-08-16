@@ -69,6 +69,7 @@ export default async function Home({
     <>
       <Header />
       <main className="flex-1 bg-background">
+        <h1 className="sr-only">MarketMMO — Sàn giao dịch tài khoản, vật phẩm & dịch vụ MMO uy tín</h1>
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
           <Reveal>
             <HomePromoBanner large={banners.large} small1={banners.small1} small2={banners.small2} />

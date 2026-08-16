@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Reveal from "@/components/Reveal";
 import { getAuthSession } from "@/lib/authz";
+import { PRIVATE_ROBOTS } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -38,4 +39,4 @@ export default async function ChatPage() {
   );
 }
 
-export const metadata = { title: "Tin nhắn — MarketMMO" };
+export const metadata = { title: "Tin nhắn — MarketMMO", robots: PRIVATE_ROBOTS };

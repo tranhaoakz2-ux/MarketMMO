@@ -1,12 +1,22 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getAuthSession, getSellerForUser } from "@/lib/authz";
 import { getInsuranceFundTarget } from "@/lib/site-config";
+import { PRIVATE_ROBOTS } from "@/lib/seo";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Reveal from "@/components/Reveal";
 import SellerSidebar from "@/components/SellerSidebar";
 
 export const dynamic = "force-dynamic";
+
+// Áp dụng cho TOÀN BỘ trang con dưới /trang-ban-hang/** qua cơ chế kế thừa
+// metadata của Next.js (trang con nào không tự khai báo `robots` riêng sẽ
+// nhận đúng giá trị này) — khu vực quản lý bán hàng chỉ dành cho seller đã
+// đăng nhập, không có giá trị gì khi bị Google index.
+export const metadata: Metadata = {
+  robots: PRIVATE_ROBOTS,
+};
 
 export default async function SellerDashboardLayout({
   children,

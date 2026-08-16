@@ -9,6 +9,7 @@ import {
   Star,
   Store,
 } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Footer from "@/components/Footer";
@@ -21,8 +22,38 @@ import ReviewForm from "@/components/ReviewForm";
 import ShopProductList from "@/components/ShopProductList";
 import { getAuthSession } from "@/lib/authz";
 import { getSellerBySlug } from "@/lib/queries";
+import { absoluteUrl, truncate } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ seller: string }>;
+}): Promise<Metadata> {
+  const { seller: sellerSlug } = await params;
+  const shop = await getSellerBySlug(sellerSlug);
+  if (!shop || shop.suspended) return {};
+
+  const title = `${shop.shopName} — Gian hàng trên MarketMMO`;
+  const description = truncate(
+    shop.description || `Gian hàng ${shop.shopName} với ${shop.products.length} sản phẩm đang bán trên MarketMMO.`
+  );
+  const url = absoluteUrl(`/shop/${shop.slug}`);
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: "website",
+      images: shop.avatarUrl ? [{ url: shop.avatarUrl }] : undefined,
+    },
+  };
+}
 
 export default async function ShopPage({
   params,

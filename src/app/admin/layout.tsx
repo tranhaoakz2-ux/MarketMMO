@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/authz";
 import { getAdminSidebarCounts } from "@/lib/queries";
+import { PRIVATE_ROBOTS } from "@/lib/seo";
 import AdminSidebar from "@/components/AdminSidebar";
 
 export const dynamic = "force-dynamic";
+
+// Kế thừa xuống mọi trang con /admin/** (xem ghi chú tương tự ở
+// src/app/trang-ban-hang/layout.tsx) — khu vực quản trị tuyệt đối không được
+// Google index.
+export const metadata: Metadata = {
+  robots: PRIVATE_ROBOTS,
+};
 
 // Admin Control Center — shell RIÊNG BIỆT, không dùng Header/Footer của site
 // mua sắm (khác hẳn layout /trang-ban-hang vốn lồng trong chrome storefront)

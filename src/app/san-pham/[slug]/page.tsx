@@ -12,6 +12,7 @@ import {
   Store,
   TrendingUp,
 } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Avatar from "@/components/Avatar";
@@ -33,10 +34,41 @@ import TutTrickBuyBox from "@/components/TutTrickBuyBox";
 import { formatLastActive, formatVnd } from "@/lib/format";
 import { getRecentForumPosts } from "@/lib/forum";
 import { getProductBySlugDb, getProductReviews, getRelatedProductsDb } from "@/lib/queries";
+import { absoluteUrl, DEFAULT_OG_IMAGE, truncate } from "@/lib/seo";
 import { slugifySeller } from "@/lib/slug";
 import { formatProductWarranty } from "@/lib/warranty";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await getProductBySlugDb(slug);
+  if (!product) return {};
+
+  const title = `${product.name} — Mua tại MarketMMO`;
+  const description = truncate(
+    product.shortDescription || product.description.join(" ") || `${product.name} bán bởi ${product.seller} trên MarketMMO.`
+  );
+  const url = absoluteUrl(`/san-pham/${product.slug}`);
+  const image = product.imageUrl ?? DEFAULT_OG_IMAGE;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: "website",
+      images: [{ url: image }],
+    },
+  };
+}
 
 export default async function ProductDetailPage({
   params,

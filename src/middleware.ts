@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { SITE_URL } from "@/lib/seo";
 
 // CSRF defense-in-depth cho các Route Handler tự viết (Next.js Server Action có
 // bảo vệ origin sẵn, nhưng ở đây KHÔNG có Server Action nào — mọi mutation qua
@@ -12,6 +13,27 @@ import { getToken } from "next-auth/jwt";
 // route (requireUser/requireSeller/requireAdmin). Không dựa middleware làm ranh
 // giới bảo mật chính (Next 16 đã vá CVE-2025-29927 middleware-bypass).
 const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+// Domain chuẩn để index (xem src/lib/seo.ts) — khi request đến từ host KHÁC
+// (vd domain tạm market-mmo.vercel.app), gắn header X-Robots-Tag noindex lên
+// MỌI response để chặn Google index song song 2 domain (gây trùng lặp nội
+// dung). Đây là lớp bổ sung cho robots.ts (chặn crawl theo host tương tự) —
+// dùng cả 2 vì robots.txt chỉ khuyến nghị bot tuân theo, còn HTTP header là
+// chỉ dẫn trực tiếp trên từng response, chắc chắn hơn.
+let canonicalHost = "marketmmo.vn";
+try {
+  canonicalHost = new URL(SITE_URL).host;
+} catch {
+  // giữ fallback ở trên nếu SITE_URL không hợp lệ
+}
+
+function tagNonCanonicalHost(res: NextResponse, req: NextRequest) {
+  const host = req.headers.get("host");
+  if (host && host !== canonicalHost) {
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
+  return res;
+}
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -34,18 +56,18 @@ export async function middleware(req: NextRequest) {
   if (req.method === "GET" && pathname === "/dang-nhap") {
     const token = await getToken({ req, secret: process.env.AUTH_SECRET });
     if (token) {
-      return NextResponse.redirect(new URL("/", req.url));
+      return tagNonCanonicalHost(NextResponse.redirect(new URL("/", req.url)), req);
     }
-    return NextResponse.next();
+    return tagNonCanonicalHost(NextResponse.next(), req);
   }
 
-  if (!MUTATION_METHODS.has(req.method)) return NextResponse.next();
+  if (!MUTATION_METHODS.has(req.method)) return tagNonCanonicalHost(NextResponse.next(), req);
 
   // Bỏ qua các endpoint được gọi HỢP LỆ từ nguồn khác origin:
   //  - /api/payment/vnpay/*: VNPay gọi server-to-server (không có Origin cùng host).
   //  - /api/auth/*: Auth.js tự có cơ chế CSRF token riêng.
   if (pathname.startsWith("/api/payment/vnpay/") || pathname.startsWith("/api/auth/")) {
-    return NextResponse.next();
+    return tagNonCanonicalHost(NextResponse.next(), req);
   }
 
   const origin = req.headers.get("origin");
@@ -59,13 +81,19 @@ export async function middleware(req: NextRequest) {
       originHost = "";
     }
     if (originHost !== req.headers.get("host")) {
-      return NextResponse.json({ error: "Yêu cầu bị từ chối (CSRF)." }, { status: 403 });
+      return tagNonCanonicalHost(
+        NextResponse.json({ error: "Yêu cầu bị từ chối (CSRF)." }, { status: 403 }),
+        req
+      );
     }
   }
 
-  return NextResponse.next();
+  return tagNonCanonicalHost(NextResponse.next(), req);
 }
 
 export const config = {
-  matcher: ["/api/:path*", "/dang-nhap"],
+  // Áp cho MỌI trang (không chỉ /api + /dang-nhap như trước) để header
+  // X-Robots-Tag noindex-khi-sai-host phủ được toàn site — trừ static asset
+  // (_next/*, favicon, ảnh...) vì chúng không cần gắn header này.
+  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|icon\\.png|.*\\.(?:png|jpg|jpeg|webp|svg|gif|ico|txt|xml)$).*)"],
 };

@@ -4,6 +4,7 @@ import AuthForms from "@/components/AuthForms";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Reveal from "@/components/Reveal";
+import { PRIVATE_ROBOTS } from "@/lib/seo";
 
 export default async function LoginPage({
   searchParams,
@@ -30,6 +31,7 @@ export default async function LoginPage({
       <Header />
       <main className="flex-1 bg-background">
         <div className="mx-auto max-w-md px-4 py-8 sm:px-6 lg:px-8">
+          <h1 className="sr-only">Đăng nhập hoặc đăng ký tài khoản MarketMMO</h1>
           <Reveal>
             <div className="overflow-hidden rounded-2xl border border-border-c bg-surface shadow-sm">
               <AuthForms
@@ -50,4 +52,5 @@ export default async function LoginPage({
 
 export const metadata = {
   title: "Đăng nhập / Đăng ký — MarketMMO",
+  robots: PRIVATE_ROBOTS,
 };

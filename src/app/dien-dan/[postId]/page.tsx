@@ -1,4 +1,5 @@
 import { MessageSquare } from "lucide-react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Avatar from "@/components/Avatar";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -10,8 +11,30 @@ import Header from "@/components/Header";
 import Reveal from "@/components/Reveal";
 import { auth } from "@/auth";
 import { getForumPostById } from "@/lib/forum";
+import { absoluteUrl, truncate } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ postId: string }>;
+}): Promise<Metadata> {
+  const { postId } = await params;
+  const post = await getForumPostById(postId);
+  if (!post) return {};
+
+  const title = `${post.title} — Diễn đàn MarketMMO`;
+  const description = truncate(post.content);
+  const url = absoluteUrl(`/dien-dan/${post.id}`);
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title, description, url, type: "article" },
+  };
+}
 
 const categoryColors: Record<string, string> = {
   "Kinh nghiệm": "bg-success/10 text-success",

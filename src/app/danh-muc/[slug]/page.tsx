@@ -1,4 +1,5 @@
 import { Info, ListFilter } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -11,10 +12,32 @@ import Reveal from "@/components/Reveal";
 import { getRecentForumPosts } from "@/lib/forum";
 import { getCategoryBySlug, getCategoryTree, getProductsByCategory } from "@/lib/queries";
 import { LISTING_SORT_OPTIONS, parseListingSortKey } from "@/lib/product-listing-sort";
+import { absoluteUrl } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 24;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const category = await getCategoryBySlug(slug);
+  if (!category) return {};
+
+  const title = `${category.name} — Mua bán ${category.name} uy tín | MarketMMO`;
+  const description = `Danh sách sản phẩm/dịch vụ ${category.name} trên MarketMMO — giao dịch ký quỹ an toàn, giao hàng tự động 24/7.`;
+  const url = absoluteUrl(`/danh-muc/${slug}`);
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title, description, url, type: "website" },
+  };
+}
 
 export default async function CategoryPage({
   params,

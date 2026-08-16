@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Providers from "@/components/Providers";
+import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,10 +14,25 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const TITLE = "MarketMMO — Sàn giao dịch tài khoản & vật phẩm MMO uy tín";
+const DESCRIPTION =
+  "MarketMMO là marketplace mua bán tài khoản số, vật phẩm/tiền tệ MMO và dịch vụ boosting, giao dịch ký quỹ an toàn, giao hàng tự động 24/7.";
+
 export const metadata: Metadata = {
-  title: "MarketMMO — Sàn giao dịch tài khoản & vật phẩm MMO uy tín",
-  description:
-    "MarketMMO là marketplace mua bán tài khoản số, vật phẩm/tiền tệ MMO và dịch vụ boosting, giao dịch ký quỹ an toàn, giao hàng tự động 24/7.",
+  // Resolve URL tương đối (canonical/OG image...) thành tuyệt đối ở mọi
+  // trang con không tự khai báo metadataBase riêng.
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    siteName: SITE_NAME,
+    url: SITE_URL,
+    locale: "vi_VN",
+    type: "website",
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: SITE_NAME }],
+  },
 };
 
 // Chống FOUC (nháy sáng): chạy TRƯỚC khi trang paint + trước khi React hydrate,
@@ -33,7 +49,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="vi"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >

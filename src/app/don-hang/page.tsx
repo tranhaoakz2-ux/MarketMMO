@@ -15,6 +15,7 @@ import { orderStatusLabel, type DisputeStatus, type OrderStatus } from "@/lib/co
 import { formatVnd } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { formatWarrantyRemaining, warrantyRemaining } from "@/lib/warranty";
+import { PRIVATE_ROBOTS } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -331,4 +332,5 @@ export default async function OrdersPage() {
 
 export const metadata = {
   title: "Lịch sử đơn hàng — MarketMMO",
+  robots: PRIVATE_ROBOTS,
 };
