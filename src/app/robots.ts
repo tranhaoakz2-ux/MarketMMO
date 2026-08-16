@@ -37,6 +37,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         "/nap-tien",
         "/dang-nhap",
         "/quen-mat-khau",
+        "/ho-so-ca-nhan",
         "/trang-ban-hang",
         "/trang-ban-hang/",
         "/admin",

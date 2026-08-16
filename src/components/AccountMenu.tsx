@@ -1,14 +1,18 @@
-import { Coins, Heart, History, LayoutGrid, User, Wallet } from "lucide-react";
+import { Coins, History, LayoutGrid, User, Wallet } from "lucide-react";
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import type { Role } from "@/lib/constants";
 
+// "Gian hàng yêu thích" đã bị bỏ khỏi menu — trước đây trỏ /nguoi-ban (danh
+// sách TẤT CẢ seller, không cá nhân hoá) vì hệ thống chưa có tính năng
+// wishlist/yêu thích thật (không có model nào trong schema). Không tự dựng
+// tính năng wishlist mới ở đây — chỉ ẩn mục gây hiểu nhầm cho tới khi có
+// tính năng thật.
 const menuItems = [
-  { label: "Tài Khoản", href: "/don-hang", icon: User },
+  { label: "Tài Khoản", href: "/ho-so-ca-nhan", icon: User },
   { label: "Affiliate", href: "/affiliate", icon: Coins },
   { label: "Nạp Tiền", href: "/nap-tien", icon: Wallet },
   { label: "Lịch Sử Mua", href: "/don-hang", icon: History },
-  { label: "Gian hàng yêu thích", href: "/nguoi-ban", icon: Heart },
 ];
 
 export default function AccountMenu({ name, role }: { name: string; role: Role }) {
@@ -23,7 +27,7 @@ export default function AccountMenu({ name, role }: { name: string; role: Role }
   return (
     <div className="group relative flex h-full items-center">
       <Link
-        href="/don-hang"
+        href="/ho-so-ca-nhan"
         className="flex h-10 items-center gap-2.5 overflow-hidden rounded-full border-2 border-ink bg-white pr-4 text-sm font-bold text-foreground transition hover:bg-surface-alt dark:bg-ink"
       >
         <Avatar size={40} />
