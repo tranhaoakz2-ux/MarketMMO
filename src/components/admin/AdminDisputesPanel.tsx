@@ -182,7 +182,7 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
               <button
                 key={d.id}
                 onClick={() => openDispute(d.id)}
-                className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 text-left shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition hover:border-[var(--adm-brand)]/50"
+                className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-[var(--adm-brand)]/50 hover:shadow-md"
               >
                 <div className="min-w-0">
                   <p className="flex items-center gap-1.5 truncate text-sm font-bold text-[var(--adm-text)]">

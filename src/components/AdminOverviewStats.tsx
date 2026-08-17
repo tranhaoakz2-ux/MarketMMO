@@ -116,7 +116,7 @@ export default function AdminOverviewStats({
                 href={`/admin?range=${opt.key}`}
                 className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
                   range === opt.key
-                    ? "bg-[var(--adm-brand)] text-[#14141f]"
+                    ? "bg-[var(--adm-surface)] text-[var(--adm-text)] shadow-sm"
                     : "text-[var(--adm-muted)] hover:text-[var(--adm-text)]"
                 }`}
               >
@@ -145,8 +145,8 @@ export default function AdminOverviewStats({
             />
             <button
               type="submit"
-              className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                range === "custom" ? "bg-[var(--adm-brand)] text-[#14141f]" : "text-[var(--adm-muted)]"
+              className={`rounded-full px-2.5 py-1 text-xs font-bold transition ${
+                range === "custom" ? "bg-[var(--adm-surface)] text-[var(--adm-text)] shadow-sm" : "text-[var(--adm-muted)] hover:text-[var(--adm-text)]"
               }`}
             >
               Lọc
@@ -259,7 +259,7 @@ export default function AdminOverviewStats({
 
           <Link
             href="/admin/dau-gia"
-            className="flex items-center gap-3 rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition hover:border-[var(--adm-brand)]/50"
+            className="flex items-center gap-3 rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-[var(--adm-brand)]/50 hover:shadow-md"
           >
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--adm-brand-dim)] text-[var(--adm-brand)]">
               <Gavel className="h-4.5 w-4.5" />

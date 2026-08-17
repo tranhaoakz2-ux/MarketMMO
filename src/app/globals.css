@@ -220,48 +220,46 @@ body {
   animation: sale-pop 1.6s ease-in-out infinite;
 }
 
-/* Admin Control Center (/admin) — bảng màu riêng (biến --adm-*, không đăng
-   ký vào @theme inline phía trên để KHÔNG ảnh hưởng bảng màu chung toàn
-   site, chỉ dùng qua cú pháp Tailwind arbitrary value vd bg-[var(--adm-surface)]
-   bên trong component thuộc /admin). TRƯỚC ĐÂY cố định luôn tối (yêu cầu
-   thiết kế ban đầu) — giờ đổi theo ĐÚNG cơ chế theme sáng/tối dùng chung với
-   buyer/seller (attribute [data-theme] trên <html>, xem ThemeToggle.tsx +
-   @custom-variant dark ở đầu file): mặc định (không có [data-theme="dark"])
-   dùng bảng màu SÁNG; có [data-theme="dark"] mới ghi đè sang bảng màu TỐI
-   (giữ nguyên y hệt giá trị cũ, không đổi gì cho người đang ở chế độ tối).
-   Màu thương hiệu/trạng thái (brand*, success/danger/info/warn) GIỮ NGUYÊN ở
-   cả 2 chế độ — cùng nguyên tắc đã áp dụng cho bảng màu chính của site. */
+/* Admin Control Center (/admin) — biến --adm-* giờ CHỈ LÀ BÍ DANH (alias)
+   trỏ thẳng vào đúng token chính của site (--background/--color-surface/
+   --color-brand/--color-success...) thay vì khai báo mã hex riêng như trước
+   (2 bảng màu từng trùng giá trị "tình cờ", dễ lệch nhau sau này khi 1 bên
+   đổi mà bên kia quên cập nhật — đã xảy ra thật với brand color đổi vàng/
+   xanh lá qua nhiều đợt trước đây). Nhờ vậy admin và buyer/seller LUÔN cùng
+   1 nguồn màu duy nhất — sửa globals.css 1 chỗ là cả 2 khu vực đổi theo,
+   không cần đồng bộ tay. `--adm-*` vẫn giữ TÊN riêng (không xoá hẳn, không
+   đăng ký vào @theme inline) vì 34 file trong /admin đang tham chiếu qua cú
+   pháp arbitrary value `bg-[var(--adm-surface)]` — đổi tên sẽ phải sửa lại
+   toàn bộ, không cần thiết cho mục tiêu "cùng ngôn ngữ thiết kế" lần này.
+   Vì mọi giá trị giờ đều là var() trỏ tới token đã tự đổi theo
+   [data-theme="dark"] ở :root phía trên, KHÔNG CẦN khối ghi đè riêng cho
+   dark mode nữa (đã xoá [data-theme="dark"] .admin-shell { ... } cũ).
+   Riêng --adm-warn/--adm-warn-bg GIỮ NGUYÊN mã hex admin-only — site chưa
+   có token "warning" riêng (bảng màu chính chỉ có brand/success/danger/info,
+   xem :root phía trên), và admin cần sắc thái thứ 4 này để phân biệt trạng
+   thái "đang chờ duyệt" với "lỗi/nguy hiểm" trong các hàng đợi kiểm duyệt —
+   đây là phần mở rộng có chủ đích, không phải sai lệch cần sửa. */
 .admin-shell {
-  --adm-bg: #f4f5f9;
-  --adm-sidebar: #ffffff;
-  --adm-surface: #ffffff;
-  --adm-surface-2: #f2f2f7;
-  --adm-border: #e4e4ec;
-  --adm-text: #16161f;
-  --adm-muted: #6b6b78;
-  --adm-brand: #ffe600;
-  --adm-brand-dark: #e0c400;
-  --adm-brand-dim: rgba(255, 230, 0, 0.12);
-  --adm-success: #34d488;
-  --adm-success-bg: rgba(52, 212, 136, 0.12);
-  --adm-danger: #ff6b62;
-  --adm-danger-bg: rgba(255, 107, 98, 0.13);
-  --adm-info: #6d9bff;
-  --adm-info-bg: rgba(109, 155, 255, 0.13);
+  --adm-bg: var(--background);
+  --adm-sidebar: var(--color-surface);
+  --adm-surface: var(--color-surface);
+  --adm-surface-2: var(--color-surface-alt);
+  --adm-border: var(--color-border);
+  --adm-text: var(--foreground);
+  --adm-muted: var(--color-muted);
+  --adm-brand: var(--color-brand);
+  --adm-brand-dark: var(--color-brand-dark);
+  --adm-brand-dim: color-mix(in srgb, var(--color-brand) 12%, transparent);
+  --adm-success: var(--color-success);
+  --adm-success-bg: color-mix(in srgb, var(--color-success) 12%, transparent);
+  --adm-danger: var(--color-danger);
+  --adm-danger-bg: color-mix(in srgb, var(--color-danger) 13%, transparent);
+  --adm-info: var(--color-info);
+  --adm-info-bg: color-mix(in srgb, var(--color-info) 13%, transparent);
   --adm-warn: #ffb020;
   --adm-warn-bg: rgba(255, 176, 32, 0.13);
 
   background: var(--adm-bg);
   color: var(--adm-text);
   min-height: 100vh;
-}
-
-[data-theme="dark"] .admin-shell {
-  --adm-bg: #0b0b10;
-  --adm-sidebar: #121218;
-  --adm-surface: #17171f;
-  --adm-surface-2: #1d1d28;
-  --adm-border: #2a2a36;
-  --adm-text: #f2f2f6;
-  --adm-muted: #8f8fa3;
 }

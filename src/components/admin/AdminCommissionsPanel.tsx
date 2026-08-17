@@ -209,7 +209,7 @@ function ListTab() {
           onChange={(e) => setReferrer(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && load()}
           placeholder="Lọc theo referrerId..."
-          className="ml-auto rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-1.5 text-xs text-[var(--adm-text)] outline-none placeholder:text-[var(--adm-muted)] sm:w-56"
+          className="ml-auto rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-1.5 text-xs text-[var(--adm-text)] outline-none placeholder:text-[var(--adm-muted)] focus:border-[var(--adm-brand-dark)] focus:ring-2 focus:ring-[var(--adm-brand)]/25 sm:w-56"
         />
       </div>
 

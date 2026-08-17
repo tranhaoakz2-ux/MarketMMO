@@ -4,6 +4,7 @@ import { requireAdminPage } from "@/lib/authz";
 import { getAdminSidebarCounts } from "@/lib/queries";
 import { PRIVATE_ROBOTS } from "@/lib/seo";
 import AdminSidebar from "@/components/AdminSidebar";
+import Reveal from "@/components/Reveal";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,7 @@ export default async function AdminLayout({
         <div className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-[var(--adm-border)] bg-[var(--adm-surface)]/95 py-2.5 pl-16 pr-4 backdrop-blur lg:h-[60px] lg:flex-nowrap lg:py-0 lg:pl-[22px] lg:pr-[22px]">
           <Link
             href="/"
-            className="rounded-[9px] border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-1.5 text-[12px] font-bold text-[var(--adm-text)] hover:bg-[var(--adm-border)]"
+            className="rounded-xl border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-1.5 text-[12px] font-bold text-[var(--adm-text)] transition hover:bg-[var(--adm-border)]"
           >
             ← Xem trang web
           </Link>
@@ -54,7 +55,9 @@ export default async function AdminLayout({
             <ThemeToggle />
           </div>
         </div>
-        <div className="mx-auto max-w-[1320px] px-4 pb-16 pt-6 sm:px-7">{children}</div>
+        <div className="mx-auto max-w-[1320px] px-4 pb-16 pt-6 sm:px-7">
+          <Reveal>{children}</Reveal>
+        </div>
       </main>
     </div>
   );

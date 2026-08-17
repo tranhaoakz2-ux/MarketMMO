@@ -3,14 +3,24 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Search, TrendingDown, TrendingUp } from "lucide-react";
 
 // ============================================================================
-// BỘ COMPONENT DEMO DÙNG CHUNG — Admin Control Center (redesign).
-// Rút ra từ CÙNG hệ thiết kế đã duyệt cho Quản Lý Bán Hàng
-// (src/components/seller-demo/DemoKit.tsx), chuyển sang bảng màu TỐI CỐ ĐỊNH
-// của khu admin (--adm-* khai báo trong .admin-shell, src/app/globals.css):
-//   • Thẻ: rounded-2xl + viền mảnh var(--adm-border) + bóng mềm — bỏ hẳn kiểu
-//     viền vàng dày 2px bao quanh mọi thẻ KPI của bản admin hiện tại (điểm thô
-//     đã được chỉ ra) — vàng chỉ còn xuất hiện ở chip icon/badge/hairline accent
-//     có chủ đích trên 1 thẻ nổi bật, không tô tràn lan.
+// BỘ COMPONENT DÙNG CHUNG — Admin Control Center. Đây là bộ component THẬT,
+// được 34 file dưới /admin import trực tiếp (tên "-demo" chỉ còn là di sản
+// đặt tên từ đợt build đầu, KHÔNG phải file demo/nháp — xem ghi chú tương tự
+// ở seller-demo/DemoKit.tsx, cũng là bộ THẬT của Quản Lý Bán Hàng).
+//
+// Từ đợt đồng bộ thiết kế buyer/seller/admin: mọi token --adm-* giờ alias
+// thẳng sang token chính của site (xem .admin-shell trong globals.css), và
+// cách dựng từng component (bóng, bo góc, hiệu ứng hover) khớp NGUYÊN VĂN
+// với seller-demo/DemoKit.tsx + các trang buyer đã design (hồ sơ cá nhân,
+// giỏ hàng...) — không chỉ "giống màu" mà giống cả cảm giác chạm (shadow-sm
+// thay vì bóng đen cứng, nút nhấc lên khi hover thay vì chỉ đổi màu phẳng).
+//   • Thẻ: rounded-2xl + viền mảnh var(--adm-border) + shadow-sm (bóng mềm
+//     chuẩn Tailwind, tự đúng sáng/tối — KHÔNG còn bóng đen cứng
+//     rgba(0,0,0,.35) hardcode như trước, nhìn nặng ở light mode).
+//   • Nút chính/thành công: thêm hover:-translate-y-0.5 hover:shadow-md
+//     (nhấc nhẹ lên khi hover) — đúng hiệu ứng nút "Lưu thay đổi"/"Thanh
+//     toán qua ví" ở trang hồ sơ cá nhân/giỏ hàng, KHÔNG áp cho nút phụ/nguy
+//     hiểm (giữ hover phẳng, tránh mọi nút đều "nhấc" gây rối mắt).
 //   • Typography: eyebrow IN HOA giãn chữ → tiêu đề đậm → số liệu lớn
 //     tabular-nums → nhãn mờ var(--adm-muted).
 //   • Badge trạng thái dùng tông ngữ nghĩa (success/danger/warn/info), không
@@ -18,8 +28,6 @@ import { ChevronLeft, ChevronRight, Search, TrendingDown, TrendingUp } from "luc
 // TẤT CẢ chỉ dùng token --adm-* SẴN CÓ (không chế mã màu mới) qua cú pháp
 // Tailwind arbitrary value — CHỈ hoạt động đúng bên trong wrapper class
 // "admin-shell" (nơi các biến này được khai báo).
-// Đây là component DEMO — KHÔNG import từ trang admin thật, không sửa
-// AdminUi.tsx/AdminSidebar.tsx/component nào của trang thật.
 // ============================================================================
 
 type IconType = ComponentType<{ className?: string; strokeWidth?: number }>;
@@ -74,7 +82,7 @@ export function Card({
   return (
     <div
       id={id}
-      className={`rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] shadow-[0_1px_3px_rgba(0,0,0,0.35)] ${padding} ${className}`}
+      className={`rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] shadow-sm ${padding} ${className}`}
     >
       {children}
     </div>
@@ -153,8 +161,9 @@ export function StatCard({
     </>
   );
 
-  const className =
-    "group relative block overflow-hidden rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition duration-200 hover:-translate-y-0.5 hover:border-black/[0.14] dark:hover:border-white/[0.14]";
+  const className = `group relative block overflow-hidden rounded-2xl border bg-[var(--adm-surface)] p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+    accent ? "border-[var(--adm-brand-dark)]/30" : "border-[var(--adm-border)]"
+  }`;
 
   if (href) {
     return (
@@ -267,7 +276,7 @@ export function ListSkeleton({ rows = 4 }: { rows?: number }) {
 
 export function TableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
+    <div className="overflow-hidden rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] shadow-sm">
       <div className="border-b border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-4 py-3">
         <Skeleton className="h-3 w-24" />
       </div>
@@ -308,12 +317,15 @@ export function EmptyState({
 }
 
 // ---- Nút ---------------------------------------------------------------------
+// primary/success "nhấc lên" khi hover (khớp nút CTA chính ở hồ sơ cá nhân/
+// giỏ hàng) — secondary/danger/ghost giữ hover phẳng, đây là hành động phụ/
+// mang tính cảnh báo, không cần nhấn mạnh thêm bằng chuyển động.
 const buttonVariant = {
-  primary: "bg-[var(--adm-brand)] text-[#14141f] hover:bg-[var(--adm-brand-dark)]",
+  primary: "bg-[var(--adm-brand)] text-[#14141f] shadow-sm hover:-translate-y-0.5 hover:bg-[var(--adm-brand-dark)] hover:shadow-md",
   secondary:
     "border border-[var(--adm-border)] bg-[var(--adm-surface-2)] text-[var(--adm-text)] hover:bg-black/5 dark:hover:bg-white/10",
-  success: "bg-[var(--adm-success)] text-[#06150d] hover:opacity-90",
-  danger: "bg-[var(--adm-danger)] text-[#1a0605] hover:opacity-90",
+  success: "bg-[var(--adm-success)] text-white shadow-sm hover:-translate-y-0.5 hover:opacity-90 hover:shadow-md",
+  danger: "bg-[var(--adm-danger)] text-white hover:opacity-90",
   ghost: "text-[var(--adm-text)] hover:bg-black/5 dark:hover:bg-white/[0.06]",
 };
 
@@ -340,7 +352,7 @@ export function Button({
       type={type}
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${sizeClass} ${buttonVariant[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full font-bold transition disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${sizeClass} ${buttonVariant[variant]} ${className}`}
     >
       {children}
     </button>
@@ -348,6 +360,10 @@ export function Button({
 }
 
 // ---- Segmented control (bo tròn) — controlled ------------------------------
+// Mục đang chọn là 1 "pill" nổi màu surface + shadow-sm trên nền xám, KHÔNG
+// tô đặc vàng như trước — khớp đúng kiểu tab lọc ở seller-demo/DemoKit.tsx
+// (mềm mại hơn, vàng chỉ còn dùng cho nút hành động chính, không lặp lại ở
+// mọi tab đang chọn).
 export function Segmented<T extends string>({
   options,
   value,
@@ -365,7 +381,7 @@ export function Segmented<T extends string>({
           onClick={() => onChange(o.value)}
           className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
             value === o.value
-              ? "bg-[var(--adm-brand)] text-[#14141f]"
+              ? "bg-[var(--adm-surface)] text-[var(--adm-text)] shadow-sm"
               : "text-[var(--adm-muted)] hover:text-[var(--adm-text)]"
           }`}
         >
@@ -393,7 +409,7 @@ export function SearchInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] py-2 pl-9 pr-3 text-sm text-[var(--adm-text)] placeholder:text-[var(--adm-muted)] focus:border-[var(--adm-brand)] focus:outline-none sm:w-64"
+        className="w-full rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] py-2 pl-9 pr-3 text-sm text-[var(--adm-text)] placeholder:text-[var(--adm-muted)] focus:border-[var(--adm-brand-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-brand)]/25 sm:w-64"
       />
     </div>
   );
@@ -434,8 +450,10 @@ export function Field({
   );
 }
 
+// rounded-xl (khớp ô input ở hồ sơ cá nhân/giỏ hàng, thay vì rounded-lg cũ)
+// + ring vàng mềm khi focus, thay vì chỉ đổi màu viền.
 const controlClass =
-  "w-full rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-2 text-sm text-[var(--adm-text)] placeholder:text-[var(--adm-muted)] focus:border-[var(--adm-brand)] focus:outline-none";
+  "w-full rounded-xl border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3 py-2 text-sm text-[var(--adm-text)] placeholder:text-[var(--adm-muted)] focus:border-[var(--adm-brand-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-brand)]/25";
 
 export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${controlClass} ${props.className ?? ""}`} />;
@@ -483,7 +501,7 @@ export function DataTable<T>({
   return (
     <>
       {/* Desktop */}
-      <div className="hidden overflow-hidden rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] shadow-[0_1px_3px_rgba(0,0,0,0.35)] md:block">
+      <div className="hidden overflow-hidden rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] shadow-sm md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -521,7 +539,7 @@ export function DataTable<T>({
         {rows.map((row, i) => (
           <div
             key={rowKey(row, i)}
-            className="rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.35)]"
+            className="rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 shadow-sm"
           >
             <div className="mb-2 min-w-0 break-words text-sm font-bold text-[var(--adm-text)]">
               {primary.render(row)}

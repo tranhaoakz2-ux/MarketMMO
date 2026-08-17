@@ -111,7 +111,7 @@ export default async function AdminOrdersPage({
               href={`/admin/don-hang${f.key === "ALL" ? "" : `?status=${f.key}`}`}
               className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
                 !code && status === f.key
-                  ? "bg-[var(--adm-brand)] text-[#14141f]"
+                  ? "bg-[var(--adm-surface)] text-[var(--adm-text)] shadow-sm"
                   : "text-[var(--adm-muted)] hover:text-[var(--adm-text)]"
               }`}
             >
@@ -129,11 +129,11 @@ export default async function AdminOrdersPage({
             name="code"
             defaultValue={code ?? ""}
             placeholder="Tra cứu mã đơn (DH-XXXXXX)"
-            className="w-52 rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3.5 py-1.5 text-xs font-semibold text-[var(--adm-text)] placeholder:text-[var(--adm-muted)] focus:outline-none"
+            className="w-52 rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-3.5 py-1.5 text-xs font-semibold text-[var(--adm-text)] placeholder:text-[var(--adm-muted)] focus:border-[var(--adm-brand-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-brand)]/25"
           />
           <button
             type="submit"
-            className="rounded-full bg-[var(--adm-brand)] px-3.5 py-1.5 text-xs font-bold text-[#14141f] transition hover:opacity-90"
+            className="rounded-full bg-[var(--adm-brand)] px-3.5 py-1.5 text-xs font-bold text-[#14141f] shadow-sm transition hover:-translate-y-0.5 hover:bg-[var(--adm-brand-dark)] hover:shadow-md"
           >
             Tra cứu
           </button>

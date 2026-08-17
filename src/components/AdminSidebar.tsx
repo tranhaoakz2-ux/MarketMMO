@@ -144,21 +144,18 @@ export default function AdminSidebar({
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className={`relative mb-0.5 flex items-center gap-2.5 rounded-[9px] py-[8.5px] pl-3 pr-2.5 text-[13px] font-semibold transition ${
+                  className={`mb-0.5 flex items-center gap-2.5 rounded-lg py-[8.5px] pl-3 pr-2.5 text-[13px] font-semibold transition ${
                     active
-                      ? "bg-[var(--adm-brand-dim)] text-[var(--adm-brand)]"
+                      ? "bg-[var(--adm-brand)] text-[#14141f]"
                       : "text-[var(--adm-muted)] hover:bg-black/[0.04] hover:text-[var(--adm-text)] dark:hover:bg-white/[0.05]"
                   }`}
                 >
-                  {active && (
-                    <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--adm-brand)]" />
-                  )}
                   <Icon className="h-[16px] w-[16px] shrink-0" strokeWidth={2.1} />
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   {item.count !== undefined && item.count > 0 && (
                     <span
                       className={`shrink-0 rounded-full px-1.5 py-px text-[10.5px] font-extrabold tabular-nums ${
-                        active ? "bg-[var(--adm-brand)] text-[#14141f]" : "bg-[var(--adm-surface-2)] text-[var(--adm-text)]"
+                        active ? "bg-[#14141f]/15 text-[#14141f]" : "bg-[var(--adm-surface-2)] text-[var(--adm-text)]"
                       }`}
                     >
                       {item.count}
