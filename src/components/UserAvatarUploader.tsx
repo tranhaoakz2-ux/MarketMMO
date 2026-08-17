@@ -14,9 +14,13 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export default function UserAvatarUploader({
   name,
   initialAvatarUrl,
+  size = 72,
 }: {
   name: string;
   initialAvatarUrl: string | null;
+  /** Kích thước hiển thị avatar (px) — thuần hiển thị, không đổi giới hạn
+      upload/logic. Mặc định giữ nguyên 72 như trước. */
+  size?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
@@ -73,14 +77,21 @@ export default function UserAvatarUploader({
   return (
     <div className="flex flex-col gap-2">
       <div className="relative inline-block">
-        <SellerAvatar avatarUrl={previewUrl ?? avatarUrl} shopName={name} size={72} shape="circle" />
+        <SellerAvatar
+          avatarUrl={previewUrl ?? avatarUrl}
+          shopName={name}
+          size={size}
+          shape="circle"
+          ring
+          fallbackColorClassName="bg-brand text-ink"
+        />
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
           aria-label="Đổi avatar"
-          className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-ink text-white shadow ring-2 ring-surface transition hover:bg-brand hover:text-ink"
+          className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-ink text-white shadow-md ring-2 ring-surface transition hover:-translate-y-0.5 hover:bg-brand hover:text-ink"
         >
-          <Camera className="h-3.5 w-3.5" />
+          <Camera className="h-4 w-4" />
         </button>
         <input
           ref={inputRef}
