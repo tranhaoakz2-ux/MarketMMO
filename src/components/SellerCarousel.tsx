@@ -1,12 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Star, Store } from "lucide-react";
+import SellerAvatar from "@/components/SellerAvatar";
 
 export type SellerListItem = {
   id: string;
   shopName: string;
   slug: string;
   avatarUrl?: string | null;
+  coverUrl?: string | null;
   level: number;
   verified: boolean;
   productCount: number;
@@ -14,44 +16,55 @@ export type SellerListItem = {
   reviewCount: number;
 };
 
+// Bố cục dải ảnh bìa + avatar tròn đè lên mép dưới — cùng cách xử lý với
+// SellerDirectoryCard (trang /nguoi-ban), thay cho cách cũ nhét thẳng
+// avatar (ảnh THƯỜNG LÀ HÌNH TRÒN) vào khung vuông h-[253px] full-bleed:
+// avatar tròn không lấp kín góc vuông nên trước đây các seller không có
+// ảnh bìa riêng bị hụt/trống góc, không đồng đều với thẻ có ảnh vuông.
 function SellerCard({ seller }: { seller: SellerListItem }) {
   return (
     <Link
       href={`/shop/${seller.slug}`}
-      className="group w-[187px] shrink-0 rounded-xl p-[5px] transition hover:-translate-y-0.5 sm:w-[204px]"
+      className="group w-[187px] shrink-0 rounded-xl transition hover:-translate-y-0.5 sm:w-[204px]"
     >
-      <div className="relative">
-        {seller.avatarUrl ? (
-          <span className="relative block h-[253px] w-full overflow-hidden rounded-lg border-2 border-brand bg-surface-alt">
-            <Image src={seller.avatarUrl} alt={seller.shopName} fill sizes="204px" className="object-cover" />
+      <div className="overflow-hidden rounded-xl border-2 border-brand bg-surface shadow-sm transition-shadow group-hover:shadow-md">
+        <div className="relative h-[88px] w-full">
+          {seller.coverUrl ? (
+            <Image src={seller.coverUrl} alt="" fill sizes="204px" className="object-cover" />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-brand-dark via-brand to-brand-light" />
+          )}
+          <span
+            className={`absolute right-1.5 top-1.5 rounded px-2 py-1 text-[11px] font-bold ${
+              seller.verified ? "bg-ink text-white" : "bg-brand text-ink"
+            }`}
+          >
+            {seller.verified ? "ĐÃ XÁC THỰC" : "SELLER"}
           </span>
-        ) : (
-          <span className="grid h-[253px] w-full place-items-center rounded-lg border-2 border-brand bg-surface-alt text-6xl font-black text-foreground/70">
-            {seller.shopName.charAt(0).toUpperCase()}
+        </div>
+
+        <div className="flex flex-col items-center px-2.5 pb-3.5 text-center">
+          <span className="-mt-7 shrink-0">
+            <SellerAvatar avatarUrl={seller.avatarUrl} shopName={seller.shopName} size={64} shape="circle" ring />
           </span>
-        )}
-        <span
-          className={`absolute right-1 top-1 rounded px-2 py-1 text-[11px] font-bold ${
-            seller.verified ? "bg-ink text-white" : "bg-brand text-ink"
-          }`}
-        >
-          {seller.verified ? "ĐÃ XÁC THỰC" : "SELLER"}
-        </span>
-        <span className="absolute -bottom-2 left-2 grid h-[25px] w-[25px] place-items-center rounded-full bg-ink text-[11px] font-bold text-white ring-2 ring-white">
-          {seller.level}
-        </span>
-      </div>
-      <h3 className="mt-[13px] line-clamp-2 text-[15px] font-bold leading-snug text-foreground transition-colors group-hover:text-brand-dark">
-        {seller.shopName}
-      </h3>
-      <div className="mt-1.5 flex items-center justify-between">
-        <p className="flex items-center gap-1 text-[15px] font-black text-danger">
-          <Star className="h-[15px] w-[15px] fill-danger text-danger" />
-          {seller.avgRating > 0 ? seller.avgRating.toFixed(1) : "Mới"}
-        </p>
-        <span className="flex items-center gap-0.5 text-[13px] text-muted">
-          <Store className="h-[15px] w-[15px]" /> {seller.productCount}
-        </span>
+
+          <h3 className="mt-1.5 line-clamp-2 text-[15px] font-bold leading-snug text-foreground transition-colors group-hover:text-brand-dark">
+            {seller.shopName}
+          </h3>
+          <span className="mt-1 inline-flex items-center rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-white">
+            Level {seller.level}
+          </span>
+
+          <div className="mt-2 flex w-full items-center justify-between">
+            <p className="flex items-center gap-1 text-[15px] font-black text-danger">
+              <Star className="h-[15px] w-[15px] fill-danger text-danger" />
+              {seller.avgRating > 0 ? seller.avgRating.toFixed(1) : "Mới"}
+            </p>
+            <span className="flex items-center gap-0.5 text-[13px] text-muted">
+              <Store className="h-[15px] w-[15px]" /> {seller.productCount}
+            </span>
+          </div>
+        </div>
       </div>
     </Link>
   );

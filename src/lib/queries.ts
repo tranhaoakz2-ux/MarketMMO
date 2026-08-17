@@ -703,6 +703,7 @@ export async function getFeaturedSellers(limit = 8) {
     level: s.level,
     verified: s.verified,
     avatarUrl: s.avatarUrl,
+    coverUrl: s.coverUrl,
     createdAt: s.createdAt,
     productCount: s.products.length,
     ...ratingStats(s.reviews),
