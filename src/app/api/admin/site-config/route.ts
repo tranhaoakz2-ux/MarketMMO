@@ -57,14 +57,16 @@ export async function PATCH(req: Request) {
       } catch {
         return NextResponse.json({ error: "Danh sách tag không hợp lệ." }, { status: 400 });
       }
+      // Cho phép mảng RỖNG (admin tự xoá hết tag để ẩn hẳn khối "Tìm kiếm
+      // phổ biến" ở trang chủ) — chỉ chặn khi có phần tử không hợp lệ hoặc
+      // vượt số lượng tối đa.
       if (
         !Array.isArray(parsed) ||
-        parsed.length === 0 ||
         parsed.length > MAX_TAGS ||
         !parsed.every((t) => typeof t === "string" && t.trim().length > 0 && t.length <= MAX_TAG_LENGTH)
       ) {
         return NextResponse.json(
-          { error: `Danh sách tag phải có 1-${MAX_TAGS} chuỗi, mỗi tag tối đa ${MAX_TAG_LENGTH} ký tự.` },
+          { error: `Danh sách tag tối đa ${MAX_TAGS} chuỗi, mỗi tag tối đa ${MAX_TAG_LENGTH} ký tự.` },
           { status: 400 }
         );
       }

@@ -112,12 +112,12 @@ export default function Footer() {
         <LegalNotice />
       </Reveal>
 
-      <div className="bg-ink text-white">
+      <div className="border-t-4 border-brand bg-ink text-white">
         <Reveal>
-          <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-3 lg:px-8">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="flex h-9 shrink-0 items-center rounded-md bg-brand px-2">
+          <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-3 md:divide-x md:divide-white/10 lg:px-8">
+            <div className="md:pr-10">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-10 shrink-0 items-center rounded-lg bg-brand px-2 shadow-sm">
                   <Image
                     src="/logo-mark.png"
                     alt="MarketMMO"
@@ -130,21 +130,23 @@ export default function Footer() {
                   MARKET<span className="text-brand">MMO</span>.VN
                 </h3>
               </div>
-              <p className="mt-3 max-w-xs text-sm text-white/60">
+              <p className="mt-3.5 max-w-xs text-sm leading-relaxed text-white/60">
                 Nền tảng nhằm kết nối, trao đổi, mua bán trong cộng đồng kiếm
                 tiền online.
               </p>
               {(contacts?.facebookUrl || contacts?.youtubeUrl || contacts?.tiktokUrl) && (
                 <>
-                  <p className="mt-5 text-sm font-bold">Theo dõi chúng tôi</p>
-                  <div className="mt-2 flex gap-2">
+                  <p className="mb-2.5 mt-6 text-xs font-black uppercase tracking-wide text-white/70">
+                    Theo dõi chúng tôi
+                  </p>
+                  <div className="flex gap-2.5">
                     {contacts?.facebookUrl && (
                       <a
                         href={contacts.facebookUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label="Facebook"
-                        className="grid h-9 w-9 place-items-center rounded-full bg-[#1877F2] transition hover:opacity-90"
+                        className="grid h-9 w-9 place-items-center rounded-full bg-[#1877F2] transition hover:-translate-y-0.5 hover:shadow-md"
                       >
                         <span className="text-sm font-black">f</span>
                       </a>
@@ -155,7 +157,7 @@ export default function Footer() {
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label="YouTube"
-                        className="grid h-9 w-9 place-items-center rounded-full bg-[#FF0000] transition hover:opacity-90"
+                        className="grid h-9 w-9 place-items-center rounded-full bg-[#FF0000] transition hover:-translate-y-0.5 hover:shadow-md"
                       >
                         <YoutubeIcon />
                       </a>
@@ -166,7 +168,7 @@ export default function Footer() {
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label="TikTok"
-                        className="grid h-9 w-9 place-items-center rounded-full bg-black transition hover:opacity-90"
+                        className="grid h-9 w-9 place-items-center rounded-full bg-black transition hover:-translate-y-0.5 hover:shadow-md"
                       >
                         <Music2 className="h-4 w-4" />
                       </a>
@@ -176,28 +178,35 @@ export default function Footer() {
               )}
             </div>
 
-            <div>
-              <h4 className="text-lg font-bold text-brand">
+            <div className="md:px-10">
+              <h4 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-brand">
+                <span className="h-1.5 w-5 rounded-full bg-brand" />
                 Đăng ký bán hàng
               </h4>
-              <p className="mt-3 max-w-xs text-sm text-white/60">
+              <p className="mt-3.5 max-w-xs text-sm leading-relaxed text-white/60">
                 Trở thành đối tác của marketmmo.vn để tiếp cận hàng ngàn
                 khách hàng và tối ưu doanh thu của bạn.
               </p>
               <Link
                 href="/tro-thanh-nguoi-ban"
-                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-ink transition hover:bg-brand-dark"
+                className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2.5 text-sm font-black text-ink shadow-sm transition hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-md"
               >
                 Đăng ký ngay →
               </Link>
             </div>
 
-            <div>
-              <h4 className="text-lg font-bold">Hỗ Trợ Khách Hàng</h4>
-              <ul className="mt-3 flex flex-col gap-2 text-sm text-white/60">
+            <div className="md:pl-10">
+              <h4 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-white">
+                <span className="h-1.5 w-5 rounded-full bg-brand" />
+                Hỗ Trợ Khách Hàng
+              </h4>
+              <ul className="mt-3.5 flex flex-col gap-2.5 text-sm text-white/60">
                 {supportLinks.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} className="transition hover:text-brand">
+                    <Link
+                      href={link.href}
+                      className="inline-flex items-center gap-1.5 transition-colors hover:text-brand"
+                    >
                       {link.label}
                     </Link>
                   </li>

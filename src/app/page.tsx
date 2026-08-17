@@ -121,9 +121,11 @@ export default async function Home({
             />
           </Reveal>
 
-          <Reveal delay={0.1}>
-            <TagCloud tags={searchTags} />
-          </Reveal>
+          {searchTags.length > 0 && (
+            <Reveal delay={0.1}>
+              <TagCloud tags={searchTags} />
+            </Reveal>
+          )}
         </div>
       </main>
       <Footer />

@@ -30,18 +30,11 @@ const DEFAULTS: Record<SiteConfigKey, string> = {
   footer_messenger_url: "",
   footer_phone: "",
   footer_telegram_url: "",
-  search_tags: JSON.stringify([
-    "Gmail EDU",
-    "Hotmail",
-    "Clone FB",
-    "TikTok",
-    "Mail Domain EDU",
-    "Facebook",
-    "Instagram",
-    "Netflix",
-    "Proxy",
-    "Thuê Gmail",
-  ]),
+  // Mặc định RỖNG (đổi từ danh sách hardcode cũ theo yêu cầu chủ sàn tự
+  // kiểm soát hoàn toàn từ khóa hiển thị ở khối "Tìm kiếm phổ biến" cuối
+  // trang chủ) — khối này tự ẩn khi rỗng (xem src/app/page.tsx). Tự thêm
+  // từ khóa qua Admin > Nội dung trang web khi cần.
+  search_tags: JSON.stringify([]),
 };
 
 export const ALL_SITE_CONFIG_KEYS = Object.keys(DEFAULTS) as SiteConfigKey[];
