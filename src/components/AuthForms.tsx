@@ -217,29 +217,7 @@ export default function AuthForms({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Hero chào mừng — cùng ngôn ngữ với khối header trang Hồ sơ cá
-          nhân/Nạp tiền/2FA (dải gradient vàng nhạt phía trên, icon badge). */}
       <Reveal>
-        <div className="relative overflow-hidden rounded-2xl border border-border-c bg-surface p-6 text-center shadow-sm sm:p-8">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-brand/12 to-transparent"
-          />
-          <div className="relative flex flex-col items-center gap-3">
-            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-brand text-ink shadow-sm">
-              <ShieldCheck className="h-7 w-7" strokeWidth={2} />
-            </span>
-            <div>
-              <h2 className="text-xl font-black text-foreground sm:text-2xl">Chào mừng đến với MarketMMO</h2>
-              <p className="mt-1 text-sm text-muted">
-                Đăng nhập hoặc tạo tài khoản để giao dịch ký quỹ an toàn, giao hàng tự động 24/7.
-              </p>
-            </div>
-          </div>
-        </div>
-      </Reveal>
-
-      <Reveal delay={0.05}>
         <div className="overflow-hidden rounded-2xl border border-border-c bg-surface shadow-sm">
           <div className="grid grid-cols-2 gap-1.5 bg-surface-alt p-1.5">
             <button
