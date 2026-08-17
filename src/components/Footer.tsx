@@ -52,10 +52,9 @@ function MessengerIcon() {
 }
 
 // Logo Telegram — cùng nguồn/lý do vector hoá với ZaloIcon/MessengerIcon ở
-// trên (Simple Icons, CC0-1.0). Dùng fill="currentColor" (khác 2 icon trên
-// luôn trắng trên nền màu thương hiệu riêng) vì 2 nút mới (Chat admin +
-// Telegram) dùng chung nền vàng thương hiệu bg-brand + chữ text-ink theo
-// yêu cầu, nên icon ăn theo màu chữ ink thay vì trắng cố định.
+// trên (Simple Icons, CC0-1.0). fill="currentColor" ăn theo màu chữ của nút
+// cha (text-white — nền xanh Telegram #229ED9 chính thức, tách riêng khỏi
+// nút "Chat với admin" cạnh bên vẫn giữ tông vàng thương hiệu).
 function TelegramIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-8 w-8" fill="currentColor" aria-hidden>
@@ -263,8 +262,10 @@ export default function Footer() {
 
         {/* Chat với admin (hệ thống tin nhắn thật /tin-nhan, cùng Conversation/
             Message dùng cho buyer-seller) + Telegram — 2 nút mới, cùng kích
-            thước với nút lên đầu trang, tông vàng thương hiệu riêng (khác
-            màu thương hiệu gốc của Zalo/Messenger/Điện thoại ở trên). */}
+            thước với nút lên đầu trang. Chat admin dùng tông vàng thương
+            hiệu; Telegram dùng đúng màu xanh nhận diện thương hiệu Telegram
+            (#229ED9, không dùng vàng như trước) — tách riêng như
+            Zalo/Messenger/Điện thoại ở trên đều giữ màu thương hiệu gốc. */}
         {showChatAdmin && (
           <div className="group/tip relative">
             <Link
@@ -286,7 +287,7 @@ export default function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Liên hệ qua Telegram"
-              className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-brand text-ink shadow-lg transition hover:scale-110 hover:bg-brand-dark hover:shadow-xl"
+              className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-[#229ED9] text-white shadow-lg transition hover:scale-110 hover:bg-[#1B8AC4] hover:shadow-xl"
             >
               <TelegramIcon />
             </a>
