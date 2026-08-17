@@ -45,7 +45,7 @@ const activityIconClass: Record<AdminActivityItem["type"], string> = {
   SELLER_JOINED: "bg-[var(--adm-success-bg)] text-[var(--adm-success)]",
   DISPUTE_OPENED: "bg-[var(--adm-danger-bg)] text-[var(--adm-danger)]",
   PRODUCT_PENDING: "bg-[var(--adm-warn-bg)] text-[var(--adm-warn)]",
-  AUDIT: "bg-white/[0.08] text-[var(--adm-muted)]",
+  AUDIT: "bg-[var(--adm-surface-2)] text-[var(--adm-muted)]",
 };
 
 function toInputDate(d?: string) {
@@ -134,14 +134,14 @@ export default function AdminOverviewStats({
               type="date"
               name="from"
               defaultValue={toInputDate(from)}
-              className="rounded-md bg-transparent px-1.5 py-1 text-xs text-[var(--adm-text)] outline-none [color-scheme:dark]"
+              className="rounded-md bg-transparent px-1.5 py-1 text-xs text-[var(--adm-text)] outline-none [color-scheme:light] dark:[color-scheme:dark]"
             />
             <span className="text-xs text-[var(--adm-muted)]">—</span>
             <input
               type="date"
               name="to"
               defaultValue={toInputDate(to)}
-              className="rounded-md bg-transparent px-1.5 py-1 text-xs text-[var(--adm-text)] outline-none [color-scheme:dark]"
+              className="rounded-md bg-transparent px-1.5 py-1 text-xs text-[var(--adm-text)] outline-none [color-scheme:light] dark:[color-scheme:dark]"
             />
             <button
               type="submit"
@@ -217,7 +217,7 @@ export default function AdminOverviewStats({
                     <Link
                       key={a.id}
                       href={a.href}
-                      className="group -mx-2 flex items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-white/[0.04]"
+                      className="group -mx-2 flex items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"
                     >
                       <span
                         className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${activityIconClass[a.type]}`}
@@ -248,7 +248,7 @@ export default function AdminOverviewStats({
                 <Link
                   key={item.label}
                   href={item.href}
-                  className="flex items-center gap-3 rounded-xl bg-[var(--adm-surface-2)] p-3 transition hover:bg-white/[0.06]"
+                  className="flex items-center gap-3 rounded-xl bg-[var(--adm-surface-2)] p-3 transition hover:bg-black/5 dark:hover:bg-white/[0.06]"
                 >
                   <p className="min-w-0 flex-1 text-xs font-semibold text-[var(--adm-text)]">{item.label}</p>
                   <CountPill count={item.count} tone="danger" showZero />

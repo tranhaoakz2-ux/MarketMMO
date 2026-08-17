@@ -105,7 +105,7 @@ export default function AdminSidebar({
 
   const navBody = (
     <>
-      <div className="flex items-center gap-2.5 border-b border-white/[0.06] px-[18px] pb-3.5 pt-[18px]">
+      <div className="flex items-center gap-2.5 border-b border-black/[0.06] px-[18px] pb-3.5 pt-[18px] dark:border-white/[0.06]">
         <div className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[9px] bg-gradient-to-br from-[var(--adm-brand)] to-[var(--adm-brand-dark)] text-[15px] font-black text-[#14141f]">
           MM
         </div>
@@ -118,7 +118,7 @@ export default function AdminSidebar({
         <button
           onClick={() => setOpen(false)}
           aria-label="Đóng menu"
-          className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[var(--adm-muted)] hover:bg-white/10 lg:hidden"
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[var(--adm-muted)] hover:bg-black/5 dark:hover:bg-white/10 lg:hidden"
         >
           <X className="h-4 w-4" />
         </button>
@@ -127,7 +127,7 @@ export default function AdminSidebar({
       <nav className="flex-1 overflow-y-auto px-2.5 pb-4 pt-2.5">
         {groups.map((group) => (
           <div key={group.label}>
-            <div className="flex items-center justify-between px-2.5 pb-1.5 pt-3.5 text-[10.5px] font-extrabold uppercase tracking-widest text-white/30">
+            <div className="flex items-center justify-between px-2.5 pb-1.5 pt-3.5 text-[10.5px] font-extrabold uppercase tracking-widest text-black/30 dark:text-white/30">
               {group.label}
               {group.groupCount !== undefined && group.groupCount > 0 && (
                 <span className="rounded-full bg-[var(--adm-warn-bg)] px-1.5 py-px text-[10px] font-extrabold tabular-nums text-[var(--adm-warn)]">
@@ -147,7 +147,7 @@ export default function AdminSidebar({
                   className={`relative mb-0.5 flex items-center gap-2.5 rounded-[9px] py-[8.5px] pl-3 pr-2.5 text-[13px] font-semibold transition ${
                     active
                       ? "bg-[var(--adm-brand-dim)] text-[var(--adm-brand)]"
-                      : "text-[var(--adm-muted)] hover:bg-white/[0.05] hover:text-[var(--adm-text)]"
+                      : "text-[var(--adm-muted)] hover:bg-black/[0.04] hover:text-[var(--adm-text)] dark:hover:bg-white/[0.05]"
                   }`}
                 >
                   {active && (
@@ -158,7 +158,7 @@ export default function AdminSidebar({
                   {item.count !== undefined && item.count > 0 && (
                     <span
                       className={`shrink-0 rounded-full px-1.5 py-px text-[10.5px] font-extrabold tabular-nums ${
-                        active ? "bg-[var(--adm-brand)] text-[#14141f]" : "bg-white/10 text-[var(--adm-text)]"
+                        active ? "bg-[var(--adm-brand)] text-[#14141f]" : "bg-[var(--adm-surface-2)] text-[var(--adm-text)]"
                       }`}
                     >
                       {item.count}
@@ -171,7 +171,7 @@ export default function AdminSidebar({
         ))}
       </nav>
 
-      <div className="flex items-center gap-2.5 border-t border-white/[0.06] p-3">
+      <div className="flex items-center gap-2.5 border-t border-black/[0.06] p-3 dark:border-white/[0.06]">
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--adm-brand)] text-[13px] font-black text-[#14141f]">
           {adminEmail.charAt(0).toUpperCase()}
         </span>

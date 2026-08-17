@@ -611,8 +611,7 @@ export function MiniBarChart({ bars }: { bars: { label: string; value: number }[
           x2={W - padR}
           y1={padT + (plotH / 3) * i}
           y2={padT + (plotH / 3) * i}
-          stroke="white"
-          strokeOpacity={0.05}
+          stroke="var(--adm-border)"
           strokeWidth={1}
         />
       ))}

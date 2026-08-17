@@ -96,9 +96,9 @@ export default function AdminPlatformFeePanel() {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-black text-[var(--adm-text)]">Tổng phí sàn thu được</h3>
           <div className="flex items-center gap-2 text-xs">
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-md bg-[var(--adm-surface-2)] px-2 py-1 text-[var(--adm-text)] outline-none [color-scheme:dark]" />
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-md bg-[var(--adm-surface-2)] px-2 py-1 text-[var(--adm-text)] outline-none [color-scheme:light] dark:[color-scheme:dark]" />
             <span className="text-[var(--adm-muted)]">—</span>
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-md bg-[var(--adm-surface-2)] px-2 py-1 text-[var(--adm-text)] outline-none [color-scheme:dark]" />
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-md bg-[var(--adm-surface-2)] px-2 py-1 text-[var(--adm-text)] outline-none [color-scheme:light] dark:[color-scheme:dark]" />
             <Button variant="secondary" size="sm" onClick={load}>Lọc</Button>
           </div>
         </div>
@@ -171,11 +171,11 @@ export default function AdminPlatformFeePanel() {
             </div>
             <div>
               <label className="mb-1 block text-[11px] text-[var(--adm-muted)]">Từ</label>
-              <input type="datetime-local" value={sStart} onChange={(e) => setSStart(e.target.value)} className="rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-2 py-1.5 text-xs text-[var(--adm-text)] outline-none [color-scheme:dark]" />
+              <input type="datetime-local" value={sStart} onChange={(e) => setSStart(e.target.value)} className="rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-2 py-1.5 text-xs text-[var(--adm-text)] outline-none [color-scheme:light] dark:[color-scheme:dark]" />
             </div>
             <div>
               <label className="mb-1 block text-[11px] text-[var(--adm-muted)]">Đến</label>
-              <input type="datetime-local" value={sEnd} onChange={(e) => setSEnd(e.target.value)} className="rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-2 py-1.5 text-xs text-[var(--adm-text)] outline-none [color-scheme:dark]" />
+              <input type="datetime-local" value={sEnd} onChange={(e) => setSEnd(e.target.value)} className="rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-2 py-1.5 text-xs text-[var(--adm-text)] outline-none [color-scheme:light] dark:[color-scheme:dark]" />
             </div>
             <Button variant="primary" onClick={addSchedule}>
               <Plus className="h-3.5 w-3.5" /> Thêm mốc
