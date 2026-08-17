@@ -170,6 +170,12 @@ model Seller {
   // null = chưa upload, UI tự fallback về chữ cái đầu shopName (xem
   // src/components/SellerAvatar.tsx, dùng chung mọi nơi hiện avatar seller).
   avatarUrl   String?
+  // Ảnh bìa gian hàng (Trang Bán Hàng > Hồ sơ cá nhân) — hiện làm nền dải
+  // header trang gian hàng công khai (/shop/[seller]) và card trong danh
+  // sách người bán (/nguoi-ban). null = chưa upload, UI tự fallback về
+  // gradient tông thương hiệu mặc định thay vì để trống trơn (xem
+  // SellerDirectory.tsx / trang /shop/[seller]).
+  coverUrl    String?
   // Hồ sơ cá nhân (Trang Bán Hàng > Hồ sơ cá nhân) — "Lĩnh vực chuyên / cam
   // kết dịch vụ", đoạn text ngắn tuỳ chọn seller tự khai để tăng độ tin cậy
   // với buyer. Nullable — không điền vẫn bán hàng bình thường. CỐ TÌNH không

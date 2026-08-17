@@ -3,6 +3,7 @@
 import { Loader2, Save, UserCircle } from "lucide-react";
 import { useState } from "react";
 import SellerAvatarUploader from "@/components/SellerAvatarUploader";
+import SellerCoverUploader from "@/components/SellerCoverUploader";
 import { Button, Card, Field, PageHeader, SectionTitle, Textarea, TextInput } from "@/components/seller-demo/DemoKit";
 import {
   calcSellerProfileCompleteness,
@@ -14,11 +15,13 @@ import {
 export default function SellerProfilePanel({
   shopName: initialShopName,
   avatarUrl,
+  coverUrl,
   description: initialDescription,
   specialty: initialSpecialty,
 }: {
   shopName: string;
   avatarUrl: string | null;
+  coverUrl: string | null;
   description: string;
   specialty: string | null;
 }) {
@@ -71,6 +74,11 @@ export default function SellerProfilePanel({
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_280px]">
         <Card className="flex flex-col gap-5">
+          <div>
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.1em] text-muted">Ảnh bìa gian hàng</p>
+            <SellerCoverUploader initialCoverUrl={coverUrl} />
+          </div>
+
           <div>
             <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.1em] text-muted">Avatar gian hàng</p>
             <SellerAvatarUploader

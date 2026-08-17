@@ -10,6 +10,7 @@ import {
   Store,
 } from "lucide-react";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Footer from "@/components/Footer";
@@ -77,7 +78,13 @@ export default async function ShopPage({
     <>
       <Header />
       <main className="flex-1 bg-background">
-        <div className="h-32 bg-gradient-to-r from-ink to-ink-soft sm:h-40" />
+        {/* Ảnh bìa gian hàng (Seller.coverUrl, Trang Bán Hàng > Hồ sơ cá nhân)
+            — giữ nguyên gradient cũ làm fallback khi seller chưa upload. */}
+        <div className="relative h-32 overflow-hidden bg-gradient-to-r from-ink to-ink-soft sm:h-40">
+          {shop.coverUrl && (
+            <Image src={shop.coverUrl} alt="" fill className="object-cover" sizes="100vw" priority />
+          )}
+        </div>
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <Reveal>

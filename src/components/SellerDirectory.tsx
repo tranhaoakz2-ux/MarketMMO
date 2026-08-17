@@ -1,6 +1,7 @@
 "use client";
 
 import { BadgeCheck, Calendar, Package, Search, ShieldCheck, Star, Trophy } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import RatingStars from "@/components/RatingStars";
@@ -18,6 +19,7 @@ export type SellerCardData = {
   level: number;
   verified: boolean;
   avatarUrl: string | null;
+  coverUrl: string | null;
   productCount: number;
   avgRating: number;
   reviewCount: number;
@@ -70,22 +72,34 @@ function SellerDirectoryCard({ seller }: { seller: SellerCardData }) {
   return (
     <Link
       href={`/shop/${seller.slug}`}
-      className="group flex flex-col gap-4 rounded-2xl border border-border-c bg-surface p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-dark hover:shadow-lg sm:p-6"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-border-c bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-dark hover:shadow-lg"
     >
-      <div className="flex items-start gap-3.5">
-        <span className="relative inline-block shrink-0">
-          <SellerAvatar avatarUrl={seller.avatarUrl} shopName={seller.shopName} size={56} shape="circle" ring />
+      {/* Dải ảnh bìa — ảnh thật nếu seller đã upload (Trang Bán Hàng > Hồ sơ
+          cá nhân), fallback gradient tông vàng thương hiệu thay vì để trống. */}
+      <div className="relative h-24 w-full shrink-0 overflow-hidden sm:h-28">
+        {seller.coverUrl ? (
+          <Image src={seller.coverUrl} alt="" fill className="object-cover" sizes="380px" />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-br from-brand-dark via-brand to-brand-light" />
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col gap-4 p-5 pt-0 sm:p-6 sm:pt-0">
+        {/* Avatar đè lên mép dưới ảnh bìa (kiểu Facebook) — viền/đổ bóng qua
+            prop `ring` có sẵn của SellerAvatar. */}
+        <span className="relative -mt-9 inline-block w-fit shrink-0">
+          <SellerAvatar avatarUrl={seller.avatarUrl} shopName={seller.shopName} size={72} shape="circle" ring />
           {seller.verified && (
             <span
-              className="absolute -bottom-0.5 -right-0.5 grid h-5 w-5 place-items-center rounded-full bg-info text-white ring-2 ring-surface"
+              className="absolute -bottom-0.5 -right-0.5 grid h-6 w-6 place-items-center rounded-full bg-info text-white ring-2 ring-surface"
               title="Đã xác thực"
             >
-              <BadgeCheck className="h-3 w-3" />
+              <BadgeCheck className="h-3.5 w-3.5" />
             </span>
           )}
         </span>
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <h3 className="truncate text-base font-bold leading-snug text-foreground transition-colors group-hover:text-brand-dark">
             {seller.shopName}
           </h3>
@@ -96,47 +110,47 @@ function SellerDirectoryCard({ seller }: { seller: SellerCardData }) {
             {tier.label}
           </span>
         </div>
-      </div>
 
-      {seller.description && (
-        <p className="line-clamp-2 text-xs leading-relaxed text-muted">{seller.description}</p>
-      )}
-
-      <div className="flex items-center justify-between gap-2 border-t border-border-c pt-3.5 text-xs">
-        <span className="flex items-center gap-1 font-semibold text-foreground">
-          <Package className="h-3.5 w-3.5 text-muted" /> {seller.productCount} sản phẩm
-        </span>
-        {seller.reviewCount > 0 ? (
-          <span className="flex items-center gap-1.5">
-            <RatingStars rating={seller.avgRating} />
-            <span className="font-bold text-foreground">{seller.avgRating.toFixed(1)}</span>
-            <span className="text-muted">({seller.reviewCount})</span>
-          </span>
-        ) : (
-          <span className="flex items-center gap-1 text-muted">
-            <Star className="h-3.5 w-3.5" /> Chưa có đánh giá
-          </span>
+        {seller.description && (
+          <p className="line-clamp-2 text-xs leading-relaxed text-muted">{seller.description}</p>
         )}
-      </div>
 
-      {/* Chỉ dấu tin cậy — quỹ bảo hiểm CHỈ hiện khi > 0 (không hiện "0đ" trơ
-          trọi), ngày tham gia luôn có sẵn (Seller.createdAt không nullable). */}
-      {(seller.insuranceBalance > 0 || seller.joinedLabel) && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
-          {seller.insuranceBalance > 0 && (
-            <span className="flex items-center gap-1 font-semibold text-info">
-              <ShieldCheck className="h-3.5 w-3.5" /> Quỹ bảo hiểm: {formatVnd(seller.insuranceBalance)}
+        <div className="flex items-center justify-between gap-2 border-t border-border-c pt-3.5 text-xs">
+          <span className="flex items-center gap-1 font-semibold text-foreground">
+            <Package className="h-3.5 w-3.5 text-muted" /> {seller.productCount} sản phẩm
+          </span>
+          {seller.reviewCount > 0 ? (
+            <span className="flex items-center gap-1.5">
+              <RatingStars rating={seller.avgRating} />
+              <span className="font-bold text-foreground">{seller.avgRating.toFixed(1)}</span>
+              <span className="text-muted">({seller.reviewCount})</span>
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-muted">
+              <Star className="h-3.5 w-3.5" /> Chưa có đánh giá
             </span>
           )}
-          <span className="flex items-center gap-1">
-            <Calendar className="h-3.5 w-3.5" /> {seller.joinedLabel}
-          </span>
         </div>
-      )}
 
-      <span className="mt-auto flex items-center justify-center gap-1.5 rounded-full bg-ink px-4 py-2.5 text-xs font-black text-white transition-colors group-hover:bg-brand-dark group-hover:text-ink">
-        Xem gian hàng
-      </span>
+        {/* Chỉ dấu tin cậy — quỹ bảo hiểm CHỈ hiện khi > 0 (không hiện "0đ" trơ
+            trọi), ngày tham gia luôn có sẵn (Seller.createdAt không nullable). */}
+        {(seller.insuranceBalance > 0 || seller.joinedLabel) && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
+            {seller.insuranceBalance > 0 && (
+              <span className="flex items-center gap-1 font-semibold text-info">
+                <ShieldCheck className="h-3.5 w-3.5" /> Quỹ bảo hiểm: {formatVnd(seller.insuranceBalance)}
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3.5 w-3.5" /> {seller.joinedLabel}
+            </span>
+          </div>
+        )}
+
+        <span className="mt-auto flex items-center justify-center gap-1.5 rounded-full bg-ink px-4 py-2.5 text-xs font-black text-white transition-colors group-hover:bg-brand-dark group-hover:text-ink">
+          Xem gian hàng
+        </span>
+      </div>
     </Link>
   );
 }

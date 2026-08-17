@@ -22,6 +22,7 @@ export default async function SellerDirectoryPage() {
     level: s.level,
     verified: s.verified,
     avatarUrl: s.avatarUrl,
+    coverUrl: s.coverUrl,
     productCount: s.productCount,
     avgRating: s.avgRating,
     reviewCount: s.reviewCount,

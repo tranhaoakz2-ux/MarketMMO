@@ -11,6 +11,7 @@ export default async function SellerProfilePage() {
     <SellerProfilePanel
       shopName={seller!.shopName}
       avatarUrl={seller!.avatarUrl}
+      coverUrl={seller!.coverUrl}
       description={seller!.description}
       specialty={seller!.specialty}
     />

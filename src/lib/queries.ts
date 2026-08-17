@@ -493,6 +493,7 @@ export async function getSellerBySlug(slug: string) {
     verified: seller.verified,
     suspended: seller.suspended,
     avatarUrl: seller.avatarUrl,
+    coverUrl: seller.coverUrl,
     createdAt: seller.createdAt,
     products,
     reviews: seller.reviews.map((r) => ({
@@ -645,6 +646,7 @@ export async function getAllSellersWithStats() {
     level: s.level,
     verified: s.verified,
     avatarUrl: s.avatarUrl,
+    coverUrl: s.coverUrl,
     createdAt: s.createdAt,
     insuranceBalance: s.insuranceBalance,
     productCount: s.products.length,
