@@ -1,10 +1,24 @@
 "use client";
 
-import { Gift, Lock, LogIn, Mail, ShieldCheck, User, UserPlus } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Gift,
+  Loader2,
+  Lock,
+  LogIn,
+  Mail,
+  ShieldCheck,
+  User,
+  UserPlus,
+} from "lucide-react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import Reveal from "@/components/Reveal";
 import TurnstileWidget, { type TurnstileWidgetHandle } from "@/components/TurnstileWidget";
 
 // lucide-react không có icon logo thương hiệu (Google) — dùng SVG inline
@@ -29,6 +43,52 @@ function GoogleIcon() {
         d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.167 6.656 3.58 9 3.58z"
       />
     </svg>
+  );
+}
+
+// Ô nhập dùng chung cho form đăng nhập/đăng ký — bo tròn + icon + focus ring
+// vàng, cùng ngôn ngữ với TextField ở UserProfilePanel/DepositPanel. Hỗ trợ
+// `toggleablePassword` để hiện nút mắt ẩn/hiện MẬT KHẨU — thuần đổi thuộc
+// tính `type` của input trên UI, không đụng state/giá trị/logic validate.
+function AuthField({
+  label,
+  icon: Icon,
+  hint,
+  toggleablePassword,
+  ...props
+}: {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  hint?: string;
+  toggleablePassword?: boolean;
+} & React.InputHTMLAttributes<HTMLInputElement>) {
+  const [visible, setVisible] = useState(false);
+  const isPasswordField = props.type === "password";
+  const inputType = isPasswordField && toggleablePassword ? (visible ? "text" : "password") : props.type;
+
+  return (
+    <div>
+      <label className="mb-1.5 block text-sm font-semibold text-foreground">{label}</label>
+      <div className="flex items-center gap-2.5 rounded-xl border border-border-c px-3.5 py-2.5 transition-colors focus-within:border-brand-dark focus-within:ring-2 focus-within:ring-brand/25">
+        <Icon className="h-4 w-4 shrink-0 text-muted" />
+        <input
+          {...props}
+          type={inputType}
+          className="w-full min-w-0 bg-transparent text-sm text-foreground focus:outline-none"
+        />
+        {isPasswordField && toggleablePassword && (
+          <button
+            type="button"
+            onClick={() => setVisible((v) => !v)}
+            aria-label={visible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+            className="shrink-0 text-muted transition-colors hover:text-brand-dark"
+          >
+            {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        )}
+      </div>
+      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+    </div>
   );
 }
 
@@ -156,247 +216,246 @@ export default function AuthForms({
   };
 
   return (
-    <div>
-      <div className="grid grid-cols-2 bg-brand text-ink">
-        <button
-          type="button"
-          onClick={() => setTab("login")}
-          className={`flex cursor-pointer items-center justify-center gap-2 py-4 text-sm font-black transition ${
-            tab === "login" ? "bg-ink text-white" : "hover:bg-brand-dark"
-          }`}
-        >
-          <LogIn className="h-4 w-4" /> Đăng nhập
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("register")}
-          className={`flex cursor-pointer items-center justify-center gap-2 border-l border-ink/10 py-4 text-sm font-black transition ${
-            tab === "register" ? "bg-ink text-white" : "hover:bg-brand-dark"
-          }`}
-        >
-          <UserPlus className="h-4 w-4" /> Đăng ký
-        </button>
-      </div>
-
-      {tab === "login" ? (
-      <form onSubmit={handleLogin} className="flex flex-col gap-4 p-6 sm:p-8">
-        <div>
-          <label className="mb-1.5 block text-sm font-semibold text-foreground">
-            Email hoặc Username
-          </label>
-          <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
-            <Mail className="h-4 w-4 text-muted" />
-            <input
-              type="text"
-              required
-              value={loginEmail}
-              onChange={(e) => setLoginEmail(e.target.value)}
-              placeholder="Nhập email hoặc username"
-              className="w-full text-sm focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-semibold text-foreground">
-            Mật khẩu
-          </label>
-          <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
-            <Lock className="h-4 w-4 text-muted" />
-            <input
-              type="password"
-              required
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-              placeholder="Nhập mật khẩu"
-              className="w-full text-sm focus:outline-none"
-            />
-          </div>
-          <Link
-            href="/quen-mat-khau"
-            className="mt-1.5 block text-right text-xs font-semibold text-brand-dark hover:underline"
-          >
-            Quên mật khẩu?
-          </Link>
-        </div>
-
-        {turnstileSiteKey && (
-          <TurnstileWidget ref={loginTurnstileRef} siteKey={turnstileSiteKey} onVerify={setLoginTurnstileToken} onExpire={() => setLoginTurnstileToken("")} />
-        )}
-
-        {loginSuccess && (
-          <p className="rounded-lg bg-success/10 px-3 py-2 text-xs font-semibold text-success">
-            {loginSuccess}
-          </p>
-        )}
-
-        {loginError && (
-          <p className="rounded-lg bg-danger/10 px-3 py-2 text-xs font-semibold text-danger">
-            {loginError}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={loginLoading || (!!turnstileSiteKey && !loginTurnstileToken)}
-          className="flex cursor-pointer items-center justify-center gap-2 rounded-full bg-brand py-3 text-sm font-black text-ink transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <LogIn className="h-4 w-4" />
-          {loginLoading ? "Đang đăng nhập..." : "Đăng nhập"}
-        </button>
-
-        {googleEnabled && (
-          <>
-            <div className="flex items-center gap-3 text-xs text-muted">
-              <span className="h-px flex-1 bg-border-c" /> hoặc
-              <span className="h-px flex-1 bg-border-c" />
+    <div className="flex flex-col gap-6">
+      {/* Hero chào mừng — cùng ngôn ngữ với khối header trang Hồ sơ cá
+          nhân/Nạp tiền/2FA (dải gradient vàng nhạt phía trên, icon badge). */}
+      <Reveal>
+        <div className="relative overflow-hidden rounded-2xl border border-border-c bg-surface p-6 text-center shadow-sm sm:p-8">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-brand/12 to-transparent"
+          />
+          <div className="relative flex flex-col items-center gap-3">
+            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-brand text-ink shadow-sm">
+              <ShieldCheck className="h-7 w-7" strokeWidth={2} />
+            </span>
+            <div>
+              <h2 className="text-xl font-black text-foreground sm:text-2xl">Chào mừng đến với MarketMMO</h2>
+              <p className="mt-1 text-sm text-muted">
+                Đăng nhập hoặc tạo tài khoản để giao dịch ký quỹ an toàn, giao hàng tự động 24/7.
+              </p>
             </div>
+          </div>
+        </div>
+      </Reveal>
+
+      <Reveal delay={0.05}>
+        <div className="overflow-hidden rounded-2xl border border-border-c bg-surface shadow-sm">
+          <div className="grid grid-cols-2 gap-1.5 bg-surface-alt p-1.5">
             <button
               type="button"
-              onClick={() => signIn("google", { callbackUrl })}
-              className="flex cursor-pointer items-center justify-center gap-2 rounded-full border-2 border-border-c py-3 text-sm font-semibold text-foreground transition hover:border-brand-dark hover:bg-surface-alt"
+              onClick={() => setTab("login")}
+              className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl py-3 text-sm font-black transition-colors ${
+                tab === "login"
+                  ? "bg-brand text-ink shadow-sm"
+                  : "text-foreground/70 hover:bg-surface hover:text-brand-dark"
+              }`}
             >
-              <GoogleIcon />
-              Đăng nhập với Google
+              <LogIn className="h-4 w-4" /> Đăng nhập
             </button>
-          </>
-        )}
-
-        <p className="text-center text-xs text-muted">
-          Tài khoản demo: buyer@marketmmo.pro / Buyer@123
-        </p>
-      </form>
-      ) : (
-      <form onSubmit={handleRegister} className="flex flex-col gap-4 p-6 sm:p-8">
-        <div>
-          <label className="mb-1.5 block text-sm font-semibold text-foreground">
-            Username
-          </label>
-          <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
-            <User className="h-4 w-4 text-muted" />
-            <input
-              type="text"
-              required
-              value={regUsername}
-              onChange={(e) => setRegUsername(e.target.value)}
-              placeholder="Nhập username"
-              className="w-full text-sm focus:outline-none"
-            />
+            <button
+              type="button"
+              onClick={() => setTab("register")}
+              className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl py-3 text-sm font-black transition-colors ${
+                tab === "register"
+                  ? "bg-brand text-ink shadow-sm"
+                  : "text-foreground/70 hover:bg-surface hover:text-brand-dark"
+              }`}
+            >
+              <UserPlus className="h-4 w-4" /> Đăng ký
+            </button>
           </div>
-          <p className="mt-1 text-xs text-muted">
-            Chỉ sử dụng chữ cái và số, không dấu
-          </p>
+
+          {tab === "login" ? (
+            <form onSubmit={handleLogin} className="flex flex-col gap-4 p-6 sm:p-8">
+              <AuthField
+                label="Email hoặc Username"
+                icon={Mail}
+                type="text"
+                required
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                placeholder="Nhập email hoặc username"
+              />
+
+              <div>
+                <AuthField
+                  label="Mật khẩu"
+                  icon={Lock}
+                  type="password"
+                  toggleablePassword
+                  required
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu"
+                />
+                <Link
+                  href="/quen-mat-khau"
+                  className="mt-1.5 block text-right text-xs font-semibold text-brand-dark hover:underline"
+                >
+                  Quên mật khẩu?
+                </Link>
+              </div>
+
+              {turnstileSiteKey && (
+                <div className="flex justify-center">
+                  <TurnstileWidget
+                    ref={loginTurnstileRef}
+                    siteKey={turnstileSiteKey}
+                    onVerify={setLoginTurnstileToken}
+                    onExpire={() => setLoginTurnstileToken("")}
+                  />
+                </div>
+              )}
+
+              {loginSuccess && (
+                <p className="flex items-center gap-2 rounded-xl bg-success/10 px-3.5 py-2.5 text-xs font-semibold text-success">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" /> {loginSuccess}
+                </p>
+              )}
+
+              {loginError && (
+                <p className="flex items-center gap-2 rounded-xl bg-danger/10 px-3.5 py-2.5 text-xs font-semibold text-danger">
+                  <AlertTriangle className="h-4 w-4 shrink-0" /> {loginError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loginLoading || (!!turnstileSiteKey && !loginTurnstileToken)}
+                className="flex cursor-pointer items-center justify-center gap-2 rounded-full bg-brand py-3.5 text-sm font-black text-ink shadow-sm transition hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-md disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
+              >
+                {loginLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+                {loginLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+              </button>
+
+              {googleEnabled && (
+                <>
+                  <div className="flex items-center gap-3 text-xs text-muted">
+                    <span className="h-px flex-1 bg-border-c" /> hoặc
+                    <span className="h-px flex-1 bg-border-c" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => signIn("google", { callbackUrl })}
+                    className="flex cursor-pointer items-center justify-center gap-2 rounded-full border-2 border-border-c py-3 text-sm font-semibold text-foreground transition-colors hover:border-brand-dark hover:bg-surface-alt"
+                  >
+                    <GoogleIcon />
+                    Đăng nhập với Google
+                  </button>
+                </>
+              )}
+
+              <p className="rounded-xl bg-surface-alt px-3.5 py-2.5 text-center text-xs text-muted">
+                Tài khoản demo: buyer@marketmmo.pro / Buyer@123
+              </p>
+            </form>
+          ) : (
+            <form onSubmit={handleRegister} className="flex flex-col gap-4 p-6 sm:p-8">
+              <AuthField
+                label="Username"
+                icon={User}
+                hint="Chỉ sử dụng chữ cái và số, không dấu"
+                type="text"
+                required
+                value={regUsername}
+                onChange={(e) => setRegUsername(e.target.value)}
+                placeholder="Nhập username"
+              />
+
+              <AuthField
+                label="Email"
+                icon={Mail}
+                type="email"
+                required
+                value={regEmail}
+                onChange={(e) => setRegEmail(e.target.value)}
+                placeholder="Nhập email"
+              />
+
+              <AuthField
+                label="Mật khẩu"
+                icon={Lock}
+                type="password"
+                toggleablePassword
+                required
+                value={regPassword}
+                onChange={(e) => setRegPassword(e.target.value)}
+                placeholder="Nhập mật khẩu"
+              />
+
+              <AuthField
+                label="Xác nhận mật khẩu"
+                icon={Lock}
+                type="password"
+                toggleablePassword
+                required
+                value={regConfirm}
+                onChange={(e) => setRegConfirm(e.target.value)}
+                placeholder="Nhập lại mật khẩu"
+              />
+
+              <AuthField
+                label="Mã mời (không bắt buộc)"
+                icon={Gift}
+                type="text"
+                value={regRefCode}
+                onChange={(e) => setRegRefCode(e.target.value.toUpperCase())}
+                placeholder="Nhập mã giới thiệu nếu có"
+                className="uppercase"
+              />
+
+              <label className="flex items-start gap-2 text-sm text-muted">
+                <input
+                  type="checkbox"
+                  checked={regAgree}
+                  onChange={(e) => setRegAgree(e.target.checked)}
+                  className="mt-0.5 accent-brand"
+                />
+                Tôi đồng ý với{" "}
+                <a href="/dieu-khoan-dich-vu" className="font-semibold text-brand-dark">
+                  Điều khoản dịch vụ
+                </a>{" "}
+                và{" "}
+                <a href="/chinh-sach-bao-mat" className="font-semibold text-brand-dark">
+                  Chính sách bảo mật
+                </a>
+              </label>
+
+              {turnstileSiteKey && (
+                <div className="flex justify-center">
+                  <TurnstileWidget
+                    ref={regTurnstileRef}
+                    siteKey={turnstileSiteKey}
+                    onVerify={setRegTurnstileToken}
+                    onExpire={() => setRegTurnstileToken("")}
+                  />
+                </div>
+              )}
+
+              {regError && (
+                <p className="flex items-center gap-2 rounded-xl bg-danger/10 px-3.5 py-2.5 text-xs font-semibold text-danger">
+                  <AlertTriangle className="h-4 w-4 shrink-0" /> {regError}
+                </p>
+              )}
+
+              <div className="flex items-center gap-2 rounded-xl border border-border-c bg-surface-alt px-3.5 py-2.5 text-xs text-muted">
+                <ShieldCheck className="h-4 w-4 shrink-0 text-success" />
+                Mật khẩu được mã hoá bcrypt trước khi lưu vào cơ sở dữ liệu.
+              </div>
+
+              <button
+                type="submit"
+                disabled={regLoading || (!!turnstileSiteKey && !regTurnstileToken)}
+                className="flex cursor-pointer items-center justify-center gap-2 rounded-full bg-brand py-3.5 text-sm font-black text-ink shadow-sm transition hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-md disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
+              >
+                {regLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                {regLoading ? "Đang đăng ký..." : "Đăng ký"}
+              </button>
+            </form>
+          )}
         </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-semibold text-foreground">
-            Email
-          </label>
-          <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
-            <Mail className="h-4 w-4 text-muted" />
-            <input
-              type="email"
-              required
-              value={regEmail}
-              onChange={(e) => setRegEmail(e.target.value)}
-              placeholder="Nhập email"
-              className="w-full text-sm focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-semibold text-foreground">
-            Mật khẩu
-          </label>
-          <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
-            <Lock className="h-4 w-4 text-muted" />
-            <input
-              type="password"
-              required
-              value={regPassword}
-              onChange={(e) => setRegPassword(e.target.value)}
-              placeholder="Nhập mật khẩu"
-              className="w-full text-sm focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-semibold text-foreground">
-            Xác nhận mật khẩu
-          </label>
-          <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
-            <Lock className="h-4 w-4 text-muted" />
-            <input
-              type="password"
-              required
-              value={regConfirm}
-              onChange={(e) => setRegConfirm(e.target.value)}
-              placeholder="Nhập lại mật khẩu"
-              className="w-full text-sm focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-semibold text-foreground">
-            Mã mời (không bắt buộc)
-          </label>
-          <div className="flex items-center gap-2 rounded-lg border border-border-c px-3 py-2.5 focus-within:border-brand-dark">
-            <Gift className="h-4 w-4 text-muted" />
-            <input
-              type="text"
-              value={regRefCode}
-              onChange={(e) => setRegRefCode(e.target.value.toUpperCase())}
-              placeholder="Nhập mã giới thiệu nếu có"
-              className="w-full text-sm uppercase focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <label className="flex items-start gap-2 text-sm text-muted">
-          <input
-            type="checkbox"
-            checked={regAgree}
-            onChange={(e) => setRegAgree(e.target.checked)}
-            className="mt-0.5 accent-brand"
-          />
-          Tôi đồng ý với{" "}
-          <a href="/dieu-khoan-dich-vu" className="font-semibold text-brand-dark">
-            Điều khoản dịch vụ
-          </a>{" "}
-          và{" "}
-          <a href="/chinh-sach-bao-mat" className="font-semibold text-brand-dark">
-            Chính sách bảo mật
-          </a>
-        </label>
-
-        {turnstileSiteKey && (
-          <TurnstileWidget ref={regTurnstileRef} siteKey={turnstileSiteKey} onVerify={setRegTurnstileToken} onExpire={() => setRegTurnstileToken("")} />
-        )}
-
-        {regError && (
-          <p className="rounded-lg bg-danger/10 px-3 py-2 text-xs font-semibold text-danger">
-            {regError}
-          </p>
-        )}
-
-        <div className="flex items-center gap-2 rounded-lg border border-border-c bg-surface-alt px-3 py-2.5 text-xs text-muted">
-          <ShieldCheck className="h-4 w-4 shrink-0 text-success" />
-          Mật khẩu được mã hoá bcrypt trước khi lưu vào cơ sở dữ liệu.
-        </div>
-
-        <button
-          type="submit"
-          disabled={regLoading || (!!turnstileSiteKey && !regTurnstileToken)}
-          className="flex cursor-pointer items-center justify-center gap-2 rounded-full bg-brand py-3 text-sm font-black text-ink transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <UserPlus className="h-4 w-4" />
-          {regLoading ? "Đang đăng ký..." : "Đăng ký"}
-        </button>
-      </form>
-      )}
+      </Reveal>
     </div>
   );
 }
