@@ -198,7 +198,7 @@ function ListTab() {
             className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
               status === f.key
                 ? "border-[var(--adm-brand)] bg-[var(--adm-brand-dim)] text-[var(--adm-brand)]"
-                : "border-[var(--adm-border)] text-[var(--adm-muted)] hover:bg-white/5"
+                : "border-[var(--adm-border)] text-[var(--adm-muted)] hover:bg-black/5 dark:hover:bg-white/5"
             }`}
           >
             {f.label}

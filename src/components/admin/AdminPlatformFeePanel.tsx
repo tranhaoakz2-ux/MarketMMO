@@ -195,7 +195,7 @@ export default function AdminPlatformFeePanel() {
                       {new Date(s.startAt).toLocaleString("vi-VN")} → {new Date(s.endAt).toLocaleString("vi-VN")}
                     </span>
                   </div>
-                  <button onClick={() => delSchedule(s.id)} className="shrink-0 rounded-md p-1 text-[var(--adm-danger)] hover:bg-white/5">
+                  <button onClick={() => delSchedule(s.id)} className="shrink-0 rounded-md p-1 text-[var(--adm-danger)] hover:bg-black/5 dark:hover:bg-white/5">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>

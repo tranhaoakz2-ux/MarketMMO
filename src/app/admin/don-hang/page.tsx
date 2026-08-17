@@ -168,7 +168,7 @@ export default async function AdminOrdersPage({
                 className={`grid h-8 w-8 place-items-center rounded-lg text-xs font-bold ${
                   p === page
                     ? "bg-[var(--adm-brand)] text-[#14141f]"
-                    : "border border-[var(--adm-border)] bg-[var(--adm-surface-2)] text-[var(--adm-text)] hover:bg-white/10"
+                    : "border border-[var(--adm-border)] bg-[var(--adm-surface-2)] text-[var(--adm-text)] hover:bg-black/5 dark:hover:bg-white/10"
                 }`}
               >
                 {p}

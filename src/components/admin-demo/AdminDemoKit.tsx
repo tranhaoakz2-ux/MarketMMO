@@ -154,7 +154,7 @@ export function StatCard({
   );
 
   const className =
-    "group relative block overflow-hidden rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition duration-200 hover:-translate-y-0.5 hover:border-white/[0.14]";
+    "group relative block overflow-hidden rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition duration-200 hover:-translate-y-0.5 hover:border-black/[0.14] dark:hover:border-white/[0.14]";
 
   if (href) {
     return (
@@ -175,7 +175,7 @@ const toneClass: Record<Tone, string> = {
   danger: "bg-[var(--adm-danger-bg)] text-[var(--adm-danger)]",
   info: "bg-[var(--adm-info-bg)] text-[var(--adm-info)]",
   warn: "bg-[var(--adm-warn-bg)] text-[var(--adm-warn)]",
-  neutral: "bg-white/[0.07] text-[var(--adm-muted)]",
+  neutral: "bg-[var(--adm-surface-2)] text-[var(--adm-muted)]",
 };
 
 const dotClass: Record<Tone, string> = {
@@ -243,7 +243,7 @@ export function CountPill({
 
 // ---- Skeleton loading (gọn, dùng cho panel fetch dữ liệu thật client-side) --
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-white/[0.06] ${className}`} />;
+  return <div className={`animate-pulse rounded-lg bg-[var(--adm-surface-2)] ${className}`} />;
 }
 
 export function ListSkeleton({ rows = 4 }: { rows?: number }) {
@@ -297,7 +297,7 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center gap-2 py-10 text-center">
-      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/[0.05] text-[var(--adm-muted)]">
+      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[var(--adm-surface-2)] text-[var(--adm-muted)]">
         <Icon className="h-7 w-7" strokeWidth={1.6} />
       </span>
       {title && <p className="text-sm font-bold text-[var(--adm-text)]">{title}</p>}
@@ -311,10 +311,10 @@ export function EmptyState({
 const buttonVariant = {
   primary: "bg-[var(--adm-brand)] text-[#14141f] hover:bg-[var(--adm-brand-dark)]",
   secondary:
-    "border border-[var(--adm-border)] bg-[var(--adm-surface-2)] text-[var(--adm-text)] hover:bg-white/10",
+    "border border-[var(--adm-border)] bg-[var(--adm-surface-2)] text-[var(--adm-text)] hover:bg-black/5 dark:hover:bg-white/10",
   success: "bg-[var(--adm-success)] text-[#06150d] hover:opacity-90",
   danger: "bg-[var(--adm-danger)] text-[#1a0605] hover:opacity-90",
-  ghost: "text-[var(--adm-text)] hover:bg-white/[0.06]",
+  ghost: "text-[var(--adm-text)] hover:bg-black/5 dark:hover:bg-white/[0.06]",
 };
 
 export function Button({
@@ -499,7 +499,7 @@ export function DataTable<T>({
               {rows.map((row, i) => (
                 <tr
                   key={rowKey(row, i)}
-                  className="border-b border-[var(--adm-border)] transition last:border-0 hover:bg-white/[0.03]"
+                  className="border-b border-[var(--adm-border)] transition last:border-0 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
                 >
                   {columns.map((c) => (
                     <td
@@ -563,14 +563,14 @@ export function Pagination({
         <button
           onClick={() => onPage(page - 1)}
           disabled={page <= 1}
-          className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] text-[var(--adm-text)] transition hover:bg-white/10 disabled:opacity-40"
+          className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] text-[var(--adm-text)] transition hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-40"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <button
           onClick={() => onPage(page + 1)}
           disabled={page >= totalPages}
-          className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] text-[var(--adm-text)] transition hover:bg-white/10 disabled:opacity-40"
+          className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] text-[var(--adm-text)] transition hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-40"
         >
           <ChevronRight className="h-4 w-4" />
         </button>

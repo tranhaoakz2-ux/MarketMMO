@@ -220,21 +220,25 @@ body {
   animation: sale-pop 1.6s ease-in-out infinite;
 }
 
-/* Admin Control Center (/admin) — bảng màu tối riêng, cố tình KHÁC hẳn
-   vàng-trắng của trang mua sắm để phân biệt rõ "đây là khu vực quản trị"
-   (yêu cầu thiết kế "sang trọng", đối chiếu bản demo Artifact đã duyệt).
-   Khai báo dưới dạng biến CSS thường (không đăng ký vào @theme inline phía
-   trên) để KHÔNG ảnh hưởng bảng màu chung toàn site — chỉ dùng qua cú pháp
-   Tailwind arbitrary value (vd bg-[var(--adm-surface)]) bên trong các
-   component thuộc /admin. */
+/* Admin Control Center (/admin) — bảng màu riêng (biến --adm-*, không đăng
+   ký vào @theme inline phía trên để KHÔNG ảnh hưởng bảng màu chung toàn
+   site, chỉ dùng qua cú pháp Tailwind arbitrary value vd bg-[var(--adm-surface)]
+   bên trong component thuộc /admin). TRƯỚC ĐÂY cố định luôn tối (yêu cầu
+   thiết kế ban đầu) — giờ đổi theo ĐÚNG cơ chế theme sáng/tối dùng chung với
+   buyer/seller (attribute [data-theme] trên <html>, xem ThemeToggle.tsx +
+   @custom-variant dark ở đầu file): mặc định (không có [data-theme="dark"])
+   dùng bảng màu SÁNG; có [data-theme="dark"] mới ghi đè sang bảng màu TỐI
+   (giữ nguyên y hệt giá trị cũ, không đổi gì cho người đang ở chế độ tối).
+   Màu thương hiệu/trạng thái (brand*, success/danger/info/warn) GIỮ NGUYÊN ở
+   cả 2 chế độ — cùng nguyên tắc đã áp dụng cho bảng màu chính của site. */
 .admin-shell {
-  --adm-bg: #0b0b10;
-  --adm-sidebar: #121218;
-  --adm-surface: #17171f;
-  --adm-surface-2: #1d1d28;
-  --adm-border: #2a2a36;
-  --adm-text: #f2f2f6;
-  --adm-muted: #8f8fa3;
+  --adm-bg: #f4f5f9;
+  --adm-sidebar: #ffffff;
+  --adm-surface: #ffffff;
+  --adm-surface-2: #f2f2f7;
+  --adm-border: #e4e4ec;
+  --adm-text: #16161f;
+  --adm-muted: #6b6b78;
   --adm-brand: #ffe600;
   --adm-brand-dark: #e0c400;
   --adm-brand-dim: rgba(255, 230, 0, 0.12);
@@ -250,4 +254,14 @@ body {
   background: var(--adm-bg);
   color: var(--adm-text);
   min-height: 100vh;
+}
+
+[data-theme="dark"] .admin-shell {
+  --adm-bg: #0b0b10;
+  --adm-sidebar: #121218;
+  --adm-surface: #17171f;
+  --adm-surface-2: #1d1d28;
+  --adm-border: #2a2a36;
+  --adm-text: #f2f2f6;
+  --adm-muted: #8f8fa3;
 }

@@ -239,7 +239,7 @@ export default function AdminDisputesPanel({ openId }: { openId?: string }) {
                 </div>
                 <p className="mt-0.5 text-xs text-[var(--adm-muted)]">Người bán: {active.orderItem.product?.seller.shopName ?? "—"}</p>
               </div>
-              <button onClick={closeModal} className="rounded-full p-1 text-[var(--adm-muted)] hover:bg-white/10">
+              <button onClick={closeModal} className="rounded-full p-1 text-[var(--adm-muted)] hover:bg-black/5 dark:hover:bg-white/10">
                 <X className="h-4 w-4" />
               </button>
             </div>

@@ -4,6 +4,7 @@ import { requireAdminPage } from "@/lib/authz";
 import { getAdminSidebarCounts } from "@/lib/queries";
 import { PRIVATE_ROBOTS } from "@/lib/seo";
 import AdminSidebar from "@/components/AdminSidebar";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -42,9 +43,16 @@ export default async function AdminLayout({
           >
             ← Xem trang web
           </Link>
-          <span className="flex items-center gap-1.5 rounded-full bg-[var(--adm-success-bg)] px-2.5 py-1 text-[11px] font-bold text-[var(--adm-success)] lg:ml-auto">
-            ● Hệ thống ổn định
-          </span>
+          <div className="flex items-center gap-2.5 lg:ml-auto">
+            <span className="flex items-center gap-1.5 rounded-full bg-[var(--adm-success-bg)] px-2.5 py-1 text-[11px] font-bold text-[var(--adm-success)]">
+              ● Hệ thống ổn định
+            </span>
+            {/* Cùng component/cơ chế lưu theme với buyer/seller (data-theme
+                trên <html> + localStorage "theme") — admin dùng CHUNG, không
+                tách riêng. Xem .admin-shell trong globals.css để biết cách
+                bảng màu --adm-* tự đổi theo data-theme. */}
+            <ThemeToggle />
+          </div>
         </div>
         <div className="mx-auto max-w-[1320px] px-4 pb-16 pt-6 sm:px-7">{children}</div>
       </main>
