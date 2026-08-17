@@ -58,10 +58,10 @@ export const WELCOME_MODAL_CONFIG = {
     },
   ] as const,
 
-  // TODO: điền link thật khi có — hiện là placeholder "#" nên nút vẫn hiện
-  // đầy đủ nhưng bấm vào không đi đâu cả.
+  // TODO: điền link Fanpage thật khi có — hiện là placeholder "#" nên nút
+  // vẫn hiện đầy đủ nhưng bấm vào không đi đâu cả.
   fanpageUrl: "#",
-  telegramUrl: "#",
+  telegramUrl: "https://t.me/Ad_marketmmo",
 
   ctaLabel: "Khám phá ngay",
 };
