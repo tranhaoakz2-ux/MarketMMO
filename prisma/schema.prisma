@@ -231,6 +231,11 @@ model Seller {
   // Audit: mỗi lần seller giải mã/xem field nhạy cảm của 1 đơn dịch vụ (xem
   // model ServiceCredentialAccessLog).
   credentialAccessLogs ServiceCredentialAccessLog[]
+
+  // suspended luôn có mặt trong where của mọi query công khai (seller:
+  // {suspended: false}) — đã áp SQL tương ứng lên Neon thủ công (xem
+  // prisma/pending-sql/2026-08-17-product-listing-indexes.sql).
+  @@index([suspended])
 }
 
 // Mã giảm giá do seller tự tạo, áp dụng cho TOÀN BỘ sản phẩm của chính họ
@@ -554,6 +559,20 @@ model Product {
   stockItems    ProductStockItem[]
   serviceFields ServiceFieldDefinition[]
   reviews       Review[]
+
+  // 3 index tổng hợp phục vụ MỌI trang listing công khai (trang chủ, danh
+  // mục, tìm kiếm, gian hàng) — status+isActive luôn xuất hiện CÙNG NHAU
+  // trong where của mọi query công khai (xem productInclude/getAllProducts/
+  // getProductsByCategory trong src/lib/queries.ts), nên gộp composite thay
+  // vì 3 index đơn lẻ để Postgres dùng được trực tiếp cho cả lọc lẫn sắp
+  // xếp mặc định (createdAt) / sắp "bán chạy" (sold) mà không cần giao
+  // (intersect) nhiều index. Đã áp SQL tương ứng lên Neon thủ công trước khi
+  // thêm khai báo này (xem prisma/pending-sql/2026-08-17-product-listing-indexes.sql)
+  // — dự án dùng `prisma db push`, không có migration, nên schema chỉ khai
+  // báo LẠI đúng những gì đã tồn tại trên DB thật.
+  @@index([status, isActive, categoryId])
+  @@index([status, isActive, createdAt])
+  @@index([status, isActive, sold])
 }
 
 // Seller tự định nghĩa danh sách field buyer PHẢI nhập khi đặt 1 dịch vụ cụ

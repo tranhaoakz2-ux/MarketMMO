@@ -1,6 +1,11 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/seo";
-import { getAllProducts, getAllSellersWithStats, getCategoryTree, type CategoryTreeNode } from "@/lib/queries";
+import {
+  getAllProductSlugsForSitemap,
+  getAllSellersWithStats,
+  getCategoryTree,
+  type CategoryTreeNode,
+} from "@/lib/queries";
 import { getForumPosts } from "@/lib/forum";
 
 // Sitemap XML thật cho Googlebot (khác /sitemap-trang-web — trang HTML cho
@@ -36,7 +41,7 @@ function flattenCategories(nodes: CategoryTreeNode[]): CategoryTreeNode[] {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [products, categoryTree, sellers, forumPosts] = await Promise.all([
-    getAllProducts(),
+    getAllProductSlugsForSitemap(),
     getCategoryTree(),
     getAllSellersWithStats(),
     getForumPosts(),

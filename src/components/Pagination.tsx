@@ -22,6 +22,8 @@ export default function Pagination({
   pageSize,
   sectionId = "danh-sach-san-pham",
   sort,
+  pageParam = "page",
+  extraParams,
 }: {
   basePath: string;
   currentPage: number;
@@ -32,6 +34,14 @@ export default function Pagination({
       định undefined nên các trang chưa dùng sắp xếp (danh-muc, tìm kiếm...)
       không đổi hành vi gì. */
   sort?: string;
+  /** Tên query param dùng cho số trang — mặc định "page". Chỉ cần đổi khi 1
+      trang có NHIỀU cụm phân trang độc lập cùng lúc (vd /shop/[seller]: sản
+      phẩm dùng "page", đánh giá dùng "reviewPage" riêng để đổi trang cụm
+      này không ảnh hưởng cụm kia). */
+  pageParam?: string;
+  /** Query param khác cần giữ nguyên khi chuyển trang (vd `q` ở /tim-kiem) —
+      optional, không truyền thì hành vi y hệt trước đây. */
+  extraParams?: Record<string, string>;
 }) {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   if (totalPages <= 1) return null;
@@ -39,7 +49,10 @@ export default function Pagination({
   const page = Math.min(Math.max(1, currentPage), totalPages);
   const pageHref = (p: number) => {
     const params = new URLSearchParams();
-    if (p !== 1) params.set("page", String(p));
+    if (extraParams) {
+      for (const [key, value] of Object.entries(extraParams)) params.set(key, value);
+    }
+    if (p !== 1) params.set(pageParam, String(p));
     if (sort) params.set("sort", sort);
     const qs = params.toString();
     return `${basePath}${qs ? `?${qs}` : ""}#${sectionId}`;

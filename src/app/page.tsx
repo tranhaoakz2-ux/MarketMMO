@@ -15,8 +15,9 @@ import {
   getCategoryTree,
   getFeaturedProducts,
   getFeaturedSellers,
+  getProductCountByCategory,
 } from "@/lib/queries";
-import { parseProductSortKey, sortProducts } from "@/lib/product-sort";
+import { parseProductSortKey } from "@/lib/product-sort";
 import { getHomeBanners } from "@/lib/home-banners";
 import { getSearchTags } from "@/lib/site-config";
 import { getAuctionWindowFor, getNextWindowStart, isWithinAuctionWindow } from "@/lib/auction-schedule";
@@ -34,29 +35,31 @@ export default async function Home({
   const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
   const sortKey = parseProductSortKey(sort);
 
-  const [productsRaw, featured, sellers, categoryTree, banners, searchTags] = await Promise.all([
-    getAllProducts(),
-    getFeaturedProducts(),
-    getFeaturedSellers(),
-    getCategoryTree(),
-    getHomeBanners(),
-    getSearchTags(),
-  ]);
-  const products = sortProducts(productsRaw, sortKey);
+  // TRƯỚC ĐÂY: getAllProducts() tải TOÀN BỘ sản phẩm APPROVED trên sàn, sắp
+  // xếp lần 2 bằng sortProducts() ở đây (product-sort.ts), rồi mới cắt trang
+  // trong bộ nhớ — 2 tầng sắp xếp chồng nhau + không phân trang ở DB (xem
+  // PERFORMANCE_AUDIT.md mục 1). Giờ getAllProducts() tự sắp ĐÚNG 1 lần theo
+  // `sortKey` (ProductSortKey là tập con hợp lệ của ListingSortKey mà hàm
+  // này nhận — "newest"/"price_asc"/"price_desc" cùng ý nghĩa ở cả 2 nơi) và
+  // cắt trang thật ở DB — sortProducts()/product-sort.ts KHÔNG đổi gì (vẫn
+  // dùng cho CategoryTabs.tsx), chỉ trang này không gọi lại nữa vì dư thừa.
+  //
+  // countBySlug (số sản phẩm theo từng category cho CategoryTabs) TRƯỚC ĐÂY
+  // đếm bằng cách duyệt qua TOÀN BỘ `products` đã tải — giờ getAllProducts()
+  // chỉ trả 1 trang nên phải đếm riêng ở DB (getProductCountByCategory()).
+  const [{ items: pagedProducts, total }, countBySlug, featured, sellers, categoryTree, banners, searchTags] =
+    await Promise.all([
+      getAllProducts({ sort: sortKey, page: currentPage, pageSize: PAGE_SIZE }),
+      getProductCountByCategory(),
+      getFeaturedProducts(),
+      getFeaturedSellers(),
+      getCategoryTree(),
+      getHomeBanners(),
+      getSearchTags(),
+    ]);
 
-  const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
-  const pagedProducts = products.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE
-  );
-
-  // Đếm số sản phẩm theo từng category LÁ — CategoryTabs tự cộng dồn lên
-  // nhóm cha (xem countForNode() trong component đó).
-  const countBySlug: Record<string, number> = {};
-  for (const p of products) {
-    countBySlug[p.categorySlug] = (countBySlug[p.categorySlug] ?? 0) + 1;
-  }
 
   // Đếm ngược đấu giá vị trí vàng — đúng khớp lịch cố định 20:00–22:00 tối
   // Chủ Nhật (xem src/lib/auction-schedule.ts): đang mở thì đếm tới lúc
@@ -97,7 +100,7 @@ export default async function Home({
                   <ListFilter className="h-4 w-4 sm:h-5 sm:w-5" /> DANH SÁCH SẢN PHẨM
                 </h2>
                 <span className="whitespace-nowrap text-[11px] font-bold text-ink sm:text-[13px]">
-                  Tìm thấy {products.length} sản phẩm
+                  Tìm thấy {total} sản phẩm
                 </span>
               </div>
             </div>
@@ -115,7 +118,7 @@ export default async function Home({
             <Pagination
               basePath="/"
               currentPage={safePage}
-              totalCount={products.length}
+              totalCount={total}
               pageSize={PAGE_SIZE}
               sort={sort}
             />

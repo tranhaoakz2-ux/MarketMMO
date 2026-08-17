@@ -30,14 +30,13 @@ export default async function AllProductsPage({
   const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
   const sort = parseListingSortKey(rawSort);
 
-  const [items, tree, recentPosts] = await Promise.all([
-    getAllProducts(sort),
+  const [{ items: pagedItems, total }, tree, recentPosts] = await Promise.all([
+    getAllProducts({ sort, page: currentPage, pageSize: PAGE_SIZE }),
     getCategoryTree(),
     getRecentForumPosts(6),
   ]);
-  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
-  const pagedItems = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
     <>
@@ -70,7 +69,7 @@ export default async function AllProductsPage({
                     <ListFilter className="h-4 w-4 sm:h-5 sm:w-5" /> DANH SÁCH SẢN PHẨM
                   </h2>
                   <span className="whitespace-nowrap text-[11px] font-bold text-ink sm:text-[13px]">
-                    Tìm thấy {items.length} sản phẩm
+                    Tìm thấy {total} sản phẩm
                   </span>
                 </div>
               </div>
@@ -103,7 +102,7 @@ export default async function AllProductsPage({
               </div>
             </Reveal>
 
-            {items.length === 0 ? (
+            {total === 0 ? (
               <Reveal>
                 <div className="rounded-xl border border-dashed border-border-c bg-surface p-10 text-center text-sm text-muted">
                   Chưa có sản phẩm nào trên sàn.
@@ -124,7 +123,7 @@ export default async function AllProductsPage({
                 <Pagination
                   basePath="/danh-muc"
                   currentPage={safePage}
-                  totalCount={items.length}
+                  totalCount={total}
                   pageSize={PAGE_SIZE}
                   sort={sort === "newest" ? undefined : sort}
                 />

@@ -54,11 +54,14 @@ export default async function CategoryPage({
   const [category, tree] = await Promise.all([getCategoryBySlug(slug), getCategoryTree()]);
   if (!category) notFound();
 
-  const items = await getProductsByCategory(slug, sort);
+  const { items: pagedItems, total } = await getProductsByCategory(slug, {
+    sort,
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+  });
   const recentPosts = await getRecentForumPosts(6);
-  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
-  const pagedItems = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
     <>
@@ -101,7 +104,7 @@ export default async function CategoryPage({
                     <ListFilter className="h-4 w-4 sm:h-5 sm:w-5" /> DANH SÁCH SẢN PHẨM
                   </h2>
                   <span className="whitespace-nowrap text-[11px] font-bold text-ink sm:text-[13px]">
-                    Tìm thấy {items.length} sản phẩm
+                    Tìm thấy {total} sản phẩm
                   </span>
                 </div>
               </div>
@@ -138,7 +141,7 @@ export default async function CategoryPage({
               </div>
             </Reveal>
 
-            {items.length === 0 ? (
+            {total === 0 ? (
               <Reveal>
                 <div className="rounded-xl border border-dashed border-border-c bg-surface p-10 text-center text-sm text-muted">
                   Chưa có sản phẩm nào trong danh mục này.
@@ -159,7 +162,7 @@ export default async function CategoryPage({
                 <Pagination
                   basePath={`/danh-muc/${slug}`}
                   currentPage={safePage}
-                  totalCount={items.length}
+                  totalCount={total}
                   pageSize={PAGE_SIZE}
                   sort={sort === "newest" ? undefined : sort}
                 />

@@ -9,13 +9,18 @@ import {
   type WalletTxType,
 } from "@/lib/constants";
 import { computeEffectivePrice, type MegaSaleFields } from "@/lib/mega-sale";
-import { applyListingSort, type ListingSortKey } from "@/lib/product-listing-sort";
+import type { ListingSortKey } from "@/lib/product-listing-sort";
 import { getAuctionSetting, findCurrentWeekSession } from "@/lib/auction";
 import { getAuctionWindowFor, isWithinAuctionWindow } from "@/lib/auction-schedule";
 
+// seller.user chỉ cần lastActiveAt (hiện "Online X trước" ở trang chi tiết
+// sản phẩm, xem mapProduct() bên dưới) — TRƯỚC ĐÂY `include: true` kéo TOÀN
+// BỘ cột User (passwordHash, email, phone, signupIp, banned...) cho seller
+// của MỌI sản phẩm trên MỌI trang listing dù không dùng tới. Xem
+// PERFORMANCE_AUDIT.md mục 3.
 const productInclude = {
   category: true,
-  seller: { include: { user: true } },
+  seller: { include: { user: { select: { lastActiveAt: true } } } },
   variants: { orderBy: { sortOrder: "asc" } },
   serviceFields: { orderBy: { sortOrder: "asc" } },
 } satisfies Prisma.ProductInclude;
@@ -253,19 +258,127 @@ export async function collectDescendantCategoryIds(rootId: string): Promise<stri
   return ids;
 }
 
-// `sort` áp dụng cho trang "Tất cả sản phẩm" (/danh-muc) — "newest"/
-// "bestselling" sắp ĐÚNG Ở TẦNG DB (orderBy), "price_asc"/"price_desc" sắp
-// SAU khi map (giá hiển thị thực tế/mega sale là giá trị tính ra, không
-// phải cột thô) qua applyListingSort(), xem src/lib/product-listing-sort.ts.
-// Mặc định (không truyền/"newest") giữ NGUYÊN hành vi cũ — createdAt desc.
-export async function getAllProducts(sort?: ListingSortKey): Promise<Product[]> {
+export type PaginatedProducts = { items: Product[]; total: number };
+
+// Chỉ đủ field để tính giá HIỆU LỰC sau Mega Sale (computeEffectivePrice()) —
+// dùng cho pha 1 của paginateProducts() bên dưới, KHÔNG include gì (rẻ hơn
+// nhiều so với productInclude đầy đủ).
+const PRODUCT_SORT_PRICE_SELECT = {
+  id: true,
+  price: true,
+  megaSaleActive: true,
+  megaSaleType: true,
+  megaSalePercent: true,
+  megaSaleFixedPrice: true,
+  megaSaleEndsAt: true,
+} satisfies Prisma.ProductSelect;
+
+// Phân trang sản phẩm THẬT Ở TẦNG DB (skip/take) — dùng chung cho
+// getAllProducts()/getProductsByCategory() (khác nhau đúng 1 điều kiện
+// `where`). Trước đây 2 hàm này tải TOÀN BỘ sản phẩm khớp điều kiện rồi mới
+// cắt trang trong bộ nhớ (xem PERFORMANCE_AUDIT.md mục 1) — chi phí DB/băng
+// thông/RAM tăng theo TỔNG số sản phẩm khớp điều kiện, không phải theo số
+// sản phẩm hiển thị.
+//
+// "newest"/"bestselling" sắp ĐÚNG ở tầng DB (cột thật createdAt/sold) nên 1
+// query duy nhất (orderBy + skip/take) là đủ.
+//
+// "price_asc"/"price_desc" KHÔNG THỂ orderBy ở DB — giá hiển thị là giá
+// HIỆU LỰC sau Mega Sale (computeEffectivePrice(), tính từ 5 cột + thời gian
+// hiện tại, không phải 1 cột thô) — làm 2 PHA: (1) query NHẸ (chỉ 6 cột,
+// KHÔNG include) cho MỌI sản phẩm khớp điều kiện để tính giá hiệu lực + sắp
+// đúng thứ tự + cắt ra đúng id của trang cần; (2) query ĐẦY ĐỦ
+// (productInclude) CHỈ cho đúng số id của trang đó. Vẫn phải quét hết hàng
+// khớp điều kiện ở pha 1 (không tránh được — giá hiệu lực không phải cột lưu
+// sẵn/index được), nhưng pha NẶNG (JOIN category/seller/variants/
+// serviceFields) chỉ chạy trên đúng `pageSize` dòng thay vì toàn bộ.
+async function paginateProducts(
+  where: Prisma.ProductWhereInput,
+  sort: ListingSortKey | undefined,
+  page: number,
+  pageSize: number
+): Promise<PaginatedProducts> {
+  const total = await prisma.product.count({ where });
+  const skip = Math.max(0, (page - 1) * pageSize);
+
+  if (sort === "price_asc" || sort === "price_desc") {
+    const lightRows = await prisma.product.findMany({ where, select: PRODUCT_SORT_PRICE_SELECT });
+    const ranked = lightRows
+      .map((p) => ({ id: p.id, effectivePrice: computeEffectivePrice(p.price, p).price }))
+      .sort((a, b) => a.effectivePrice - b.effectivePrice);
+    if (sort === "price_desc") ranked.reverse();
+    const pageIds = ranked.slice(skip, skip + pageSize).map((r) => r.id);
+    if (pageIds.length === 0) return { items: [], total };
+
+    const rows = await prisma.product.findMany({ where: { id: { in: pageIds } }, include: productInclude });
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    // `id: { in: [...] }` KHÔNG đảm bảo giữ đúng thứ tự — sắp lại theo đúng
+    // pageIds đã tính ở pha 1.
+    const ordered = pageIds.map((id) => byId.get(id)).filter((r): r is NonNullable<typeof r> => Boolean(r));
+    const items = await attachRealRatings(ordered.map(mapProduct));
+    return { items, total };
+  }
+
   const rows = await prisma.product.findMany({
-    where: { status: "APPROVED", isActive: true, seller: { suspended: false } },
+    where,
     include: productInclude,
     orderBy: sort === "bestselling" ? { sold: "desc" } : { createdAt: "desc" },
+    skip,
+    take: pageSize,
   });
-  const products = await attachRealRatings(rows.map(mapProduct));
-  return applyListingSort(products, sort ?? "newest");
+  const items = await attachRealRatings(rows.map(mapProduct));
+  return { items, total };
+}
+
+// `sort` áp dụng cho trang chủ (`/`) + "Tất cả sản phẩm" (`/danh-muc`).
+export async function getAllProducts(opts: {
+  sort?: ListingSortKey;
+  page: number;
+  pageSize: number;
+}): Promise<PaginatedProducts> {
+  const where: Prisma.ProductWhereInput = {
+    status: "APPROVED",
+    isActive: true,
+    seller: { suspended: false },
+  };
+  return paginateProducts(where, opts.sort, opts.page, opts.pageSize);
+}
+
+// Số sản phẩm theo từng danh mục LÁ (dùng cho badge "(N)" ở CategoryTabs
+// trang chủ) — TRƯỚC ĐÂY tính bằng cách đếm trên TOÀN BỘ sản phẩm đã tải về
+// (products.length trong page.tsx); giờ getAllProducts() chỉ trả về đúng 1
+// trang nên phải đếm riêng ở DB. 1 query duy nhất (_count lọc theo quan hệ
+// products, Prisma hỗ trợ filtered relation count) — KHÔNG phải N+1 theo số
+// category.
+export async function getProductCountByCategory(): Promise<Record<string, number>> {
+  const rows = await prisma.category.findMany({
+    where: { status: "APPROVED", isActive: true, children: { none: {} } },
+    select: {
+      slug: true,
+      _count: {
+        select: {
+          products: { where: { status: "APPROVED", isActive: true, seller: { suspended: false } } },
+        },
+      },
+    },
+  });
+  const result: Record<string, number> = {};
+  for (const row of rows) result[row.slug] = row._count.products;
+  return result;
+}
+
+// Sitemap XML (src/app/sitemap.ts) cần TOÀN BỘ sản phẩm (mọi URL, không
+// phân trang — đúng nhu cầu, KHÁC getAllProducts() giờ luôn phân trang) chỉ
+// để lấy 2 field (slug, createdAt) — TRƯỚC ĐÂY dùng getAllProducts() đầy đủ
+// (productInclude nặng: category+seller+user+variants+serviceFields) chỉ để
+// đọc 2 cột này ra. Không phải N+1, chỉ là select dư — xem
+// PERFORMANCE_AUDIT.md mục 3.
+export async function getAllProductSlugsForSitemap(): Promise<{ slug: string; createdAt: Date }[]> {
+  return prisma.product.findMany({
+    where: { status: "APPROVED", isActive: true, seller: { suspended: false } },
+    select: { slug: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 // "Sản phẩm nổi bật" trang chủ — 3 tầng, KHÔNG BAO GIỜ để trống dưới `limit`
@@ -327,52 +440,59 @@ export async function getFeaturedProducts(limit = 8): Promise<Product[]> {
 // (chỉ sản phẩm gán trực tiếp vào đúng category đó).
 // `sort` — cùng quy ước với getAllProducts() ở trên, dùng cho
 // /danh-muc/[slug]. Lọc theo danh mục (kể cả danh mục con, xem
-// collectDescendantCategoryIds) áp dụng TRƯỚC, sắp xếp áp dụng SAU — chọn
-// danh mục + đổi sắp xếp cùng lúc vẫn đúng cả hai.
+// collectDescendantCategoryIds) áp dụng TRƯỚC, sắp xếp+phân trang áp dụng
+// SAU (paginateProducts) — chọn danh mục + đổi sắp xếp + đổi trang cùng lúc
+// vẫn đúng cả ba.
 export async function getProductsByCategory(
   categorySlug: string,
-  sort?: ListingSortKey
-): Promise<Product[]> {
+  opts: { sort?: ListingSortKey; page: number; pageSize: number }
+): Promise<PaginatedProducts> {
   const category = await prisma.category.findUnique({
     where: { slug: categorySlug },
     select: { id: true },
   });
-  if (!category) return [];
+  if (!category) return { items: [], total: 0 };
   const categoryIds = await collectDescendantCategoryIds(category.id);
 
-  const rows = await prisma.product.findMany({
-    where: {
-      status: "APPROVED",
-      isActive: true,
-      seller: { suspended: false },
-      categoryId: { in: categoryIds },
-    },
-    include: productInclude,
-    orderBy: sort === "bestselling" ? { sold: "desc" } : { createdAt: "desc" },
-  });
-  const products = await attachRealRatings(rows.map(mapProduct));
-  return applyListingSort(products, sort ?? "newest");
+  const where: Prisma.ProductWhereInput = {
+    status: "APPROVED",
+    isActive: true,
+    seller: { suspended: false },
+    categoryId: { in: categoryIds },
+  };
+  return paginateProducts(where, opts.sort, opts.page, opts.pageSize);
 }
 
-export async function searchProducts(query: string): Promise<Product[]> {
+// Tìm kiếm (`/tim-kiem`) — luôn createdAt desc (trang này chưa có tuỳ chọn
+// sắp xếp), nên KHÔNG cần 2 pha như paginateProducts() — 1 query skip/take
+// trực tiếp là đủ.
+export async function searchProducts(
+  query: string,
+  opts: { page: number; pageSize: number }
+): Promise<PaginatedProducts> {
   const q = query.trim();
-  if (!q) return [];
+  if (!q) return { items: [], total: 0 };
+  const where: Prisma.ProductWhereInput = {
+    status: "APPROVED",
+    isActive: true,
+    seller: { suspended: false },
+    OR: [
+      { name: { contains: q, mode: "insensitive" } },
+      { shortDescription: { contains: q, mode: "insensitive" } },
+      { seller: { shopName: { contains: q, mode: "insensitive" } } },
+      { category: { name: { contains: q, mode: "insensitive" } } },
+    ],
+  };
+  const total = await prisma.product.count({ where });
   const rows = await prisma.product.findMany({
-    where: {
-      status: "APPROVED",
-      isActive: true,
-      seller: { suspended: false },
-      OR: [
-        { name: { contains: q, mode: "insensitive" } },
-        { shortDescription: { contains: q, mode: "insensitive" } },
-        { seller: { shopName: { contains: q, mode: "insensitive" } } },
-        { category: { name: { contains: q, mode: "insensitive" } } },
-      ],
-    },
+    where,
     include: productInclude,
     orderBy: { createdAt: "desc" },
+    skip: Math.max(0, (opts.page - 1) * opts.pageSize),
+    take: opts.pageSize,
   });
-  return attachRealRatings(rows.map(mapProduct));
+  const items = await attachRealRatings(rows.map(mapProduct));
+  return { items, total };
 }
 
 // Tỷ lệ khiếu nại THẬT của 1 sản phẩm = số OrderItem có Dispute (bất kỳ
@@ -456,31 +576,50 @@ function ratingStats(reviews: { rating: number }[]) {
   return { avgRating, reviewCount };
 }
 
-export async function getSellerBySlug(slug: string) {
-  const seller = await prisma.seller.findUnique({
-    where: { slug },
-    include: {
-      // status: "APPROVED" — sản phẩm PENDING/REJECTED của seller (từ tính
-      // năng "Đăng sản phẩm mới") không được lộ ra trang gian hàng công khai,
-      // cùng quy tắc đã áp dụng cho mọi query công khai khác trong file này.
-      // isActive: true — sản phẩm admin đã ẩn cũng biến mất khỏi shop công khai.
-      products: {
-        where: { status: "APPROVED", isActive: true },
-        include: productInclude,
-        orderBy: { createdAt: "desc" },
-      },
-      // hidden: false — review admin đã ẩn (spam/xúc phạm) biến mất khỏi
-      // trang shop công khai VÀ khỏi rating trung bình tính ở ratingStats().
-      reviews: {
-        where: { hidden: false },
-        include: { user: { select: { name: true, username: true } } },
-        orderBy: { createdAt: "desc" },
-      },
-    },
-  });
+// TRƯỚC ĐÂY hàm này include TOÀN BỘ products + reviews của seller (không
+// take/skip) — 1 gian hàng nhiều sản phẩm/đánh giá sẽ tải hết về dù trang chỉ
+// hiển thị 1 trang. Tách làm 3: getSellerBySlug() giờ CHỈ trả thông tin gian
+// hàng + số liệu TỔNG HỢP (đếm/tính trung bình ở DB qua aggregate — vẫn
+// đúng "tổng toàn gian hàng" dù trang sản phẩm/đánh giá đang phân trang ở
+// trang nào), getSellerProductsPaged()/getSellerReviewsPaged() bên dưới lo
+// phần danh sách theo trang. Xem PERFORMANCE_AUDIT.md mục 1.
+export type SellerShopInfo = {
+  id: string;
+  userId: string;
+  shopName: string;
+  slug: string;
+  description: string;
+  specialty: string | null;
+  level: number;
+  verified: boolean;
+  suspended: boolean;
+  avatarUrl: string | null;
+  coverUrl: string | null;
+  createdAt: Date;
+  productCount: number;
+  totalSold: number;
+  avgRating: number;
+  reviewCount: number;
+};
+
+export async function getSellerBySlug(slug: string): Promise<SellerShopInfo | null> {
+  const seller = await prisma.seller.findUnique({ where: { slug } });
   if (!seller) return null;
 
-  const products = await attachRealRatings(seller.products.map(mapProduct));
+  // status: "APPROVED" + isActive: true — cùng quy tắc lọc đã áp dụng cho
+  // mọi query công khai khác trong file này (sản phẩm PENDING/REJECTED/đã
+  // ẩn không tính vào số liệu gian hàng công khai).
+  const productWhere: Prisma.ProductWhereInput = { sellerId: seller.id, status: "APPROVED", isActive: true };
+  const [productAgg, reviewAgg] = await Promise.all([
+    prisma.product.aggregate({ where: productWhere, _count: { _all: true }, _sum: { sold: true } }),
+    // hidden: false — review admin đã ẩn (spam/xúc phạm) không tính vào rating
+    // trung bình, cùng quy tắc ratingStats() đã dùng trước đây.
+    prisma.review.aggregate({
+      where: { sellerId: seller.id, hidden: false },
+      _avg: { rating: true },
+      _count: { rating: true },
+    }),
+  ]);
 
   return {
     id: seller.id,
@@ -495,8 +634,65 @@ export async function getSellerBySlug(slug: string) {
     avatarUrl: seller.avatarUrl,
     coverUrl: seller.coverUrl,
     createdAt: seller.createdAt,
-    products,
-    reviews: seller.reviews.map((r) => ({
+    productCount: productAgg._count._all,
+    totalSold: productAgg._sum.sold ?? 0,
+    avgRating: reviewAgg._avg.rating ?? 0,
+    reviewCount: reviewAgg._count.rating,
+  };
+}
+
+// Sản phẩm CỦA 1 GIAN HÀNG, phân trang thật ở DB — cả 3 kiểu sort đều là cột
+// thật (views/createdAt/sold) nên KHÔNG cần 2 pha như paginateProducts() ở
+// trên (đó là cho trang chủ/danh mục/tìm kiếm có thêm tuỳ chọn sắp theo giá
+// hiệu lực Mega Sale — trang gian hàng chưa có tuỳ chọn đó).
+export async function getSellerProductsPaged(
+  sellerId: string,
+  opts: { sort: "popular" | "newest" | "bestselling"; page: number; pageSize: number }
+): Promise<PaginatedProducts> {
+  const where: Prisma.ProductWhereInput = { sellerId, status: "APPROVED", isActive: true };
+  const total = await prisma.product.count({ where });
+  const orderBy: Prisma.ProductOrderByWithRelationInput =
+    opts.sort === "newest"
+      ? { createdAt: "desc" }
+      : opts.sort === "bestselling"
+        ? { sold: "desc" }
+        : { views: "desc" };
+  const rows = await prisma.product.findMany({
+    where,
+    include: productInclude,
+    orderBy,
+    skip: Math.max(0, (opts.page - 1) * opts.pageSize),
+    take: opts.pageSize,
+  });
+  const items = await attachRealRatings(rows.map(mapProduct));
+  return { items, total };
+}
+
+export type ShopReview = {
+  id: string;
+  userId: string;
+  authorName: string;
+  rating: number;
+  comment: string;
+  createdAt: Date;
+};
+
+// Đánh giá CỦA 1 GIAN HÀNG, phân trang thật ở DB.
+export async function getSellerReviewsPaged(
+  sellerId: string,
+  opts: { page: number; pageSize: number }
+): Promise<{ items: ShopReview[]; total: number }> {
+  const where = { sellerId, hidden: false };
+  const total = await prisma.review.count({ where });
+  const rows = await prisma.review.findMany({
+    where,
+    include: { user: { select: { name: true, username: true } } },
+    orderBy: { createdAt: "desc" },
+    skip: Math.max(0, (opts.page - 1) * opts.pageSize),
+    take: opts.pageSize,
+  });
+  return {
+    items: rows.map((r) => ({
       id: r.id,
       userId: r.userId,
       authorName: r.user.name ?? r.user.username ?? "Người dùng",
@@ -504,7 +700,7 @@ export async function getSellerBySlug(slug: string) {
       comment: r.comment,
       createdAt: r.createdAt,
     })),
-    ...ratingStats(seller.reviews),
+    total,
   };
 }
 

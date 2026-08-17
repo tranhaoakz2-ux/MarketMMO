@@ -16,16 +16,24 @@ import { notFound } from "next/navigation";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Avatar from "@/components/Avatar";
+import Pagination from "@/components/Pagination";
 import RatingStars from "@/components/RatingStars";
 import SellerAvatar from "@/components/SellerAvatar";
 import Reveal from "@/components/Reveal";
 import ReviewForm from "@/components/ReviewForm";
-import ShopProductList from "@/components/ShopProductList";
+import ShopProductList, { type ShopSortKey } from "@/components/ShopProductList";
 import { getAuthSession } from "@/lib/authz";
-import { getSellerBySlug } from "@/lib/queries";
+import { getSellerBySlug, getSellerProductsPaged, getSellerReviewsPaged } from "@/lib/queries";
 import { absoluteUrl, truncate } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+const PRODUCTS_PAGE_SIZE = 24;
+const REVIEWS_PAGE_SIZE = 10;
+
+function parseShopSortKey(raw: string | undefined): ShopSortKey {
+  return raw === "newest" || raw === "bestselling" ? raw : "popular";
+}
 
 export async function generateMetadata({
   params,
@@ -38,7 +46,7 @@ export async function generateMetadata({
 
   const title = `${shop.shopName} — Gian hàng trên MarketMMO`;
   const description = truncate(
-    shop.description || `Gian hàng ${shop.shopName} với ${shop.products.length} sản phẩm đang bán trên MarketMMO.`
+    shop.description || `Gian hàng ${shop.shopName} với ${shop.productCount} sản phẩm đang bán trên MarketMMO.`
   );
   const url = absoluteUrl(`/shop/${shop.slug}`);
 
@@ -58,10 +66,17 @@ export async function generateMetadata({
 
 export default async function ShopPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ seller: string }>;
+  searchParams: Promise<{ page?: string; sort?: string; reviewPage?: string }>;
 }) {
   const { seller: sellerSlug } = await params;
+  const { page, sort, reviewPage } = await searchParams;
+  const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
+  const currentReviewPage = Math.max(1, parseInt(reviewPage ?? "1", 10) || 1);
+  const sortBy = parseShopSortKey(sort);
+
   const [shop, session] = await Promise.all([getSellerBySlug(sellerSlug), getAuthSession()]);
   if (!shop) notFound();
 
@@ -70,8 +85,20 @@ export default async function ShopPage({
   // — trừ chính seller đó vẫn xem được gian hàng của mình để biết lý do.
   if (shop.suspended && !isOwnShop) notFound();
 
+  // TRƯỚC ĐÂY getSellerBySlug() include TOÀN BỘ products/reviews của seller
+  // (không take/skip) — 1 gian hàng nhiều sản phẩm/đánh giá sẽ tải hết về dù
+  // trang chỉ hiển thị 1 trang (xem PERFORMANCE_AUDIT.md mục 1). Giờ tách
+  // riêng 2 query phân trang thật, chạy song song (đều cần shop.id nên phải
+  // đợi getSellerBySlug() xong trước, không gộp chung Promise.all ở trên
+  // được) — số liệu tổng (productCount/totalSold/avgRating/reviewCount) vẫn
+  // lấy từ `shop` (đã tính qua aggregate, đúng TOÀN gian hàng bất kể đang ở
+  // trang nào).
+  const [productsResult, reviewsResult] = await Promise.all([
+    getSellerProductsPaged(shop.id, { sort: sortBy, page: currentPage, pageSize: PRODUCTS_PAGE_SIZE }),
+    getSellerReviewsPaged(shop.id, { page: currentReviewPage, pageSize: REVIEWS_PAGE_SIZE }),
+  ]);
+
   const seller = shop.shopName;
-  const items = shop.products;
   const sellerLevel = shop.level;
 
   return (
@@ -133,7 +160,7 @@ export default async function ShopPage({
                   </span>
                   <span className="flex items-center gap-1">
                     <ShoppingBag className="h-3.5 w-3.5" /> Đã bán:{" "}
-                    {items.reduce((sum, p) => sum + p.sold, 0).toLocaleString("vi-VN")}
+                    {shop.totalSold.toLocaleString("vi-VN")}
                   </span>
                   <span className="flex items-center gap-1">
                     <Heart className="h-3.5 w-3.5" /> Yêu thích: 12
@@ -160,22 +187,42 @@ export default async function ShopPage({
           </Reveal>
 
           <Reveal delay={0.05}>
-            <div className="mt-6 flex items-center justify-between gap-3 overflow-hidden rounded-xl bg-brand shadow-sm">
+            <div
+              id="san-pham-gian-hang"
+              className="mt-6 flex items-center justify-between gap-3 overflow-hidden rounded-xl bg-brand shadow-sm"
+            >
               <div className="flex items-center gap-2 px-4 py-3 text-sm font-black text-ink">
                 <Store className="h-4 w-4" /> Sản phẩm của {seller}
               </div>
               <span className="mr-4 rounded-full bg-white px-3 py-1 text-xs font-bold text-ink">
-                {items.length} sản phẩm
+                {shop.productCount} sản phẩm
               </span>
             </div>
           </Reveal>
 
           <Reveal delay={0.05}>
-            <ShopProductList products={items} />
+            <ShopProductList products={productsResult.items} sellerSlug={shop.slug} sortBy={sortBy} />
+          </Reveal>
+
+          <Reveal delay={0.05}>
+            <div className="mt-4">
+              <Pagination
+                basePath={`/shop/${shop.slug}`}
+                currentPage={currentPage}
+                totalCount={productsResult.total}
+                pageSize={PRODUCTS_PAGE_SIZE}
+                sectionId="san-pham-gian-hang"
+                sort={sortBy === "popular" ? undefined : sortBy}
+                extraParams={currentReviewPage > 1 ? { reviewPage: String(currentReviewPage) } : undefined}
+              />
+            </div>
           </Reveal>
 
           <Reveal delay={0.1} className="mt-10 pb-12">
-            <div className="mb-4 flex items-center gap-2 overflow-hidden rounded-xl bg-ink px-4 py-3 text-sm font-black text-white">
+            <div
+              id="danh-gia-gian-hang"
+              className="mb-4 flex items-center gap-2 overflow-hidden rounded-xl bg-ink px-4 py-3 text-sm font-black text-white"
+            >
               <Star className="h-4 w-4 text-brand" /> Đánh giá từ người mua
               <span className="ml-auto rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-bold">
                 {shop.reviewCount}
@@ -184,29 +231,43 @@ export default async function ShopPage({
 
             <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
               <div className="flex flex-col gap-3">
-                {shop.reviews.length === 0 ? (
+                {reviewsResult.items.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-border-c bg-surface p-8 text-center text-sm text-muted">
                     Gian hàng này chưa có đánh giá nào.
                   </div>
                 ) : (
-                  shop.reviews.map((review) => (
-                    <div
-                      key={review.id}
-                      className="rounded-xl border border-border-c bg-surface p-4 shadow-sm"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Avatar size={28} />
-                        <span className="text-sm font-bold text-foreground">
-                          {review.authorName}
-                        </span>
-                        <RatingStars rating={review.rating} />
-                        <span className="ml-auto text-xs text-muted">
-                          {review.createdAt.toLocaleDateString("vi-VN")}
-                        </span>
+                  <>
+                    {reviewsResult.items.map((review) => (
+                      <div
+                        key={review.id}
+                        className="rounded-xl border border-border-c bg-surface p-4 shadow-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Avatar size={28} />
+                          <span className="text-sm font-bold text-foreground">
+                            {review.authorName}
+                          </span>
+                          <RatingStars rating={review.rating} />
+                          <span className="ml-auto text-xs text-muted">
+                            {review.createdAt.toLocaleDateString("vi-VN")}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm text-foreground/80">{review.comment}</p>
                       </div>
-                      <p className="mt-2 text-sm text-foreground/80">{review.comment}</p>
-                    </div>
-                  ))
+                    ))}
+                    <Pagination
+                      basePath={`/shop/${shop.slug}`}
+                      currentPage={currentReviewPage}
+                      totalCount={reviewsResult.total}
+                      pageSize={REVIEWS_PAGE_SIZE}
+                      sectionId="danh-gia-gian-hang"
+                      pageParam="reviewPage"
+                      extraParams={{
+                        ...(currentPage > 1 ? { page: String(currentPage) } : {}),
+                        ...(sortBy !== "popular" ? { sort: sortBy } : {}),
+                      }}
+                    />
+                  </>
                 )}
               </div>
 
