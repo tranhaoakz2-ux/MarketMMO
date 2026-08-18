@@ -2,2217 +2,279 @@
 
 Hướng dẫn cho Claude Code khi làm việc trong repo **MarketMMO**.
 
+> **Đọc cùng lúc**: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — mô tả
+> chi tiết CÁCH TỪNG HỆ THỐNG NGHIỆP VỤ VẬN HÀNH THẬT (checkout/escrow, 4
+> loại sản phẩm, lộ hàng, bảo hành, giải ngân/cron, đặt trước, khiếu nại,
+> rút tiền, đấu giá, nạp tiền, phí sàn/hoa hồng, admin, SEO...). File
+> `CLAUDE.md` này chỉ nói về stack/cấu trúc/quy ước/quy trình làm việc —
+> **không lặp lại** nội dung nghiệp vụ đã có ở đó.
+
 ## Tổng quan dự án
 
-MarketMMO là một website **marketplace** giới thiệu và bán các sản phẩm/dịch vụ số:
-
-- Tài khoản số (Gmail, Facebook, Discord, TikTok, YouTube, v.v.)
-- Vật phẩm / tiền tệ trong game MMO (gold, item, account game)
-- Dịch vụ boosting / cày thuê (leveling, rank boost)
-
-Dự án đã được scaffold bằng Next.js (App Router) + TypeScript + Tailwind CSS,
-với các trang chính (trang chủ, danh mục, chi tiết sản phẩm, đăng nhập/đăng ký,
-gian hàng người bán, ví/nạp tiền, giỏ hàng, lịch sử đơn hàng) hiện thực theo
-thiết kế thật của shopmini.pro (không chỉ ảnh tham khảo tĩnh
-`shopmini.pro__category=Gmail.png`, mà đã đối chiếu trực tiếp với các trang
-sống trên shopmini.pro — xem mục "Quy tắc bắt buộc"). Backend **thật** đã được
-xây dựng (Prisma + PostgreSQL, Auth.js, checkout trừ ví có ký quỹ, ví/nạp tiền,
-đăng ký người bán, trang quản trị) — xem mục "Backend" bên dưới. File này là
-kim chỉ nam khi tiếp tục phát triển — cập nhật khi có thay đổi lớn về tech
-stack, cấu trúc thư mục, hoặc quy ước code.
-
-## Thông tin công ty / thương hiệu tham khảo
-
-Thông tin dưới đây tổng hợp từ shopmini.pro (nguồn tham khảo mô hình kinh doanh —
-cùng lĩnh vực "sàn mua bán tài khoản MMO"), dùng để định hướng nội dung, tính năng
-và các trang pháp lý cho MarketMMO:
-
-- **Định vị**: sàn giao dịch tài khoản/dịch vụ MMO uy tín, giao dịch tự động, có
-  cơ chế **ký quỹ (escrow)** bảo vệ người mua/bán (ví dụ: giữ tiền ~3 ngày trước
-  khi giải ngân cho người bán) thay cho trung gian truyền thống.
-- **Mô hình vận hành**: nạp tiền vào ví trước ("Nạp tiền"), sau đó mua sản phẩm
-  bằng số dư ví; giao hàng/kích hoạt **tự động 24/7**.
-- **Đây là marketplace multi-vendor**: có luồng "Trở thành người bán" cho phép
-  bên thứ ba đăng bán sản phẩm/dịch vụ, kèm cơ chế xác minh người bán.
-- **Tính năng nổi bật cần cân nhắc cho MarketMMO**:
-  - Ví/nạp tiền (Deposit) + lịch sử mua hàng (Order history)
-  - Chương trình giới thiệu/kiếm tiền (referral/affiliate)
-  - Công cụ lấy mã 2FA cho tài khoản đã mua
-  - Diễn đàn/cộng đồng (Forum)
-  - Tài liệu API cho nhà phát triển/đối tác
-- **Trang pháp lý/nội dung cần có**: Câu hỏi thường gặp (FAQ), Điều khoản dịch vụ,
-  Điều khoản bán hàng (dành cho người bán), Chính sách bảo mật, Sitemap.
-- **Kênh liên hệ**: hỗ trợ qua chat trực tuyến trên site + mạng xã hội (Facebook,
-  TikTok); trang tham khảo không công khai địa chỉ/số điện thoại/email cụ thể —
-  cần bổ sung thông tin liên hệ thật của MarketMMO khi có.
-- **Tuân thủ**: cấm sử dụng tài khoản/sản phẩm giao dịch trên sàn cho mục đích lừa
-  đảo, mạo danh hoặc vi phạm an ninh mạng — nên nêu rõ trong Điều khoản dịch vụ.
-
-> Đây là thông tin **tham khảo mô hình**, không phải thông tin pháp lý chính thức
-> của MarketMMO. Khi có thông tin công ty thật (tên pháp nhân, địa chỉ, số điện
-> thoại, email hỗ trợ, mã số thuế...), cập nhật/thay thế mục này.
-
-## Đối tượng người dùng & ngôn ngữ
-
-- Người dùng cuối là người Việt Nam → giao diện, nội dung mặc định bằng **tiếng Việt**.
-- Đơn vị tiền tệ mặc định: **VNĐ**. Cân nhắc tích hợp cổng thanh toán phổ biến ở VN
-  (VNPay, Momo, chuyển khoản ngân hàng) bên cạnh thẻ quốc tế nếu cần.
-- Đây là mặt hàng số (digital goods) → luồng giao hàng phải hỗ trợ **giao tự động**
-  ngay sau khi thanh toán (ví dụ: hiển thị/email tài khoản, mã kích hoạt) thay vì
-  quy trình vận chuyển vật lý.
+MarketMMO là **marketplace multi-vendor** bán tài khoản số (Gmail, Facebook,
+Discord, TikTok...), vật phẩm/tiền tệ game MMO, dịch vụ boosting, và công
+cụ/Tool AI Agent. Người dùng cuối là người Việt Nam → giao diện/nội dung
+tiếng Việt, tiền tệ VNĐ. Cơ chế cốt lõi: **ký quỹ (escrow)** giữ tiền buyer
+tới khi hết bảo hành/hết hạn ký quỹ mới giải ngân cho seller, giao hàng số tự
+động 24/7. Tham khảo mô hình kinh doanh từ shopmini.pro (không phải thông tin
+pháp lý chính thức — xem `docs/ARCHITECTURE.md` để biết logic thật đã xây).
 
 ## Tech Stack
 
-- **Framework**: Next.js 16 (App Router) + React 19 + TypeScript — `src/` + import
-  alias `@/*`.
-- **Styling**: Tailwind CSS v4 (config qua `@theme inline` trong
-  `src/app/globals.css`, không có `tailwind.config.js` riêng).
-- **Icon**: `lucide-react` (lưu ý: bộ icon **không có logo thương hiệu** như
-  Facebook/TikTok — dùng SVG inline riêng cho các icon đó, xem `Footer.tsx`).
-- **Animation**: `framer-motion` — xem component `Reveal` dùng chung cho hiệu
-  ứng xuất hiện khi cuộn (`whileInView`).
-- **Backend/DB**: Prisma ORM v5 + **PostgreSQL 16** chạy qua Docker
-  (`docker-compose.yml` ở root — container `market-mmo-postgres-1`, cổng
-  **5433** trên host, không phải 5432 mặc định vì máy dev này đã có một stack
-  Docker khác (`du-an-mmo`, dự án riêng biệt tại `D:\Du-an-MMO`) chiếm cổng
-  5432 — **không** dùng chung container đó). Bắt đầu DB: `docker compose up
--d`. Dữ liệu Postgres lưu trong Docker volume `marketmmo_pgdata`, không mất
-  khi tắt container (chỉ mất nếu `docker compose down -v`).
-  Các trường kiểu "enum" (`role`, `status`, `type`...) hiện là `String`
-  (không dùng `enum` native của Prisma) — union type TypeScript tương ứng
-  khai báo ở `src/lib/constants.ts`. Đây là lựa chọn có chủ đích giữ nguyên
-  từ lúc còn dùng SQLite (không hỗ trợ enum); có thể chuyển sang `enum` thật
-  trong `prisma/schema.prisma` bất kỳ lúc nào nếu muốn (Postgres hỗ trợ đầy
-  đủ), không bắt buộc.
-- **Auth**: Auth.js (`next-auth@5` beta) — Credentials (đăng nhập bằng
-  **email hoặc username** + mật khẩu, hash bằng `bcryptjs` — field wire vẫn
-  tên `email` để không phải đổi mọi nơi gọi `signIn`, nhưng `authorize()`
-  tra cả `email` lẫn `username` qua `findFirst({ OR: [...] })`) + Google
-  OAuth (chỉ bật khi có `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` trong `.env`).
-  Đăng ký (`/api/auth/register`) vẫn bắt buộc nhập cả username lẫn email
-  riêng biệt — chỉ luồng đăng nhập mới chấp nhận 1 trong 2. Session dùng
-  chiến lược `jwt` (bắt buộc
-  khi có Credentials provider). Cấu hình tại `src/auth.ts`. Đăng nhập/đăng ký
-  đều có xác minh chống bot **Cloudflare Turnstile** (`src/components/
-TurnstileWidget.tsx` + `src/lib/turnstile.ts`), theo cùng quy ước "tuỳ chọn
-  theo env" như Google OAuth/VNPay: chỉ hiển thị widget và bắt buộc xác minh
-  khi có `NEXT_PUBLIC_TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` trong
-  `.env`, thiếu key thì tự động bỏ qua bước xác minh (không chặn đăng nhập ở
-  môi trường dev chưa đăng ký Cloudflare). Verify thất bại ném lỗi
-  `CredentialsSignin` với `code: "turnstile"` để client phân biệt được với
-  lỗi sai email/mật khẩu. **Quên mật khẩu**: link "Quên mật khẩu?" ở form
-  đăng nhập → `/quen-mat-khau` — 1 trang duy nhất, wizard 2 bước nội bộ
-  (`ForgotPasswordForm.tsx`, state `step: "email" | "code"`, KHÔNG còn trang
-  `/dat-lai-mat-khau?token=...` riêng — đã đổi từ link-token sang **mã OTP 6
-  số** theo yêu cầu người dùng): nhập email → hệ thống gửi mã 6 số qua
-  **Resend** (`src/lib/email.ts`, env-gated `RESEND_API_KEY` — thiếu key thì
-  log mã ra console thay vì gửi thật, vẫn test được đầy đủ) → nhập mã + mật
-  khẩu mới trong CÙNG bước 2 (1 request gộp verify+đổi mật khẩu, không tách
-  riêng bước "xác minh mã"). Xem model `PasswordResetToken` trong mục
-  Backend. `AuthForms.tsx` (`/dang-nhap`)
-  render **2 form tách biệt theo tab thật** (state `tab`, click đổi
-  `"login"`/`"register"`, chỉ 1 form hiện tại 1 thời điểm) — trước đây 2 form
-  hiện cùng lúc cạnh nhau trong lưới 2 cột, thanh "Đăng nhập | Đăng ký" phía
-  trên chỉ là chữ tĩnh không bấm được; đã đổi theo yêu cầu người dùng. Hỗ trợ
-  mở thẳng tab đăng ký qua query `?tab=register` (prop `initialTab`).
-- **Thanh toán**: khung tích hợp **VNPay** đã viết đúng spec công khai
-  (`src/lib/payment/vnpay.ts`, HMAC-SHA512) nhưng cần `VNPAY_TMN_CODE` +
-  `VNPAY_HASH_SECRET` thật (đăng ký merchant với VNPay) mới hoạt động — xem
-  mục "Backend" bên dưới. Khi chưa có key, hệ thống tự động chỉ cho phép nạp
-  tiền thủ công (admin duyệt).
+- **Next.js 16** (App Router) + **React 19** + TypeScript — `src/` + alias
+  `@/*`. Route Handlers (`app/api/**/route.ts`) cho toàn bộ backend, không
+  dùng Server Actions.
+- **Styling**: Tailwind CSS v4 (`@theme inline` trong `src/app/globals.css`,
+  không có `tailwind.config.js` riêng). Icon: `lucide-react` (không có logo
+  thương hiệu — SVG inline riêng cho Facebook/TikTok/Zalo, xem `Footer.tsx`).
+  Animation: `framer-motion` qua component `Reveal` dùng chung cho scroll-in.
+- **DB**: Prisma ORM 5 + **PostgreSQL 16**. Dev local qua Docker
+  (`docker-compose.yml`, container `market-mmo-postgres-1`, **cổng host
+  5433** — không phải 5432 mặc định, tránh đụng stack Docker khác trên máy
+  dev). Production: **Neon** (managed Postgres, khác hẳn Docker local —
+  xem mục "Quy trình đổi schema" bên dưới, đây là điểm dễ nhầm nhất).
+  Trạng thái/loại (`status`, `type`...) là cột `String` tự do, KHÔNG dùng
+  enum Postgres — union type tương ứng khai ở `src/lib/constants.ts`.
+- **Auth**: Auth.js (`next-auth@5` beta) — Credentials (email/username +
+  password, bcrypt) + Google OAuth (env-gated) + Turnstile chống bot
+  (env-gated, fail-closed ở production). Session JWT, refresh
+  role/walletBalance/banned từ DB mỗi request. Chi tiết: `docs/ARCHITECTURE.md` §1.
+- **Thanh toán**: VNPay (chờ key thật), SePay webhook (chờ key thật, tự
+  động hoá nạp bank), USDT TRC20 (xác minh on-chain thật qua TronGrid, hoạt
+  động ngay khi có địa chỉ ví), bank thủ công. Admin cấu hình qua
+  `/admin/cai-dat` (model `PaymentConfig`, ưu tiên hơn `.env`). Chi tiết:
+  `docs/ARCHITECTURE.md` §11.
+- **Mã hoá dữ liệu nhạy cảm**: AES-256-GCM (`src/lib/service-crypto.ts`,
+  Node `crypto` built-in) cho field dịch vụ nhạy cảm và kho credential TOOL
+  — bắt buộc `SERVICE_CREDENTIAL_ENCRYPTION_KEY`, fail-closed nếu thiếu.
+- **Cron**: Vercel Cron (`vercel.json`) — `POST /api/cron/daily`, 1
+  lần/ngày (16:00 UTC = 23:00 VN), bảo vệ bằng `CRON_SECRET`. Xem
+  `docs/ARCHITECTURE.md` §6 để biết việc gì ĐÃ tự động và việc gì CHƯA.
 
 ### Lệnh thường dùng
 
 ```bash
-docker compose up -d  # khởi động PostgreSQL cho dự án (bắt buộc trước khi dev)
-npm run dev         # chạy dev server tại http://localhost:3000
-npm run build        # build production
-npm run start         # chạy bản build production
-npm run lint          # eslint
-npm run db:push       # đồng bộ prisma/schema.prisma vào database (postgres)
-npm run db:seed       # nạp lại dữ liệu mẫu (category/product/seller/admin/buyer demo)
-npm run db:studio     # mở Prisma Studio để xem/sửa dữ liệu trực quan
-npm run screenshot -- <url> <outPath> [width] [height] [fullPage]
-                       # chụp screenshot bằng Playwright, dùng cho quy tắc
-                       # bắt buộc "đối chiếu design" bên dưới
+docker compose up -d   # khởi động PostgreSQL cho dự án (bắt buộc trước khi dev)
+npm run dev             # dev server tại http://localhost:3000
+npm run build            # build production
+npm run lint              # eslint
+npx tsc --noEmit           # typecheck
+npm run db:push        # đồng bộ schema.prisma → DB (AN TOÀN dùng local — .env trỏ Docker, KHÔNG phải Neon)
+npm run db:seed         # nạp lại dữ liệu mẫu
+npm run db:studio        # Prisma Studio
+npm run screenshot -- <url> <outPath> [width] [height] [fullPage]  # Playwright, đối chiếu design
 ```
 
-Lần đầu clone dự án: copy `.env.example` → `.env` (chỉnh `AUTH_SECRET` cho môi
-trường thật), chạy `docker compose up -d` để khởi động Postgres, sau đó
+Lần đầu clone: copy `.env.example` → `.env`, `docker compose up -d`, rồi
 `npm run db:push && npm run db:seed`.
 
-**Project skill**: `.claude/skills/start-dev/SKILL.md` — quy trình chuẩn để
-bật Postgres + dev server + xác nhận app chạy thật (screenshot) + tài khoản
-demo + các gotcha đã gặp (EPERM khi generate Prisma lúc dev server đang chạy,
-sai cổng DATABASE_URL...). Dùng skill này thay vì dò lại từ đầu mỗi phiên.
+**Project skill**: `.claude/skills/start-dev/SKILL.md` — quy trình chuẩn bật
+Postgres + dev server + gotcha đã gặp (EPERM khi generate Prisma lúc dev
+server đang chạy, sai cổng DATABASE_URL...). Dùng skill này thay vì dò lại.
 
-### Cấu trúc thư mục chính
+## Cấu trúc thư mục chính
 
 ```
-docker-compose.yml  # container Postgres riêng cho dự án (cổng host 5433)
+docker-compose.yml       # Postgres riêng cho dự án (cổng host 5433)
+vercel.json               # cấu hình cron (POST /api/cron/daily)
 prisma/
-  schema.prisma  # User, Account/Session/VerificationToken (Auth.js), Seller,
-                 # Category, Product, Order, OrderItem, WalletTransaction, Review
-  seed.ts        # nạp category/product từ src/data/*.ts vào DB kèm 4 seller,
-                 # 1 admin, 1 buyer demo (chạy qua `npm run db:seed`)
+  schema.prisma            # toàn bộ model — nguồn chân lý duy nhất về DB
+  seed.ts                    # nạp category/product/seller/admin/buyer demo
+  pending-sql/                # SQL đã/cần chạy tay trên Neon — xem quy trình bên dưới
+                                # + docs/ARCHITECTURE.md §16 (lịch sử đầy đủ)
 src/
-  auth.ts        # cấu hình Auth.js (Credentials + Google), export auth/signIn/signOut/handlers
+  auth.ts                    # cấu hình Auth.js
+  middleware.ts               # gắn X-Robots-Tag noindex khi host khác domain chuẩn
   app/
-    page.tsx                    # Trang chủ — fetch qua src/lib/queries.ts (Prisma)
-    danh-muc/[slug]/page.tsx    # Trang danh mục — dynamic, fetch DB theo slug
-    san-pham/[slug]/page.tsx    # Chi tiết sản phẩm — dynamic, fetch DB theo slug
-    shop/[seller]/page.tsx      # Gian hàng người bán — dynamic, fetch DB theo slug
-    dang-nhap/page.tsx          # Đăng nhập / Đăng ký thật (AuthForms — signIn/register API,
-                                 # dạng tab thật — xem ghi chú AuthForms.tsx bên dưới)
-    quen-mat-khau/page.tsx      # ForgotPasswordForm — wizard 2 bước: nhập email (gửi mã OTP
-                                 # 6 số qua Resend) rồi nhập mã + mật khẩu mới, cùng 1 trang
-    nap-tien/page.tsx           # Ví — DepositPanel (VNPay hoặc yêu cầu thủ công + lịch sử)
-    gio-hang/page.tsx           # Giỏ hàng (client, CartContext) + nút thanh toán thật
-    don-hang/page.tsx           # Lịch sử đơn hàng thật (yêu cầu đăng nhập, redirect nếu chưa)
-    tro-thanh-nguoi-ban/page.tsx # SellerRegisterForm — tạo Seller record thật
-    quan-ly-san-pham/page.tsx   # (SELLER/ADMIN) ProductVariantManager — seller tự thêm/xoá
-                                 # phiên bản (label/giá/kho riêng) cho SẢN PHẨM CỦA MÌNH; base
-                                 # product vẫn chỉ tạo qua seed, trang này CHƯA tạo SP mới.
-                                 # Vẫn giữ hoạt động song song với /trang-ban-hang/san-pham
-                                 # (route mới render lại đúng component này) — không xoá.
-    trang-ban-hang/layout.tsx   # (SELLER/ADMIN) "Quản Lý Bán Hàng" — dashboard người bán đầy đủ,
-                                 # xem mục "Quản Lý Bán Hàng" trong "Luồng nghiệp vụ chính" để
-                                 # biết chi tiết từng trang con và thiết kế an toàn luồng tiền.
-                                 # layout.tsx: guard đăng nhập + seller (redirect nếu không đạt)
-                                 # + render SellerSidebar bọc quanh mọi trang con bên dưới.
-    trang-ban-hang/page.tsx               # Tổng quan — doanh thu theo khoảng ngày (searchParams)
-    trang-ban-hang/san-pham/page.tsx      # SellerProductsPanel — AddProductForm ("Đăng sản
-                                           # phẩm mới") + ProductVariantManager (dùng chung
-                                           # với /quan-ly-san-pham) render cùng trang
-    trang-ban-hang/don-san-pham/page.tsx  # đơn hàng thuộc category KHÔNG phải dịch vụ
-    trang-ban-hang/don-dich-vu/page.tsx   # đơn hàng thuộc category dịch vụ (SERVICE_CATEGORY_SLUGS)
-    trang-ban-hang/rut-tien/page.tsx      # SellerWithdrawPanel — yêu cầu rút tiền + lịch sử
-    trang-ban-hang/quy-bao-hiem/page.tsx  # SellerInsurancePanel — nạp quỹ bảo hiểm + lịch sử
-    trang-ban-hang/danh-gia/page.tsx      # danh sách đánh giá gian hàng (đọc, không sửa)
-    trang-ban-hang/dat-truoc/page.tsx     # SellerPreOrderPanel — toggle preOrder + đơn đang chờ
-    trang-ban-hang/ma-giam-gia/page.tsx   # SellerDiscountCodesPanel — tạo/bật/tắt/xoá mã giảm giá
-    trang-ban-hang/khieu-nai/page.tsx     # SellerDisputesList — danh sách khiếu nại (đọc, admin xử lý)
-    trang-ban-hang/telegram-bot/page.tsx  # SellerTelegramPanel — liên kết Chat ID (env-gated)
-    nguoi-ban/page.tsx          # Danh sách tất cả seller kèm rating trung bình (link ngay
-                                 # sau "Đăng Ký Bán Hàng" trong nav)
-    affiliate/page.tsx          # Affiliate/giới thiệu thật — mã + link mời, thống kê hoa
-                                 # hồng (AffiliatePanel), yêu cầu đăng nhập
-    admin/layout.tsx             # Admin Control Center — shell RIÊNG BIỆT (KHÔNG dùng
-                                  # Header/Footer site mua sắm), guard đăng nhập+role ADMIN,
-                                  # render AdminSidebar (13 mục) + topbar, theme tối riêng
-                                  # qua class `.admin-shell` (xem globals.css). Xem mục 16
-                                  # "Luồng nghiệp vụ chính" để biết chi tiết đầy đủ.
-    admin/page.tsx                    # Tổng quan — KPI (GMV, user mới, đang ký quỹ, việc cần
-                                       # xử lý) + biểu đồ + hoạt động gần đây + "Cần xử lý"
-    admin/nguoi-dung/page.tsx         # AdminUsersPanel — tìm kiếm/khoá-mở khoá tài khoản
-    admin/nguoi-ban/page.tsx          # AdminSellersPanel — tìm kiếm/khoá-mở khoá gian hàng
-    admin/don-hang/page.tsx           # Duyệt toàn bộ OrderItem nền tảng, lọc trạng thái,
-                                       # nút giải ngân ký quỹ đến hạn (AdminEscrowReleaseButton)
-    admin/san-pham/page.tsx           # AdminProductsPanel — di chuyển từ AdminDashboard cũ
-    admin/danh-muc/page.tsx           # AdminCategoriesPanel — di chuyển từ AdminDashboard cũ
-    admin/dien-dan/page.tsx           # AdminForumReportsPanel — hàng chờ báo cáo bài viết/
-                                       # bình luận vi phạm, ẩn nội dung hoặc bỏ qua
-    admin/nap-tien/page.tsx           # AdminDepositsPanel — GIỮ NGUYÊN logic duyệt tay thật
-                                       # (KHÔNG đổi thành log VNPay tự động dù bản demo có vẽ
-                                       # vậy — xem lý do ở mục 16)
-    admin/rut-tien/page.tsx           # AdminWithdrawalsPanel — giữ nguyên logic duyệt tay thật
-    admin/tai-chinh/page.tsx          # Sức khoẻ tài chính — tổng số dư ví/ký quỹ/quỹ bảo hiểm/
-                                       # hoa hồng affiliate/đã rút toàn hệ thống (snapshot)
-    admin/khieu-nai/page.tsx          # AdminDisputesPanel — bấm dòng mở modal chi tiết
-                                       # (thay vì action button trực tiếp trên dòng như cũ)
-    admin/dau-gia/page.tsx            # AdminAuctionPanel — 6 slot, sửa giá sàn, gán thủ công,
-                                       # huỷ lượt đặt giá, đóng phiên sớm, xem lịch sử bid đầy đủ
-    admin/nhat-ky/page.tsx            # Danh sách AdminAuditLog phân trang (40/trang)
-    admin/cai-dat/page.tsx            # Trạng thái các tích hợp qua biến môi trường (đã cấu
-                                       # hình/chưa), KHÔNG bao giờ hiện giá trị secret thật
-    dau-gia/page.tsx            # Đấu giá "vị trí vàng" — banner, lịch đấu giá, 6 slot,
-                                 # form đặt giá (AuctionBidForm), hướng dẫn
-    dien-dan/page.tsx           # Diễn đàn thật — danh sách bài viết (ForumPost) + nút
-                                 # "Đăng bài mới" (ForumNewPostPanel)
-    dien-dan/[postId]/page.tsx  # Chi tiết bài viết — nội dung, nút thích (ForumLikeButton),
-                                 # danh sách + form bình luận (ForumCommentForm)
-    lay-2fa/page.tsx            # Công cụ lấy mã 2FA (TOTP tính client-side)
-    tin-nhan/page.tsx           # Chat thật buyer-seller + bot "Hệ Thống" (ChatInbox), yêu
-                                 # cầu đăng nhập, hỗ trợ ?with=<userId> để tự mở hội thoại
-    cau-hoi-thuong-gap/, dieu-khoan-dich-vu/, dieu-khoan-ban-hang/,
-    chinh-sach-bao-mat/, sitemap-trang-web/, tai-lieu-api/  # trang nội dung tĩnh
-    api/
-      auth/[...nextauth]/route.ts  # Auth.js route handler
-      auth/register/route.ts       # đăng ký tài khoản (bcrypt hash) + xử lý mã mời affiliate
-                                    # (refCode optional) trong cùng transaction
-      auth/forgot-password/route.ts # sinh mã OTP 6 số (SHA-256 hash) + gửi email Resend, rate-
-                                    # limit theo IP+email, luôn trả message chung chung (không
-                                    # lộ email có tồn tại)
-      auth/reset-password/route.ts # verify mã (theo userId, timing-safe) + hạn + số lần sai +
-                                    # chưa dùng, đổi passwordHash trong 1 request gộp
-      checkout/route.ts            # giỏ hàng → Order/OrderItem, trừ ví, giảm kho, escrow —
-                                    # tự "claim" ProductStockItem (FOR UPDATE SKIP LOCKED)
-                                    # cho sản phẩm/variant đã dùng kho thật, điền
-                                    # OrderItem.deliveredPayload; sản phẩm chưa dùng kho thật
-                                    # giữ nguyên hành vi cũ (deliveredPayload null)
-      wallet/deposit-request/route.ts  # tạo WalletTransaction PENDING (nạp thủ công)
-      wallet/transactions/route.ts     # lịch sử giao dịch ví của user hiện tại
-      payment/vnpay/create/route.ts    # tạo URL thanh toán VNPay (cần env key)
-      payment/vnpay/return/route.ts    # xác thực chữ ký + cộng ví khi VNPay redirect về
-      seller/register/route.ts         # tạo Seller record + nâng role user lên SELLER
-      seller/products/route.ts         # (SELLER) GET — danh sách sản phẩm của chính seller
-                                        # kèm variants (dùng lại getMySellerProducts()); POST —
-                                        # đăng sản phẩm gốc mới, tạo với status "PENDING"
-      admin/products/route.ts          # (ADMIN) GET — danh sách sản phẩm PENDING/REJECTED
-      admin/products/[id]/route.ts     # (ADMIN) POST {action: "approve"|"reject", adminNote?}
-                                        # — duyệt/từ chối 1 sản phẩm seller vừa đăng
-      seller/categories/route.ts       # POST — seller tự đề xuất danh mục mới (name), tạo
-                                        # Category với status "PENDING", chặn trùng tên
-      admin/categories/route.ts        # (ADMIN) GET — danh sách category PENDING/REJECTED
-      admin/categories/[id]/route.ts   # (ADMIN) POST {action: "approve"|"reject", adminNote?}
-                                        # — duyệt/từ chối 1 category seller vừa đề xuất
-      seller/products/[productId]/variants/route.ts
-                                        # POST — seller thêm 1 phiên bản (label/price/stock)
-                                        # cho sản phẩm CỦA CHÍNH MÌNH (kiểm tra sellerId)
-      seller/products/[productId]/variants/[variantId]/route.ts
-                                        # PATCH/DELETE — sửa/xoá 1 phiên bản, cùng kiểm tra
-                                        # quyền sở hữu qua sellerId của product cha; DELETE dọn
-                                        # thêm mọi ProductStockItem AVAILABLE của variant trước
-                                        # khi xoá (tránh mồ côi sang kho của Product gốc)
-      seller/products/[productId]/stock/route.ts   # POST — seller nhập hàng loạt kho dữ liệu
-                                                     # giao hàng thật (mỗi dòng textarea = 1
-                                                     # ProductStockItem), tự tăng stock theo số dòng
-      seller/products/[productId]/route.ts    # PATCH — seller bật/tắt Product.preOrder cho
-                                               # sản phẩm CỦA CHÍNH MÌNH (kiểm tra sellerId)
-      discount-codes/preview/route.ts  # POST — xem trước số tiền giảm (KHÔNG tăng usedCount,
-                                        # KHÔNG đụng tiền) — checkout tự tính lại độc lập
-      seller/discount-codes/route.ts   # GET/POST — (SELLER) danh sách/tạo mã giảm giá
-      seller/discount-codes/[id]/route.ts     # PATCH (bật/tắt)/DELETE — cùng kiểm tra sellerId
-      disputes/route.ts                # POST — buyer HOẶC seller mở khiếu nại trên 1 OrderItem
-                                        # đang ESCROW (chuyển status → DISPUTED)
-      admin/disputes/route.ts          # (ADMIN) danh sách khiếu nại
-      admin/disputes/[id]/route.ts     # (ADMIN) "refund_buyer" (hoàn 100% buyer) hoặc
-                                        # "release_seller" (giải ngân seller) — không có % tuỳ ý
-      seller/telegram/route.ts         # GET trạng thái liên kết; POST {action: "link"|"confirm"|
-                                        # "unlink"|"test"} — env-gated TELEGRAM_BOT_TOKEN
-      reviews/route.ts                 # POST — gửi đánh giá 1-5 sao cho seller (chỉ khi
-                                        # đã mua hàng từ seller đó, 1 review/user/seller, upsert)
-      admin/deposits/route.ts          # (ADMIN) danh sách yêu cầu nạp tiền
-      admin/deposits/[id]/route.ts     # (ADMIN) duyệt/từ chối một yêu cầu
-      admin/escrow/release/route.ts    # (ADMIN) giải ngân các OrderItem đến hạn ký quỹ
-      seller/withdraw-request/route.ts # POST — seller tạo yêu cầu rút tiền (TRỪ VÍ NGAY,
-                                        # xem "Quản Lý Bán Hàng"); GET — lịch sử rút tiền của
-                                        # chính seller đó
-      admin/withdrawals/route.ts       # (ADMIN) danh sách yêu cầu rút tiền
-      admin/withdrawals/[id]/route.ts  # (ADMIN) duyệt (chỉ đổi trạng thái) / từ chối (hoàn
-                                        # tiền) — mirror 1:1 admin/deposits/[id]/route.ts
-      seller/insurance-deposit/route.ts # POST — nạp quỹ bảo hiểm (tự động duyệt ngay, chuyển
-                                         # tiền nội bộ ví → insuranceBalance); GET — lịch sử
-      auction/bids/route.ts            # POST — seller đặt giá đấu cho 1 vị trí vàng
-      admin/auction/resolve/route.ts   # (ADMIN) đóng MỌI slot hết hạn (dùng chung
-                                        # resolveAuctionSlot() ở src/lib/auction.ts), xoay
-                                        # vòng slot mới
-      admin/auction/slots/route.ts            # (ADMIN) GET — toàn bộ slot (không lọc status
-                                               # như getAuctionSlots() công khai), kèm đủ lịch
-                                               # sử bid, tối đa 3 slot gần nhất/vị trí
-      admin/auction/slots/[id]/route.ts       # (ADMIN) PATCH {floorPrice} — sửa giá sàn, chỉ
-                                               # áp dụng cho slot đang OPEN
-      admin/auction/slots/[id]/cancel-bids/route.ts  # (ADMIN) POST — xoá toàn bộ AuctionBid
-                                                       # của 1 slot OPEN (không đụng ví ai, vì
-                                                       # tiền chỉ trừ lúc thắng)
-      admin/auction/slots/[id]/close-now/route.ts     # (ADMIN) POST — ép 1 slot OPEN đóng
-                                                       # NGAY bất kể còn hạn, dùng chung
-                                                       # resolveAuctionSlot()
-      admin/auction/assign/route.ts           # (ADMIN) POST {slotId, productId, chargeSeller,
-                                               # amount?} — gán thủ công 1 sản phẩm vào vị trí
-                                               # vàng, BỎ QUA đấu giá; đóng slot cũ + mở slot
-                                               # kế tiếp cùng vị trí để xoay vòng, tuỳ chọn thu
-                                               # phí seller (WalletTransaction type PURCHASE,
-                                               # cùng convention với thắng đấu giá thật)
-      admin/users/route.ts                    # (ADMIN) GET ?q= — tìm kiếm user theo email/
-                                               # username/tên, tối đa 50 kết quả
-      admin/users/[id]/route.ts               # (ADMIN) PATCH {action:"ban"|"unban", reason?}
-                                               # — khoá/mở khoá tài khoản (User.banned)
-      admin/sellers/route.ts                  # (ADMIN) GET ?q= — tìm kiếm gian hàng theo tên
-      admin/sellers/[id]/route.ts             # (ADMIN) PATCH {action:"suspend"|"unsuspend",
-                                               # reason?} — khoá/mở khoá gian hàng (Seller.suspended);
-                                               # {action:"verify"|"unverify"} — bật/tắt thủ công badge
-                                               # "Đã xác thực" (Seller.verified, xem mục 16)
-      admin/sellers/[id]/products/route.ts    # (ADMIN) GET — sản phẩm APPROVED của 1 seller,
-                                               # dùng cho dropdown "gán thủ công" đấu giá
-      admin/forum-reports/route.ts            # (ADMIN) GET — hàng chờ báo cáo diễn đàn OPEN
-      admin/forum-reports/[id]/route.ts       # (ADMIN) POST {action:"hide"|"dismiss"} — ẩn
-                                               # nội dung bị báo cáo hoặc bỏ qua
-      forum/report/route.ts                   # POST {postId?, commentId?, reason} — buyer-facing,
-                                               # đúng 1 trong 2 id, tạo ForumReport status OPEN
-      forum/posts/route.ts             # POST — đăng bài viết diễn đàn mới (ForumPost)
-      forum/posts/[postId]/comments/route.ts  # POST — gửi bình luận cho 1 bài viết
-      forum/posts/[postId]/like/route.ts      # POST — toggle thích/bỏ thích 1 bài viết
-                                                # (unique theo postId+userId)
-      messages/conversations/route.ts         # GET danh sách hội thoại của user hiện tại;
-                                               # POST {targetUserId} — get-or-create hội thoại
-      messages/conversations/[id]/route.ts    # GET tin nhắn (đồng thời đánh dấu đã đọc)/
-                                               # POST gửi tin (FormData: content + file tuỳ
-                                               # chọn) — verify user là 1 trong 2 người tham
-                                               # gia, 404 nếu không (chặn rò rỉ tin nhắn)
-      messages/attachments/[messageId]/route.ts  # GET ảnh/file đính kèm 1 tin nhắn — verify
-                                                  # người gọi thuộc đúng hội thoại chứa nó
-      messages/unread-count/route.ts          # GET tổng số tin chưa đọc — Header poll mỗi 15s
-    globals.css    # design tokens qua @theme inline (Tailwind v4)
-  components/  # Header, NavMegaMenu (dropdown hover Sản phẩm/Dịch vụ/Nạp tiền),
-               # Footer, LegalNotice, LegalPageLayout, ProductCard,
-               # CategorySidebar, CategoryTabs, FeaturedCarousel, FeaturedProductsPanel,
-               # SellerCarousel, SellerFeaturedPanel,
-               # AuctionCountdown, AuctionBidForm, PromoBanner,
-               # TagCloud, BuyBox, DepositPanel,
-               # SellerRegisterForm, ReviewForm, AuthForms, ForgotPasswordForm,
-               # ResetPasswordForm, AffiliatePanel,
-               # ForumNewPostPanel, ForumLikeButton, ForumCommentForm,
-               # Providers, TotpTool, RatingStars, Breadcrumb, Reveal,
-               # SellerSidebar, SellerOverviewStats, SellerOrdersTable,
-               # SellerWithdrawPanel, SellerInsurancePanel, SellerReviewsList,
-               # SellerPreOrderPanel, SellerDiscountCodesPanel, SellerDisputesList,
-               # OpenDisputeButton (nút mở khiếu nại, dùng ở /don-hang),
-               # DeliveredPayloadButton (nút "Xem thông tin đã giao" + sao chép, dùng ở
-               # /don-hang — chỉ hiện khi OrderItem.deliveredPayload khác null),
-               # HeaderChatButton (icon chat + badge chưa đọc trên Header), ChatInbox,
-               # SellerTelegramPanel, ProductVariantManager (gồm cả
-               # StockEntryPanel — nhập kho dữ liệu giao hàng thật theo sản phẩm/variant),
-               # AddProductForm (form "Đăng sản phẩm mới"), SellerProductsPanel (điều phối
-               # AddProductForm + ProductVariantManager), ProductThumbnail (ảnh sản phẩm
-               # thật hoặc fallback icon category, dùng chung mọi nơi), ProductInfoTabs,
-               # AdminSidebar, AdminOverviewStats, ForumReportButton
-    admin/     # Component riêng cho Admin Control Center (theme tối, xem globals.css):
-               # AdminUi.tsx (AdminCard/AdminBadge/AdminButton/AdminEmptyState/
-               # AdminPageHeader — bộ UI dùng chung theo token --adm-*, KHÔNG chứa logic
-               # nghiệp vụ), AdminDepositsPanel, AdminWithdrawalsPanel,
-               # AdminProductsPanel, AdminCategoriesPanel
-               # (4 panel này migrate 1:1 logic từ AdminDashboard.tsx cũ — component gộp
-               # 1 trang duy nhất đã bị XOÁ, thay bằng các trang con riêng dưới admin/*),
-               # AdminDisputesPanel (bấm dòng mở modal chi tiết, KHÁC bản cũ dùng nút
-               # action ngay trên dòng), AdminUsersPanel, AdminSellersPanel (gồm cả nút
-               # bật/tắt badge "Đã xác thực" thủ công, xem mục 16),
-               # AdminEscrowReleaseButton, AdminAuctionResolveButton, AdminAuctionPanel
-               # (6 slot + modal sửa giá sàn/gán thủ công/huỷ bid/đóng phiên sớm),
-               # AdminForumReportsPanel
-  context/
-    CartContext.tsx # Giỏ hàng client: dòng giỏ hàng lưu "snapshot" sản phẩm
-                     # (id/slug/tên/giá/seller/stock) tại thời điểm thêm — không
-                     # cần lookup lại DB từ client. Lưu localStorage (key
-                     # "marketmmo_cart"), dùng qua hook `useCart()`.
-  data/        # nguồn seed + kiểu `Product`/`Category` dùng chung: categories.ts
-               # (10 category), products.ts (~28 sản phẩm, import bởi
-               # prisma/seed.ts — KHÔNG dùng trực tiếp trong trang nữa).
-               # posts.ts (mock diễn đàn cũ) đã xoá — diễn đàn giờ là dữ liệu
-               # thật qua model ForumPost, xem lib/forum.ts.
-  lib/
-    prisma.ts     # PrismaClient singleton (tránh tạo nhiều connection khi hot-reload)
-    queries.ts    # hàm fetch Prisma, map về đúng shape `Product` type cũ để
-                  # UI component (ProductCard, BuyBox...) không cần đổi
-    forum.ts      # getForumPosts()/getRecentForumPosts()/getForumPostById() — query
-                  # ForumPost kèm _count comments/likes + likedByMe theo session hiện tại
-    constants.ts  # union type Role/OrderStatus/WalletTxType/WalletTxStatus +
-                  # ESCROW_HOLD_DAYS (3 ngày) + REFERRAL_COMMISSION_VND
-                  # (20.000đ) + label tiếng Việt
-    authz.ts      # requireUser()/requireSeller()/requireAdmin() dùng trong API route —
-                  # cả requireUser()/requireSeller() đều chặn user.banned=true (403 "Tài
-                  # khoản của bạn đã bị khoá"), xem mục 16 "Luồng nghiệp vụ chính"
-    audit.ts      # logAdminAction({adminId, action, targetType, targetId?, detail?}) —
-                  # ghi 1 dòng AdminAuditLog, gọi ở CUỐI mỗi route admin sau khi hành động
-                  # chính đã thành công. Cố tình KHÔNG throw nếu ghi log lỗi (không được để
-                  # sự cố audit làm hỏng 1 thao tác admin đã xong, vd đã giải ngân tiền
-                  # thật) — chỉ console.error. Đã nối vào TOÀN BỘ route admin hiện có
-                  # (deposits/withdrawals/disputes/verifications/products/categories/
-                  # escrow-release/auction-resolve) và mọi route admin mới xây trong Admin
-                  # Control Center.
-    auction.ts    # resolveAuctionSlot(slot) — logic chọn người thắng (bid cao nhất mà
-                  # seller đủ tiền), trừ ví, gắn featuredUntil, đóng slot cũ + mở slot kế
-                  # tiếp cùng vị trí. Tách riêng khỏi route để DÙNG CHUNG giữa
-                  # POST /api/admin/auction/resolve (quét mọi slot hết hạn) và
-                  # POST /api/admin/auction/slots/[id]/close-now (ép đóng 1 slot cụ thể
-                  # ngay lập tức, bất kể còn hạn) — tránh trùng lặp logic 2 nơi.
-    referral.ts   # generateReferralCode()/ensureReferralCode() — sinh mã
-                  # affiliate 8 ký tự, retry khi trùng unique constraint
-    slug.ts, format.ts, totp.ts
-    email.ts      # sendPasswordResetEmail() qua Resend — env-gated
-                  # RESEND_API_KEY, thiếu key thì log link ra console thay vì
-                  # gửi thật (dùng cho luồng quên mật khẩu)
-    payment/vnpay.ts  # tạo URL thanh toán + xác thực chữ ký trả về (HMAC-SHA512)
-    payment/deposit.ts  # getBankInfo()/getUsdtInfo() — đọc env, trả null nếu
-                        # thiếu cấu hình (bank/USDT nạp tiền thủ công)
+    page.tsx, danh-muc/, san-pham/, shop/, nguoi-ban/, tim-kiem/, dau-gia/,
+    dien-dan/, lay-2fa/, cau-hoi-thuong-gap/, dieu-khoan-*, chinh-sach-bao-mat/,
+    sitemap-trang-web/, tai-lieu-api/       # trang công khai (Server Components)
+    dang-nhap/, quen-mat-khau/, gio-hang/, don-hang/, nap-tien/, tin-nhan/,
+    ho-so-ca-nhan/, tro-thanh-nguoi-ban/     # trang cần đăng nhập (metadata noindex)
+    trang-ban-hang/           # (SELLER/ADMIN) dashboard người bán đầy đủ — xem
+                                # layout.tsx (guard) + từng trang con (san-pham,
+                                # don-san-pham, don-dich-vu, rut-tien, quy-bao-hiem,
+                                # danh-gia, dat-truoc, ma-giam-gia, khieu-nai,
+                                # telegram-bot, quang-ba, ho-so). Các thư mục
+                                # `demo-*` là bản demo tĩnh dùng để duyệt thiết kế
+                                # trước khi xây thật (KHÔNG phải trang thật).
+    admin/                     # Admin Control Center — shell riêng (theme tối
+                                # `.admin-shell`, KHÔNG dùng Header/Footer site
+                                # mua sắm). 18 trang con — xem
+                                # docs/ARCHITECTURE.md §14 để biết đủ danh sách +
+                                # route API đứng sau từng mục.
+    api/                        # toàn bộ backend — xem docs/ARCHITECTURE.md để
+                                  # biết route nào làm gì (không liệt kê lại ở đây,
+                                  # danh sách quá lớn và đổi thường xuyên)
+    robots.ts, sitemap.ts      # SEO — xem docs/ARCHITECTURE.md §15
+    globals.css                # design tokens Tailwind v4 (`@theme inline`) +
+                                  # theme tối riêng cho admin (biến `--adm-*`)
+  components/                  # 1 component/file, PascalCase trùng tên file.
+                                # admin/ = component riêng Admin Control Center
+                                # (dùng token --adm-*). admin-demo/ = bộ UI-kit
+                                # AdminDemoKit dùng chung giữa bản demo & trang
+                                # thật (Card/Button/StatusBadge/DataTable...).
+                                # seller-demo/ = tương tự cho demo trang seller.
+  context/CartContext.tsx      # giỏ hàng client — snapshot sản phẩm, localStorage
+  data/                        # nguồn seed (categories.ts, products.ts) — KHÔNG
+                                # import trực tiếp trong trang, chỉ dùng bởi seed.ts
+  lib/                         # toàn bộ logic nghiệp vụ dùng chung — xem
+                                # docs/ARCHITECTURE.md để biết hàm nào làm gì.
+                                # File đáng chú ý: queries.ts (mọi fetch Prisma
+                                # cho trang công khai — mapProduct() KHÔNG BAO GIỜ
+                                # đưa field nhạy cảm ra ngoài), authz.ts (require*),
+                                # warranty.ts, escrow.ts, auction.ts,
+                                # commission.ts, platform-fee.ts, service-crypto.ts,
+                                # constants.ts (mọi hằng số + union type trạng thái)
 scripts/
-  screenshot.mjs # script Playwright dùng cho `npm run screenshot`
+  screenshot.mjs               # Playwright cho `npm run screenshot`
+docs/
+  ARCHITECTURE.md               # tài liệu vận hành đầy đủ — ĐỌC TRƯỚC KHI SỬA
+                                  # logic nghiệp vụ bất kỳ hệ thống nào
 ```
 
-Trang danh mục/sản phẩm/shop/trang chủ đều gắn `export const dynamic =
-"force-dynamic"` vì dữ liệu (tồn kho, đã bán, số dư ví...) thay đổi liên tục —
-không dùng `generateStaticParams`/SSG cho các trang này nữa.
-
-## Design System (dựa trên ảnh tham khảo shopmini.pro)
-
-Phong cách: **hiện đại, chuyên nghiệp, độ tương phản cao**, đặc trưng của các site
-marketplace bán tài khoản/dịch vụ số tại VN — mật độ thông tin cao, tín hiệu tin
-cậy rõ ràng (đánh giá sao, số lượng còn hàng), CTA nổi bật.
-
-### Main content container
-
-Toàn bộ trang dùng chung 1 bề rộng container (`mx-auto max-w-7xl`, 14 chỗ
-dùng trong Header/Footer/các trang) — canh giữa, giới hạn bề ngang nội dung
-trên màn hình rộng. Giá trị **đã chỉnh +15%** so với mặc định Tailwind: thay
-vì sửa `max-w-7xl` → `max-w-[...]` ở từng file, ghi đè biến theme
-`--container-7xl: 92rem` (80rem gốc × 1.15) trong `@theme inline` của
-`globals.css` — Tailwind v4 dùng namespace `--container-*` để định nghĩa quy
-mô cho mọi utility `max-w-*`/`w-*` cùng scale, nên 1 dòng áp dụng đồng loạt
-cho toàn site, không cần sửa từng component. Muốn đổi lại kích thước
-container: chỉ sửa biến này, **không** thêm `max-w-[...]` rải rác.
-
-### Bảng màu
-
-- **Primary — Xanh chuối non** (`#8DC63F` nền chính / `#6FA82E` đậm dùng cho
-  hover-border-brand-dark/text nhấn / `#D4EDA6` nhạt dùng cho nền overlay
-  `bg-brand-light`): dùng cho banner, nút CTA, badge giá, icon danh mục nổi
-  bật, viền sản phẩm. Đổi từ tông vàng/gold ban đầu (`#FFC700`) sang xanh lá
-  chuối non theo yêu cầu — toàn bộ 3 biến `--color-brand`/`--color-brand-dark`/
-  `--color-brand-light` khai báo tập trung trong `src/app/globals.css`, mọi
-  chỗ dùng qua utility `bg-brand`/`text-brand`/`border-brand`(-dark/-light)
-  tự động đổi màu theo, không cần sửa từng component.
-- **Nền tối — Đen/Navy đậm** (`#111111` – `#1A1A2E`): header trên cùng và footer.
-- **Nền nội dung**: trắng, xen kẽ dải xám nhạt cho các hàng sản phẩm (dễ đọc khi
-  danh sách dài).
-- Dùng xanh chuối non làm điểm nhấn có chủ đích (giá, nút mua, badge khuyến
-  mãi, viền sản phẩm) — tránh phủ tràn lan gây rối mắt. Vài chỗ trước đây
-  hardcode Tailwind `amber-*`/`yellow-*` thay vì dùng biến (viền hover thẻ sản
-  phẩm, badge "Tài trợ", label "Chọn danh mục", tab sắp xếp đang chọn, icon
-  đồng hồ "last active"...) đã đổi hết sang `border-brand-dark`/`text-brand-dark`/
-  `bg-brand` — xem lịch sử để biết danh sách đầy đủ nếu cần đối chiếu.
-
-### Bố cục Header (đã đo pixel-chính-xác từ shopmini.pro)
-
-Header gồm 3 lớp xếp chồng. Kích thước lấy từ `getBoundingClientRect()` /
-`getComputedStyle()` trực tiếp trên shopmini.pro (viewport 1280px) để khớp
-tỉ lệ thật, không áng chừng:
-
-1. **Ticker** nền tối: cao ~22px, `text-sm` (14px), ẩn trên mobile.
-2. **Thanh chính nền brand** (xanh chuối non, trước đây vàng): cao **56px**
-   (`h-14 sm:h-[56px]`). Logo = icon
-   `logo-mark.png` (36-40px, bo góc, nền đen) + chữ **"MARKETMMO"** (không có
-   ".PRO" — bỏ theo yêu cầu). Thanh tìm kiếm cao đúng **40px** (`h-10`). Nút
-   **"Đăng nhập" nền đen chữ trắng** đứng trước, **"Đăng ký" nền trắng viền
-   đen** đứng sau (khớp thứ tự màu của shopmini.pro — lưu ý dễ làm ngược).
-   Cả 2 đều trỏ `/dang-nhap`, riêng "Đăng ký" thêm `?tab=register` để mở
-   thẳng đúng tab đăng ký (xem `AuthForms.tsx` bên dưới). Trên mobile, ô tìm
-   kiếm xuống hàng riêng full-width bên dưới logo/icon.
-3. **Thanh nav nền trắng**: cao đúng **50px** (`h-[50px]`), chữ **16px
-   (`text-base`) font-semibold** (không phải `text-sm` 14px như bản cũ). Thứ
-   tự: Trang chủ, **Sản phẩm ⌄**, **Dịch vụ ⌄**, **Nạp tiền ⌄** (3 mục có
-   dropdown hover — xem `NavMegaMenu` bên dưới), Đơn Hàng, Lấy 2FA, Kiếm
-   tiền, Diễn đàn … rồi **badge trái động** và **"Danh Sách Seller"** bên phải,
-   mỗi chữ bọc riêng trong **badge nền brand (`bg-brand`) chữ đen (`text-ink`),
-   bo tròn `rounded-full`** — hai badge tách biệt, không dùng chung một khung
-   (theo yêu cầu tường minh, đừng gộp lại). Cùng pattern với badge "HOT" ở
-   panel Sản phẩm nổi bật. Trên mobile gộp vào menu hamburger (dạng danh sách
-   phẳng), 2 badge này vẫn giữ style nền brand/chữ đen riêng, kích thước theo
-   nội dung (`w-fit`) chứ không kéo full-width như các link khác trong menu.
-
-   **Badge trái động theo vai trò** (`Header.tsx`, biến `isSeller`/
-   `sellerBadgeHref`/`sellerBadgeLabel`): mặc định hiện **"Đăng Ký Bán Hàng"**
-   trỏ `/tro-thanh-nguoi-ban` (chưa đăng nhập, hoặc đã đăng nhập nhưng vẫn là
-   BUYER thường). Ngay khi `session.user.role` là `SELLER`/`ADMIN` (đã đăng
-   ký bán hàng thành công), badge tự đổi thành **"Quản Lý Bán Hàng"** trỏ
-   thẳng `/trang-ban-hang` — cùng 1 vị trí/style, không thêm badge mới, tránh
-   hiện nút "Đăng Ký Bán Hàng" vô nghĩa với người đã là seller. Áp dụng đồng
-   bộ cả desktop nav lẫn menu mobile (dùng chung 2 biến, không lặp logic).
-
-### Dropdown hover (`NavMegaMenu`)
-
-`src/components/NavMegaMenu.tsx` — mega-menu CSS thuần (`group` +
-`group-hover`, không cần state/JS), tái tạo hành vi hover-dropdown của
-shopmini.pro cho 3 mục **Sản phẩm / Dịch vụ / Nạp tiền**:
-
-- **Sản phẩm**: lưới 2 cột, đủ 10 category thật từ `src/data/categories.ts`
-  (icon emoji + tên), trỏ tới `/danh-muc/[slug]`.
-- **Dịch vụ**: do MarketMMO chưa tách bảng "dịch vụ" khỏi "sản phẩm" trong
-  schema, 4 mục trỏ vào các category liên quan (Boosting, ChatGPT, YouTube)
-  — không bịa trang mới.
-- **Nạp tiền**: "Nạp tiền ngay" + "Lịch sử giao dịch", cả hai đều trỏ tới
-  `/nap-tien` vì trang ví đã gộp cả 2 phần trên cùng 1 trang
-  (`DepositPanel`).
-- Nội dung dropdown ở shopmini.pro dùng nhãn/số lượng riêng của họ (Email,
-  Khác, Phần mềm, Tài Khoản...) — **không copy nguyên nhãn đó** vì không khớp
-  category thật của MarketMMO; chỉ tái tạo đúng **kiểu tương tác** (hover mở
-  mega-menu góc bo, shadow, chevron xoay 180°).
-
-### Logo thương hiệu
-
-- `public/logo-mark.png` — icon hexagon "MM" (bạc/xanh lá, nền đen; nửa phải
-  trước đây vàng/gold, đã hue-shift sang xanh lá khớp `--color-brand` khi đổi
-  tông màu thương hiệu — script tạm dùng `sharp` đọc HSL từng pixel, chỉ xoay
-  hue vùng có hue vàng/cam ~15-65° sang 120° và giữ nguyên saturation/
-  lightness để không mất hiệu ứng đổ bóng 3D gốc, đã xoá sau khi chạy xong)
-  đã cắt riêng từ ảnh gốc, dùng cho **Header**, **Footer**, và favicon
-  (`src/app/icon.png` — quy ước Next.js App Router, tự sinh route
-  `/icon.png`, không cần khai báo `metadata.icons`).
-- `public/logo-full.png` — ảnh logo gốc đầy đủ (icon + wordmark "MARKETMMO" +
-  tagline "DIGITAL ASSETS MARKETPLACE"), cũng đã hue-shift đồng bộ, giữ lại
-  làm tài sản thương hiệu cho các nhu cầu sau này (ảnh chia sẻ mạng xã hội,
-  trang giới thiệu...), hiện
-  chưa dùng trực tiếp trong UI.
-- Khi thay logo mới: thay 2 file này (giữ nguyên tên) là đủ, không cần sửa
-  code — Header/Footer/favicon đều tham chiếu qua đường dẫn cố định.
-
-### Bố cục trang chủ (`/`)
-
-Banner quảng cáo 2 khối (dark + xanh lá) → carousel "Sản phẩm nổi bật" (badge TÀI
-TRỢ) → carousel "Các Seller Nổi Bật" → tabs danh mục (Tất cả/Sản phẩm/Dịch vụ +
-chip từng category kèm số lượng) → thanh tiêu đề brand "DANH SÁCH SẢN PHẨM" →
-grid sản phẩm → pagination → tag cloud "Tìm kiếm phổ biến" → banner tuân thủ
-pháp luật → footer.
-
-`PromoBanner.tsx` (`"use client"`) render 2 khối (trái/phải), **mỗi khối tự
-động luân phiên giữa 2 ảnh** (component `BannerSlot`, `setInterval` 5s) —
-không còn là 2 khối CSS gradient/text dựng tay, và không còn chỉ 1 ảnh
-tĩnh/khối nữa. Khung hiển thị hiện **dẹt ngang** (`aspect-[872/334]` trái /
-`aspect-[877/334]` phải — chiều cao đã chủ động thu còn 50% so với chiều cao
-gốc 668px của ảnh nguồn theo yêu cầu, chiều ngang giữ nguyên).
-
-**Chuyển ảnh kiểu trượt ngang (slide) + kéo chuột/vuốt tay thủ công** (thay
-cho crossfade opacity ban đầu, theo yêu cầu người dùng): track `flex` chứa
-toàn bộ ảnh, dịch chuyển bằng `transform: translateX(...)` — mỗi ảnh rộng
-đúng `(100/count)%` của track, `transform 700ms ease` khi tự động chuyển
-(index tăng → track trượt sang trái, ảnh mới trượt vào từ bên phải). Kéo
-chuột/vuốt tay dùng **Pointer Events** (`onPointerDown/Move/Up/Leave/Cancel`,
-1 API dùng chung cho cả mouse lẫn touch) — trong lúc kéo tắt `transition`
-(theo sát ngón tay/con trỏ tức thời qua state `dragPx` cộng thẳng vào
-`translateX`), nhả tay tính tỷ lệ khoảng đã kéo so với bề rộng khung
-(`DRAG_THRESHOLD_RATIO = 0.15`): vượt 15% mới đổi ảnh (kéo trái → ảnh sau,
-kéo phải → ảnh trước, có `modulo` nên ảnh cuối kéo tiếp sẽ vòng về ảnh đầu),
-chưa đủ thì bật lại đúng ảnh cũ. Dùng `ref` (`pausedRef`, không phải state)
-để tạm dừng auto-rotate trong lúc kéo mà không cần huỷ/tạo lại `setInterval`
-— interval vẫn chạy nền, chỉ bỏ qua tick nào rơi đúng lúc đang kéo. 2 khối
-trái/phải kéo **độc lập nhau** (mỗi `BannerSlot` tự quản lý state riêng).
-
-4 ảnh (`public/banner-home-left-1.jpg`, `-left-2.jpg`, `-right-1.jpg`,
-`-right-2.jpg`, JPEG chất lượng 90, ~75-110KB/ảnh) cắt ra từ 1 ảnh lưới 2×2
-do AI tạo (người dùng cung cấp), dùng `sharp` `.extract()` theo toạ độ dò
-pixel (đo khoảng trắng mảnh phân cách 4 ô trong ảnh gốc). Ảnh nguồn (~996-
-1011px rộng) **không cùng tỉ lệ khung** với khung banner hiện tại (872-877 :
-334) — ảnh hàng trên (`-1.jpg`, tỉ lệ ~2.25-2.29:1) hẹp hơn khung nên bị
-`object-cover` crop trên-dưới; ảnh hàng dưới (`-2.jpg`, tỉ lệ ~3.10-3.15:1)
-rộng hơn khung nên bị crop 2 bên trái-phải. Vì nội dung quan trọng (logo/
-tiêu đề) luôn nằm ở góc trên-trái mọi ảnh, đã set `object-top` cho 2 ảnh
-hàng trên và `object-left` cho 2 ảnh hàng dưới (thay vì crop-giữa mặc định)
-để tránh cắt mất chữ đầu dòng — bug thật đã gặp và sửa: ban đầu dùng crop-
-giữa mặc định làm mất chữ "F" của "FLASH SALE"/"B" của "Bảo vệ tuyệt đối",
-sau khi đổi `object-left` mới hiện đầy đủ (đổi lại nút CTA bên phải bị crop
-một phần — đánh đổi chấp nhận được vì tiêu đề quan trọng hơn nút bấm).
-
-Khi thay banner mới: cắt ảnh mới đè lên đúng 4 file này (giữ nguyên tên) là
-đủ. Nếu ảnh mới có tỉ lệ khung khác, cân nhắc lại `object-top`/`object-left`
-cho từng ảnh trong `PromoBanner.tsx` thay vì giữ nguyên mù quáng.
-
-### "Sản phẩm nổi bật" (`FeaturedProductsPanel` + `FeaturedCarousel`)
-
-Kích thước gốc đo trực tiếp trên shopmini.pro (không áng chừng): khung bọc
-`border-radius: 10px`, `padding: 20px` (khớp `.search-container` của họ);
-ảnh sản phẩm trong mỗi thẻ ban đầu 176×176px khớp bản gốc, sau đó **phóng to
-thêm +25% theo yêu cầu** (176→220px, thẻ 192→240px) — toàn bộ chi tiết trong
-thẻ (badge, avatar seller, chữ tên/giá/đã bán, icon giỏ hàng, khoảng cách
-giữa các thẻ) scale đồng bộ theo cùng tỉ lệ 1.25× ở bước này. Sau đó chỉnh
-tiếp lần 2 theo yêu cầu: **thu hẹp bề ngang 15%, tăng chiều cao 15%** — chỉ
-áp dụng lên khung ảnh + bề rộng thẻ (220→187px / 240→204px ngang, ảnh
-220→253px cao), **không** thu nhỏ lại chữ/badge/icon ở bước này (khác bước
-+25% trước đó vốn scale toàn bộ). Thẻ hiện có dáng **thon dọc** (portrait)
-thay vì gần vuông. Kích thước hiện tại không còn khớp 1:1 với shopmini.pro —
-là lựa chọn có chủ đích của bạn qua nhiều bước chỉnh liên tiếp, không phải
-sai lệch. Xem lịch sử giá trị chính xác trong `FeaturedCarousel.tsx`.
-Carousel **tự động trôi liên tục từ trái sang phải, lặp vô
-hạn** (`.animate-marquee-right` trong `globals.css`) — không còn nút mũi tên
-cuộn tay; track chứa nội dung nhân đôi (`[...items, ...items]`) để loop liền
-mạch không giật, dừng lại khi hover (`animation-play-state: paused`) để
-người dùng có thể bấm vào thẻ, và tự tắt animation khi
-`prefers-reduced-motion`. Tốc độ tỉ lệ theo số lượng sản phẩm
-(`max(18s, items.length * 4s)`) để nhịp trôi luôn đều.
-
-### "Các Seller Nổi Bật" (`SellerFeaturedPanel` + `SellerCarousel`)
-
-Section riêng ngay dưới "Sản phẩm nổi bật" trên trang chủ, lấy dữ liệu qua
-`getAllSellersWithStats()`. Theo yêu cầu tường minh: **khung bọc và kích
-thước từng thẻ bên trong bằng y hệt** `FeaturedProductsPanel`/`FeaturedCard`
-(cùng `rounded-[10px] border p-4/p-5`, thẻ `w-[187px] sm:w-[204px]`, khung
-ảnh `h-[253px]`), **tiêu đề cùng cỡ chữ/màu** (`text-[14.4px] font-black
-text-ink` trong badge nền brand `bg-brand` bo tròn, giống hệt tiêu đề "Sản
-Phẩm Nổi Bật" — chỉ đổi icon từ ảnh lửa sang icon `Store` màu đỏ, vì đây là
-yêu cầu áp dụng cho phần chữ/badge, không bắt buộc icon). Mỗi thẻ hiển thị
-chữ cái đầu tên shop (thay cho emoji category), badge "ĐÃ XÁC THỰC"/"SELLER",
-số level, rating trung bình (sao đỏ) và số sản phẩm — cùng hệ thống cỡ chữ
-15px/13px với `FeaturedCard`.
-
-Carousel trôi **ngược chiều** — phải sang trái
-(`.animate-marquee-left` trong `globals.css`, keyframe ngược với
-`.animate-marquee-right`) — **cùng tốc độ px/giây** với "Sản phẩm nổi bật".
-Lưu ý quan trọng: `SellerCarousel` **không** dùng sàn tối thiểu `max(18s,
-...)` như `FeaturedCarousel`, chỉ dùng thuần `items.length * 4` — vì danh
-sách seller thường ngắn hơn sản phẩm nổi bật (ví dụ 4 so với 8), nếu áp cùng
-sàn 18s thì 2 carousel sẽ lệch tốc độ (đã đo bằng Playwright: lệch ~55 vs
-~47px/s trước khi bỏ sàn, ~55 vs ~55px/s sau khi bỏ). Công thức `n * 4` giữ
-tốc độ px/giây không đổi bất kể số lượng phần tử vì bề rộng track và duration
-cùng tỉ lệ thuận với `n` — chỉ `FeaturedCarousel` cần sàn 18s vì danh sách
-sản phẩm nổi bật đủ dài để hiếm khi chạm sàn.
-
-Kỹ thuật marquee nhân đôi track (`[...items, ...items]`, chạy 0% → -50%) chỉ
-liền mạch khi **một bản sao** đã đủ rộng để lấp đầy khung nhìn — nếu danh
-sách quá ngắn (bug thật đã gặp: chỉ 4 seller ~876px trong khi khung panel
-~1174-1400px), phần rìa phải của bản sao thứ 2 bị hở ra khoảng trắng khi
-track dịch gần tới -50%. Khắc phục bằng cách lặp lại `items` thành 1 "block"
-đủ rộng (`Math.ceil(1600 / (items.length * 219))` lần, mốc 1600px ứng với
-`--container-7xl` + biên an toàn) rồi mới nhân đôi **block** đó để cuộn vô
-hạn — xem `SellerCarousel.tsx`. Vì bề rộng block và duration
-(`block.length * 4`) cùng tỉ lệ thuận theo số lần lặp, tốc độ px/giây vẫn
-khớp với "Sản phẩm nổi bật" sau khi lặp (đã đo lại: bản sao rộng 1744px >
-khung nhìn 1174px, không còn khoảng trắng). Nếu sau này thêm carousel dạng
-marquee khác với danh sách có thể ngắn, áp dụng lại kỹ thuật lặp-thành-block
-này thay vì nhân đôi trực tiếp danh sách gốc.
-
-### Bố cục trang danh mục (`/danh-muc/[slug]`) — khớp ảnh tham khảo
-
-Breadcrumb → layout 2 cột: **sidebar trái** (Bộ lọc theo danh mục, tình trạng
-kho, widget "Bài viết tham khảo") + **nội dung phải** (tiêu đề danh mục, thanh
-tiêu đề brand + bộ lọc sắp xếp, grid sản phẩm, pagination, đoạn mô tả danh mục).
-
-### Khối "Mô tả / Tích hợp API / Đánh giá" (trang chi tiết sản phẩm)
-
-`ProductInfoTabs.tsx` (`"use client"`, tách riêng khỏi `san-pham/[slug]/
-page.tsx` vì cần state — trang cha vẫn là Server Component) — **tab bấm-
-chuyển-nội-dung thật** (state `tab`, chỉ 1 nội dung hiện tại 1 thời điểm,
-đã thử qua bản "hiện cả 3 cùng lúc chia 3 cột" trước đó nhưng người dùng yêu
-cầu đổi lại thành tab). 3 nút tab chia đều `grid-cols-3`, tab đang chọn tô
-`bg-ink text-white`, còn lại `bg-brand text-ink`, mỗi nội dung dùng dữ liệu
-thật — không dùng dữ liệu giả:
-- **MÔ TẢ SẢN PHẨM**: `product.description` (prop `description`).
-- **TÍCH HỢP API**: đoạn giới thiệu ngắn + link tới trang `/tai-lieu-api` có
-  sẵn của site (không tạo nội dung API mới, chỉ trỏ tới trang thật).
-- **ĐÁNH GIÁ (REVIEWS)**: `RatingStars` + `product.rating`/`reviewCount`
-  (số tĩnh từ seed, xem ghi chú ở mục "Domain" cuối file, prop `rating`/
-  `reviewCount`) + link `sellerShopHref` (`/shop/[seller]`) xem đánh giá đầy
-  đủ của gian hàng, **và bên dưới là danh sách bình luận thật + form gửi
-  đánh giá** — tái dùng nguyên `ReviewForm.tsx`/`GET getSellerReviews()`/
-  `POST /api/reviews` đã có sẵn từ trang shop (`/shop/[seller]`), KHÔNG xây
-  hệ thống review theo từng sản phẩm riêng. Nghĩa là bình luận hiện ở đây là
-  đánh giá **theo cả gian hàng** (mọi sản phẩm của seller đó dùng chung 1
-  danh sách bình luận), không phải riêng cho sản phẩm đang xem — cùng giới
-  hạn nghiệp vụ đã ghi ở mục "Domain" (`Product.rating`/`reviewCount` tĩnh
-  và hệ thống Review thật vẫn tách theo Seller). `Product.sellerId` (field
-  mới thêm vào type `Product` + `mapProduct()`, chỉ có khi fetch qua
-  `getProductBySlugDb`) dùng để gọi `getSellerReviews(sellerId)` và truyền
-  `sellerId` cho `<ReviewForm>` biết gửi đánh giá vào đúng seller nào. Điều
-  kiện gửi được bình luận giữ nguyên như trang shop: phải đăng nhập **và**
-  đã từng mua hàng từ seller đó (không cứ phải mua đúng sản phẩm này).
-
-### Thẻ sản phẩm (`ProductCard`)
-
-Dạng thẻ ngang trong grid 2-3 cột (không phải hàng full-width): ảnh/icon vuông
-bên trái kèm badge danh mục + badge HOT, bên phải là tên (2 dòng), tên người
-bán + badge "Đã xác thực", mô tả ngắn 1 dòng, kho/đã bán, lượt xem, giá (đỏ,
-có thể là khoảng giá "9.000đ - 12.000đ").
-
-### Footer
-
-Banner tuân thủ pháp luật (nền brand nhạt, `bg-brand-light`) phía trên + footer nền tối 3 cột:
-(1) thương hiệu + mô tả + social, (2) CTA "Đăng ký bán hàng", (3) danh sách
-link hỗ trợ khách hàng. Widget liên hệ nổi cố định góc dưới phải
-(`fixed bottom-5 right-5`, `Footer.tsx` — phải là `"use client"` vì nút lên
-đầu trang cần `onClick`/`window.scrollTo`), chỉ gồm đúng **4 icon tròn ảnh
-thật** (không còn nút "Hỗ trợ" dạng pill chữ, cũng không còn icon tự vẽ bằng
-lucide/CSS gradient của bước trước — đã thay bằng ảnh do người dùng cung
-cấp), kích thước `h-[57px] w-[57px]` (44px gốc +30%), khoảng cách giữa các
-icon `gap-6` (24px, gấp đôi `gap-3` gốc), xếp dọc từ trên xuống: **Zalo**,
-**Messenger**, **Gọi điện**, đường kẻ phân cách mảnh, rồi **lên đầu trang**
-(cuộn mượt `behavior: "smooth"`).
-
-File ảnh: `public/support-zalo.png`, `public/support-messenger.png`,
-`public/support-phone.png`, `public/support-arrow-up.png` — cắt ra từ 1 ảnh
-chụp gốc người dùng gửi (4 icon xếp dọc, mỗi icon hình tròn 64×64px, cách
-nhau đều) bằng `sharp` (`.extract()` theo toạ độ dò được qua quét pixel hàng/
-cột), sau đó khử nền xám nhạt `(246,246,246)` của ảnh chụp gốc thành trong
-suốt (alpha) để icon nổi đúng trên mọi nền trang — xem quy trình tương tự đã
-dùng cho `public/fire-icon.png`. Khi cần thay icon mới: đè trực tiếp 4 file
-này (giữ nguyên tên), không cần sửa `Footer.tsx`.
-
-Cả 3 link Zalo/Messenger/Gọi điện hiện dùng `href="#"` placeholder — giống
-quy ước social Facebook/YouTube/TikTok ở trên, cần thay bằng link Zalo OA /
-Messenger / số điện thoại thật khi có thông tin liên hệ chính thức.
-
-### Nguyên tắc UI
-
-- Font đậm, dễ đọc; tiêu đề thương hiệu có thể viết hoa.
-- Badge/nhãn rõ ràng cho: giảm giá %, HOT, Đã xác thực, TÀI TRỢ.
-- `lucide-react` không có icon logo thương hiệu (Facebook/YouTube/TikTok) —
-  dùng SVG inline riêng, xem `Footer.tsx`.
-- Responsive: grid sản phẩm 3 cột (desktop) → 2 cột (tablet) → 1 cột (mobile);
-  sidebar danh mục chuyển xuống trên cùng ở mobile.
-
-## Backend (đã hiện thực thật)
-
-### Lưu trữ file (`src/lib/uploads.ts`)
-
-Dùng cho ảnh/file đính kèm chat (`Message.attachmentPath`) — **2 chế độ lưu
-trữ song song**, tự chọn theo env, cùng quy ước env-var-gated như
-VNPay/Telegram/Resend trong dự án. **Dùng Blob store RIÊNG với ảnh sản
-phẩm** (token `marketmmo_chat_private_READ_WRITE_TOKEN`, khác
-`BLOB_READ_WRITE_TOKEN` của `saveProductImage`) — 1 store Vercel Blob chỉ
-chọn được `access` public HOẶC private **lúc tạo, không đổi lại được sau**
-(giới hạn thật của Vercel), nên ảnh chat (riêng tư) và ảnh sản phẩm (công
-khai) bắt buộc phải là 2 store khác nhau, không thể dùng chung 1 token như
-thiết kế ban đầu. Tên biến `marketmmo_chat_private_READ_WRITE_TOKEN` (chữ
-thường + gạch dưới, khác quy ước UPPER_CASE) do chính Vercel sinh ra khi kết
-nối store "marketmmo-chat-private" vào project — **giữ nguyên đúng chính
-tả**, không tự đổi cách viết hoa/thường. Vercel sinh kèm 1 biến
-`marketmmo_chat_private_STORE_ID` nhưng code hiện **không dùng tới** (chỉ
-cần khi xác thực bằng OIDC thay vì token tĩnh — xem `chatBlobToken()` trong
-`src/lib/uploads.ts`).
-
-- **Có `marketmmo_chat_private_READ_WRITE_TOKEN`** (bắt buộc khi deploy lên
-  Vercel): lưu qua **Vercel Blob store PRIVATE** (`@vercel/blob`, `access:
-"private"` + `addRandomSuffix: true`) — đọc/ghi đều yêu cầu xác thực token
-  phía server, không có URL public nào lộ ra ngoài dù URL có bị đoán trúng.
-  Giá trị lưu vào DB (`attachmentPath`...) có tiền tố `blob:` + pathname
-  (không phải URL đầy đủ) — đọc lại bằng `get({access:"private", token:
-...})`. Bắt buộc dùng Blob khi deploy Vercel vì filesystem trong môi trường
-  serverless **không lưu trữ lâu dài** — mỗi request/instance có thể chạy
-  trên máy chủ khác, ghi vào ổ đĩa cục bộ dễ mất ngay sau đó hoặc sau lần
-  deploy tiếp theo.
-- **Thiếu token** (dev local mặc định): rơi về ghi ổ đĩa cục bộ, thư mục
-  `/uploads` ở root (NGOÀI `/public`, không commit — xem `.gitignore`). Giá
-  trị lưu vào DB là đường dẫn tương đối.
-- **Dữ liệu cũ (trước khi vá bảo mật)**: một số bản ghi chat cũ vẫn còn lưu
-  URL Blob **public** đầy đủ (`https://...public.blob.vercel-storage.com/...`,
-  từ store public gốc dùng trước khi tách private) — cố tình **KHÔNG
-  migrate**, `readUploadedFile()` vẫn nhận diện tiền tố `http(s)://` và đọc
-  qua `fetch()` bình thường để không mất lịch sử chat cũ. Ảnh chat **mới**
-  từ nay luôn qua store private.
-
-Dù lưu theo chế độ nào, **file không public trực tiếp** — API vẫn luôn tự
-verify quyền xem (`requireSeller`/`requireAdmin`/kiểm tra user thuộc đúng
-hội thoại) rồi mới đọc nội dung qua `readUploadedFile()` (tự nhận diện tiền
-tố `blob:`/`http`/đường dẫn ổ đĩa) và trả về, trình duyệt/client không bao
-giờ nhận được URL/token Blob trực tiếp để tự ý chia sẻ ra ngoài. Khi thay
-đổi nguồn ảnh mới hoặc thêm loại file mới: chỉ cần sửa `src/lib/uploads.ts`,
-không cần đụng vào từng route đọc file.
-
-**Lưu ý kiểu TypeScript**: cài `@vercel/blob` (qua dependency `undici`) làm
-`Buffer`/`Uint8Array` không còn được coi tương thích với `BodyInit` khi
-truyền thẳng vào `new NextResponse(buffer, ...)` (xung đột global type giữa
-`@types/node` và `undici-types` — lỗi biết đến trong cộng đồng Next.js, không
-phải bug thật lúc runtime). Khắc phục bằng ép kiểu tường minh `buffer as
-BodyInit` tại route đọc file (`api/messages/attachments/[messageId]`) — nếu
-thêm route đọc file mới, áp dụng cùng cách ép kiểu này.
-
-### Mô hình dữ liệu (`prisma/schema.prisma`)
-
-- **User**: email/username/passwordHash (bcrypt), `role` (BUYER/SELLER/ADMIN),
-  `walletBalance` (Int, đơn vị VNĐ). Kèm `Account`/`Session`/
-  `VerificationToken` chuẩn Auth.js cho OAuth (Google). `referralCode`
-  (String, nullable + unique) là mã affiliate của chính user đó;
-  `referredById`/`referredBy`/`referrals` (self-relation "Referrals") liên
-  kết người đã mời/được mời. `referralCode` **nullable** dù là tính năng
-  chính — vì dự án dùng `prisma db push` (không có migration), tài khoản có
-  sẵn trước khi thêm tính năng chưa thể backfill mã qua migration; thay vào
-  đó sinh "lười" (lazy) qua `ensureReferralCode()` (`src/lib/referral.ts`)
-  ngay khi user đó vào trang `/affiliate` lần đầu — user đăng ký mới thì có
-  mã ngay lúc tạo tài khoản. `referralRewarded` (Boolean) đặt trên **người
-  được mời** (không phải người mời) — đánh dấu người giới thiệu của họ đã
-  nhận hoa hồng cho riêng lượt mời này chưa, xem mục 9 "Luồng nghiệp vụ
-  chính" để biết điều kiện kích hoạt. `lastActiveAt` (DateTime, nullable) —
-  cập nhật trong callback `jwt()` (`src/auth.ts`): ghi ngay khi có phiên
-  đăng nhập mới (`user` param có giá trị, áp dụng cho cả Credentials lẫn
-  Google), và ghi throttle tối đa 1 lần/2 phút ở nhánh refresh token trên các
-  request tiếp theo — tránh ghi DB mỗi request. Dùng để hiển thị "Online X
-  trước"/"Đang online" ở trang chi tiết sản phẩm qua
-  `formatLastActive()` (`src/lib/format.ts`). `banned`/`bannedReason`/
-  `bannedAt` (Admin > Người dùng, `/admin/nguoi-dung`) — khoá tài khoản: chặn
-  đăng nhập mới (`authorize()` trong `src/auth.ts` throw ngay khi
-  `user.banned`) VÀ chặn mọi hành động cần xác thực ở phiên ĐANG hoạt động
-  (`requireUser()`/`requireSeller()` trong `src/lib/authz.ts` kiểm tra
-  `session.user.banned`, trả 403). Cờ `banned` được đọc lại mỗi lần JWT
-  refresh (nhánh `else if (token.id)` trong callback `jwt()`) nên nếu admin
-  khoá tài khoản GIỮA phiên đang mở, user bị chặn hành động tiếp theo trong
-  vài phút mà không cần đăng xuất/đăng nhập lại — không có cơ chế invalidate
-  session tức thời, đây là đánh đổi có chủ đích (đơn giản, không cần thêm hạ
-  tầng session store). `banned` mặc định `false` (migration-safe).
-- **PasswordResetToken**: 1-nhiều với `User`, phục vụ luồng quên mật khẩu
-  bằng **mã OTP 6 số** (đổi từ link-token ban đầu). `codeHash` (String,
-  **KHÔNG** `@unique` — khác token 256-bit cũ, mã 6 số chỉ có 1 triệu khả
-  năng nên một ràng buộc unique toàn cục sẽ va chạm thật giữa nhiều user
-  khác nhau; tra cứu luôn scope theo `userId`, tìm bằng email trước) lưu
-  **SHA-256 hash** của mã gốc — mã gốc chỉ nằm trong email gửi đi, không lưu
-  trong DB, để rò rỉ DB không thể dùng trực tiếp reset mật khẩu người khác
-  (đánh đổi có chủ đích: SHA-256 không hoàn toàn chống brute-force offline
-  với secret chỉ 1 triệu khả năng như token 256-bit cũ, nhưng giữ nguyên
-  cách xử lý hash hiện có theo đúng yêu cầu, không thêm bcrypt/scrypt cho
-  phạm vi này). `attempts` (Int, mặc định 0) đếm số lần nhập sai — khoá mã
-  khi `>= PASSWORD_RESET_MAX_ATTEMPTS` (5, `src/lib/constants.ts`), buộc xin
-  mã mới. `expiresAt` mặc định +10 phút (`PASSWORD_RESET_CODE_EXPIRY_MINUTES`),
-  `usedAt` đánh dấu đã dùng (chặn tái sử dụng). Tạo mã mới tự xoá mọi mã cũ
-  chưa dùng của cùng user — chỉ 1 mã hiệu lực tại 1 thời điểm.
-  `POST /api/auth/reset-password` nhận `{email, code, password}` trong
-  **cùng 1 request** (không tách bước verify riêng), so khớp hash bằng
-  `crypto.timingSafeEqual` (constant-time, tránh timing side-channel), và
-  dùng **1 message lỗi duy nhất** ("Mã xác nhận không đúng hoặc đã hết
-  hạn.") cho MỌI nhánh thất bại (không tìm thấy user, không có mã hiệu lực,
-  hết hạn, khoá do sai quá số lần, sai mã) — tránh tạo kênh dò xem 1 email
-  có tồn tại/đang có mã hiệu lực hay không, cùng nguyên tắc chống
-  enumeration ở `forgot-password/route.ts`. Cả 2 route đều rate-limit qua
-  `src/lib/rate-limit.ts` theo CẢ IP lẫn email (2 bucket riêng).
-- **Seller**: 1-1 với User đã nâng role SELLER, có `slug` (dùng cho
-  `/shop/[seller]`), `level`. `verified` (Boolean, mặc định `false`) — badge
-  "Đã xác thực" công khai trên gian hàng; **TRƯỚC ĐÂY** set tự động qua quy
-  trình xác thực CCCD (model `SellerVerification`, đã **xoá bỏ hoàn toàn**
-  do liên quan dữ liệu cá nhân nhạy cảm — không còn upload/lưu trữ/duyệt ảnh
-  giấy tờ tuỳ thân nào trong hệ thống). Giờ là cờ admin **tự bật/tắt thủ
-  công** theo đánh giá riêng (Admin > Người bán, `/admin/nguoi-ban`,
-  `PATCH /api/admin/sellers/[id] {action:"verify"|"unverify"}`) — không có
-  quy trình/tiêu chí tự động nào đứng sau field này. `insuranceBalance` (Int, mặc định 0)
-  — số dư quỹ bảo hiểm hiển thị như tín hiệu tin cậy ở trang chi tiết sản
-  phẩm (giống shopmini.pro). Đã có **luồng nạp quỹ bảo hiểm thật** qua
-  `/trang-ban-hang/quy-bao-hiem` (xem mục "Quản Lý Bán Hàng" trong "Luồng
-  nghiệp vụ chính") — khác shopmini.pro, MarketMMO **không chặn cứng** tính
-  năng bán hàng khi seller chưa nạp đủ mức gợi ý (`INSURANCE_FUND_TARGET`,
-  `src/lib/constants.ts`, hiện 300.000đ), chỉ mang tính khuyến khích/tín
-  nhiệm — đây là quyết định phạm vi có chủ đích, xem lý do trong lịch sử.
-  `telegramChatId`/`telegramLinkCode` phục vụ liên kết Telegram Bot
-  (`/trang-ban-hang/telegram-bot`, env-gated `TELEGRAM_BOT_TOKEN`) — xem mục
-  "Luồng nghiệp vụ chính". `suspended`/`suspendedReason`/`suspendedAt`
-  (Admin > Người bán, `/admin/nguoi-ban`) — khoá GIAN HÀNG (khác `User.banned`
-  ở trên: seller vẫn đăng nhập/dùng chat/diễn đàn bình thường, chỉ sản phẩm
-  của họ biến mất khỏi site công khai). Mọi query công khai trả sản phẩm
-  (`getAllProducts`, `getFeaturedProducts`, `getProductsByCategory`,
-  `searchProducts`, `getProductBySlugDb`, `getRelatedProductsDb`) đều lọc
-  thêm `seller: { suspended: false }`; trang gian hàng (`/shop/[seller]`)
-  404 với khách vãng lai khi `suspended=true` (chính seller đó vẫn xem được
-  gian hàng mình để biết lý do). Mặc định `false` (migration-safe).
-- **Category** / **Product**: Product thuộc 1 Category + 1 Seller;
-  `description`/`attributes` lưu dạng JSON string (parse ở `queries.ts`).
-  `Product.price`/`stock`/`sold` là giá trị **mặc định** — chỉ thật sự dùng
-  khi sản phẩm **chưa có** `ProductVariant` nào (tương thích ngược với toàn
-  bộ sản phẩm seed cũ). `preOrder` (Boolean, mặc định false) — seller đánh
-  dấu "sắp có hàng" (`/trang-ban-hang/dat-truoc`), `POST /api/checkout` bỏ
-  qua kiểm tra tồn kho cho sản phẩm này, `stock` có thể xuống âm.
-  `imageUrl` (String, nullable) — ảnh thật do seller upload lúc đăng sản
-  phẩm (xem mục "Đăng sản phẩm mới"), null thì UI fallback về icon category
-  như trước (`ProductThumbnail.tsx`). `status` (`"PENDING"` | `"APPROVED"` |
-  `"REJECTED"`, mặc định **`"APPROVED"`** — cố tình khác
-  `Dispute` (mặc định `"PENDING"`) vì migration thêm field này phải không
-  làm ẩn mất toàn bộ sản phẩm seed cũ đã có sẵn từ trước; API tạo sản phẩm
-  mới set `"PENDING"` tường minh, không dựa vào default) + `adminNote`
-  (String, nullable — lý do admin từ chối, nếu có). Mọi query công khai
-  (`getAllProducts`, `getFeaturedProducts`, `getProductsByCategory`,
-  `searchProducts`, `getProductBySlugDb`, `getRelatedProductsDb`) đều lọc
-  `status: "APPROVED"` — sản phẩm đang chờ duyệt/bị từ chối không hiện ở bất
-  kỳ đâu trên site công khai, kể cả gõ đúng URL slug (404). Riêng
-  `getMySellerProducts()` (trang quản lý sản phẩm của seller) **không lọc
-  status** — seller luôn thấy đủ sản phẩm của mình ở mọi trạng thái kèm badge
-  màu tương ứng (`PRODUCT_STATUS_LABEL` trong `src/lib/constants.ts`).
-  `Category` cũng có `status`/`adminNote` cùng pattern (mặc định `"APPROVED"`
-  cùng lý do migration-safety) + `proposedById` (nullable, `onDelete:
-  SetNull`) trỏ tới `Seller` đã đề xuất — xem mục "Seller tự đề xuất danh
-  mục mới". `getAllCategories()` lọc `status: "APPROVED"` (dùng ở mọi nơi
-  công khai); `getSellerVisibleCategories()` lọc `status: { in: ["APPROVED",
-"PENDING"] } }` (dùng riêng cho dropdown chọn danh mục khi seller đăng sản
-  phẩm, để họ chọn được cả category đang chờ duyệt).
-- **ProductVariant**: phiên bản/gói do seller tự thêm cho sản phẩm CỦA MÌNH
-  (vd Gmail: "Domain .US - Thuê 24h - Tên Việt" vs "Domain .Com - Thuê 24h"),
-  mỗi variant có `label`/`price`/`stock`/`sold` riêng, `sortOrder` tăng dần
-  theo thứ tự thêm. Khi `Product.variants.length > 0`, trang chi tiết sản
-  phẩm (`BuyBox.tsx`) **bắt buộc chọn 1 variant** trước khi mua — giá/kho
-  hiệu lực lấy từ variant đã chọn, ô mô tả ngắn (`shortDescription`) bị ẩn đi
-  nhường chỗ cho lưới chọn variant. Quản lý qua `/quan-ly-san-pham` (seller
-  tự thêm/xoá, **chưa có** sửa hàng loạt — trang này chỉ thêm variant cho
-  sản phẩm đã tồn tại; tạo sản phẩm GỐC mới xem mục "Đăng sản phẩm mới").
-- **ProductStockItem**: kho dữ liệu giao hàng THẬT — mỗi dòng là 1 đơn vị nội
-  dung (`content`, vd 1 dòng "email|password|2fa") có thể giao cho đúng 1
-  buyer, gắn vào `Product` hoặc `ProductVariant` cụ thể (`variantId`
-  nullable). `status` (`"AVAILABLE"` | `"SOLD"`) — checkout tự "claim" đúng
-  số lượng bản ghi `AVAILABLE` bằng `SELECT ... FOR UPDATE SKIP LOCKED` rồi
-  gắn `orderItemId`. Sản phẩm/variant chỉ chuyển sang "chế độ kho thật" khi
-  đã có `>=1` bản ghi (kiểm tra bằng COUNT, không cần cờ boolean riêng) —
-  180+ sản phẩm cũ/mọi sản phẩm chưa từng nhập kho vẫn hoạt động y hệt trước
-  đây (`stock` chỉ là số seller tự gõ, `OrderItem.deliveredPayload` null).
-  `variantId` dùng `onDelete: SetNull` (không Cascade) để bản ghi ĐÃ BÁN
-  không mất khi variant bị xoá — xem mục "Kho dữ liệu giao hàng thật" trong
-  "Luồng nghiệp vụ chính" để biết chi tiết cơ chế claim + xử lý xoá variant.
-- **Order** / **OrderItem**: 1 Order có nhiều OrderItem (đa người bán trong
-  cùng 1 đơn — đúng bản chất multi-vendor). Mỗi OrderItem có `status` và
-  `escrowReleaseAt` **riêng** vì mỗi item có thể thuộc seller khác nhau với
-  thời điểm giải ngân khác nhau. `variantId`/`variantLabel` snapshot variant
-  đã mua (nếu có) — `variantId` set `onDelete: SetNull` (không cascade) để
-  seller xoá variant sau này không làm mất lịch sử đơn hàng, `variantLabel`
-  vẫn hiển thị đúng tên variant tại thời điểm mua dù variant gốc đã bị xoá.
-  `Order.discountCode`/`discountAmount` ghi lại mã giảm giá ĐÃ ÁP DỤNG cho
-  đơn (nếu có) — chỉ mang tính hiển thị/audit, không dùng để tính lại tiền.
-  `OrderItem.dispute` (1-1 optional) liên kết tới `Dispute` nếu đang bị
-  khiếu nại (status chuyển `DISPUTED`, loại khỏi vòng giải ngân tự động).
-- **DiscountCode**: mã giảm giá do seller tự tạo (`/trang-ban-hang/ma-giam-gia`),
-  áp dụng cho **toàn bộ sản phẩm của chính seller đó** — không giảm chéo
-  sang sản phẩm seller khác trong cùng giỏ hàng. `type` (PERCENT/FIXED),
-  `maxUses` nullable (null = không giới hạn), `usedCount` tăng NGAY TRONG
-  `$transaction` của `POST /api/checkout` (tránh race condition 2 checkout
-  cùng dùng 1 mã `maxUses=1` cùng lúc). Logic tính/chia số tiền giảm nằm ở
-  `src/lib/discount.ts`, xem mục "Luồng nghiệp vụ chính" để biết chi tiết
-  bug đã bắt được và sửa (làm tròn số tiền giảm theo dòng hàng).
-- **Dispute**: khiếu nại 1-1 với `OrderItem` (`@@unique` qua `orderItemId`),
-  `openedById` là buyer HOẶC seller của đơn đó. `status`: OPEN →
-  RESOLVED_REFUND (admin hoàn 100% tiền buyer) hoặc RESOLVED_RELEASE (admin
-  giải ngân seller) — không có hoàn tiền một phần.
-- **WalletTransaction**: ghi nhận mọi biến động ví — `type` (DEPOSIT/
-  PURCHASE/PAYOUT/REFUND/REFERRAL_BONUS/WITHDRAW/INSURANCE_DEPOSIT),
-  `status` (PENDING/CONFIRMED/REJECTED). Đây là **sổ cái duy nhất** cho ví;
-  `User.walletBalance` là số dư cache, luôn được cập nhật đồng thời trong
-  cùng transaction Prisma với mỗi thay đổi.
-- **Conversation / Message**: chat (`/tin-nhan`) giữa 2 `User` bất kỳ —
-  `userAId`/`userBId` LUÔN chuẩn hoá (id nhỏ hơn xếp vào `userAId`) khi
-  tạo/tìm hội thoại (`getOrCreateConversation()`,
-  `src/lib/system-bot.ts`), `@@unique([userAId, userBId])` đảm bảo 1 cặp
-  user chỉ có đúng 1 `Conversation`. Không dùng khái niệm buyer/seller cứng
-  vì hội thoại với bot "Hệ Thống" (xem mục 12 "Luồng nghiệp vụ chính") không
-  khớp khung đó — bot chỉ là 1 `User` bình thường được lazy-init, không có
-  role riêng. `Message.attachmentPath`/`attachmentName`/`attachmentType`
-  (nullable) — ảnh/file đính kèm tuỳ chọn, lưu ngoài `/public`
-  (xem `saveChatAttachment()`, `src/lib/uploads.ts`).
-- **Review**: đánh giá **1-5 sao + bình luận** của người mua dành cho **Seller**
-  (không phải từng Product). `@@unique([sellerId, userId])` — mỗi người chỉ
-  đánh giá 1 lần/gian hàng (gửi lại sẽ ghi đè đánh giá cũ, không tạo bản
-  ghi trùng). Rating trung bình/tổng số đánh giá tính động (aggregate) ở
-  `queries.ts`, không lưu cache trên `Seller`.
-- **AuctionSlot / AuctionBid**: hệ thống đấu giá "vị trí vàng" — seller trả
-  giá để sản phẩm của mình hiện trong carousel "Sản phẩm nổi bật" ở trang
-  chủ trong một khoảng thời gian (mô phỏng đúng cơ chế của shopmini.pro, đối
-  chiếu trực tiếp từ trang `/dau-gia` của họ, không phải suy đoán). 6 vị trí
-  cố định: `position` 1-4 = `period` "WEEKLY" (thắng thì hiện 1 tuần),
-  `position` 5-6 = "DAILY" (thắng thì hiện 1 ngày). `AuctionBid` nhiều-1 với
-  `AuctionSlot`; giá cao nhất khi slot hết hạn (`endAt <= now`) thắng.
-  `Product.featuredUntil` (DateTime, nullable) được set khi thắng — đây là
-  cờ **khác** với `Product.hot` (sản phẩm được admin gắn cứng làm "TÀI TRỢ"
-  qua seed, không qua đấu giá). `getFeaturedProducts()` gộp cả hai (`hot=true
-OR featuredUntil > now`), UI phân biệt bằng badge khác nhau (xem
-  `FeaturedCarousel.tsx`).
-- **ForumPost / ForumComment / ForumLike**: diễn đàn cộng đồng thật (trước đây
-  là mock tĩnh `src/data/posts.ts`, đã xoá file này). Bất kỳ user đăng nhập
-  nào cũng đăng bài (`category` là 1 trong `FORUM_CATEGORIES`,
-  `src/lib/constants.ts`), bình luận (đóng vai trò "chat" theo từng bài viết
-  — thread bình luận công khai dưới mỗi bài, không phải chat real-time riêng
-  tư), và thả tim 1 bài viết. `ForumLike` có `@@unique([postId, userId])` —
-  mỗi user chỉ thích 1 lần/bài, bấm lại để bỏ thích (toggle qua
-  `POST /api/forum/posts/[postId]/like`). Không có trường `views`/lượt xem
-  (giống `Product.views`, cũng không được tăng ở đâu trong code — chỉ là số
-  tĩnh) để tránh thêm tính năng không ai dùng tới.
-- **ForumReport**: buyer-facing — bất kỳ user đăng nhập nào cũng báo cáo 1
-  `ForumPost` HOẶC 1 `ForumComment` (đúng 1 trong 2 field `postId`/`commentId`
-  khác null, validate ở `POST /api/forum/report`), kèm `reason`. `status`
-  (`"OPEN"` | `"RESOLVED_HIDDEN"` | `"RESOLVED_DISMISSED"`, mặc định
-  `"OPEN"`) — admin xử lý tại `/admin/dien-dan` (`POST
-/api/admin/forum-reports/[id]`): **Ẩn nội dung** đặt `hidden=true` trên
-  `ForumPost`/`ForumComment` tương ứng (không xoá cứng, giữ lịch sử kiểm
-  duyệt) + report chuyển `RESOLVED_HIDDEN`; **Bỏ qua** chỉ đổi report sang
-  `RESOLVED_DISMISSED`, không đụng nội dung. `getForumPosts()`/
-  `getForumPostById()` (`src/lib/forum.ts`) lọc `hidden: false` cho cả bài
-  viết lẫn bình luận — nội dung bị ẩn biến mất khỏi diễn đàn công khai
-  (bài viết bị ẩn thì cả trang chi tiết cũng coi như không tồn tại, giống
-  cách `Product`/`Category` PENDING/REJECTED "biến mất" khỏi query công khai).
-- **AdminAuditLog**: sổ nhật ký MỌI hành động quản trị (`Admin > Nhật ký hoạt
-  động`, `/admin/nhat-ky`) — ghi qua `logAdminAction()` (`src/lib/audit.ts`)
-  ở cuối mỗi route admin, sau khi hành động chính (thường là đổi tiền/trạng
-  thái) đã thành công. Cố tình KHÔNG có transaction chung với hành động
-  chính và swallow-catch lỗi ghi log — một sự cố ghi audit không được phép
-  làm hỏng/rollback 1 thao tác admin đã thực hiện xong (vd đã giải ngân tiền
-  thật cho seller). `targetType` là tên model dạng string (`"User"`,
-  `"Seller"`, `"WalletTransaction"`, `"AuctionSlot"`...), không dùng
-  relation/foreign key thật tới nhiều bảng khác nhau — giữ đơn giản vì đây
-  chỉ là log hiển thị, không phải dữ liệu nghiệp vụ cần truy vấn ngược.
-
-### Luồng nghiệp vụ chính
-
-1. **Đăng ký/Đăng nhập**: `POST /api/auth/register` tạo User (role BUYER mặc
-   định) → tự động `signIn("credentials", ...)`. Đăng nhập qua Auth.js
-   Credentials provider, so khớp bcrypt.
-2. **Mua hàng** (`POST /api/checkout`, dùng chung cho "Mua ngay" ở
-   `BuyBox` và thanh toán giỏ hàng ở `/gio-hang`): trong 1 Prisma
-   `$transaction` — kiểm tra tồn kho từng sản phẩm, tính tổng tiền, kiểm tra
-   `walletBalance` đủ hay không, tạo `Order` + `OrderItem` (status `ESCROW`,
-   `escrowReleaseAt = now + ESCROW_HOLD_DAYS` ngày — hằng số ở
-   `lib/constants.ts`, mặc định 3), trừ tồn kho + cộng đã bán, trừ ví buyer,
-   ghi `WalletTransaction` loại PURCHASE. Mỗi item gửi lên có thể kèm
-   `variantId` (`CartLine`/`BuyBox` đều hỗ trợ) — nếu sản phẩm **có**
-   variant, **bắt buộc** phải gửi đúng `variantId` (nếu thiếu, throw lỗi yêu
-   cầu chọn loại sản phẩm) và giá/trừ kho/cộng đã bán tính trên
-   `ProductVariant` đó thay vì trên `Product`; nếu sản phẩm không có variant
-   nào thì giữ nguyên logic cũ (tính trên `Product`). `CartContext` định danh
-   1 dòng giỏ hàng theo cặp `(productId, variantId)` — 2 variant khác nhau
-   của cùng 1 sản phẩm là 2 dòng riêng biệt, không gộp số lượng.
-3. **Nạp tiền thủ công** (2 kênh, cùng cơ chế admin duyệt — `src/components/
-DepositPanel.tsx` + `src/lib/payment/deposit.ts`): `POST
-/api/wallet/deposit-request` tạo `WalletTransaction` PENDING — **chưa cộng
-   ví**. Admin duyệt tại `/admin` (`POST /api/admin/deposits/[id]` với
-   `action: "approve"|"reject"`) mới cộng/từ chối.
-   - **Chuyển khoản ngân hàng** (`method: "bank"`, giá trị cũ `"manual"` vẫn
-     tương thích ngược): luôn khả dụng kể cả khi chưa cấu hình
-     `BANK_NAME`/`BANK_ACCOUNT_NUMBER`/`BANK_ACCOUNT_HOLDER` trong `.env` —
-     thiếu thì UI vẫn cho gửi yêu cầu, chỉ ẩn số tài khoản cụ thể (yêu cầu
-     liên hệ admin qua Zalo/Messenger). Có cấu hình thì hiện đủ 3 trường +
-     mã "nội dung chuyển khoản" (`NAP<6 ký tự cuối user id>`, ổn định theo
-     user, lưu vào `note`) để admin đối chiếu sao kê.
-   - **USDT mạng TRC20** (`method: "usdt"`): **tắt hoàn toàn** nếu thiếu
-     `USDT_TRC20_ADDRESS`/`USDT_VND_RATE` trong `.env` (khác bank — không có
-     fallback vì bắt buộc phải có địa chỉ ví thật mới nhận được tiền).
-     `WalletTransaction.gatewayRef` lưu TxID người dùng nhập sau khi chuyển
-     (bắt buộc, validate ở API); `note` lưu số USDT quy đổi + tỷ giá dùng lúc
-     đó. Admin dashboard hiện link "Xem giao dịch trên Tronscan" từ
-     `gatewayRef` để đối chiếu on-chain trước khi duyệt — **chưa** có xác
-     minh on-chain tự động (không gọi API Tronscan phía server), vẫn là quy
-     trình admin tự kiểm tra thủ công như chuyển khoản ngân hàng.
-   - Lưu ý cố tình: KHÔNG có giá trị mặc định "trông giống thật" cho số tài
-     khoản/địa chỉ ví trong `.env.example` — để trống buộc người triển khai
-     phải điền thông tin thật, tránh rủi ro người dùng chuyển nhầm tiền thật
-     vào một số tài khoản/địa chỉ ví không xác định do bị đoán/gõ nhầm.
-   - `GET /api/wallet/transactions` (dùng riêng cho `DepositPanel`) lọc
-     đúng `type: "DEPOSIT"` — trước đây thiếu điều kiện này nên "Lịch sử nạp
-     tiền" từng hiện lẫn cả giao dịch PURCHASE/PAYOUT (số âm), đã sửa.
-4. **Nạp tiền qua VNPay** (cần env key thật): `POST
-/api/payment/vnpay/create` tạo `WalletTransaction` PENDING rồi trả về URL
-   VNPay đã ký (HMAC-SHA512). VNPay redirect người dùng về `GET
-/api/payment/vnpay/return` — route này **tự xác thực chữ ký** trước khi
-   tin bất kỳ tham số nào, rồi cộng ví nếu `vnp_ResponseCode === "00"`.
-5. **Giải ngân ký quỹ**: `POST /api/admin/escrow/release` (admin) quét mọi
-   `OrderItem` có `status = ESCROW` và `escrowReleaseAt <= now`, chuyển sang
-   `RELEASED`, cộng tiền vào ví Seller tương ứng, ghi `WalletTransaction`
-   loại PAYOUT. **Chưa có cron job tự động** — cần gọi endpoint này định kỳ
-   (Windows Task Scheduler / Vercel Cron / cron trên VPS) khi triển khai thật.
-6. **Đăng ký người bán**: `POST /api/seller/register` — 1 user chỉ tạo được
-   1 Seller (chặn qua `@unique` trên `userId`), slug tự động từ tên gian
-   hàng (thêm hậu tố nếu trùng), nâng `role` → SELLER trong cùng transaction.
-7. **Đánh giá seller** (`POST /api/reviews`, trang `/nguoi-ban` +
-   `/shop/[seller]`): chỉ chấp nhận nếu người gửi **đã có ít nhất 1
-   `OrderItem` mua từ seller đó** (kiểm tra qua `orderItem.findFirst({
-sellerId, order: { buyerId } })`) và **không phải chính seller tự đánh
-   giá mình**. Đã test: tài khoản chưa từng mua bị chặn với lỗi rõ ràng;
-   tài khoản đã mua gửi được đánh giá và thấy ngay trên trang gian hàng +
-   trang danh sách người bán.
-8. **Đấu giá vị trí vàng** (trang `/dau-gia`, `POST /api/auction/bids`):
-   seller chọn 1 sản phẩm **của chính mình** để đặt giá cho 1 trong 6 vị trí;
-   giá phải `≥ floorPrice` và `>` giá cao nhất hiện tại của slot đó; kiểm tra
-   luôn `walletBalance` đủ tại thời điểm đặt giá (tiền **chưa bị trừ** lúc
-   này, chỉ trừ khi thắng). `POST /api/admin/auction/resolve` (admin, cũng
-   **chưa có cron tự động** — giống mục giải ngân ký quỹ) đóng các slot đã
-   hết hạn: duyệt danh sách bid từ cao xuống thấp, chọn bid đầu tiên mà
-   seller đó (qua `User.walletBalance`) đủ tiền làm người thắng (bỏ qua bid
-   cao hơn nhưng không đủ tiền thay vì huỷ cả phiên) → trừ ví, ghi
-   `WalletTransaction`, set `Product.featuredUntil`, đóng slot cũ, **tự tạo
-   slot mới cùng vị trí** để hệ thống xoay vòng liên tục (khác với shopmini.pro
-   — họ có lịch cố định 20:00 hàng ngày/Chủ nhật với khoảng nghỉ giữa các
-   phiên; hệ thống của MarketMMO nối tiếp phiên ngay lập tức, không có
-   khoảng nghỉ). Đã test full luồng: đặt bid → set hạn slot về quá khứ →
-   admin resolve → sản phẩm thắng lên đầu carousel "Sản phẩm nổi bật" trang
-   chủ với badge "ĐẤU GIÁ NGAY" (phân biệt với badge "TÀI TRỢ" của sản phẩm
-   `hot` thường).
-9. **Affiliate/giới thiệu** (trang `/affiliate`, mục nav "Affiliate" — trước
-   đây là "Kiếm tiền" trỏ tới `/tro-thanh-nguoi-ban`, đã đổi theo yêu cầu):
-   mỗi user có 1 `referralCode` (sinh lười nếu chưa có, xem trên) hiển thị
-   kèm link mời `/dang-nhap?ref=<code>`. Trang `/dang-nhap` đọc query `ref` và
-   truyền xuống `AuthForms` làm giá trị mặc định cho ô "Mã mời" (không bắt
-   buộc) ở form đăng ký. `POST /api/auth/register` nhận thêm `refCode`
-   optional — nếu hợp lệ, **chỉ** gắn `referredById` (không cộng hoa hồng ở
-   bước này, khác thiết kế ban đầu).
-
-   Hoa hồng (`REFERRAL_COMMISSION_VND`, mặc định 20.000đ) chỉ được cộng vào
-   ví người giới thiệu khi **cả 3 điều kiện** cùng đúng, kiểm tra trong
-   `POST /api/checkout` (không phải lúc đăng ký): (1) đây là **đơn hàng đầu
-   tiên** của người được mời (`tx.order.count` trước khi tạo order mới —
-   phải đếm trước, nếu không order đang tạo sẽ tự tính vào và luôn sai), (2)
-   giá trị đơn hàng đó **vượt** `REFERRAL_MIN_FIRST_ORDER_VND` (mặc định
-   20.000đ, hằng số **tách riêng** khỏi `REFERRAL_COMMISSION_VND` dù hiện
-   cùng giá trị — để có thể chỉnh 1 trong 2 độc lập sau này), (3) người được
-   mời đã có ít nhất 1 `WalletTransaction` loại `DEPOSIT` status `CONFIRMED`
-   (xác nhận tiền đến từ nạp tiền thật). Lưu ý quan trọng: điều kiện áp dụng
-   **đúng đơn đầu tiên** — nếu đơn đầu tiên không đủ 20.000đ thì các đơn sau
-   dù lớn hơn cũng **không** còn kích hoạt được hoa hồng nữa (đã test xác
-   nhận hành vi này). Mỗi người được mời chỉ kích hoạt hoa hồng đúng 1 lần,
-   đánh dấu qua `User.referralRewarded` (đặt trên chính người được mời, không
-   phải người mời, để idempotent). Toàn bộ nằm trong cùng
-   `prisma.$transaction` với phần trừ ví/tạo order/trừ kho của checkout.
-
-   `AffiliatePanel.tsx` hiển thị mã/link (nút sao chép), số người đã mời,
-   tổng hoa hồng đã nhận (aggregate `WalletTransaction` loại
-   `REFERRAL_BONUS`), và danh sách người đã mời kèm badge trạng thái "Đã
-   nhận hoa hồng"/"Chưa đủ điều kiện" theo `referralRewarded`. Đã test
-   end-to-end bằng Playwright (3 kịch bản): (a) đăng ký qua link `?ref=` → mã
-   tự điền đúng ô → checkout ngay khi ví chưa nạp tiền bị chặn đúng lỗi "Số
-   dư ví không đủ"; (b) nạp tiền (admin duyệt) → checkout đơn 21.000đ (vượt
-   mốc) → ví người giới thiệu cộng đúng 20.000đ, `referralRewarded` chuyển
-   `true`; (c) tài khoản khác nạp tiền → checkout đơn đầu tiên chỉ 17.500đ
-   (dưới mốc) → **không** cộng hoa hồng, ví người giới thiệu giữ nguyên,
-   `referralRewarded` vẫn `false`.
-10. **Diễn đàn** (`/dien-dan`, `POST /api/forum/posts` +
-    `/api/forum/posts/[postId]/comments` + `/api/forum/posts/[postId]/like`):
-    user đăng nhập đăng bài (tiêu đề 5-200 ký tự, nội dung 10-5000 ký tự,
-    chọn 1 category trong `FORUM_CATEGORIES`) qua panel `ForumNewPostPanel`
-    ở trang danh sách — submit xong redirect thẳng tới trang chi tiết bài
-    viết vừa tạo. Trang chi tiết (`/dien-dan/[postId]`) hiển thị nội dung,
-    nút thích (`ForumLikeButton`, optimistic update rồi đồng bộ lại theo
-    response) và thread bình luận (`ForumCommentForm` + danh sách
-    `ForumComment` sắp xếp cũ→mới, đóng vai trò kênh "chat" công khai cho
-    từng bài viết). Người chưa đăng nhập vẫn xem được bài + bình luận, nhưng
-    nút thích/form bình luận/nút đăng bài đều điều hướng sang `/dang-nhap`
-    khi bấm (cùng pattern với `ReviewForm`). Widget "Bài viết tham khảo" ở
-    sidebar trang danh mục (`CategorySidebar.tsx`) và mục "BÀI VIẾT THAM
-    KHẢO" ở cuối trang chi tiết sản phẩm giờ cũng lấy dữ liệu thật qua
-    `getRecentForumPosts()`, link thẳng tới từng bài viết thay vì trang
-    `/dien-dan` chung chung như trước. Đã test end-to-end bằng Playwright:
-    đăng nhập → mở bài viết → thích (tăng đếm)/bỏ thích (giảm đếm) → gửi
-    bình luận (hiện ngay) → đăng bài mới (redirect đúng trang chi tiết).
-11. **Quản Lý Bán Hàng** (`/trang-ban-hang`, dashboard người bán đầy đủ, dựng theo
-    ảnh tham khảo trang seller dashboard thật của shopmini.pro — sidebar nhiều
-    mục). Đăng ký bán hàng xong (`SellerRegisterForm`) giờ redirect thẳng vào
-    đây (trước đây redirect sang `/shop/[slug]`). `layout.tsx` guard 2 lớp:
-    chưa đăng nhập → `/dang-nhap?callbackUrl=/trang-ban-hang`; đã đăng nhập
-    nhưng chưa là seller → `/tro-thanh-nguoi-ban`. Dùng `getAuthSession()`/
-    `getSellerForUser()` (`src/lib/authz.ts`, bọc `React.cache()`) để layout
-    và các trang con cùng 1 request chỉ tốn đúng 1 lần query session/seller
-    thật — **quy ước mới**: mọi trang Server Component cần session/seller nên
-    dùng 2 hàm này thay vì tự gọi `auth()`/`prisma.seller.findUnique` lại.
-
-    Sidebar (`SellerSidebar.tsx`) 13 mục, chia 2 nhóm rõ ràng theo quyết định
-    phạm vi đã thống nhất với user — **không cố build hết trong 1 lần vì đa
-    số phần còn thiếu đụng tiền thật/dữ liệu nhạy cảm, cần luật nghiệp vụ rõ
-    trước**:
-    - **Có logic thật**: Tổng quan, Sản phẩm (render lại `ProductVariantManager`
-      của `/quan-ly-san-pham`, route cũ vẫn giữ song song), Đơn sản phẩm/Đơn
-      dịch vụ (tách theo `SERVICE_CATEGORY_SLUGS` — tái dùng đúng heuristic
-      "Dịch vụ" đã có ở `NavMegaMenu`, KHÔNG phải field DB thật), Rút tiền,
-      Quỹ Bảo Hiểm, Đánh giá, Quảng bá (link thẳng ra `/dau-gia` có sẵn).
-    - **"Sắp ra mắt"** (`ComingSoonCard`, chưa có logic): Đặt trước, Mã giảm
-      giá, Khiếu nại, Telegram Bot — xem lý do từng mục trong "Còn thiếu"
-      bên dưới.
-
-    **Rút tiền** (`/trang-ban-hang/rut-tien`, `POST /api/seller/withdraw-request`):
-    khác hẳn luồng nạp tiền (không đụng số dư cho tới khi admin duyệt) — rút
-    tiền **trừ ví NGAY khi tạo yêu cầu** trong 1 `prisma.$transaction` (đọc
-    `walletBalance` mới nhất rồi throw nếu không đủ, tránh race condition),
-    để seller không thể tạo nhiều yêu cầu rồi tiêu số tiền đó vào việc khác
-    (đặt giá đấu, mua hàng) trong lúc chờ duyệt. Lưu vào `WalletTransaction`
-    (`type: "WITHDRAW"`, `amount` **âm**, `status: "PENDING"`, `note` chứa
-    thông tin ngân hàng nhận tiền seller tự nhập mỗi lần — MarketMMO chưa có
-    field lưu tài khoản ngân hàng riêng của seller). Admin duyệt tại `/admin`
-    (mục "Yêu cầu rút tiền chờ duyệt", `PATCH /api/admin/withdrawals/[id]`,
-    mirror 1:1 pattern `admin/deposits/[id]`): **Duyệt** chỉ đổi trạng thái
-    `CONFIRMED` (KHÔNG đụng số dư nữa vì đã trừ lúc tạo yêu cầu — tránh trừ 2
-    lần); **Từ chối** hoàn lại đúng số tiền đã khoá (`increment` bằng
-    `Math.abs(amount)`) + `status: "REJECTED"`. Đã test end-to-end xác nhận
-    đúng cả 2 nhánh (số dư giảm ngay lúc tạo yêu cầu, từ chối hoàn đúng số,
-    duyệt không trừ thêm lần nữa) — đây là phần rủi ro cao nhất của tính
-    năng nên được ưu tiên test kỹ nhất.
-
-    **Quỹ bảo hiểm** (`/trang-ban-hang/quy-bao-hiem`,
-    `POST /api/seller/insurance-deposit`): khác rút tiền — đây là chuyển tiền
-    **nội bộ** giữa 2 ví của cùng 1 seller đã xác nhận trong hệ thống (ví
-    chính → `Seller.insuranceBalance`), không phải tiền từ/đến ngân hàng
-    ngoài nên **tự động duyệt ngay**, không qua admin: 1 `$transaction` trừ
-    `walletBalance`, cộng `insuranceBalance`, tạo `WalletTransaction`
-    (`type: "INSURANCE_DEPOSIT"`, `status: "CONFIRMED"` ngay). Số dư quỹ bảo
-    hiểm cập nhật đồng bộ với badge có sẵn ở trang chi tiết sản phẩm.
-
-    **Tổng quan** (`/trang-ban-hang`, `page.tsx` đọc `searchParams` thay vì
-    gọi API riêng — filter khoảng ngày dùng `<Link href="?range=...">`, khớp
-    quy ước server-render sẵn có của dự án): thiết kế lại "hiện đại và đầy đủ
-    tính năng hơn" theo yêu cầu người dùng — trước khi đưa lên site đã dựng
-    demo tĩnh (Artifact) cho người dùng duyệt trước, y hệt quy trình sẽ áp
-    dụng cho các thay đổi UI lớn khác sau này nếu được yêu cầu. Bố cục 2 cột:
-    - **Hàng 4 stat card** (giữ nguyên 4 card gốc, thêm mới): Doanh thu kỳ
-      này (`OrderItem` status `RELEASED`) kèm **% tăng/giảm so với kỳ liền
-      trước cùng độ dài** (badge `TrendingUp`/`TrendingDown`, ẩn hẳn nếu kỳ
-      trước = 0đ để tránh hiện % vô nghĩa — không dùng số giả); Tiền tạm giữ
-      (status `ESCROW`); Số dư ví (kèm link tắt "Rút tiền →"); Quỹ bảo hiểm
-      (kèm % so với `INSURANCE_FUND_TARGET`, hoặc "Đã vượt mức gợi ý" nếu đủ).
-    - **Cột chính (trái)**: biểu đồ "Doanh số theo thời gian"
-      (`RevenueChart.tsx`, client component, SVG — không dùng path tay phức
-      tạp, chỉ rect/line đơn giản nên SVG đủ, không cần Canvas — tô màu thẳng
-      bằng class Tailwind `fill-brand`/`fill-muted` thay vì đọc CSS variable
-      trong JS; hover đổi màu cột + tooltip số tiền theo toạ độ X con trỏ quy
-      đổi theo viewBox, không cần lớp canvas ẩn riêng để bắt sự kiện chuột).
-      Cố tình tính trên **mọi trạng thái trừ CANCELLED** (không chỉ
-      `RELEASED` như stat card) — nếu chỉ tính RELEASED thì `ESCROW_HOLD_DAYS`
-      (3 ngày) gần nhất luôn gần như 0, nhìn như biểu đồ lỗi dù seller vẫn
-      bán đều (`getSellerRevenueTrend`, gộp theo tuần nếu khoảng ngày > 10
-      ngày, tự điền đủ mọi mốc kể cả 0 đơn để cột cách đều). Tiếp theo:
-      "Trạng thái đơn hàng" (thanh tỷ lệ 4 màu RELEASED/ESCROW/DISPUTED/
-      CANCELLED, `getSellerOrderStatusBreakdown`); "Sản phẩm bán chạy" (xếp
-      theo doanh số trong kỳ, `getSellerTopProducts`); "Đơn hàng gần đây" (5
-      đơn mới nhất, **độc lập với bộ lọc ngày** — luôn là feed hoạt động gần
-      nhất, `getSellerRecentOrders`, dùng `formatRelativeTime()` mới thêm
-      trong `src/lib/format.ts`, khác `formatLastActive()` — hàm đó chỉ dành
-      riêng cho "Online X trước" của `User`, không có tiền tố "Online").
-      **Mỗi dòng trong "Sản phẩm bán chạy" và "Đơn hàng gần đây" bấm được**
-      (theo yêu cầu người dùng sau khi duyệt demo) — dẫn tới
-      `/shop/[slug]` (trang gian hàng công khai của chính seller đó, dùng để
-      xem trước gian hàng như buyer nhìn thấy).
-    - **Cột phụ (phải)**: "Cần xử lý" (`getSellerAttentionCounts` — sản phẩm
-      `status: "PENDING"` của chính seller, khiếu nại `status: "OPEN"`, và
-      SKU đã dùng kho thật nhưng `AVAILABLE < 3`; mỗi mục dẫn thẳng tới đúng
-      trang liên quan, ẩn hẳn mục nào = 0, hiện thông báo rỗng vui vẻ nếu cả
-      3 đều = 0 — không hiện danh sách rỗng vô nghĩa) và "Gian hàng của bạn"
-      (`getSellerStoreSnapshot` — level, đã xác thực, rating trung bình tính
-      động giống `getAllSellersWithStats()`, thanh tiến độ quỹ bảo hiểm).
-    - Tất cả số liệu mới đều tính từ dữ liệu **đã có sẵn** (không thêm bảng
-      mới) — chỉ thêm 7 hàm query trong `src/lib/queries.ts`
-      (`getSellerRevenueTrend`, `getSellerOrderStatusBreakdown`,
-      `getSellerTopProducts`, `getSellerRecentOrders`,
-      `getSellerAttentionCounts`, `getSellerStoreSnapshot`, cộng
-      `getSellerRevenueStats` gọi thêm 1 lần cho kỳ trước để tính %).
-    - **Khác ảnh tham khảo shopmini.pro**: không có card "Ví khiếu nại"
-      (tính năng Khiếu nại đã xây nhưng không có khái niệm "ví" riêng cho nó)
-      và không có nút "Yêu cầu Xóa Shop" (hành động khó đảo ngược, không nằm
-      trong yêu cầu ban đầu — cố tình bỏ qua).
-12. **Tin nhắn** (`/tin-nhan`, model `Conversation`/`Message`, dựng theo ảnh
-    chụp trang chat thật của shopmini.pro): icon chat trên Header (cạnh icon
-    giỏ hàng, `HeaderChatButton.tsx`) hiện badge số tin chưa đọc, chỉ hiện
-    khi đã đăng nhập. Trang `/tin-nhan` (`ChatInbox.tsx`) — danh sách hội
-    thoại bên trái (tìm kiếm phía client, tab Tất cả/Chưa xem) + khung chat
-    bên phải, **cập nhật bằng polling** (không dùng WebSocket — quyết định
-    phạm vi có chủ đích): danh sách hội thoại poll mỗi 15s, tin nhắn hội
-    thoại đang mở poll mỗi 7s.
-
-    `Conversation` dùng 2 user tổng quát (`userAId`/`userBId`, LUÔN chuẩn hoá
-    id nhỏ hơn vào `userAId` khi tạo/tìm — xem `getOrCreateConversation()`
-    trong `src/lib/system-bot.ts`) thay vì khái niệm buyer/seller cứng, vì
-    hội thoại với bot "Hệ Thống" không khớp khung đó. `@@unique([userAId,
-userBId])` + `prisma.conversation.upsert` đảm bảo 1 cặp user chỉ có đúng 1
-    hội thoại dù ai nhắn trước, tránh race condition.
-
-    **Bot "Hệ Thống"**: chỉ là 1 `User` bình thường được lazy-init qua
-    `getSystemBotUser()` (upsert theo email cố định `system@marketmmo.internal`,
-    đúng pattern `ensureReferralCode()` trong `src/lib/referral.ts` — không
-    backfill qua migration vì dự án dùng `prisma db push`). **Không** thêm
-    role `"SYSTEM"` riêng vào `Role` union (bot không có `passwordHash` nên
-    không đăng nhập được, tránh thay đổi schema không cần thiết).
-    `sendSystemMessage(userId, content)` được gọi ở đúng 2 sự kiện thật
-    (khớp ảnh tham khảo, không bịa thêm): `POST /api/auth/register` (tin
-    chào mừng) và `POST /api/seller/register` (tin chúc mừng kích hoạt gian
-    hàng) — hàm export công khai, sẵn sàng nối thêm sự kiện khác sau này
-    (nạp tiền được duyệt, đơn giải ngân...).
-
-    **Điểm vào "Nhắn tin"**: trang `/shop/[seller]` (nút placeholder "Đăng
-    nhập để chat" cũ đã có sẵn, nay gắn logic thật) — chưa đăng nhập thấy nút
-    cũ (thêm `callbackUrl`), đã đăng nhập và không phải chủ shop thấy nút
-    "Nhắn tin" thật trỏ `/tin-nhan?with=<userId của seller>` (tự get-or-create
-    hội thoại), chủ shop tự xem gian hàng mình thì ẩn nút. **Chưa có** ở
-    BuyBox (trang chi tiết sản phẩm) hay trang chủ — chỉ trang shop.
-
-    Bảo mật: mọi route `/api/messages/conversations/[id]` verify user hiện
-    tại là 1 trong 2 người tham gia hội thoại (`userAId`/`userBId`), trả 404
-    nếu không — đã test tài khoản không liên quan gọi thẳng API vẫn bị chặn
-    đúng. Đã test end-to-end (13 kịch bản Playwright): tin chào mừng/kích
-    hoạt gian hàng hiện đúng nội dung, buyer nhắn tin từ trang shop → seller
-    thấy tin + badge Header đúng số → seller đọc → badge tự hết → seller trả
-    lời → buyer nhận được qua polling (~7s), không cần tải lại trang.
-
-    **Bấm tên/avatar seller trong khung chat → mở gian hàng**: `GET
-/api/messages/conversations` trả thêm `otherUser.sellerSlug` (tra
-    `prisma.seller.findMany({ where: { userId: { in: otherUserIds } } })`,
-    `null` nếu người kia không phải seller/là bot hệ thống). `ChatInbox.tsx`
-    chỉ bọc `<Link href="/shop/[slug]">` quanh avatar + tên ở header khung
-    chat khi có `sellerSlug` — bot "Hệ Thống" và buyer thường (không phải
-    seller) vẫn hiển thị như cũ, không bấm được. Đã test: buyer mở hội thoại
-    với seller → bấm tên/avatar → điều hướng đúng `/shop/<slug>` của seller
-    đó.
-
-    **Gửi ảnh/file đính kèm**: `Message.attachmentPath`/`attachmentName`/
-    `attachmentType` (`"IMAGE"` | `"FILE"`). Lưu qua Vercel Blob hoặc thư mục
-    `/uploads/chat/<conversationId>/<uuid ngẫu nhiên>.<ext>` ngoài `/public`
-    tuỳ môi trường (xem `saveChatAttachment()` trong `src/lib/uploads.ts` +
-    mục "Lưu trữ file"), chỉ đọc qua
-    `GET /api/messages/attachments/[messageId]`
-    (verify người gọi thuộc đúng hội thoại chứa tin nhắn đó, 404 nếu không —
-    đã test tài khoản khác bị chặn). Ảnh: JPEG/PNG/WebP, tối đa 5MB. File:
-    PDF/DOC(X)/XLS(X)/ZIP/TXT, tối đa 10MB — **cố tình chặn mọi định dạng
-    khác** (đặc biệt file thực thi) để tránh chat trở thành kênh phát tán mã
-    độc. Tên file lưu trên đĩa dùng UUID ngẫu nhiên (không dùng tên gốc, tránh
-    path traversal/trùng tên), tên gốc người dùng đặt lưu riêng ở
-    `attachmentName` để hiển thị lại đúng. `POST
-/api/messages/conversations/[id]` nay nhận `FormData` (trước đây JSON) —
-    `content` optional nếu có đính kèm. Danh sách hội thoại hiện
-    "[Hình ảnh]"/"[Tệp đính kèm]" thay preview text khi tin cuối chỉ có đính
-    kèm. Đã test end-to-end (8 kịch bản riêng): gửi ảnh + gửi file kèm caption
-    → người nhận xem/tải được qua link bảo vệ → tài khoản không liên quan bị
-    chặn 404 khi cố tải file người khác.
-
-13. **Đăng sản phẩm mới** (`/trang-ban-hang/san-pham`, `POST
-/api/seller/products` + `POST /api/admin/products/[id]`): lần đầu tiên
-    seller tự tạo được **sản phẩm gốc mới** (trước đây chỉ thêm được
-    variant cho sản phẩm có sẵn) — đây là tính năng cốt lõi của marketplace,
-    xây theo 2 quyết định phạm vi đã chốt với người dùng:
-    - **Cần admin duyệt trước khi hiện công khai** (không hiện ngay) — tránh
-      sản phẩm lừa đảo/spam.
-    - **Seller upload ảnh thật** (không chỉ dùng icon category chung).
-
-    `AddProductForm.tsx` (nút "Đăng sản phẩm mới" mở form: ảnh + tên +
-    danh mục + mô tả ngắn + mô tả chi tiết dạng textarea nhiều dòng — mỗi
-    dòng thành 1 phần tử `description: string[]`, khớp đúng shape cũ + giá +
-    kho) gửi `FormData` tới `POST /api/seller/products`. Route tạo
-    `Product` với `status: "PENDING"` (tường minh, không dựa default), slug
-    tự sinh từ tên (thêm hậu tố nếu trùng, cùng pattern `slugifySeller` →
-    `slugifyProduct` trong `src/lib/slug.ts`), `attributes` để rỗng `"[]"`
-    (chưa có UI nhập, field này hiện không hiển thị ở đâu trong UI nên bỏ
-    qua thay vì xây thêm không cần thiết). `SellerProductsPanel.tsx` là
-    component điều phối — đổi `key` trên `<ProductVariantManager>` để buộc
-    load lại danh sách ngay sau khi đăng sản phẩm mới thành công, không chia
-    sẻ state trực tiếp giữa 2 component.
-
-    **Đăng phiên bản + nhập kho ngay trong cùng 1 lần đăng sản phẩm** (theo
-    yêu cầu người dùng, tránh seller phải làm 3 bước tách rời: tạo sản
-    phẩm → quay lại thêm phiên bản → quay lại nhập kho): `AddProductForm.tsx`
-    có thêm khối "Phiên bản / Gói (tuỳ chọn)" ngay trong form tạo sản phẩm —
-    nút "+ Thêm phiên bản" thêm 1 dòng nháp (tên/giá/kho, state cục bộ
-    `DraftVariant[]`, chưa gọi API), mỗi dòng phiên bản có sẵn 1 ô textarea
-    "Kho dữ liệu giao hàng thật" riêng. Khi bấm "Gửi để duyệt", client gọi
-    **tuần tự** 3 API có sẵn (không gộp thành 1 transaction backend mới, vì
-    đây là thao tác quản trị của seller — không đụng tiền/tồn kho buyer nên
-    không cần tính nguyên tử tuyệt đối như checkout): `POST
-/api/seller/products` tạo sản phẩm gốc → với mỗi phiên bản nháp, `POST
-.../variants` tạo phiên bản → nếu phiên bản đó có dán kho, `POST .../stock`
-    nhập kho luôn cho đúng `variantId` vừa tạo. Sản phẩm KHÔNG có phiên bản
-    nào thì hiện 1 ô "Kho dữ liệu giao hàng thật" ở cấp sản phẩm gốc thay
-    vào đó (gọi `POST .../stock` không kèm `variantId`).
-
-    **Tránh cộng trùng kho**: nếu seller vừa gõ tay số vào ô "Kho" vừa dán
-    dữ liệu kho thật cho cùng 1 phiên bản/sản phẩm, số gõ tay sẽ bị **bỏ qua
-    hoàn toàn** — request tạo phiên bản/sản phẩm luôn gửi `stock: 0` khi có
-    kho thật kèm theo, để bước `POST .../stock` (tự `increment` theo đúng số
-    dòng) là nguồn duy nhất quyết định con số cuối cùng. UI phản ánh đúng
-    quy tắc này: ô "Kho" tự chuyển sang `disabled`, hiện placeholder "Tự
-    tính theo kho" ngay khi seller gõ vào ô kho thật tương ứng.
-
-    Lỡ 1 bước giữa chừng thất bại (vd phiên bản thứ 2 lỗi tên trùng ký tự
-    tối thiểu) thì sản phẩm + các phiên bản/kho đã tạo thành công trước đó
-    **vẫn giữ nguyên** — form hiện thông báo lỗi liệt kê đúng bước nào thất
-    bại, seller bổ sung tiếp ngay tại `ProductVariantManager` (mục "Sản
-    phẩm" bên dưới, nơi vẫn có đầy đủ nút "Nhập kho"/"+ Thêm phiên bản" như
-    luồng cũ) — không mất dữ liệu, không cần đăng lại từ đầu.
-
-    Đã test qua Playwright thật (điền cả 2 trường hợp: có 2 phiên bản kèm
-    kho riêng từng phiên bản; và không có phiên bản nào, dán kho thẳng vào
-    sản phẩm gốc) xác nhận: sản phẩm/phiên bản tạo đúng, `stock` tự tính
-    đúng theo số dòng kho dán vào (không lấy số gõ tay cố tình điền sai để
-    kiểm chứng), số bản ghi `ProductStockItem` đúng và đều ở trạng thái
-    `AVAILABLE`.
-
-    **Gợi ý tự động danh mục theo tên sản phẩm** (`detectCategorySlug()`
-    trong `AddProductForm.tsx`): gõ tên có chứa từ khoá khớp danh mục (vd
-    "Gmail", "Facebook"/"FB", "Discord", "Tiktok", "Outlook"/"Hotmail",
-    "ChatGPT"/"GPT"/"OpenAI", "Steam", "Twitter"/"X", "Boost"/"Boosting"/
-    "cày thuê"/"leveling"/"rank" — bảng `CATEGORY_KEYWORDS`) thì dropdown
-    danh mục **tự điền sẵn**, kèm badge nhỏ "Tự động gợi ý" — chỉ là GỢI Ý,
-    seller tự bấm chọn lại được bất kỳ lúc nào (bấm 1 lần vào dropdown là
-    tắt hẳn auto-suggest cho lần đăng sản phẩm đó, tránh ghi đè lựa chọn cố
-    ý của seller). So khớp theo *từ nguyên vẹn* (`\btừ\b`) trên chuỗi đã bỏ
-    dấu tiếng Việt (`normalizeVietnamese()`) — quan trọng với từ khoá ngắn
-    như "x" (Twitter/X) hay "fb", tránh khớp nhầm vào giữa 1 từ khác (vd
-    "x" không khớp vào "Extension"). Đã test 15 kịch bản qua script độc lập
-    (trùng khớp đúng từng category + 2 trường hợp không khớp gì, bao gồm
-    đúng edge case "x" kể trên) — không cần đăng nhập vì đây là hàm thuần,
-    không phụ thuộc DOM/API.
-
-    **Ảnh sản phẩm — công khai, khác hẳn ảnh đính kèm chat**: `saveProductImage()`
-    (`src/lib/uploads.ts`) dùng Vercel Blob `access: "public"` giống các
-    upload khác, nhưng KHÔNG qua route bảo vệ nào — URL Blob trả về dùng
-    thẳng trong `<Image src=...>` vì ảnh sản phẩm vốn phải public cho mọi
-    khách xem. Thiếu `BLOB_READ_WRITE_TOKEN` (dev local) thì ghi thẳng vào
-    `public/uploads/products/` (khác thư mục `/uploads` ở root dùng cho
-    chat — thư mục đó nằm NGOÀI `/public`, không public được) để
-    Next.js tự phục vụ như static asset bình thường. `next.config.ts` đã
-    thêm `images.remotePatterns` cho domain
-    `*.public.blob.vercel-storage.com` để `next/image` tối ưu được ảnh Blob.
-
-    **Ẩn/hiện theo trạng thái duyệt**: mọi query công khai trong
-    `src/lib/queries.ts` lọc `status: "APPROVED"` — sản phẩm `PENDING`/
-    `REJECTED` không xuất hiện ở trang chủ, danh mục, tìm kiếm, sản phẩm liên
-    quan, và truy cập thẳng URL chi tiết sản phẩm cũng trả 404 (dù đúng
-    slug). Seller vẫn thấy đủ sản phẩm của mình (mọi trạng thái) ở
-    `/trang-ban-hang/san-pham` qua `getMySellerProducts()` (hàm này KHÔNG
-    lọc status), kèm badge màu (`PRODUCT_STATUS_LABEL`,
-    `src/lib/constants.ts`) và lý do từ chối nếu có.
-
-    **Admin duyệt** (`/admin/san-pham`, `AdminProductsPanel.tsx`): `GET /api/admin/products` liệt kê
-    sản phẩm `PENDING`/`REJECTED` kèm ảnh/tên/seller/giá; `POST
-/api/admin/products/[id]` với `{ action: "approve" | "reject", adminNote? }`
-    — Duyệt chuyển `status: "APPROVED"`; Từ chối chuyển `status: "REJECTED"`
-    kèm `adminNote` (seller thấy lại lý do này trong trang quản lý sản phẩm
-    của mình). Không có bước "sửa rồi gửi lại" — seller bị từ chối phải tạo
-    sản phẩm mới (bản ghi cũ giữ nguyên `REJECTED` làm lịch sử).
-
-    **`ProductThumbnail.tsx`** — component dùng chung thay thế hoàn toàn
-    việc gọi `getCategoryIcon()` trực tiếp rải rác ở `ProductCard.tsx`/
-    `CategoryProductCard.tsx`/`FeaturedCarousel.tsx`/trang chi tiết sản
-    phẩm: có `imageUrl` thì hiện `<Image fill>` (ảnh thật), không có thì
-    fallback icon category như hành vi gốc — nhận `boxClassName` (kích
-    thước/bo góc/nền của khung bọc tại từng nơi gọi, giữ nguyên pixel-chính-
-    xác đã đo trước đó) + `iconClassName` để khớp đúng từng nơi mà không cần
-    đổi CSS hiện có.
-
-    Đã test toàn bộ luồng qua script Node gọi thẳng Prisma/queries.ts (không
-    qua HTTP — Turnstile thật đã chặn đăng nhập tự động ở trình duyệt
-    headless, xem mục "Xác minh chống bot" ở Tech Stack): tạo sản phẩm
-    `PENDING` → xác nhận ẩn khỏi **cả 5** query công khai (trang chủ, nổi
-    bật, theo danh mục, tìm kiếm, chi tiết) → vẫn hiện đúng trong
-    `getMySellerProducts` → admin duyệt → xác nhận hiện đúng ở **cả 4** query
-    công khai còn lại kèm đúng `imageUrl` → tạo sản phẩm thứ 2, admin từ
-    chối kèm lý do → xác nhận lưu đúng `adminNote` và vẫn ẩn khỏi trang công
-    khai. Toàn bộ sản phẩm cũ (180 sản phẩm tính cả dữ liệu demo/test tích
-    luỹ qua các phiên trước, không chỉ 28 sản phẩm seed gốc) trên cả database
-    dev lẫn production đã xác nhận tự động chuyển đúng `status: "APPROVED"`
-    sau khi thêm field này, không bị ẩn mất.
-
-14. **Seller tự đề xuất danh mục mới** (nút "+ Thêm danh mục mới chưa có" ở
-    cuối dropdown chọn danh mục trong `AddProductForm.tsx`, `POST
-/api/seller/categories` + `POST /api/admin/categories/[id]`): nếu sản phẩm
-    seller bán chưa khớp danh mục nào có sẵn, họ tự gõ tên danh mục mới ngay
-    trong form đăng sản phẩm — gửi lên tạo `Category` với `status: "PENDING"`
-    (cùng pattern `Product.status`, `@default("APPROVED")` để 10 category
-    seed có sẵn không bị ẩn khi thêm field này). **Khác với sản phẩm PENDING
-    (seller phải chờ admin duyệt mới thấy sản phẩm công khai)**: category
-    PENDING **được chọn dùng ngay lập tức** cho sản phẩm đang đăng — client
-    chèn category mới vào state cục bộ (`localCategories` trong
-    `AddProductForm.tsx`) và tự động set làm lựa chọn hiện tại, không cần
-    tải lại trang hay đợi category được duyệt trước.
-
-    `getAllCategories()` (`src/lib/queries.ts`, dùng ở trang chủ/trang danh
-    mục — mọi nơi hiển thị công khai) lọc `status: "APPROVED"`, nên category
-    đang chờ duyệt **không** xuất hiện ở tabs trang chủ/mega-menu/trang danh
-    mục (truy cập thẳng URL `/danh-muc/[slug-pending]` cũng 404). Route
-    `/trang-ban-hang/san-pham` dùng riêng `getSellerVisibleCategories()`
-    (lọc `status: { in: ["APPROVED", "PENDING"] } }`, loại `REJECTED`) để
-    seller vẫn chọn được category đang chờ duyệt (của mình hoặc seller khác)
-    cho sản phẩm mới — đây là lý do 2 hàm tách riêng thay vì dùng chung 1
-    `getAllCategories()`.
-
-    `Category.proposedById` (nullable, `onDelete: SetNull`) lưu seller đã đề
-    xuất — chỉ để admin biết ngữ cảnh khi duyệt (`/admin/danh-muc`,
-    `AdminCategoriesPanel.tsx`, cùng pattern UI với "Sản phẩm chờ duyệt"),
-    **không** có trang riêng cho seller theo dõi danh sách category mình đã
-    đề xuất (ngoài phạm vi, tránh xây thêm UI không ai yêu cầu). API tự chặn
-    trùng tên (so khớp không phân biệt hoa/thường) trước khi tạo, tránh
-    seller vô tình tạo 2 category cùng nghĩa khác cách viết hoa.
-
-    Đã test toàn bộ luồng qua script Node gọi thẳng Prisma (không qua HTTP,
-    cùng lý do Turnstile như mục 13): đề xuất category → xác nhận ẩn khỏi
-    `getAllCategories()` nhưng hiện đúng trong danh sách seller nhìn thấy →
-    tạo sản phẩm dùng ngay category đang PENDING đó thành công → admin duyệt
-    → category hiện công khai → test trùng tên bị chặn đúng → đề xuất
-    category thứ 2, admin từ chối → xác nhận biến mất khỏi cả dropdown seller
-    lẫn trang công khai (8/8 kịch bản pass).
-
-15. **Kho dữ liệu giao hàng thật** (model `ProductStockItem`, Trang Bán Hàng
-    > Sản phẩm, `POST /api/seller/products/[productId]/stock`): trước tính
-    năng này, `Product.stock`/`ProductVariant.stock` chỉ là 1 con số seller
-    tự gõ tay — mua xong đơn hàng chuyển sang ký quỹ nhưng **không có nội
-    dung thật nào được giao** (`OrderItem.deliveredPayload` luôn null). Đây
-    là khoảng trống lớn nhất của 1 sàn marketplace bán tài khoản/vật phẩm số
-    (đúng bản chất MarketMMO) — tính năng này lấp đúng khoảng trống đó.
-
-    **Nhập kho** (`StockEntryPanel` trong `ProductVariantManager.tsx`, nút
-    "Nhập kho" dưới mỗi sản phẩm không có variant / dưới mỗi variant): seller
-    dán hàng loạt vào textarea, **mỗi dòng = 1 đơn vị sẽ giao cho đúng 1
-    khách** (không ép format cụ thể — mỗi category dữ liệu khác nhau, vd
-    Gmail dùng `email|password|2fa`, Steam key chỉ cần 1 mã). Tối đa 500
-    dòng/lần, 500 ký tự/dòng. Thêm kho thành công tự động `increment` đúng
-    `Product.stock`/`ProductVariant.stock` theo số dòng — 2 con số luôn đồng
-    bộ vì đây là 2 điểm ghi DUY NHẤT vào `stock` kể từ khi sản phẩm/variant
-    bắt đầu dùng kho thật (điểm còn lại là bước trừ kho lúc checkout, không
-    đổi so với trước).
-
-    **Cơ chế "chế độ kho thật" tự động, không cần cờ boolean riêng**: 1
-    sản phẩm/variant được coi là dùng kho thật khi `COUNT(ProductStockItem)
-    WHERE productId=X AND variantId=Y) > 0` — seller CHƯA từng nhập kho thì
-    count = 0, checkout giữ nguyên 100% hành vi cũ (kiểm tra theo
-    `stock` thô, `deliveredPayload` luôn null). Đây là lý do 180+ sản phẩm cũ
-    (và mọi sản phẩm mới chưa bấm "Nhập kho") không bị ảnh hưởng gì —
-    migration-safety cùng tinh thần với `Product.status`/`Category.status`.
-
-    **Checkout tự động "claim" hàng khi mua** (`POST /api/checkout`, viết lại
-    hoàn toàn phần tạo `OrderItem` — không còn dùng nested `items: {
-create: [...] }` như trước vì cần lấy đúng id từng `OrderItem` để gắn vào
-    đúng lô `ProductStockItem` đã claim, thứ tự trả về của `include:
-{items:true}` không đảm bảo khớp mảng gốc nên không thể tin cậy để ghép
-    cặp): với mỗi dòng hàng đang ở chế độ kho thật, chạy
-    `SELECT ... WHERE status='AVAILABLE' ORDER BY "createdAt" ASC LIMIT
-    quantity FOR UPDATE SKIP LOCKED` (raw SQL, lần đầu dùng trong dự án) rồi
-    **đánh dấu SOLD ngay lập tức** (chưa cần biết orderItemId) — bắt buộc
-    làm ngay trong cùng vòng lặp, KHÔNG gom lại update ở cuối, để chặn đúng
-    trường hợp giỏ hàng có 2 dòng trùng productId+variantId (gửi thẳng lên
-    API, không qua `CartContext` dedup) claim trúng cùng 1 bản ghi. Không đủ
-    hàng trong kho thật → throw lỗi "không đủ hàng trong kho" (kể cả khi
-    `preOrder=true` — khác chế độ cũ, không thể "giao trước" 1 nội dung chưa
-    tồn tại). `FOR UPDATE SKIP LOCKED` đảm bảo 2 checkout chạy song song
-    tranh mua đơn vị cuối cùng không bao giờ cùng thắng (đã test bằng 2
-    request `Promise.all` thật — đúng 1 thành công, bản ghi kho chỉ chuyển
-    SOLD đúng 1 lần).
-
-    Nội dung claim được lưu vào `OrderItem.deliveredPayload` dạng JSON string
-    mảng (khớp `quantity`, vd mua 2 thì mảng có 2 phần tử). Buyer xem tại
-    `/don-hang` qua nút "Xem thông tin đã giao"
-    (`DeliveredPayloadButton.tsx`, chỉ hiện khi `deliveredPayload` khác
-    null) — hiện ngay lập tức sau khi mua (không đợi giải ngân ký quỹ, đúng
-    mô hình "giao hàng tự động 24/7" — ký quỹ chỉ giữ TIỀN của seller, không
-    giữ QUYỀN XEM nội dung của buyer), mỗi dòng có nút sao chép riêng.
-
-    **Xoá variant có dọn kho tường minh** (`DELETE
-/api/seller/products/[productId]/variants/[variantId]`): `ProductStockItem.
-    variantId` dùng `onDelete: SetNull` (không Cascade) để bản ghi ĐÃ BÁN
-    không bao giờ mất khi variant bị xoá sau này (lịch sử giao hàng của buyer
-    phải giữ nguyên vĩnh viễn — chỉ dựa vào `orderItemId`, không phụ thuộc
-    `variant` còn tồn tại hay không). Nhưng nếu để `SetNull` tự động áp dụng
-    cho CẢ bản ghi CHƯA BÁN (AVAILABLE), chúng sẽ vô tình "mồ côi" lẫn sang
-    kho của Product gốc (sai dữ liệu nếu Product vẫn còn variant khác) — nên
-    route DELETE tự dọn (`deleteMany` các bản ghi AVAILABLE của variant đó)
-    TRƯỚC khi xoá variant, trong cùng 1 `$transaction`.
-
-    Đã test bằng script Node gọi thẳng HTTP vào server dev thật (không phải
-    gọi thẳng Prisma như các tính năng trước) — vì logic quan trọng nhất
-    (raw SQL `FOR UPDATE SKIP LOCKED`, thứ tự tạo OrderItem) nằm trong chính
-    route `/api/checkout`, cần test đúng code đang chạy thay vì viết lại
-    logic tương đương trong script test. Xác thực buyer/seller bằng cách tự
-    tạo JWT session hợp lệ qua `next-auth/jwt`'s `encode()` (cùng thuật toán
-    Auth.js dùng để tạo cookie phiên đăng nhập thật) thay vì đăng nhập qua
-    trình duyệt — Turnstile thật chỉ chặn được request tới API đăng nhập,
-    không chặn được request dùng cookie phiên đã có sẵn. 19 kịch bản qua
-    HTTP (nhập kho qua đúng API thật → stock tự tăng đúng → mua 2/3 → xác
-    nhận `deliveredPayload` đúng nội dung/thứ tự → 2 bản ghi chuyển SOLD kèm
-    đúng orderItemId, 1 còn AVAILABLE → `stock`/`sold` đồng bộ đúng → mua
-    tiếp vượt kho thật bị chặn đúng và KHÔNG mất bản ghi nào (rollback đúng)
-    → luồng tương tự cho phiên bản → xoá variant dọn đúng kho chưa bán, giữ
-    nguyên bản ghi đã bán → sản phẩm chưa từng nhập kho vẫn hoạt động y hệt
-    chế độ cũ) + 1 kịch bản đua tranh mua đơn vị cuối cùng bằng 2 request
-    song song thật (`Promise.all`) — tổng 22/22 pass.
-16. **Admin Control Center** (`/admin`, dựng lại HOÀN TOÀN từ trang quản trị
-    đơn-trang cũ — component gộp `AdminDashboard.tsx` đã bị XOÁ, thay bằng
-    13 trang con riêng dưới `admin/*` + shell/sidebar/theme tối riêng biệt).
-    Xây theo demo Artifact "control room" đã được duyệt qua 6 vòng chỉnh sửa,
-    dưới 2 ràng buộc người dùng chốt tường minh qua `AskUserQuestion` TRƯỚC
-    khi code:
-    - **Nạp tiền/Rút tiền GIỮ NGUYÊN thực tế hiện tại**: mặc dù bản demo vẽ
-      2 trang này thành log giao dịch VNPay tự động (không cần duyệt tay),
-      quyết định cuối là **KHÔNG** đổi — VNPay không hỗ trợ payout/
-      disbursement tự động (cần sản phẩm riêng MarketMMO chưa có), và
-      `VNPAY_TMN_CODE`/`VNPAY_HASH_SECRET` còn chưa cấu hình. `/admin/nap-tien`
-      (`AdminDepositsPanel.tsx`) và `/admin/rut-tien` (`AdminWithdrawalsPanel.tsx`)
-      chỉ đổi GIAO DIỆN (theme tối), gọi lại NGUYÊN VẸN
-      `GET/POST /api/admin/deposits`/`withdrawals` đã có từ trước.
-    - **Làm hết 1 lần** (không phased rollout): toàn bộ 13 mục sidebar đều có
-      logic thật ngay từ lần build này, bao gồm mọi năng lực HOÀN TOÀN MỚI
-      (khoá tài khoản/gian hàng, duyệt toàn bộ đơn hàng, kiểm duyệt diễn đàn,
-      báo cáo sức khoẻ tài chính, sửa giá sàn/gán thủ công/huỷ bid đấu giá,
-      nhật ký hoạt động, trạng thái tích hợp hệ thống) — không chỉ di chuyển
-      5 mục duyệt PENDING đã có sẵn (Nạp tiền, Rút tiền, Khiếu nại, Sản phẩm,
-      Danh mục) vào theme mới.
-
-    **Shell riêng biệt** (`src/app/admin/layout.tsx`): guard đăng nhập + role
-    ADMIN (redirect y hệt trang cũ), render `AdminSidebar.tsx` (13 mục chia
-    6 nhóm, badge số đếm qua `getAdminSidebarCounts()`) — **KHÔNG** dùng
-    `<Header>`/`<Footer>` của site mua sắm, cố tình tách hẳn để "khu vực quản
-    trị" có cảm giác khác biệt rõ ràng. Theme tối riêng qua class
-    `.admin-shell` (biến CSS `--adm-*`, khai báo trong `globals.css` NGOÀI
-    `@theme inline` để không rò rỉ ra bảng màu site) — mọi component admin
-    dùng qua cú pháp Tailwind arbitrary value (`bg-[var(--adm-surface)]`).
-    Bộ UI dùng chung `src/components/admin/AdminUi.tsx` (AdminCard/AdminBadge/
-    AdminButton/AdminEmptyState/AdminPageHeader) tránh lặp class dài ở >10
-    panel khác nhau.
-
-    **Tổng quan** (`/admin`): 4 thẻ KPI bấm được, dẫn tới đúng trang chi tiết
-    (Tổng giá trị giao dịch → `/admin/don-hang`; Người dùng mới →
-    `/admin/nguoi-dung`; Đang ký quỹ → `/admin/don-hang?status=ESCROW`; Việc
-    cần xử lý → cuộn mượt xuống panel "Cần xử lý" cùng trang, `id="can-xu-ly"`
-    + `scroll-mt-20`) — GMV tính từ `OrderItem` không `CANCELLED` trong
-    khoảng ngày chọn (`getAdminOverviewStats`), escrow là snapshot TOÀN hệ
-    thống hiện tại (không lọc theo ngày). Biểu đồ dùng lại nguyên
-    `RevenueChart.tsx` của trang seller overview (không tạo bản riêng — màu
-    `fill-brand` trùng khớp `--adm-brand` nên hiển thị đúng trên nền tối dù
-    class tham chiếu theme site, không phải `--adm-*`). "Hoạt động gần đây"
-    gộp 5 nguồn khác nhau (đăng ký mới, seller mới, khiếu nại mới,
-    sản phẩm chờ duyệt mới, `AdminAuditLog`) qua `getAdminActivityFeed()` —
-    không có bảng "activity" riêng, mỗi dòng bấm vào dẫn thẳng trang liên
-    quan (riêng dòng khiếu nại trỏ `/admin/khieu-nai?open=<id>` mở thẳng đúng
-    modal chi tiết, xem bên dưới).
-
-    **Người dùng** (`/admin/nguoi-dung`, `POST /api/admin/users/[id]`
-    `{action:"ban"|"unban"}`): tìm kiếm theo email/username/tên, khoá kèm lý
-    do tuỳ chọn (modal xác nhận). Không cho khoá tài khoản `role=ADMIN`
-    (chặn ở API, không chỉ ẩn nút). Xem cơ chế enforcement đầy đủ ở mục
-    `User.banned` trong "Mô hình dữ liệu".
-
-    **Người bán** (`/admin/nguoi-ban`, `POST /api/admin/sellers/[id]`
-    `{action:"suspend"|"unsuspend"}`): tương tự Người dùng nhưng khoá GIAN
-    HÀNG thay vì tài khoản — xem `Seller.suspended` trong "Mô hình dữ liệu"
-    để biết chính xác chỗ nào bị ẩn.
-
-    **Đơn hàng & Ký quỹ** (`/admin/don-hang`): duyệt TOÀN BỘ `OrderItem` trên
-    nền tảng (khác trang seller dashboard chỉ thấy đơn của chính mình) —
-    filter theo status qua `<Link href="?status=...">` (server-render, khớp
-    quy ước có sẵn của dự án), phân trang 30 dòng/trang
-    (`getAdminOrderItems`). Nút "Chạy giải ngân ký quỹ đến hạn" gọi lại
-    nguyên `POST /api/admin/escrow/release` đã có.
-
-    **Diễn đàn** (`/admin/dien-dan`): hàng chờ `ForumReport` status OPEN, ẩn
-    nội dung hoặc bỏ qua — xem model `ForumReport` ở "Mô hình dữ liệu". Nút
-    "Báo cáo" buyer-facing mới (`ForumReportButton.tsx`) đặt ở cả bài viết
-    (`/dien-dan/[postId]`) lẫn từng bình luận, mở popover nhập lý do, gọi
-    `POST /api/forum/report`.
-
-    **Sức khoẻ tài chính** (`/admin/tai-chinh`, `getAdminFinancialHealth()`):
-    6 thẻ snapshot TOÀN hệ thống tại thời điểm gọi (không lọc theo ngày) —
-    tổng số dư ví user (`User.walletBalance` aggregate), tổng đang ký quỹ,
-    tổng quỹ bảo hiểm seller, tổng đã giải ngân, tổng hoa hồng affiliate đã
-    trả (`WalletTransaction` type `REFERRAL_BONUS` CONFIRMED), tổng đã rút.
-    Chỉ mang tính đối chiếu dòng tiền nhanh, KHÔNG thay thế sổ sách kế toán.
-
-    **Khiếu nại** (`/admin/khieu-nai`, `AdminDisputesPanel.tsx`): khác bản cũ
-    (nút Duyệt/Từ chối in ngay trên từng dòng danh sách) — giờ **bấm vào 1
-    dòng mở modal chi tiết đầy đủ** (lý do, người mở, số tiền, thời gian) rồi
-    mới quyết định Hoàn tiền buyer/Giải ngân seller trong modal đó. Hỗ trợ
-    prop `openId` (từ query `?open=<disputeId>`) để mở thẳng đúng khiếu nại
-    khi bấm từ "Hoạt động gần đây" ở Tổng quan.
-
-    **Đấu giá vị trí vàng** (`/admin/dau-gia`, `AdminAuctionPanel.tsx`) — mục
-    được xây chi tiết nhất trong 13 trang, gồm 4 khả năng:
-    - Xem đủ 6 slot (nhóm Tuần #1-4 / Ngày #5-6) kèm TOÀN BỘ lịch sử bid mỗi
-      slot (khác `getAuctionSlots()` công khai chỉ trả top 1 bid) —
-      `getAdminAuctionSlots()` giữ tối đa 3 slot gần nhất/vị trí (kể cả đã
-      CLOSED) để xem lịch sử mà không load vô hạn.
-    - **Sửa giá sàn** (`PATCH /api/admin/auction/slots/[id]`): chỉ áp dụng
-      slot đang OPEN.
-    - **Gán thủ công** (`POST /api/admin/auction/assign`): admin chọn 1
-      seller → 1 sản phẩm ĐÃ DUYỆT của seller đó → gán thẳng vào 1 vị trí,
-      BỎ QUA hoàn toàn quy trình đấu giá/bidding. Tuỳ chọn "Thu phí seller"
-      (checkbox + số tiền) — nếu bật, kiểm tra đủ số dư ví TRƯỚC khi trừ,
-      dùng đúng convention `WalletTransaction type: "PURCHASE"` với note
-      `"Admin gán thủ công vị trí vàng #N"` (khớp format note khi thắng đấu
-      giá thật, chỉ khác nội dung); nếu tắt thì hoàn toàn miễn phí, không tạo
-      `WalletTransaction`. Đóng slot cũ NGAY + tạo slot kế tiếp cùng vị trí/
-      kỳ hạn để hệ thống xoay vòng liên tục (không "đứng hình" ở vị trí vừa
-      gán) — cùng cơ chế xoay vòng với giải quyết đấu giá thật.
-    - **Đóng phiên ngay** (`POST /api/admin/auction/slots/[id]/close-now`) +
-      **Huỷ mọi lượt đặt giá** (`POST
-/api/admin/auction/slots/[id]/cancel-bids`, chỉ `deleteMany` AuctionBid,
-      KHÔNG đụng ví ai vì tiền chỉ trừ lúc thắng thật sự).
-
-      Refactor quan trọng khi xây tính năng này: logic chọn người thắng/trừ
-      ví/xoay vòng slot (vốn viết thẳng trong `POST
-/api/admin/auction/resolve`) được tách ra hàm dùng chung
-      `resolveAuctionSlot()` (`src/lib/auction.ts`) — vừa dùng cho giải quyết
-      HÀNG LOẠT slot hết hạn (route resolve cũ, không đổi hành vi) vừa dùng
-      cho "Đóng phiên ngay" 1 slot cụ thể bất kể còn hạn hay không, tránh
-      viết trùng ~50 dòng logic winner-selection ở 2 route.
-
-    **Nhật ký hoạt động** (`/admin/nhat-ky`): liệt kê `AdminAuditLog` phân
-    trang 40 dòng/trang (`getAdminAuditLogPage`) — mọi hành động ở 15 mục
-    còn lại (kể cả 6 mục di chuyển từ trang cũ) đều được nối `logAdminAction()`
-    ở bước cuối, xem `src/lib/audit.ts`.
-
-    **Cài đặt hệ thống** (`/admin/cai-dat`): đọc SỰ TỒN TẠI (không phải giá
-    trị) của 7 biến môi trường tích hợp bên thứ 3 (VNPay, Google OAuth,
-    Turnstile, Resend, Telegram Bot, Vercel Blob, USDT TRC20), hiện badge
-    "Đã cấu hình"/"Chưa cấu hình" — KHÔNG BAO GIỜ render giá trị secret thật
-    ra client dù là cho admin.
-
-    Đã kiểm thử qua script Node gọi thẳng HTTP (mint session cookie qua
-    `next-auth/jwt`'s `encode()`, cùng kỹ thuật đã dùng cho mục 15): khoá/mở
-    khoá tài khoản (xác nhận `requireUser()` chặn đúng mọi route bảo vệ khi
-    banned), khoá/mở khoá gian hàng (xác nhận sản phẩm biến mất/hiện lại
-    khỏi query công khai + trang shop 404 đúng cho khách vãng lai), audit log
-    ghi đúng `adminId`, trang Sức khoẻ tài chính không lỗi, sửa giá sàn +
-    gán thủ công (miễn phí) đấu giá (xác nhận slot cũ CLOSED, slot mới cùng
-    vị trí được tạo, `Product.featuredUntil` được set), buyer báo cáo bài
-    viết → admin ẩn → `ForumPost.hidden=true` — 21/21 kịch bản pass. Riêng
-    luồng "banned chặn đăng nhập ở form thật" xác nhận gián tiếp qua code
-    review (không test được qua HTTP tự động vì Turnstile đã bật thật trong
-    `.env` dev, và test cấp API/DB không thể vượt qua bước giải captcha).
-
-### Tài khoản có sẵn sau khi seed (`npm run db:seed`)
-
-| Vai trò     | Email                                                       | Mật khẩu                          | Ghi chú                                                      |
-| ----------- | ----------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------ |
-| Admin       | `admin@marketmmo.pro`                                       | `Admin@123456` (hoặc theo `.env`) | Truy cập `/admin`                                            |
-| Buyer demo  | `buyer@marketmmo.pro`                                       | `Buyer@123`                       | Ví sẵn 500.000đ để test mua hàng                             |
-| Seller demo | `<slug>@marketmmo.pro` (vd `marketmmo-store@marketmmo.pro`) | `Seller@123`                      | 4 seller: marketmmo-store, accverse, proaccounts, cloudhouse |
-
-> Đây là thông tin đăng nhập cho **môi trường dev/demo** — đổi hoặc xoá các
-> tài khoản này trước khi triển khai production thật.
-
-### Domain (khái niệm — đã ánh xạ vào schema ở trên)
-
-- **Delivery tự động**: đã hiện thực thật qua model `ProductStockItem` — xem
-  mục "Luồng nghiệp vụ chính" (mục 15 "Kho dữ liệu giao hàng thật"). Sản
-  phẩm/phiên bản CHƯA từng được seller nhập kho thật vẫn hoạt động như cũ
-  (đơn hàng chuyển thẳng sang ký quỹ, `OrderItem.deliveredPayload` = null) —
-  chỉ sản phẩm/phiên bản seller đã bắt đầu nhập kho mới có giao hàng tự động
-  thật (buyer xem tại `/don-hang`).
-- **Review/Rating**: đánh giá **Seller** (gian hàng) đã hiện thực thật —
-  xem mục "Luồng nghiệp vụ chính" ở trên. Riêng `Product.rating`/
-  `reviewCount` (điểm sao hiển thị trên từng thẻ sản phẩm) **vẫn là số tĩnh
-  từ seed**, chưa gắn với bảng `Review` — đây là 2 hệ thống rating tách biệt
-  có chủ đích (đánh giá theo gian hàng, không theo từng sản phẩm), xem
-  checklist nếu muốn mở rộng sang review theo sản phẩm.
-- **Referral/Affiliate**: đã hiện thực thật — xem mục "Luồng nghiệp vụ chính"
-  (mục 9) và trang `/affiliate`.
-
-## Quy tắc bắt buộc
-
-Các quy tắc sau **luôn phải tuân thủ** khi phát triển MarketMMO, không phải gợi ý:
-
-1. **Screenshot đối chiếu design**: sau mỗi thay đổi UI lớn (thêm/sửa section,
-   trang mới, layout mới), chạy `npm run dev`, dùng `npm run screenshot` (script
-   Playwright tại `scripts/screenshot.mjs`) để chụp lại trang, rồi so sánh với
-   thiết kế gốc trước khi coi là hoàn thành.
-   - Ảnh tĩnh `shopmini.pro__category=Gmail.png` chỉ có độ phân giải thấp
-     (190×385px) nên **không dùng làm nguồn đối chiếu chính** — chỉ hữu ích ở
-     mức bố cục/màu sắc tổng thể.
-   - Nguồn đối chiếu chính xác hơn: chụp trực tiếp các trang sống trên
-     shopmini.pro (ví dụ bằng một script Playwright tạm thời, `waitUntil:
-"load"` thay vì `"networkidle"` vì site có long-poll/chat widget khiến
-     `networkidle` không bao giờ đạt được) rồi so bố cục, thứ tự section, và
-     nội dung field với trang MarketMMO tương ứng. Đã áp dụng cách này cho
-     trang chủ, danh mục, chi tiết sản phẩm, đăng nhập, gian hàng người bán.
-   - Script `npm run screenshot` mặc định cuộn qua toàn trang trước khi chụp
-     để các section có scroll-animation (mục 3 bên dưới) đã hiển thị đầy đủ
-     trong ảnh full-page.
-2. **Mobile-friendly bắt buộc**: mọi trang/component phải responsive, kiểm tra
-   hiển thị tốt trên mobile (không chỉ desktop) trước khi báo hoàn thành — bao
-   gồm cả banner danh mục dạng icon ngang và danh sách sản phẩm dạng hàng.
-3. **Animation khi scroll cho mọi section**: mỗi section trên trang (banner,
-   danh mục, danh sách sản phẩm, footer...) phải có hiệu ứng xuất hiện khi cuộn
-   tới (scroll-triggered animation — vd: fade-in/slide-up), không hiển thị tĩnh
-   ngay lập tức.
+Trang danh mục/sản phẩm/shop/trang chủ đều `export const dynamic =
+"force-dynamic"` (tồn kho/đã bán/số dư ví đổi liên tục) — không SSG.
+
+## Quy trình làm việc quan trọng
+
+**1. Đổi schema Prisma — BẮT BUỘC theo đúng thứ tự này:**
+1. Viết file SQL mới vào `prisma/pending-sql/YYYY-MM-DD-mo-ta-ngan.sql`
+   (idempotent — `ADD COLUMN IF NOT EXISTS`...), kèm comment giải thích lý
+   do/tác động migration-safety cho dữ liệu cũ.
+2. **DỪNG, đưa user duyệt** — KHÔNG tự chạy SQL này lên Neon (production).
+3. Sau khi user xác nhận đã chạy trên Neon: cập nhật `prisma/schema.prisma`
+   khớp đúng SQL, chạy `npx prisma generate` (KHÔNG `prisma db push`/
+   `migrate` nhắm production).
+4. Muốn test local: `npm run db:push` **AN TOÀN** để chạy — `.env` local trỏ
+   Docker (cổng 5433), hoàn toàn tách biệt với Neon. Đây là bước RIÊNG,
+   không thay thế bước 2-3.
+5. Thêm 1 dòng vào bảng lịch sử ở `docs/ARCHITECTURE.md` §16.
+6. Trên Windows: **dừng dev server trước** khi chạy `prisma generate`/
+   `db push` — engine `.dll.node` bị khoá file nếu dev server đang chạy
+   (lỗi `EPERM`).
+
+**2. Không tự ý commit/push.** Sau khi hoàn thành + tự test xong, báo cáo
+kết quả và DỪNG LẠI chờ user xem/duyệt. Chỉ commit/push khi user gõ yêu cầu
+rõ ràng (vd "hãy commit + push"). Không amend, không `--no-verify`, không
+force-push trừ khi được yêu cầu tường minh.
+
+**3. Script test tạm thời**: viết vào `scripts/tmp-*.mjs`, chạy bằng `node
+scripts/tmp-xxx.mjs`, **xoá file sau khi dùng xong** — không để lại script
+test một lần trong repo. Kỹ thuật hay dùng để test qua HTTP thật (không phải
+gọi thẳng Prisma) khi cần né Turnstile: mint session cookie bằng
+`next-auth/jwt`'s `encode()` cho tài khoản seller/buyer/admin demo, gọi
+thẳng route API.
+
+**4. Trước khi sửa 1 hệ thống nghiệp vụ**: đọc đúng mục liên quan trong
+`docs/ARCHITECTURE.md` trước — đừng suy đoán lại từ tên biến/route, nhiều
+cơ chế (đấu giá, pre-order, bảo hành) đã qua rebuild lớn và khác đáng kể so
+với thiết kế ban đầu.
+
+**5. `git status` trước mọi lệnh có thể mất dữ liệu** (`checkout`/`restore`/
+`reset`/`clean`) — stash trước nếu có thay đổi chưa commit.
+
+## Nguyên tắc bảo mật cốt lõi
+
+- **Nội dung giao hàng CHỈ lộ qua `reveal-delivered`** (`POST
+/api/orders/[orderItemId]/reveal-delivered`) — buyer phải đã mua + tự bấm
+  "Xem". `mapProduct()`/mọi query công khai (`src/lib/queries.ts`) TUYỆT ĐỐI
+  không được đưa `tutTrickContent`, `toolUsageGuide`, `toolDeliveryLink`,
+  `deliveredPayload` ra ngoài. Xem `docs/ARCHITECTURE.md` §4.
+- **Field nhạy cảm mã hoá at-rest, fail-closed**: `ServiceIntake` (secret
+  field dịch vụ) và `ProductStockItem.content` (kho TOOL) qua
+  `src/lib/service-crypto.ts` (AES-256-GCM). Thiếu
+  `SERVICE_CREDENTIAL_ENCRYPTION_KEY` → chặn cứng, KHÔNG BAO GIỜ lưu
+  plaintext dự phòng. Không log plaintext/ciphertext ở bất kỳ đâu.
+- **Mọi thao tác đổi tiền/tồn kho** bọc trong `prisma.$transaction`, bước
+  "trừ có điều kiện" dùng `updateMany({where:{..., đủ điều kiện}})` rồi
+  kiểm `count===0` để phát hiện race condition (2 request song song tranh
+  cùng 1 tài nguyên) — xem ví dụ chuẩn ở `POST /api/checkout`.
+- **API route luôn qua `requireUser()`/`requireSeller()`/`requireAdmin()`**
+  (`src/lib/authz.ts`) — không tự viết lại check session/role/banned/
+  suspended.
+- **File upload**: luôn verify magic-byte thật (`assertMagicMatches()` trong
+  `src/lib/uploads.ts`), không tin `Content-Type` client gửi. Không cho
+  upload định dạng thực thi trần (chỉ .zip nếu cần nén) — bài học từ việc
+  đã CHỦ ĐỘNG GỠ tính năng upload file .zip lên sàn cho Tool/AI Agent
+  (2026-08-18) vì rủi ro phát tán mã độc, chỉ giữ lại "link tải ngoài".
+- **Không hardcode key/secret mẫu "trông giống thật"** trong `.env.example`
+  — để trống buộc người triển khai điền giá trị thật, tránh chuyển nhầm
+  tiền vào địa chỉ/tài khoản không xác định.
+
+## Design System (tóm tắt — chi tiết đo pixel xem lịch sử git nếu cần)
+
+- **Container**: `mx-auto max-w-7xl` toàn site — biến `--container-7xl:
+92rem` (đã +15% so với mặc định Tailwind) khai trong `@theme inline` của
+  `globals.css`. Đổi bề rộng site: chỉ sửa biến này, không thêm
+  `max-w-[...]` rải rác.
+- **Màu chủ đạo**: xanh chuối non — `--color-brand` (#8DC63F nền chính) /
+  `--color-brand-dark` (#6FA82E, hover/text nhấn) / `--color-brand-light`
+  (#D4EDA6, overlay nhạt). Nền tối `#111111`–`#1A1A2E` cho header trên
+  cùng/footer. Dùng qua utility `bg-brand`/`text-brand`/`border-brand`(-dark/
+  -light) — không hardcode hex mới.
+- **Header 3 lớp** (đo pixel-chính-xác từ shopmini.pro): ticker tối ~22px →
+  thanh chính nền brand cao 56px (logo + "MARKETMMO", nút Đăng nhập nền đen
+  trước/Đăng ký nền trắng sau) → nav trắng cao 50px, chữ 16px font-semibold,
+  dropdown mega-menu hover (`NavMegaMenu.tsx`) cho Sản phẩm/Dịch vụ/Nạp tiền.
+- **Marquee carousel** (`FeaturedCarousel`/`SellerCarousel`): track nhân đôi
+  `[...items, ...items]`, chạy `0% → -50%`, dừng khi hover. Danh sách ngắn
+  phải lặp thành 1 "block" đủ rộng khung nhìn TRƯỚC khi nhân đôi (tránh hở
+  khoảng trắng cuối chu kỳ) — xem `SellerCarousel.tsx` nếu thêm marquee mới.
+- **Logo**: `public/logo-mark.png` (icon) + `public/logo-full.png` (đầy đủ)
+  — thay logo mới chỉ cần đè 2 file này, giữ nguyên tên.
+
+## Quy tắc bắt buộc (mọi thay đổi UI)
+
+1. **Screenshot đối chiếu**: sau thay đổi UI lớn, `npm run dev` rồi `npm run
+screenshot` để chụp lại, so với thiết kế gốc trước khi coi là hoàn thành.
+2. **Mobile-friendly**: kiểm tra responsive trước khi báo hoàn thành.
+3. **Scroll animation**: mọi section cấp trang bọc trong `<Reveal>` — không
+   tự viết animation riêng.
 
 ## Quy ước code
 
-- TypeScript strict; component UI tách khỏi logic dữ liệu. Trang lấy dữ liệu
-  thật qua `src/lib/queries.ts` (Prisma) — không import trực tiếp
-  `src/data/*.ts` trong trang nữa (file đó giờ chỉ là nguồn seed).
-- Component dùng chung đặt tại `src/components/`, mỗi component một file, đặt
-  tên PascalCase trùng tên file.
-- Mọi section cấp trang bọc trong `Reveal` (`src/components/Reveal.tsx`) để có
-  scroll animation đồng nhất — không tự viết animation riêng lẻ khác.
-- Màu sắc dùng qua CSS variables/utility đã khai báo trong
-  `src/app/globals.css` (`bg-brand`, `bg-ink`, `bg-surface-alt`,
-  `text-danger`, `border-border-c`...) — không hardcode mã hex mới trong
-  component trừ khi thật sự cần.
+- TypeScript strict; component UI tách khỏi logic dữ liệu (`src/lib/queries.ts`
+  cho mọi fetch Prisma — không import `src/data/*.ts` trong trang).
+- 1 component/file, PascalCase trùng tên file, đặt tại `src/components/`.
+- Màu qua CSS variable/utility đã khai trong `globals.css` — không hardcode
+  hex mới trừ khi thật sự cần.
 - Không thêm thư viện/abstraction ngoài phạm vi cần thiết cho từng tính năng.
-- Mọi thao tác đổi tiền/tồn kho (checkout, duyệt nạp tiền, giải ngân) phải bọc
-  trong `prisma.$transaction(...)` để tránh lệch số dư khi có lỗi giữa chừng —
-  xem ví dụ ở `src/app/api/checkout/route.ts`.
-- API route bảo vệ bằng `requireUser()`/`requireAdmin()`
-  (`src/lib/authz.ts`) — không tự viết lại logic kiểm tra session/role.
-- **Prisma `orderBy` trên field nullable + DESC**: Postgres mặc định xếp
-  `NULL` **lên đầu** khi `ORDER BY x DESC` (ngược trực giác). Nếu field đó
-  chỉ có giá trị ở một số ít record (như `Product.featuredUntil`) và bạn
-  muốn ưu tiên record có giá trị lên trước, phải chỉ định tường minh
-  `orderBy: { field: { sort: "desc", nulls: "last" } }` — thiếu dòng này đã
-  gây lỗi thật (`getFeaturedProducts` trả toàn record `hot=true` có
-  `featuredUntil=null`, sản phẩm thắng đấu giá bị `take` cắt mất dù đúng ra
-  phải đứng đầu). Xem `src/lib/queries.ts`.
-- **Component đếm ngược thời gian thật (`AuctionCountdown`)**: không tính
-  giá trị giây/phút ngay trong lần render đầu (kể cả `useState(() =>
-...)`) vì server và client sẽ tính ở 2 mili-giây khác nhau → hydration
-  mismatch. Khởi tạo state là `null`, chỉ tính giá trị thật trong
-  `useEffect` (chạy sau khi mount ở client), render placeholder tĩnh trong
-  lúc chờ.
+- **Prisma `orderBy` field nullable + DESC**: Postgres mặc định xếp `NULL`
+  LÊN ĐẦU khi `ORDER BY x DESC` — muốn ưu tiên record có giá trị, phải
+  `orderBy: { field: { sort: "desc", nulls: "last" } }` tường minh (bug thật
+  đã gặp ở `getFeaturedProducts`).
+- **State tính theo thời gian thật** (đếm ngược, timestamp): không tính
+  ngay ở lần render đầu (`useState(() => ...)`) vì server/client tính ở 2
+  mili-giây khác nhau → hydration mismatch. Khởi tạo `null`, tính thật trong
+  `useEffect`.
 
-## Việc cần làm tiếp theo
+## Tài khoản demo (`npm run db:seed`)
 
-Đã xây xong (frontend + **backend thật**, đã kiểm thử end-to-end):
+| Vai trò | Email | Mật khẩu |
+| --- | --- | --- |
+| Admin | `admin@marketmmo.pro` | `Admin@123456` (hoặc theo `.env` `ADMIN_PASSWORD`) |
+| Buyer | `buyer@marketmmo.pro` | `Buyer@123` |
+| Seller | `marketmmo-store@marketmmo.pro` (+ `accverse@`, `proaccounts@`, `cloudhouse@marketmmo.pro`) | `Seller@123` |
 
-- [x] Trang chủ, danh mục, chi tiết sản phẩm, gian hàng người bán — dữ liệu
-      **thật từ PostgreSQL qua Prisma** (không còn mock trong trang), 28 sản
-      phẩm phủ đủ 10 category.
-- [x] **PostgreSQL qua Docker** (nâng cấp từ SQLite ban đầu): container riêng
-      biệt cho dự án (`docker-compose.yml`, cổng host 5433 để không đụng
-      stack Docker khác đang chạy sẵn trên máy). Đã kiểm thử lại toàn bộ luồng
-      (đăng nhập, mua hàng trừ ví, trang admin) trên Postgres — hoạt động y
-      hệt như trên SQLite trước đó.
-- [x] **Auth thật**: đăng ký/đăng nhập bằng Auth.js (Credentials + Google tuỳ
-      chọn), mật khẩu hash bcrypt, session JWT. Header hiển thị số dư ví/tên
-      user thật khi đã đăng nhập, có nút đăng xuất.
-- [x] **Giỏ hàng + thanh toán thật**: `CartContext` lưu snapshot sản phẩm vào
-      `localStorage`; nút "Mua ngay" / thanh toán giỏ hàng gọi
-      `POST /api/checkout` — trừ ví, giảm tồn kho, tạo `Order`/`OrderItem` với
-      trạng thái ký quỹ (`ESCROW`) thật trong DB. Đã test: mua hàng → số dư ví
-      giảm đúng, đơn hàng hiện đúng trạng thái và ngày giải ngân dự kiến.
-- [x] **Ví/nạp tiền thật**: yêu cầu nạp thủ công (admin duyệt) hoạt động đầy
-      đủ; khung tích hợp VNPay đã viết đúng spec (HMAC-SHA512) nhưng **cần
-      `VNPAY_TMN_CODE`/`VNPAY_HASH_SECRET` thật** mới dùng được — hiện tự động
-      ẩn/disable nếu thiếu key.
-- [x] **Admin Control Center** (`/admin`, dựng lại hoàn toàn từ trang quản trị
-      đơn-trang cũ — xem chi tiết mục 16 "Luồng nghiệp vụ chính"): shell/
-      sidebar/theme tối riêng biệt, gồm cả 5 mục di chuyển từ trang
-      cũ (Nạp tiền, Rút tiền — **giữ nguyên logic duyệt tay thật**; Khiếu
-      nại — bấm dòng mở modal chi tiết; Sản phẩm/Danh mục chờ
-      duyệt) VÀ 7 năng lực hoàn toàn mới: khoá/mở khoá tài khoản
-      (`User.banned`) + gian hàng (`Seller.suspended`), duyệt toàn bộ đơn
-      hàng nền tảng có lọc trạng thái, kiểm duyệt diễn đàn qua cơ chế báo cáo
-      buyer-facing mới (`ForumReport`), báo cáo Sức khoẻ tài chính, Đấu giá
-      vị trí vàng nâng cấp đầy đủ (sửa giá sàn/gán thủ công bỏ qua bidding/
-      huỷ lượt đặt giá/đóng phiên sớm), Nhật ký hoạt động (`AdminAuditLog`,
-      nối vào toàn bộ route admin cũ lẫn mới), và Cài đặt hệ thống (trạng
-      thái tích hợp qua biến môi trường). Đã test 21/21 kịch bản qua script
-      HTTP + xác nhận trực quan qua screenshot (dark theme render đúng).
-- [x] **Đăng ký bán hàng thật**: tạo `Seller` record + nâng role user, redirect
-      thẳng tới gian hàng mới tạo. Đã test bằng luồng đăng ký tài khoản mới →
-      trở thành người bán → xem gian hàng.
-- [x] **Trang "Người Bán" (`/nguoi-ban`)** — link ngay sau "Đăng Ký Bán Hàng"
-      trong nav: liệt kê toàn bộ seller kèm số sản phẩm đang bán và rating
-      trung bình. Trang gian hàng (`/shop/[seller]`) hiện rating thật (thay
-      cho "Tín nhiệm: 100" cố định trước đây) + danh sách bình luận đánh giá + form gửi đánh giá 1-5 sao. Đã test: chặn đúng người chưa mua hàng
-      không cho đánh giá, chặn seller tự đánh giá mình, gửi đánh giá thành
-      công cập nhật ngay cả trang gian hàng lẫn trang danh sách người bán.
-- [x] **Công cụ Lấy 2FA** (`/lay-2fa`): tính mã TOTP thật (RFC 6238, HMAC-SHA1
-      qua Web Crypto API, `src/lib/totp.ts`) hoàn toàn phía client — không gửi
-      mã bí mật đi đâu. Đã kiểm chứng khớp 100% với phép tính độc lập.
-- [x] Trang Diễn đàn, và các trang pháp lý: FAQ, Điều khoản dịch vụ, Điều
-      khoản bán hàng, Chính sách bảo mật, Sitemap, Tài liệu API.
-- [x] **Header khớp shopmini.pro pixel-chính-xác** (đo trực tiếp trên site
-      của họ): chiều cao thanh chính/nav trắng/ô tìm kiếm, cỡ chữ nav 16px,
-      thứ tự màu nút Đăng nhập/Đăng ký, dropdown mega-menu hover cho Sản
-      phẩm/Dịch vụ/Nạp tiền (`NavMegaMenu.tsx`), logo bỏ ".PRO".
-- [x] **Đấu giá "vị trí vàng"** (`/dau-gia`) — hệ thống thật, không phải giao
-      diện tĩnh: đặt giá (`AuctionBidForm`), đếm ngược thật (`AuctionCountdown`),
-      admin giải quyết phiên + xoay vòng slot mới, sản phẩm thắng tự động lên
-      carousel "Sản phẩm nổi bật" trang chủ (khung trắng bo góc + badge "ĐẤU
-      GIÁ NGAY" khớp shopmini.pro). Đã test full luồng bid → resolve → hiển thị.
-- [x] **Affiliate/giới thiệu** (`/affiliate`, mục nav đổi tên từ "Kiếm tiền"):
-      mã giới thiệu 8 ký tự/user (sinh lười cho tài khoản cũ, sinh ngay lúc
-      đăng ký cho tài khoản mới), link mời `/dang-nhap?ref=<code>` tự điền ô
-      "Mã mời" ở form đăng ký. Hoa hồng 20.000đ (`REFERRAL_COMMISSION_VND`)
-      chỉ cộng vào ví người giới thiệu khi người được mời **đã nạp tiền thật
-      + đơn hàng đầu tiên vượt** `REFERRAL_MIN_FIRST_ORDER_VND` (20.000đ) —
-      kiểm tra trong `POST /api/checkout`, không phải lúc đăng ký (đăng ký chỉ
-      gắn quan hệ). Đánh dấu qua `User.referralRewarded` để chỉ kích hoạt
-      đúng 1 lần/người được mời — nếu đơn đầu tiên không đủ mốc, các đơn sau
-      dù lớn hơn cũng không còn tính. `AffiliatePanel` hiển thị mã/link (nút
-      sao chép), thống kê số người đã mời + tổng hoa hồng, danh sách người đã
-      mời kèm badge "Đã nhận hoa hồng"/"Chưa đủ điều kiện". Đã test end-to-end
-      3 kịch bản (đăng ký → checkout khi chưa nạp tiền bị chặn; nạp tiền +
-      đơn > mốc → cộng đúng 20.000đ; đơn đầu tiên < mốc → không cộng) — xem
-      chi tiết mục 9 "Luồng nghiệp vụ chính".
-- [x] **Phiên bản/gói sản phẩm** (`/quan-ly-san-pham`, model `ProductVariant`):
-      seller tự thêm/xoá các gói cho sản phẩm CỦA MÌNH (vd Gmail: theo
-      quốc gia domain, thời hạn thuê...), mỗi gói có giá/kho riêng. Trang chi
-      tiết sản phẩm bắt buộc chọn 1 gói trước khi mua khi sản phẩm có gói
-      (ẩn ô mô tả ngắn, thay bằng lưới chọn gói kiểu shopmini.pro — chọn =
-      viền brand, hết hàng = gạch ngang "Hết hàng"). Checkout/giỏ hàng tính
-      đúng giá + trừ đúng kho của gói đã chọn (không đụng vào
-      `Product.stock`), lưu `variantId`/`variantLabel` snapshot trên
-      `OrderItem` để lịch sử đơn hàng vẫn hiển thị đúng gói đã mua kể cả sau
-      khi seller xoá gói đó. Đã test full luồng: seller thêm 3 gói (1 gói
-      hết hàng) → buyer chọn đúng gói còn hàng → mua → kiểm tra DB đúng
-      giá/variantId + kho gói giảm đúng + kho sản phẩm gốc không đổi + lịch
-      sử đơn hàng hiện đúng tên gói.
-- [x] **Diễn đàn thật** (`/dien-dan`, model `ForumPost`/`ForumComment`/
-      `ForumLike`, thay cho mock `src/data/posts.ts` đã xoá): user đăng nhập
-      đăng bài, bình luận (đóng vai trò "chat" công khai theo từng bài viết —
-      không phải chat real-time riêng tư), và thả tim 1 bài viết (bấm lại để
-      bỏ thích). Trang chi tiết `/dien-dan/[postId]` mới. Widget "Bài viết
-      tham khảo" (sidebar danh mục) và "BÀI VIẾT THAM KHẢO" (cuối trang chi
-      tiết sản phẩm) đổi sang dữ liệu thật, link thẳng tới từng bài. Xem chi
-      tiết mục 10 "Luồng nghiệp vụ chính". Đã test end-to-end bằng Playwright
-      (đăng nhập → thích/bỏ thích đổi đúng số đếm → gửi bình luận hiện ngay
-      → đăng bài mới redirect đúng trang chi tiết).
-- [x] **Quản Lý Bán Hàng** (`/trang-ban-hang`, dashboard người bán đầy đủ dựng
-      theo ảnh tham khảo shopmini.pro): sidebar 12 mục, đăng ký seller xong
-      redirect thẳng vào đây. **Toàn bộ 12 mục đều có logic thật** (không còn
-      mục "Sắp ra mắt" nào) — Tổng quan (doanh thu theo khoảng ngày), Sản
-      phẩm, Đơn sản phẩm/Đơn dịch vụ, **Rút tiền** (trừ ví ngay khi tạo yêu
-      cầu, admin duyệt/từ chối tại `/admin`, từ chối hoàn đúng tiền — không
-      double-refund/double-deduct), **Quỹ bảo hiểm** (nạp thật, tự động duyệt
-      vì là chuyển nội bộ), Đánh giá, Quảng bá (link `/dau-gia`), **Đặt
-      trước**, **Mã giảm giá**, **Khiếu nại**, **Telegram Bot** — xem chi
-      tiết từng mục ở mục 11-15 "Luồng nghiệp vụ chính". Đã
-      test end-to-end bằng Playwright cho cả 12 mục: guard đăng nhập/seller
-      đúng cả 2 nhánh redirect, đăng ký seller mới → vào đúng Quản Lý Bán Hàng,
-      và **đặc biệt đã test kỹ luồng rút tiền** (tạo 2 yêu cầu → số dư trừ
-      ngay cả 2 lần → admin từ chối 1 → hoàn đúng số tiền → admin duyệt 1 →
-      số dư không đổi thêm → khớp chính xác từng đồng qua toàn bộ chuỗi).
-- [x] **Đặt trước** (`/trang-ban-hang/dat-truoc`, `Product.preOrder`): seller
-      đánh dấu sản phẩm "sắp có hàng" (`PATCH /api/seller/products/[id]`),
-      buyer vẫn trả 100% tiền như checkout thường (tận dụng đúng hệ thống ký
-      quỹ có sẵn, không xây luồng đặt cọc riêng) — `POST /api/checkout` **bỏ
-      qua kiểm tra tồn kho** cho sản phẩm có `preOrder=true`, `stock` có thể
-      xuống âm làm tín hiệu "nợ hàng". Trang dashboard liệt kê sản phẩm kèm
-      toggle bật/tắt + danh sách đơn đặt trước đang chờ giao (`getSellerPreOrderItems`,
-      lọc `status: "ESCROW"` trên sản phẩm có `preOrder=true`). Badge "ĐẶT
-      TRƯỚC" (icon `Clock`, nền `bg-info`) hiện trên `ProductCard`. Đã test:
-      bật preOrder → mua sản phẩm dù hết hàng vẫn thành công.
-- [x] **Mã giảm giá** (`/trang-ban-hang/ma-giam-gia`, model `DiscountCode`):
-      seller tạo mã (% hoặc số tiền cố định, giới hạn số lần dùng/hạn dùng
-      tuỳ chọn) áp dụng cho **toàn bộ sản phẩm của chính mình** — không giảm
-      chéo sang sản phẩm seller khác trong cùng giỏ hàng. Buyer nhập mã ở
-      `/gio-hang` (xem trước số tiền giảm qua `POST /api/discount-codes/preview`,
-      không tăng `usedCount`), áp dụng thật khi `POST /api/checkout` (tự tính
-      lại độc lập, không tin số liệu preview từ client — tránh giả mạo). Logic
-      chia đều số tiền giảm cho từng dòng hàng nằm ở `src/lib/discount.ts`
-      (`computeDiscountAmount`/`distributeDiscount`) — **quan trọng**: số tiền
-      giảm thực tế (`actualDiscount`) phải suy ra từ giá nguyên VNĐ sau khi
-      làm tròn (`Math.floor(lineTotal / quantity)`), KHÔNG dùng số dự kiến
-      trước khi làm tròn — nếu không, tổng tiền buyer bị trừ có thể lệch vài
-      đồng so với tổng các `OrderItem.price × quantity` đã lưu (bug thật bắt
-      được qua script test độc lập trước khi tích hợp vào checkout, xem lịch
-      sử). Có sàn `MIN_ITEM_PRICE_AFTER_DISCOUNT` (1.000đ) để mã FIXED lớn
-      không đưa giá 1 sản phẩm về gần 0. `usedCount` tăng NGAY TRONG cùng
-      `$transaction` với checkout để tránh race condition (2 checkout dùng
-      chung mã `maxUses=1` cùng lúc). Đã test: tạo mã giảm 20% → áp dụng giỏ
-      hàng → tổng tiền trừ đúng → `usedCount` tăng đúng 1.
-- [x] **Khiếu nại** (`/trang-ban-hang/khieu-nai`, model `Dispute`): buyer HOẶC
-      seller mở khiếu nại trên 1 `OrderItem` đang `ESCROW` (nút "Mở khiếu nại"
-      ở `/don-hang`, `POST /api/disputes`) — chuyển status sang `DISPUTED`
-      (loại khỏi vòng giải ngân tự động của `/api/admin/escrow/release`, chỉ
-      xử lý status `ESCROW`). **Chỉ admin quyết định kết quả cuối**
-      (`/admin`, `POST /api/admin/disputes/[id]`): "Hoàn tiền người mua"
-      (status → `CANCELLED`, hoàn 100% vào ví buyer, `WalletTransaction`
-      type `REFUND` — lần đầu tiên type này thật sự được tạo ra) hoặc "Giải
-      ngân người bán" (status → `RELEASED`, cộng ví seller, type `PAYOUT`,
-      giống hệt luồng escrow release bình thường). Không có hoàn tiền một
-      phần — giữ đúng pattern "admin tự quyết, không có logic % phức tạp"
-      xuyên suốt dự án. Trang dashboard seller chỉ hiển thị danh sách khiếu
-      nại + trạng thái (đọc, không tự xử lý). Đã test: buyer mở khiếu nại →
-      admin hoàn tiền buyer → ví buyer cộng đúng số tiền.
-- [x] **Telegram Bot** (`/trang-ban-hang/telegram-bot`, `Seller.telegramChatId`/
-      `telegramLinkCode`): env-gated giống VNPay (`TELEGRAM_BOT_TOKEN` trong
-      `.env`, thiếu thì UI tự hiện thông báo "chưa cấu hình", không chặn phần
-      còn lại của app). Luồng liên kết **không cần webhook công khai** (khó
-      test ở dev local) — seller tự lấy Chat ID của mình (vd nhắn
-      @userinfobot), nhập vào form, server gọi Telegram `sendMessage` gửi mã
-      xác nhận 6 số tới đúng Chat ID đó, seller nhập lại mã để xác nhận đúng
-      là Chat ID của họ (chỉ cần gọi API Telegram một chiều — outbound). Có
-      nút "Gửi tin nhắn thử" sau khi liên kết. Đã test: đúng trạng thái "chưa
-      cấu hình" hiển thị khi thiếu `TELEGRAM_BOT_TOKEN` (chưa test gửi tin
-      nhắn thật vì chưa có bot token thật — cần điền `.env` giống quy trình
-      VNPay để test đầy đủ).
-- [x] **Gỡ bỏ hoàn toàn tính năng Xác thực CCCD** (2026): trước đây có luồng
-      seller upload ảnh CCCD 2 mặt + họ tên/số CCCD để admin duyệt, tự động
-      bật badge "Đã xác thực" khi duyệt xong (`/trang-ban-hang/xac-thuc-cccd`,
-      `/admin/xac-thuc`, model `SellerVerification`). Đã **xoá bỏ hoàn toàn**
-      theo yêu cầu — không còn upload/lưu trữ/duyệt bất kỳ ảnh giấy tờ tuỳ
-      thân nào trong hệ thống: xoá toàn bộ UI/route liên quan, drop bảng
-      `SellerVerification` khỏi DB (cả dev lẫn production), xoá ảnh CCCD thật
-      đã lưu trên ổ đĩa cục bộ. Badge "Đã xác thực" (`Seller.verified`)
-      **vẫn giữ lại** nhưng đổi cơ chế — giờ admin tự bật/tắt thủ công tại
-      `/admin/nguoi-ban` (`AdminSellersPanel.tsx`, nút "Đánh dấu"/"Đã xác
-      thực", `PATCH /api/admin/sellers/[id] {action:"verify"|"unverify"}`),
-      không còn quy trình/tiêu chí tự động nào đứng sau field này — xem chi
-      tiết ở mục `Seller.verified` trong "Mô hình dữ liệu". Đã test 10/10
-      kịch bản qua script HTTP: mọi route/trang CCCD cũ trả 404, sidebar
-      seller/admin không còn mục nhắc CCCD, toggle xác thực thủ công hoạt
-      động đúng cả 2 chiều, Prisma Client không còn model `sellerVerification`.
-- [x] **Tin nhắn** (`/tin-nhan`, model `Conversation`/`Message`, dựng theo
-      ảnh chụp trang chat thật của shopmini.pro): icon chat trên Header (badge
-      số tin chưa đọc, poll 15s) + trang inbox đầy đủ (danh sách hội thoại +
-      khung chat, poll tin nhắn hội thoại đang mở mỗi 7s — không dùng
-      WebSocket, quyết định phạm vi có chủ đích). Bot "Hệ Thống" tự động gửi
-      tin chào mừng khi đăng ký tài khoản + tin chúc mừng khi đăng ký bán
-      hàng (2 sự kiện khớp đúng ảnh tham khảo). Buyer/seller nhắn tin thật
-      qua nút "Nhắn tin" ở trang shop (`/shop/[seller]`, gắn vào đúng nút
-      placeholder "Đăng nhập để chat" đã có sẵn từ trước). Xem chi tiết mục
-      12 "Luồng nghiệp vụ chính". Hỗ trợ **gửi ảnh/file đính kèm** (ảnh tối
-      đa 5MB, file tài liệu — PDF/DOC(X)/XLS(X)/ZIP/TXT — tối đa 10MB, chặn
-      mọi định dạng khác kể cả file thực thi), lưu ngoài `/public`,
-      chỉ đọc qua route bảo vệ. Đã test end-to-end 21 kịch bản
-      Playwright (13 luồng chat text + 8 luồng đính kèm): 2 tin hệ thống
-      đúng nội dung, buyer nhắn seller → seller thấy tin + badge đúng số →
-      đọc → badge hết → trả lời → buyer nhận qua polling không cần tải lại
-      trang; gửi ảnh/file kèm caption → người nhận xem/tải được; tài khoản
-      không liên quan bị chặn 404 khi gọi thẳng API hội thoại/đính kèm
-      người khác (không rò rỉ tin nhắn/file).
-- [x] **Quên mật khẩu bằng mã OTP 6 số** (`/quen-mat-khau`, model
-      `PasswordResetToken`, **đã đổi từ link-token sang mã OTP** theo yêu
-      cầu người dùng — xem chi tiết model ở mục "Mô hình dữ liệu"): link
-      "Quên mật khẩu?" ở form đăng nhập (`AuthForms.tsx`) → trang
-      `/quen-mat-khau` (component `ForgotPasswordForm.tsx`, wizard 2 bước
-      nội bộ bằng state `step`, KHÔNG còn trang `/dat-lai-mat-khau?token=...`
-      riêng) — **bước 1**: nhập email, `POST /api/auth/forgot-password` luôn
-      trả **cùng 1 message chung chung** dù email có tồn tại hay không (tránh
-      dò tài khoản) — chỉ thực sự tạo mã + gửi mail nếu user tồn tại **và**
-      có `passwordHash` (tài khoản chỉ đăng nhập Google thì không có gì để
-      "đặt lại", bỏ qua); rate-limit theo cả IP (10/giờ) lẫn email (5/giờ,
-      `src/lib/rate-limit.ts`). **Bước 2**: nhập mã 6 số + mật khẩu mới +
-      xác nhận mật khẩu **trong cùng 1 form**, submit gộp 1 request
-      `POST /api/auth/reset-password {email, code, password}` — vừa verify
-      mã vừa đổi mật khẩu, không tách bước "xác minh mã" riêng. Có nút "Gửi
-      lại mã" (gọi lại đúng API bước 1) và "Đổi email khác" (quay về bước 1).
+> Đổi/xoá các tài khoản này trước khi triển khai production thật.
 
-      Mã 6 số sinh bằng `crypto.randomInt(0, 1_000_000)`, **chỉ lưu SHA-256
-      hash trong DB** (`PasswordResetToken.codeHash`, **không** `@unique` —
-      khác token cũ, xem lý do ở mục "Mô hình dữ liệu"), so khớp bằng
-      `crypto.timingSafeEqual` (constant-time). Hết hạn sau
-      `PASSWORD_RESET_CODE_EXPIRY_MINUTES` (10 phút, `src/lib/constants.ts`);
-      nhập sai tăng `attempts`, đạt `PASSWORD_RESET_MAX_ATTEMPTS` (5) thì mã
-      bị khoá — cả 2 trường hợp cùng trả về **1 message lỗi duy nhất** ("Mã
-      xác nhận không đúng hoặc đã hết hạn.") áp dụng cho MỌI nhánh thất bại
-      (user không tồn tại, không có mã hiệu lực, hết hạn, khoá do sai quá số
-      lần, sai mã) để không mở kênh dò email. Tạo mã mới tự xoá mọi mã cũ
-      chưa dùng của user đó (chỉ 1 mã hiệu lực tại 1 thời điểm), đánh dấu
-      `usedAt` ngay trong cùng `$transaction` với đổi `passwordHash` — dùng
-      lại mã đã dùng bị từ chối đúng (đã test).
+## Trạng thái hiện tại — còn thiếu / cần lưu ý
 
-      **Gửi email qua Resend** (`src/lib/email.ts`, `sendPasswordResetEmail`
-      nay nhận `code` thay vì `resetUrl`) — cùng quy ước env-var-gated như
-      VNPay/Telegram: thiếu `RESEND_API_KEY` thì **không chặn luồng**, chỉ
-      `console.log` mã ra log server (đủ để test toàn bộ luồng ở dev/demo mà
-      không cần key thật). `RESEND_FROM_EMAIL` mặc định dùng địa chỉ sandbox
-      `onboarding@resend.dev` của Resend — địa chỉ này **chỉ gửi được tới
-      đúng email đã đăng ký tài khoản Resend**, cần xác minh 1 domain thật
-      trên Resend rồi đổi `RESEND_FROM_EMAIL` sang `@domain đó` mới gửi được
-      cho người dùng bất kỳ ở production. Đã test 14 kịch bản qua script
-      HTTP gọi thẳng cả 2 route (không phải qua Prisma trực tiếp — logic
-      quan trọng nhất nằm trong chính route) + xác nhận UI qua Playwright
-      screenshot: email không tồn tại/tồn tại đều trả cùng message ở cả 2
-      bước; mã sai tăng đúng `attempts`; mã đúng đổi mật khẩu thành công,
-      mật khẩu cũ bị từ chối, mật khẩu mới đăng nhập được; dùng lại mã đã
-      dùng bị từ chối; mã hết hạn bị từ chối; mã bị khoá sau 5 lần sai dù
-      lần cuối nhập đúng cũng vẫn bị từ chối; rate-limit gửi mã theo email
-      kích hoạt đúng sau 5 lần/giờ.
-- [x] **Đăng nhập Google & xác minh chống bot Turnstile — xác nhận vẫn hoạt
-      động đúng**: 2 tính năng này **code đã có sẵn từ trước** (không phải
-      xây mới), chỉ đang ẩn vì `.env` để trống `AUTH_GOOGLE_ID`/
-      `AUTH_GOOGLE_SECRET` và `NEXT_PUBLIC_TURNSTILE_SITE_KEY`/
-      `TURNSTILE_SECRET_KEY` — điền đúng 4 biến này vào `.env` (lấy từ Google
-      Cloud Console/Cloudflare dashboard) là 2 nút "Đăng nhập với Google" và
-      widget xác minh bot sẽ tự hiện ra ở cả form đăng nhập lẫn đăng ký, không
-      cần sửa code gì thêm — xem `AuthForms.tsx`/`src/app/dang-nhap/page.tsx`.
-- [x] **Lưu trữ file sẵn sàng deploy Vercel** (`src/lib/uploads.ts`): ảnh/file
-      đính kèm chat trước đây chỉ ghi ổ đĩa cục bộ — sẽ mất trên môi trường
-      serverless của Vercel (filesystem không lưu trữ lâu dài). Đã thêm
-      **Vercel Blob** (`@vercel/blob`) làm chế độ lưu trữ chính khi có
-      `BLOB_READ_WRITE_TOKEN`, tự rơi về ổ đĩa cục bộ khi thiếu token (dev
-      local) — xem mục "Lưu trữ file" trong Backend. Đã test round-trip lưu/
-      đọc (script Node độc lập gọi thẳng
-      `saveChatAttachment`/`readUploadedFile`, không
-      qua HTTP — vì Turnstile thật đã bật nên trình duyệt headless không tự
-      vượt qua được bước đăng nhập để test qua UI).
-- [x] **Đăng sản phẩm mới** (`/trang-ban-hang/san-pham`, model `Product`
-      thêm `imageUrl`/`status`/`adminNote`): tính năng cốt lõi của
-      marketplace — seller lần đầu tự tạo được sản phẩm gốc mới (trước đây
-      chỉ thêm được variant cho sản phẩm có sẵn qua seed). 2 quyết định
-      phạm vi đã chốt: **cần admin duyệt** trước khi hiện công khai và
-      **seller upload ảnh thật** (dùng lại hạ tầng Vercel
-      Blob, nhưng public — không qua route bảo vệ như ảnh đính kèm chat). Xem chi
-      tiết mục 13 "Luồng nghiệp vụ chính". Đã test toàn bộ luồng qua script
-      Node gọi thẳng Prisma/queries.ts: sản phẩm PENDING ẩn khỏi cả 5 query
-      công khai (trang chủ/nổi bật/danh mục/tìm kiếm/chi tiết) nhưng vẫn
-      hiện trong trang quản lý của seller → admin duyệt → hiện đúng công
-      khai kèm ảnh → luồng từ chối lưu đúng lý do, vẫn ẩn khỏi trang công
-      khai → xác nhận 180 sản phẩm cũ (dev + production) tự động chuyển
-      đúng `status: "APPROVED"` sau khi thêm field, không bị ẩn mất.
-- [x] **Seller tự đề xuất danh mục mới** (nút "+ Thêm danh mục mới chưa có"
-      cuối dropdown chọn danh mục trong `AddProductForm.tsx`, model
-      `Category` thêm `status`/`adminNote`/`proposedById`): khi sản phẩm
-      seller bán chưa khớp danh mục có sẵn, họ tự gõ tên ngay trong form đăng
-      sản phẩm — tạo `Category` mới `status: "PENDING"`, admin duyệt tại
-      `/admin/danh-muc` (`AdminCategoriesPanel.tsx`). Khác sản phẩm
-      PENDING (phải chờ duyệt mới hiện), category PENDING **dùng được ngay**
-      cho sản phẩm đang đăng (client tự chèn vào dropdown, không cần tải lại
-      trang) nhưng vẫn ẩn khỏi mọi nơi công khai (`getAllCategories()` lọc
-      `APPROVED`) cho tới khi duyệt — `getSellerVisibleCategories()` (lọc
-      `APPROVED` + `PENDING`) là hàm riêng phục vụ đúng dropdown này. Xem chi
-      tiết mục 14 "Luồng nghiệp vụ chính". Đã test 8 kịch bản qua script Node
-      gọi thẳng Prisma: ẩn khỏi công khai khi PENDING, hiện đúng trong
-      dropdown seller, dùng được ngay cho sản phẩm mới, admin duyệt → hiện
-      công khai, chặn trùng tên, admin từ chối → biến mất khỏi cả 2 nơi.
-- [x] **Kho dữ liệu giao hàng thật** (model `ProductStockItem`): lấp khoảng
-      trống lớn nhất của sàn — trước đây mua xong chỉ chuyển trạng thái ký
-      quỹ, không có nội dung tài khoản/mã kích hoạt nào thật sự được giao.
-      Seller nhập kho hàng loạt (mỗi dòng textarea = 1 đơn vị giao hàng,
-      `StockEntryPanel` trong `ProductVariantManager.tsx`) cho sản phẩm
-      không-có-variant hoặc từng variant riêng. `POST /api/checkout` viết
-      lại phần tạo `OrderItem` để tự "claim" đúng số lượng bản ghi
-      `AVAILABLE` bằng raw SQL `FOR UPDATE SKIP LOCKED` (lần đầu dùng raw SQL
-      trong dự án — cần thiết để 2 checkout chạy song song không bao giờ
-      giao trùng 1 tài khoản cho 2 buyer khác nhau), điền
-      `OrderItem.deliveredPayload` (JSON mảng nội dung). Buyer xem ngay tại
-      `/don-hang` qua nút "Xem thông tin đã giao" (`DeliveredPayloadButton`,
-      có nút sao chép từng dòng) — hiện ngay sau khi mua, không đợi giải
-      ngân ký quỹ (ký quỹ chỉ giữ tiền seller, không giữ quyền xem của
-      buyer). Sản phẩm/variant CHƯA từng nhập kho thật (đa số 180+ sản phẩm
-      cũ) hoạt động y hệt trước đây — chế độ kho thật tự bật khi có `>=1`
-      bản ghi, không cần cờ boolean riêng, không có gì bị phá vỡ. Xem chi
-      tiết mục 15 "Luồng nghiệp vụ chính". Đã test 22 kịch bản: 19 qua HTTP
-      thật vào server dev (không phải gọi thẳng Prisma như thường lệ, vì
-      logic quan trọng nhất nằm trong chính route checkout — xác thực bằng
-      JWT session tự tạo qua `next-auth/jwt` để né Turnstile ở bước đăng
-      nhập mà vẫn test đúng code thật đang chạy) phủ đủ: nhập kho → mua đủ →
-      `deliveredPayload` đúng nội dung/thứ tự → kho/stock đồng bộ đúng → mua
-      vượt kho bị chặn và rollback sạch → luồng tương tự cho variant → xoá
-      variant dọn đúng kho chưa bán, giữ nguyên bản ghi đã bán → sản phẩm
-      chưa dùng kho thật không bị ảnh hưởng; + 3 kịch bản đua tranh mua đơn
-      vị cuối cùng bằng 2 request song song thật, xác nhận đúng 1 thắng.
-
-Còn thiếu / cần làm tiếp:
-
-- [ ] **Đăng sản phẩm mới — còn thiếu nhỏ**: sản phẩm bị admin từ chối
-      (`REJECTED`) không có luồng "sửa rồi gửi lại" — seller phải đăng sản
-      phẩm hoàn toàn mới, bản ghi cũ giữ nguyên làm lịch sử (chấp nhận được
-      cho v1, có thể xây thêm sau nếu cần). Seller cũng không xem trước được
-      trang chi tiết công khai của sản phẩm đang chờ duyệt (URL đó 404 cho
-      tới khi được duyệt) — chỉ xem thông tin tóm tắt (ảnh/tên/giá) trong
-      trang quản lý. `Product.attributes` vẫn để trống `"[]"` lúc tạo (chưa
-      có UI nhập) — giữ nguyên vì trường này hiện không hiển thị ở đâu trong
-      UI, không phải giới hạn thật.
-- [ ] **Tin nhắn — còn thiếu nhỏ**: nút "Nhắn tin" mới có ở trang shop, chưa
-      có ở BuyBox (trang chi tiết sản phẩm) hay trang chủ. Chưa nối thêm sự
-      kiện hệ thống khác (nạp tiền được duyệt, đơn giải ngân...) —
-      `sendSystemMessage()` (`src/lib/system-bot.ts`) đã sẵn sàng để nối
-      thêm, chỉ 2 sự kiện khớp ảnh tham khảo hiện có. (Gửi ảnh/file đính kèm
-      đã xây xong — xem mục 12 "Luồng nghiệp vụ chính".)
-- [ ] **Mã giảm giá chưa tích hợp vào BuyBox**: mới hoạt động ở `/gio-hang`
-      (giỏ hàng) — nút "Mua ngay" ở `BuyBox.tsx` (trang chi tiết sản phẩm)
-      chưa có ô nhập mã dù `POST /api/checkout` đã hỗ trợ `discountCode` cho
-      cả 2 luồng. Cần thêm UI tương tự khi có thời gian.
-- [ ] **Telegram Bot chưa test với token thật**: framework đã hoàn chỉnh
-      (link/confirm/unlink/test message) nhưng chưa gọi qua Telegram API thật
-      lần nào (thiếu `TELEGRAM_BOT_TOKEN`). Cũng **chưa có thông báo tự động**
-      khi có đơn hàng mới/khiếu nại mới — hiện chỉ có nút "Gửi tin nhắn thử"
-      thủ công; nếu muốn tự động, cần gọi `sendTelegramMessage()`
-      (`src/lib/telegram.ts`) từ trong `POST /api/checkout`/`POST
-/api/disputes` khi seller đã liên kết.
-- [ ] **Sửa phiên bản**: `/quan-ly-san-pham` hiện chỉ **thêm/xoá** phiên bản
-      (API `PATCH` sửa label/giá/kho đã có sẵn ở
-      `seller/products/[productId]/variants/[variantId]/route.ts` nhưng
-      **chưa có UI** gọi tới nó — cần thêm form sửa inline). (Tạo sản phẩm
-      gốc mới cho seller **đã xây xong** — xem mục "Đăng sản phẩm mới".)
-
-- [ ] **Cron tự động cho các tác vụ "giải quyết định kỳ"**: cả
-      `/api/admin/escrow/release` **và** `/api/admin/auction/resolve` hiện
-      phải bấm tay trong `/admin` — cần lên lịch gọi định kỳ (Vercel Cron /
-      Windows Task Scheduler / cron trên VPS) khi triển khai thật. Gợi ý: gọi
-      `/api/admin/auction/resolve` mỗi phút là đủ (không tốn kém vì hầu hết
-      lần gọi sẽ không có slot nào hết hạn).
-- [ ] **Lịch đấu giá cố định**: hệ thống hiện xoay vòng slot ngay khi resolve
-      (không có khoảng nghỉ), khác với lịch cố định 20:00 hàng ngày/Chủ nhật
-      của shopmini.pro — nếu muốn khớp chính xác lịch đó, cần thêm logic tính
-      `startAt`/`endAt` theo giờ cố định thay vì `now + duration`.
-- [ ] **VNPay production**: cần đăng ký merchant thật, điền
-      `VNPAY_TMN_CODE`/`VNPAY_HASH_SECRET` vào `.env`. Đã sửa 1 bug thật khi rà
-      lại code trước khi dùng key thật: `signData` (chuỗi ký HMAC) từng dùng
-      `encodeURIComponent` thường (giữ `%20` cho khoảng trắng) trong khi VNPay
-      yêu cầu kiểu `application/x-www-form-urlencoded` (khoảng trắng → `+`) —
-      sai chữ ký với bất kỳ field nào có khoảng trắng (vd `vnp_OrderInfo`, luôn
-      xảy ra vì `orderInfo` có dạng "Nap tien vi MarketMMO - ..."). Đã sửa +
-      viết script test round-trip xác nhận: tạo URL thanh toán → giả lập
-      VNPay ký phản hồi bằng cùng thuật toán → `verifyVnpayReturn` chấp nhận
-      đúng, và phát hiện đúng khi giả mạo (đổi `vnp_Amount` sau khi ký → chữ ký
-      sai). Vẫn nên **kiểm thử lại với sandbox VNPay thật** một lần trước khi
-      lên production, vì test trên chỉ giả lập, không gọi server VNPay thật.
-- [ ] **Review theo sản phẩm**: đánh giá seller (gian hàng) đã hiện thực thật
-      (xem mục Backend), nhưng `Product.rating`/`reviewCount` trên từng thẻ
-      sản phẩm vẫn là số tĩnh từ seed — nếu muốn review theo từng sản phẩm cụ
-      thể thay vì theo cả gian hàng, cần thêm `productId` (optional) vào model
-      `Review` hoặc tạo model riêng.
-- [ ] Nâng cấp production: Postgres hiện chạy trên container Docker cục bộ
-      (chỉ dùng cho dev) — cần chuyển sang dịch vụ Postgres có backup/HA thật
-      khi triển khai (Supabase/Neon/RDS...), đổi `AUTH_SECRET` thật, xoá/đổi
-      mật khẩu các tài khoản demo được tạo bởi `prisma/seed.ts`.
-- [ ] Bổ sung thông tin pháp nhân/liên hệ thật của MarketMMO (thay thế phần
-      "Thông tin công ty / thương hiệu tham khảo") — nội dung các trang pháp
-      lý cũng chỉ mang tính tham khảo, cần luật sư rà soát trước khi dùng thật.
-- [ ] Viết test tự động (unit/integration) cho logic nghiệp vụ (checkout, ví,
-      escrow) — hiện chỉ mới kiểm thử thủ công bằng Playwright script trong
-      lúc phát triển (không có trong repo, chỉ dùng để verify rồi xoá).
+- **VNPay & SePay webhook**: khung code đầy đủ, đã rà lỗi kỹ, nhưng **chưa
+  hoạt động thật** — thiếu key/secret thật trong `.env`/`PaymentConfig`.
+  USDT TRC20 sẵn sàng hoạt động ngay khi có địa chỉ ví thật (không phụ
+  thuộc secret bên thứ 3).
+- **Chưa có cron cho**: hoàn tiền pre-order quá hạn (chỉ nút admin bấm tay,
+  `POST /api/admin/preorders/refund-overdue`) và escalate khiếu nại
+  `SELLER_WARRANTY→PLATFORM` sau 24h (buyer phải tự bấm nút). Giải ngân
+  escrow + chốt phiên đấu giá ĐÃ có cron (`/api/cron/daily`, 1 lần/ngày).
+- **Sản phẩm bị REJECTED** không có luồng "sửa rồi gửi lại" — seller phải
+  đăng sản phẩm mới, bản ghi cũ giữ nguyên làm lịch sử.
+- **Sửa phiên bản (variant)**: API `PATCH` đã có nhưng UI mới hỗ trợ thêm/
+  xoá, chưa có form sửa inline.
+- **Test tự động**: chưa có unit/integration test trong repo — kiểm thử thủ
+  công qua script HTTP tạm thời (mint JWT session) trong lúc phát triển, xoá
+  sau khi verify xong (xem "Quy trình làm việc" mục 3).
+- Xem `docs/ARCHITECTURE.md` từng mục để biết chi tiết đầy đủ hơn về phần
+  nào đã hoàn thiện/còn dở dang trong mỗi hệ thống.
