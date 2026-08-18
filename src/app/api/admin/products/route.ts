@@ -30,14 +30,11 @@ export async function GET() {
       categoryName: p.category.name,
       seller: p.seller,
       productType: p.productType,
-      // TOOL: cho admin xem trước link/tên file khi duyệt (route này đã
+      // TOOL: cho admin xem trước link tải khi duyệt (route này đã
       // requireAdmin() ở trên, an toàn để trả thẳng — KHÁC buyer, không cần
-      // qua cơ chế reveal-delivered vì admin chưa "mua" gì). File thật tải
-      // qua GET /api/admin/products/[id]/tool-file riêng, KHÔNG trả
-      // toolFileUrl (đường dẫn lưu trữ) ra đây.
+      // qua cơ chế reveal-delivered vì admin chưa "mua" gì). Chỉ hiển thị
+      // dạng text ở UI — KHÔNG tự mở/tải, xem AdminProductsPanel.tsx.
       toolDeliveryLink: p.toolDeliveryLink,
-      toolFileName: p.toolFileName,
-      toolFileSize: p.toolFileSize,
     })),
   });
 }

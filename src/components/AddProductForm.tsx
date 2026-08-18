@@ -146,13 +146,12 @@ export default function AddProductForm({
   // thật" đã có cho PRODUCT (mở thêm cho TOOL bên dưới), server tự mã hoá
   // từng dòng khi productType="TOOL" (xem POST .../stock).
   const [toolUsageGuide, setToolUsageGuide] = useState("");
-  // Tool/AI Agent: 2 hình thức giao THÊM bên cạnh "Kho tài khoản tool" ở
-  // trên — link tải (Google Drive/MediaFire...) và file .zip upload lên sàn,
-  // cả 2 optional + kết hợp tự do với kho tài khoản (xem
-  // Product.toolDeliveryLink/toolFileUrl trong schema.prisma).
+  // Tool/AI Agent: giao THÊM bằng link tải (Google Drive/MediaFire...) bên
+  // cạnh "Kho tài khoản tool" ở trên — optional, kết hợp tự do với kho tài
+  // khoản (xem Product.toolDeliveryLink trong schema.prisma). Hình thức
+  // upload file .zip lên sàn đã bị GỠ (quyết định bảo mật: không lưu file
+  // thực thi trên máy chủ, tránh sàn thành nơi phát tán mã độc).
   const [toolDeliveryLink, setToolDeliveryLink] = useState("");
-  const [toolFile, setToolFile] = useState<File | null>(null);
-  const [toolFileError, setToolFileError] = useState<string | null>(null);
 
   // Thời gian bảo hành — áp dụng cho CẢ 4 loại hàng (xem Product.warrantyValue/
   // warrantyUnit trong schema.prisma). "Sản phẩm" (tài khoản/dữ liệu kho
@@ -372,12 +371,6 @@ export default function AddProductForm({
         setError("Link tải tool không hợp lệ — phải bắt đầu bằng http:// hoặc https://.");
         return;
       }
-      // 20MB — khớp MAX_TOOL_FILE_SIZE ở src/lib/uploads.ts (không import
-      // được thẳng vì file đó dùng API Node.js server-only).
-      if (toolFile && toolFile.size > 20 * 1024 * 1024) {
-        setError("File tool vượt quá 20MB.");
-        return;
-      }
     }
     if (!noWarranty) {
       const num = Number(warrantyValue);
@@ -435,9 +428,6 @@ export default function AddProductForm({
       form.append("toolUsageGuide", toolUsageGuide.trim());
       if (toolDeliveryLink.trim()) {
         form.append("toolDeliveryLink", toolDeliveryLink.trim());
-      }
-      if (toolFile) {
-        form.append("toolFile", toolFile);
       }
     }
 
@@ -1030,13 +1020,15 @@ export default function AddProductForm({
           />
 
           <div className="mt-3 border-t border-border-c pt-3">
-            <p className="text-sm font-bold text-foreground">Giao file/link tool (tuỳ chọn)</p>
+            <p className="text-sm font-bold text-foreground">Giao bằng link tải (tuỳ chọn)</p>
             <p className="text-[11px] text-muted">
-              Dùng khi tool là 1 file ứng dụng hoặc link tải — có thể kết hợp
-              tự do với &ldquo;Kho tài khoản tool&rdquo; ở trên (vd vừa có
-              tài khoản đăng nhập vừa có file cài đặt). Cả 2 ô dưới đây đều
-              CHỈ hiện cho buyer SAU KHI đã mua + bấm nhận, không lộ ra trang
-              công khai.
+              Dùng khi tool là 1 file ứng dụng — dán link tải ngoài (Google
+              Drive, MediaFire...), có thể kết hợp tự do với &ldquo;Kho tài
+              khoản tool&rdquo; ở trên (vd vừa có tài khoản đăng nhập vừa có
+              link tải file cài đặt). CHỈ hiện cho buyer SAU KHI đã mua + bấm
+              nhận, không lộ ra trang công khai. Sàn KHÔNG nhận upload file
+              trực tiếp (lý do an toàn — không lưu file thực thi trên máy
+              chủ) — sản phẩm sẽ qua admin duyệt trước khi bán.
             </p>
 
             <label className="mb-1 mt-2.5 block text-xs font-semibold text-foreground">
@@ -1050,34 +1042,6 @@ export default function AddProductForm({
               maxLength={2000}
               className="w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             />
-
-            <label className="mb-1 mt-2.5 block text-xs font-semibold text-foreground">
-              File tool (.zip, tối đa 20MB)
-            </label>
-            <input
-              type="file"
-              accept=".zip,application/zip,application/x-zip-compressed"
-              onChange={(e) => {
-                const f = e.target.files?.[0] ?? null;
-                setToolFileError(null);
-                if (f && f.size > 20 * 1024 * 1024) {
-                  setToolFileError("File vượt quá 20MB.");
-                  setToolFile(null);
-                  e.target.value = "";
-                  return;
-                }
-                setToolFile(f);
-              }}
-              className="block w-full text-xs text-foreground file:mr-3 file:rounded-full file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-ink hover:file:bg-brand-dark"
-            />
-            <p className="mt-1 text-[11px] text-foreground/70">
-              Chỉ nhận .zip — nếu tool là .exe, hãy nén lại vào .zip trước
-              khi tải lên (sàn không nhận file thực thi trần vì lý do an
-              toàn).
-            </p>
-            {toolFileError && (
-              <p className="mt-1 text-[11px] font-semibold text-danger">{toolFileError}</p>
-            )}
           </div>
         </div>
       )}

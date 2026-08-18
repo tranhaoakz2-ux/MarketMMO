@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Check, Copy, Download, ExternalLink, Loader2, PackageOpen } from "lucide-react";
+import { AlertTriangle, Check, Copy, ExternalLink, Loader2, PackageOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { formatDaysRemaining } from "@/lib/format";
@@ -61,8 +61,6 @@ export default function DeliveredPayloadButton({
   const [expiresAtList, setExpiresAtList] = useState<(string | null)[]>([]);
   const [usageGuide, setUsageGuide] = useState<string | null>(null);
   const [toolDeliveryLink, setToolDeliveryLink] = useState<string | null>(null);
-  const [toolFileName, setToolFileName] = useState<string | null>(null);
-  const [toolFileSize, setToolFileSize] = useState<number | null>(null);
   const [noAutoContent, setNoAutoContent] = useState(false);
 
   const handleOpen = async () => {
@@ -100,18 +98,15 @@ export default function DeliveredPayloadButton({
     setExpiresAtList(parsedExpiry);
     const guide = typeof data.usageGuide === "string" ? data.usageGuide : null;
     const link = typeof data.toolDeliveryLink === "string" ? data.toolDeliveryLink : null;
-    const fileName = typeof data.toolFileName === "string" ? data.toolFileName : null;
     setUsageGuide(guide);
     setToolDeliveryLink(link);
-    setToolFileName(fileName);
-    setToolFileSize(typeof data.toolFileSize === "number" ? data.toolFileSize : null);
 
     // "Không có nội dung tự động" CHỈ đúng khi THẬT SỰ không có gì để hiện —
     // trước đây chỉ xét deliveredPayload nên 1 sản phẩm TOOL có quy trình sử
-    // dụng/link/file nhưng KHÔNG có "kho tài khoản" sẽ bị nuốt mất, buyer chỉ
-    // thấy thông báo chung chung thay vì thấy usageGuide/link/file (lỗi có
-    // sẵn, phát hiện + sửa cùng đợt thêm link/file tải).
-    const hasToolExtras = mode === "tool" && Boolean(guide || link || fileName);
+    // dụng/link nhưng KHÔNG có "kho tài khoản" sẽ bị nuốt mất, buyer chỉ thấy
+    // thông báo chung chung thay vì thấy usageGuide/link (lỗi có sẵn, phát
+    // hiện + sửa cùng đợt thêm link tải).
+    const hasToolExtras = mode === "tool" && Boolean(guide || link);
     setNoAutoContent(parsedContents.length === 0 && !hasToolExtras);
 
     // Lần bấm đầu tiên vừa set receivedAt ở server — làm mới trang để mốc
@@ -231,35 +226,22 @@ export default function DeliveredPayloadButton({
             </button>
           </div>
         ))}
-        {mode === "tool" && (toolDeliveryLink || toolFileName) && (
+        {mode === "tool" && toolDeliveryLink && (
           <div className="rounded border border-border-c bg-surface p-2.5">
             <p className="mb-1 text-[10px] font-bold uppercase text-muted">Tải tool</p>
             <p className="mb-2 flex items-start gap-1 text-[10px] leading-snug text-danger">
               <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-              File/link do người bán cung cấp — sàn không đảm bảo an toàn tuyệt đối. Hãy quét
-              virus trước khi mở/chạy, bạn tự chịu trách nhiệm.
+              File do người bán cung cấp qua link ngoài — sàn không đảm bảo an toàn tuyệt đối.
+              Hãy tự quét virus trước khi mở/chạy, bạn tự chịu trách nhiệm.
             </p>
-            <div className="flex flex-col gap-1.5">
-              {toolDeliveryLink && (
-                <a
-                  href={toolDeliveryLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-[11px] font-bold text-ink transition hover:bg-brand-dark"
-                >
-                  <ExternalLink className="h-3 w-3" /> Mở link tải tool
-                </a>
-              )}
-              {toolFileName && (
-                <a
-                  href={`/api/orders/${orderItemId}/tool-file`}
-                  className="flex items-center justify-center gap-1.5 rounded-full border border-border-c bg-surface-alt px-3 py-1.5 text-[11px] font-bold text-foreground transition hover:bg-surface"
-                >
-                  <Download className="h-3 w-3" /> Tải {toolFileName}
-                  {toolFileSize ? ` (${(toolFileSize / 1024 / 1024).toFixed(1)}MB)` : ""}
-                </a>
-              )}
-            </div>
+            <a
+              href={toolDeliveryLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-[11px] font-bold text-ink transition hover:bg-brand-dark"
+            >
+              <ExternalLink className="h-3 w-3" /> Mở link tải tool
+            </a>
           </div>
         )}
         <button

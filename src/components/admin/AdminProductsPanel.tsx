@@ -5,7 +5,7 @@
 // vẫn THẬT: fetch GET /api/admin/products, POST /api/admin/products/[id]
 // {action:"approve"|"reject"} — không đổi 1 dòng logic nghiệp vụ. API route
 // đã có sẵn requireAdmin() (không đụng tới).
-import { Check, Download, ExternalLink, PackageSearch, X } from "lucide-react";
+import { Check, ExternalLink, PackageSearch, ShieldAlert, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button, Card, EmptyState, ListSkeleton, formatVndDemo } from "@/components/admin-demo/AdminDemoKit";
 
@@ -24,14 +24,23 @@ type PendingProduct = {
   seller: { shopName: string; slug: string };
   productType: string;
   toolDeliveryLink: string | null;
-  toolFileName: string | null;
-  toolFileSize: number | null;
 };
+
+// Chỉ mở đúng 1 đích cố định (virustotal.com) để admin tự dán link tool vào
+// quét — KHÔNG tự động gửi/tải bất kỳ nội dung nào của seller lên đó.
+const VIRUSTOTAL_URL = "https://www.virustotal.com/gui/home/url";
 
 export default function AdminProductsPanel() {
   const [products, setProducts] = useState<PendingProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyLink = async (id: string, link: string) => {
+    await navigator.clipboard.writeText(link);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -95,30 +104,41 @@ export default function AdminProductsPanel() {
                   {new Date(p.createdAt).toLocaleString("vi-VN")}
                 </p>
                 <p className="mt-1 text-xs text-[var(--adm-text)]/70">{p.shortDescription}</p>
-                {/* Tool/AI Agent có file/link giao hàng — cho admin xem/tải
-                    trước khi duyệt (rủi ro malware). File thật KHÔNG lộ công
-                    khai, chỉ đọc được qua route admin-only này. */}
-                {p.productType === "TOOL" && (p.toolDeliveryLink || p.toolFileName) && (
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {p.toolDeliveryLink && (
-                      <a
-                        href={p.toolDeliveryLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-2.5 py-1 text-[11px] font-bold text-[var(--adm-text)] transition hover:border-[var(--adm-brand)]"
+                {/* Tool/AI Agent giao bằng LINK TẢI — chỉ hiện link dạng
+                    TEXT để admin đọc trỏ đi đâu, KHÔNG phải nút mở/tải tự
+                    động (tránh admin lỡ tay click mở file lạ trên máy cá
+                    nhân). Kèm cảnh báo rõ + link tiện ích VirusTotal. */}
+                {p.productType === "TOOL" && p.toolDeliveryLink && (
+                  <div className="mt-2 rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] p-2.5">
+                    <p className="mb-1 text-[10px] font-bold uppercase text-[var(--adm-muted)]">
+                      Link tải tool (seller cung cấp)
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <code className="min-w-0 flex-1 truncate rounded bg-[var(--adm-surface)] px-2 py-1 text-[11px] text-[var(--adm-text)]">
+                        {p.toolDeliveryLink}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyLink(p.id, p.toolDeliveryLink!)}
+                        className="shrink-0 rounded-full border border-[var(--adm-border)] px-2.5 py-1 text-[11px] font-bold text-[var(--adm-text)] transition hover:border-[var(--adm-brand)]"
                       >
-                        <ExternalLink className="h-3 w-3" /> Xem link tải
-                      </a>
-                    )}
-                    {p.toolFileName && (
-                      <a
-                        href={`/api/admin/products/${p.id}/tool-file`}
-                        className="flex items-center gap-1 rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-2.5 py-1 text-[11px] font-bold text-[var(--adm-text)] transition hover:border-[var(--adm-brand)]"
-                      >
-                        <Download className="h-3 w-3" /> Tải file kiểm tra
-                        {p.toolFileSize ? ` (${(p.toolFileSize / 1024 / 1024).toFixed(1)}MB)` : ""}
-                      </a>
-                    )}
+                        {copiedId === p.id ? "Đã chép" : "Sao chép"}
+                      </button>
+                    </div>
+                    <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-[var(--adm-danger-bg)] px-2 py-1.5 text-[11px] font-semibold leading-snug text-[var(--adm-danger)]">
+                      <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      KHÔNG tải/mở/chạy file từ link này trên máy cá nhân. Chỉ kiểm tra link có hợp
+                      lệ, có phải hàng cấm không. Nếu cần kiểm tra file, dùng máy ảo (sandbox)
+                      riêng hoặc dán link vào VirusTotal để quét.
+                    </p>
+                    <a
+                      href={VIRUSTOTAL_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-[var(--adm-brand)] hover:underline"
+                    >
+                      <ExternalLink className="h-3 w-3" /> Mở VirusTotal để tự dán link quét
+                    </a>
                   </div>
                 )}
               </div>

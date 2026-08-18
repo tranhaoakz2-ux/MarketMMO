@@ -558,18 +558,22 @@ model Product {
   // khoản/ProductStockItem). PRIVATE/gated, đọc LIVE từ đây trong
   // POST /api/orders/[id]/reveal-delivered SAU KHI buyer đã mua + bấm "Xem"
   // — cùng nguyên tắc toolUsageGuide/tutTrickContent ở trên, KHÔNG BAO GIỜ
-  // đưa vào mapProduct()/Product type public.
+  // đưa vào mapProduct()/Product type public. Admin duyệt sản phẩm TOOL có
+  // link này chỉ được XEM DẠNG TEXT (không tự mở), kèm cảnh báo không
+  // tải/chạy file trên máy cá nhân — xem AdminProductsPanel.tsx.
   toolDeliveryLink String?
-  // Giao TOOL bằng FILE UPLOAD (.zip) — đường dẫn lưu trữ NỘI BỘ (Blob
-  // PRIVATE, tái dùng store riêng tư đã có cho file đính kèm chat, xem
-  // src/lib/uploads.ts). KHÔNG PHẢI URL public, không bao giờ trả thẳng cho
-  // client — buyer tải qua GET /api/orders/[id]/tool-file (xác thực đã mua
-  // + đã lộ hàng trước khi stream file).
+
+  // === ĐÃ NGỪNG DÙNG (deprecated, 2026-08-18) ===
+  // 3 cột dưới đây phục vụ hình thức "seller upload file .zip lên sàn" cho
+  // TOOL — đã GỠ BỎ theo quyết định bảo mật: không lưu file thực thi trên
+  // máy chủ, tránh sàn trở thành nơi phát tán mã độc. Giờ TOOL CHỈ giao bằng
+  // link tải (toolDeliveryLink ở trên) hoặc kho tài khoản
+  // (ProductVariant/ProductStockItem). GIỮ NGUYÊN cột trong DB (không xoá,
+  // tránh rủi ro migration) nhưng KHÔNG còn route/UI/logic nào đọc/ghi 3 cột
+  // này nữa — luôn null cho mọi sản phẩm tạo từ nay. Có thể xoá thật khỏi DB
+  // sau này nếu chắc chắn không cần khôi phục lại tính năng.
   toolFileUrl  String?
-  // Tên file gốc seller đặt — hiển thị lại đúng tên khi buyer tải
-  // (Content-Disposition) + hiện trước cho buyer biết sắp tải file gì.
   toolFileName String?
-  // Dung lượng file (byte) — chỉ để hiển thị cho buyer trước khi tải.
   toolFileSize Int?
 
   orderItems    OrderItem[]

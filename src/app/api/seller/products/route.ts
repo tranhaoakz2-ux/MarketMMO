@@ -11,7 +11,7 @@ import {
 import { getMySellerProducts } from "@/lib/queries";
 import { prisma } from "@/lib/prisma";
 import { slugifyFieldKey, slugifyProduct } from "@/lib/slug";
-import { saveProductImage, saveToolFile } from "@/lib/uploads";
+import { saveProductImage } from "@/lib/uploads";
 import { toWarrantyHours } from "@/lib/warranty";
 
 export async function GET() {
@@ -209,14 +209,13 @@ export async function POST(req: Request) {
     toolUsageGuide = raw;
   }
 
-  // TOOL: 2 hình thức giao thêm bên cạnh "Kho tài khoản tool" (ProductStockItem)
-  // — link tải và file .zip, cả 2 optional + kết hợp tự do với kho tài
-  // khoản. Cả 2 đều là tài nguyên DÙNG CHUNG (không tiêu hao), đọc LIVE từ
-  // Product lúc reveal-delivered — không đụng gì tới checkout/tiền/tồn kho.
+  // TOOL: giao thêm bằng LINK TẢI bên cạnh "Kho tài khoản tool" (ProductStockItem)
+  // — tài nguyên DÙNG CHUNG (không tiêu hao), đọc LIVE từ Product lúc
+  // reveal-delivered — không đụng gì tới checkout/tiền/tồn kho. Hình thức
+  // "upload file .zip lên sàn" đã bị GỠ (quyết định bảo mật: không lưu file
+  // thực thi trên máy chủ) — xem toolFileUrl/toolFileName/toolFileSize
+  // deprecated trong schema.prisma.
   let toolDeliveryLink: string | null = null;
-  let toolFileUrl: string | null = null;
-  let toolFileName: string | null = null;
-  let toolFileSize: number | null = null;
   if (productType === "TOOL") {
     const linkRaw = String(form.get("toolDeliveryLink") ?? "").trim();
     if (linkRaw) {
@@ -227,19 +226,6 @@ export async function POST(req: Request) {
         );
       }
       toolDeliveryLink = linkRaw;
-    }
-
-    const toolFile = form.get("toolFile");
-    if (toolFile instanceof File && toolFile.size > 0) {
-      try {
-        const saved = await saveToolFile(toolFile);
-        toolFileUrl = saved.path;
-        toolFileName = saved.name;
-        toolFileSize = saved.size;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Không thể tải file tool lên.";
-        return NextResponse.json({ error: message }, { status: 400 });
-      }
     }
   }
 
@@ -329,9 +315,6 @@ export async function POST(req: Request) {
         tutTrickContent,
         toolUsageGuide,
         toolDeliveryLink,
-        toolFileUrl,
-        toolFileName,
-        toolFileSize,
         warrantyValue,
         warrantyUnit,
       },
