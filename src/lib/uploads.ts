@@ -32,6 +32,21 @@ const ALLOWED_DOC_TYPES: Record<string, string> = {
 export const MAX_UPLOAD_SIZE = 5 * 1024 * 1024; // 5MB — ảnh (sản phẩm, chat)
 export const MAX_CHAT_FILE_SIZE = 10 * 1024 * 1024; // 10MB — file đính kèm chat
 
+// File tool seller upload cho sản phẩm loại TOOL/AI Agent (Trang Bán Hàng >
+// Sản phẩm, đăng sản phẩm mới) — CHỈ nhận .zip, cố tình chặn .exe/.rar trực
+// tiếp (cùng lý do đã áp dụng cho ALLOWED_DOC_TYPES ở trên: tránh sàn trở
+// thành kênh phát tán file thực thi trần, và .exe tải từ URL lạ thường bị
+// Windows SmartScreen/Chrome Safe Browsing cảnh báo mạnh dù file sạch) —
+// seller tự nén .exe vào .zip trước khi tải lên. 20MB — an toàn với giới
+// hạn payload của Vercel Serverless Function (upload qua server, không phải
+// upload thẳng lên Blob từ trình duyệt) — tool lớn hơn dùng "Link tải"
+// (Google Drive...) thay vì upload thẳng.
+const ALLOWED_TOOL_FILE_TYPES: Record<string, string> = {
+  "application/zip": "zip",
+  "application/x-zip-compressed": "zip",
+};
+export const MAX_TOOL_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+
 export function isAllowedImageType(mimeType: string): boolean {
   return mimeType in ALLOWED_TYPES;
 }
@@ -310,6 +325,34 @@ export async function saveChatAttachment(
   const storedPath = await saveBuffer(relativePath, buffer, file.type);
 
   return { path: storedPath, type: isImage ? "IMAGE" : "FILE", name: file.name.slice(0, 200) };
+}
+
+/**
+ * Lưu file tool (.zip) cho sản phẩm loại TOOL/AI Agent — NỘI DUNG GIAO nhạy
+ * cảm, dùng CHUNG store Blob riêng tư đã có cho file đính kèm chat (KHÔNG
+ * tạo store mới) — chỉ đọc lại được qua route đã xác thực buyer đã mua sản
+ * phẩm này (GET /api/orders/[orderItemId]/tool-file), không có URL public
+ * nào lộ ra ngoài. Tên file lưu dùng UUID ngẫu nhiên (không dùng tên gốc
+ * seller đặt) để tránh path traversal/trùng tên; tên gốc lưu riêng vào DB
+ * (Product.toolFileName) để hiển thị lại đúng cho buyer.
+ */
+export async function saveToolFile(
+  file: File
+): Promise<{ path: string; name: string; size: number }> {
+  const ext = ALLOWED_TOOL_FILE_TYPES[file.type];
+  if (!ext) {
+    throw new Error("Chỉ chấp nhận file .zip (nén .exe/.rar vào .zip trước khi tải lên).");
+  }
+  if (file.size > MAX_TOOL_FILE_SIZE) {
+    throw new Error(`File vượt quá ${Math.round(MAX_TOOL_FILE_SIZE / 1024 / 1024)}MB.`);
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  assertMagicMatches(file.type, buffer); // chống giả mạo Content-Type (polyglot/exe đội lốt .zip)
+  const relativePath = path.join("tool-files", `${randomUUID()}.${ext}`);
+  const storedPath = await saveBuffer(relativePath, buffer, file.type);
+
+  return { path: storedPath, name: file.name.slice(0, 200), size: file.size };
 }
 
 /**

@@ -46,7 +46,15 @@ export async function POST(
         deliveredPayloadEncryption: true,
         isPreOrder: true,
         order: { select: { buyerId: true } },
-        product: { select: { productType: true, toolUsageGuide: true } },
+        product: {
+          select: {
+            productType: true,
+            toolUsageGuide: true,
+            toolDeliveryLink: true,
+            toolFileName: true,
+            toolFileSize: true,
+          },
+        },
       },
     });
 
@@ -141,6 +149,16 @@ export async function POST(
     // TOOL: quy trình sử dụng đầy đủ — plaintext, gửi kèm credential đã giải
     // mã trong CÙNG response (1 lượt xem = 1 dòng log, đủ cho cả 2 phần).
     usageGuide: item.product?.productType === "TOOL" ? item.product.toolUsageGuide : undefined,
+    // TOOL: link tải + tên/dung lượng file (nếu seller có cấu hình) — đọc
+    // LIVE từ Product (không snapshot vào OrderItem, xem
+    // Product.toolDeliveryLink/toolFileUrl trong schema.prisma), gửi kèm
+    // trong CÙNG response, cùng 1 dòng log truy cập với usageGuide/
+    // deliveredPayload ở trên. KHÔNG gửi toolFileUrl (đường dẫn lưu trữ
+    // thật) — buyer tải file qua GET /api/orders/[id]/tool-file riêng, route
+    // đó tự đọc lại toolFileUrl phía server.
+    toolDeliveryLink: item.product?.productType === "TOOL" ? item.product.toolDeliveryLink : undefined,
+    toolFileName: item.product?.productType === "TOOL" ? item.product.toolFileName : undefined,
+    toolFileSize: item.product?.productType === "TOOL" ? item.product.toolFileSize : undefined,
     // receipt = null khi đã set từ trước (idempotent) hoặc không đủ điều
     // kiện (DISPUTED) — client dùng để biết có nên router.refresh() lại
     // dòng bảo hành hay không (đỡ refresh vô ích khi xem lại lần 2 trở đi).

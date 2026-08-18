@@ -29,6 +29,15 @@ export async function GET() {
       createdAt: p.createdAt,
       categoryName: p.category.name,
       seller: p.seller,
+      productType: p.productType,
+      // TOOL: cho admin xem trước link/tên file khi duyệt (route này đã
+      // requireAdmin() ở trên, an toàn để trả thẳng — KHÁC buyer, không cần
+      // qua cơ chế reveal-delivered vì admin chưa "mua" gì). File thật tải
+      // qua GET /api/admin/products/[id]/tool-file riêng, KHÔNG trả
+      // toolFileUrl (đường dẫn lưu trữ) ra đây.
+      toolDeliveryLink: p.toolDeliveryLink,
+      toolFileName: p.toolFileName,
+      toolFileSize: p.toolFileSize,
     })),
   });
 }

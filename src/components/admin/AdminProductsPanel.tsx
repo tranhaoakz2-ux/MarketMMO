@@ -5,7 +5,7 @@
 // vẫn THẬT: fetch GET /api/admin/products, POST /api/admin/products/[id]
 // {action:"approve"|"reject"} — không đổi 1 dòng logic nghiệp vụ. API route
 // đã có sẵn requireAdmin() (không đụng tới).
-import { Check, PackageSearch, X } from "lucide-react";
+import { Check, Download, ExternalLink, PackageSearch, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button, Card, EmptyState, ListSkeleton, formatVndDemo } from "@/components/admin-demo/AdminDemoKit";
 
@@ -22,6 +22,10 @@ type PendingProduct = {
   createdAt: string;
   categoryName: string;
   seller: { shopName: string; slug: string };
+  productType: string;
+  toolDeliveryLink: string | null;
+  toolFileName: string | null;
+  toolFileSize: number | null;
 };
 
 export default function AdminProductsPanel() {
@@ -91,6 +95,32 @@ export default function AdminProductsPanel() {
                   {new Date(p.createdAt).toLocaleString("vi-VN")}
                 </p>
                 <p className="mt-1 text-xs text-[var(--adm-text)]/70">{p.shortDescription}</p>
+                {/* Tool/AI Agent có file/link giao hàng — cho admin xem/tải
+                    trước khi duyệt (rủi ro malware). File thật KHÔNG lộ công
+                    khai, chỉ đọc được qua route admin-only này. */}
+                {p.productType === "TOOL" && (p.toolDeliveryLink || p.toolFileName) && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {p.toolDeliveryLink && (
+                      <a
+                        href={p.toolDeliveryLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-2.5 py-1 text-[11px] font-bold text-[var(--adm-text)] transition hover:border-[var(--adm-brand)]"
+                      >
+                        <ExternalLink className="h-3 w-3" /> Xem link tải
+                      </a>
+                    )}
+                    {p.toolFileName && (
+                      <a
+                        href={`/api/admin/products/${p.id}/tool-file`}
+                        className="flex items-center gap-1 rounded-full border border-[var(--adm-border)] bg-[var(--adm-surface-2)] px-2.5 py-1 text-[11px] font-bold text-[var(--adm-text)] transition hover:border-[var(--adm-brand)]"
+                      >
+                        <Download className="h-3 w-3" /> Tải file kiểm tra
+                        {p.toolFileSize ? ` (${(p.toolFileSize / 1024 / 1024).toFixed(1)}MB)` : ""}
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex shrink-0 gap-2">
                 <Button variant="success" disabled={busyId === p.id} onClick={() => handleAction(p.id, "approve")}>

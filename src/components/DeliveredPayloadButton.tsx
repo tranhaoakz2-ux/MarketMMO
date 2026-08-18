@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Check, Copy, Loader2, PackageOpen } from "lucide-react";
+import { AlertTriangle, Check, Copy, Download, ExternalLink, Loader2, PackageOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { formatDaysRemaining } from "@/lib/format";
@@ -60,6 +60,9 @@ export default function DeliveredPayloadButton({
   const [contents, setContents] = useState<string[]>([]);
   const [expiresAtList, setExpiresAtList] = useState<(string | null)[]>([]);
   const [usageGuide, setUsageGuide] = useState<string | null>(null);
+  const [toolDeliveryLink, setToolDeliveryLink] = useState<string | null>(null);
+  const [toolFileName, setToolFileName] = useState<string | null>(null);
+  const [toolFileSize, setToolFileSize] = useState<number | null>(null);
   const [noAutoContent, setNoAutoContent] = useState(false);
 
   const handleOpen = async () => {
@@ -74,23 +77,16 @@ export default function DeliveredPayloadButton({
       return;
     }
 
-    // deliveredPayload null = dịch vụ/dòng hàng không có nội dung tự động —
-    // buyer vẫn được ghi nhận "đã nhận hàng" ở server, chỉ không có gì để
-    // hiện ở đây.
-    if (data.deliveredPayload === null) {
-      setContents([]);
-      setNoAutoContent(true);
-    } else {
-      let parsedContents: string[] = [];
+    let parsedContents: string[] = [];
+    if (data.deliveredPayload !== null) {
       try {
         const parsed = JSON.parse(data.deliveredPayload);
         parsedContents = Array.isArray(parsed) ? parsed : [String(parsed)];
       } catch {
         parsedContents = [data.deliveredPayload];
       }
-      setContents(parsedContents);
-      setNoAutoContent(false);
     }
+    setContents(parsedContents);
 
     let parsedExpiry: (string | null)[] = [];
     if (data.deliveredExpiresAt) {
@@ -102,7 +98,21 @@ export default function DeliveredPayloadButton({
       }
     }
     setExpiresAtList(parsedExpiry);
-    setUsageGuide(typeof data.usageGuide === "string" ? data.usageGuide : null);
+    const guide = typeof data.usageGuide === "string" ? data.usageGuide : null;
+    const link = typeof data.toolDeliveryLink === "string" ? data.toolDeliveryLink : null;
+    const fileName = typeof data.toolFileName === "string" ? data.toolFileName : null;
+    setUsageGuide(guide);
+    setToolDeliveryLink(link);
+    setToolFileName(fileName);
+    setToolFileSize(typeof data.toolFileSize === "number" ? data.toolFileSize : null);
+
+    // "Không có nội dung tự động" CHỈ đúng khi THẬT SỰ không có gì để hiện —
+    // trước đây chỉ xét deliveredPayload nên 1 sản phẩm TOOL có quy trình sử
+    // dụng/link/file nhưng KHÔNG có "kho tài khoản" sẽ bị nuốt mất, buyer chỉ
+    // thấy thông báo chung chung thay vì thấy usageGuide/link/file (lỗi có
+    // sẵn, phát hiện + sửa cùng đợt thêm link/file tải).
+    const hasToolExtras = mode === "tool" && Boolean(guide || link || fileName);
+    setNoAutoContent(parsedContents.length === 0 && !hasToolExtras);
 
     // Lần bấm đầu tiên vừa set receivedAt ở server — làm mới trang để mốc
     // đếm ngược bảo hành (tính ở /don-hang, server component) hiện đúng
@@ -200,7 +210,7 @@ export default function DeliveredPayloadButton({
             </p>
           </div>
         )}
-        {mode === "tool" && (
+        {mode === "tool" && contents.length > 0 && (
           <p className="text-[10px] font-bold uppercase text-muted">Tài khoản của bạn</p>
         )}
         {contents.map((content, idx) => (
@@ -221,6 +231,37 @@ export default function DeliveredPayloadButton({
             </button>
           </div>
         ))}
+        {mode === "tool" && (toolDeliveryLink || toolFileName) && (
+          <div className="rounded border border-border-c bg-surface p-2.5">
+            <p className="mb-1 text-[10px] font-bold uppercase text-muted">Tải tool</p>
+            <p className="mb-2 flex items-start gap-1 text-[10px] leading-snug text-danger">
+              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+              File/link do người bán cung cấp — sàn không đảm bảo an toàn tuyệt đối. Hãy quét
+              virus trước khi mở/chạy, bạn tự chịu trách nhiệm.
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {toolDeliveryLink && (
+                <a
+                  href={toolDeliveryLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-[11px] font-bold text-ink transition hover:bg-brand-dark"
+                >
+                  <ExternalLink className="h-3 w-3" /> Mở link tải tool
+                </a>
+              )}
+              {toolFileName && (
+                <a
+                  href={`/api/orders/${orderItemId}/tool-file`}
+                  className="flex items-center justify-center gap-1.5 rounded-full border border-border-c bg-surface-alt px-3 py-1.5 text-[11px] font-bold text-foreground transition hover:bg-surface"
+                >
+                  <Download className="h-3 w-3" /> Tải {toolFileName}
+                  {toolFileSize ? ` (${(toolFileSize / 1024 / 1024).toFixed(1)}MB)` : ""}
+                </a>
+              )}
+            </div>
+          </div>
+        )}
         <button
           onClick={() => setOpen(false)}
           className="self-start text-[10px] font-semibold text-muted hover:underline"

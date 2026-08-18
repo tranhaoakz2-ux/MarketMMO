@@ -11,7 +11,7 @@ import {
 import { getMySellerProducts } from "@/lib/queries";
 import { prisma } from "@/lib/prisma";
 import { slugifyFieldKey, slugifyProduct } from "@/lib/slug";
-import { saveProductImage } from "@/lib/uploads";
+import { saveProductImage, saveToolFile } from "@/lib/uploads";
 import { toWarrantyHours } from "@/lib/warranty";
 
 export async function GET() {
@@ -209,6 +209,40 @@ export async function POST(req: Request) {
     toolUsageGuide = raw;
   }
 
+  // TOOL: 2 hình thức giao thêm bên cạnh "Kho tài khoản tool" (ProductStockItem)
+  // — link tải và file .zip, cả 2 optional + kết hợp tự do với kho tài
+  // khoản. Cả 2 đều là tài nguyên DÙNG CHUNG (không tiêu hao), đọc LIVE từ
+  // Product lúc reveal-delivered — không đụng gì tới checkout/tiền/tồn kho.
+  let toolDeliveryLink: string | null = null;
+  let toolFileUrl: string | null = null;
+  let toolFileName: string | null = null;
+  let toolFileSize: number | null = null;
+  if (productType === "TOOL") {
+    const linkRaw = String(form.get("toolDeliveryLink") ?? "").trim();
+    if (linkRaw) {
+      if (linkRaw.length > 2000 || !/^https?:\/\/.+/i.test(linkRaw)) {
+        return NextResponse.json(
+          { error: "Link tải tool không hợp lệ — phải bắt đầu bằng http:// hoặc https://." },
+          { status: 400 }
+        );
+      }
+      toolDeliveryLink = linkRaw;
+    }
+
+    const toolFile = form.get("toolFile");
+    if (toolFile instanceof File && toolFile.size > 0) {
+      try {
+        const saved = await saveToolFile(toolFile);
+        toolFileUrl = saved.path;
+        toolFileName = saved.name;
+        toolFileSize = saved.size;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Không thể tải file tool lên.";
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+    }
+  }
+
   // Thời gian bảo hành (áp dụng cho CẢ 4 loại hàng) — checkbox "Không bảo
   // hành" gửi noWarranty=true → value=0 tường minh, không phụ thuộc client
   // gửi đúng warrantyValue=0 hay không. PRODUCT (tài khoản/dữ liệu kho thật)
@@ -294,6 +328,10 @@ export async function POST(req: Request) {
         credentialViewWindowHours: productType === "SERVICE" ? credentialViewWindowHours : null,
         tutTrickContent,
         toolUsageGuide,
+        toolDeliveryLink,
+        toolFileUrl,
+        toolFileName,
+        toolFileSize,
         warrantyValue,
         warrantyUnit,
       },

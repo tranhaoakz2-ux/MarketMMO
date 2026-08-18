@@ -553,6 +553,25 @@ model Product {
   // tutTrickContent ở trên (không đưa vào mapProduct()/Product public).
   toolUsageGuide String?
 
+  // Giao TOOL bằng LINK TẢI (Google Drive/MediaFire/link riêng...) — tài
+  // nguyên DÙNG CHUNG cho mọi buyer đã mua (KHÔNG tiêu hao như kho tài
+  // khoản/ProductStockItem). PRIVATE/gated, đọc LIVE từ đây trong
+  // POST /api/orders/[id]/reveal-delivered SAU KHI buyer đã mua + bấm "Xem"
+  // — cùng nguyên tắc toolUsageGuide/tutTrickContent ở trên, KHÔNG BAO GIỜ
+  // đưa vào mapProduct()/Product type public.
+  toolDeliveryLink String?
+  // Giao TOOL bằng FILE UPLOAD (.zip) — đường dẫn lưu trữ NỘI BỘ (Blob
+  // PRIVATE, tái dùng store riêng tư đã có cho file đính kèm chat, xem
+  // src/lib/uploads.ts). KHÔNG PHẢI URL public, không bao giờ trả thẳng cho
+  // client — buyer tải qua GET /api/orders/[id]/tool-file (xác thực đã mua
+  // + đã lộ hàng trước khi stream file).
+  toolFileUrl  String?
+  // Tên file gốc seller đặt — hiển thị lại đúng tên khi buyer tải
+  // (Content-Disposition) + hiện trước cho buyer biết sắp tải file gì.
+  toolFileName String?
+  // Dung lượng file (byte) — chỉ để hiển thị cho buyer trước khi tải.
+  toolFileSize Int?
+
   orderItems    OrderItem[]
   auctionBids   AuctionBid[]
   variants      ProductVariant[]
