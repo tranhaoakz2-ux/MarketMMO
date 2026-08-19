@@ -100,6 +100,9 @@ model User {
   // Lịch sử đổi trạng thái đơn do chính user này thực hiện (buyer/seller/admin)
   // — AUDIT LỊCH SỬ ĐƠN HÀNG LỖ HỔNG 3, xem model OrderStatusHistory.
   orderStatusChangesActed OrderStatusHistory[]
+  // Yêu cầu nạp USDT TRC20 đang đặt trước — xem model UsdtDepositIntent
+  // (LAUNCH_AUDIT.md #1).
+  usdtDepositIntents UsdtDepositIntent[]
 }
 
 // Quên mật khẩu: mã OTP 6 số lưu dạng SHA-256 hash (không lưu mã gốc) để dữ
@@ -1154,6 +1157,61 @@ model WalletTransaction {
   // bao giờ mất dòng nào dù AuctionBid phía kia (giả sử) có bị xoá.
   auctionBidId String?
   auctionBid   AuctionBid? @relation(fields: [auctionBidId], references: [id], onDelete: SetNull)
+}
+
+// Vá LAUNCH_AUDIT.md #1 — chặn "cướp" TxID nạp USDT TRC20 công khai trên
+// blockchain. Trước đây POST /api/wallet/deposit-usdt cộng tiền thẳng cho
+// BẤT KỲ ai gọi API kèm 1 TxID hợp lệ — không có gì ràng buộc TxID đó với
+// đúng người đã gửi (TxID + số tiền + địa chỉ gửi đều công khai trên
+// Tronscan). Vá bằng cách buyer phải "đặt trước" 1 bản ghi ở đây TRƯỚC khi
+// chuyển — hệ thống cấp 1 SỐ USDT ĐỊNH DANH RIÊNG (phần nguyên ≈ quy đổi từ
+// vndAmount, 6 số thập phân cuối là mã ngẫu nhiên duy nhất trong các bản ghi
+// đang PENDING). Lúc xác minh on-chain (route KHÔNG đổi tên), hệ thống khớp
+// SỐ USDT THỰC NHẬN với đúng bản ghi đang chờ — tiền luôn cộng vào ví CHỦ
+// YÊU CẦU (userId ở đây), KHÔNG PHẢI người gọi API xác minh. Ai cướp TxID
+// gọi API bằng tài khoản khác cũng không được cộng gì, vì tài khoản đó
+// không có yêu cầu nào khớp đúng số tiền trên chain.
+//
+// Không có UNIQUE cứng trên usdtAmountRaw (cần unique index CÓ ĐIỀU KIỆN
+// WHERE status='PENDING' mới đúng ý — Prisma schema DSL không biểu diễn
+// được dạng index này, và prisma db push có thể xoá mất index không khai
+// báo trong schema ở lần push sau) — code tự kiểm tra trùng + retry với mã
+// ngẫu nhiên khác trước khi tạo (đủ an toàn: ~999.999 khả năng cho 6 số
+// thập phân, chỉ cần không trùng các yêu cầu ĐANG PENDING cùng lúc).
+model UsdtDepositIntent {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Số VNĐ buyer yêu cầu nạp — ĐÓNG BĂNG tại thời điểm tạo yêu cầu, đây là
+  // số THỰC SỰ cộng vào ví khi khớp (không tính lại theo tỷ giá lúc xác
+  // minh TxID, tránh buyer bối rối vì lệch tỷ giá giữa 2 thời điểm).
+  vndAmount Int
+  // Số USDT ĐỊNH DANH buyer phải chuyển, đơn vị raw (10^-6 USDT, khớp
+  // decimals thật của token USDT-TRC20) — vd 20483726 = 20.483726 USDT.
+  usdtAmountRaw BigInt
+  // Tỷ giá + nguồn dùng để TÍNH GỢI Ý phần nguyên usdtAmountRaw lúc tạo yêu
+  // cầu — chỉ để hiển thị/đối chiếu, KHÔNG dùng lại lúc khớp (khớp thuần
+  // theo usdtAmountRaw).
+  rate       Float
+  rateSource String
+
+  // "PENDING" (đang chờ buyer chuyển + xác minh) | "MATCHED" (đã khớp TxID,
+  // đã cộng ví) | "EXPIRED" (quá hạn, không dùng được nữa — set lười khi có
+  // request đọc/tạo mới đụng tới, không cần cron riêng).
+  status    String   @default("PENDING")
+  expiresAt DateTime
+
+  // TxID đã khớp vào yêu cầu này (nếu MATCHED) — audit/đối chiếu.
+  matchedTxid String?
+  // WalletTransaction được tạo khi khớp thành công — audit/đối chiếu.
+  matchedWalletTransactionId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  // Index chính dùng lúc khớp TxID: tìm 1 intent PENDING có đúng usdtAmountRaw.
+  @@index([status, usdtAmountRaw])
 }
 
 // Chat giữa 2 user bất kỳ (buyer-seller, hoặc user với bot "Hệ Thống" —

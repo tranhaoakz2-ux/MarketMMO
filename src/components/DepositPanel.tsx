@@ -21,7 +21,13 @@ import { useEffect, useState } from "react";
 import Reveal from "@/components/Reveal";
 import { formatVnd } from "@/lib/format";
 import type { BankInfo, UsdtInfo } from "@/lib/payment/deposit";
-import { walletMethodLabel, walletTxStatusLabel, type WalletTxStatus } from "@/lib/constants";
+import {
+  MAX_USDT_DEPOSIT_VND,
+  MIN_USDT_DEPOSIT_VND,
+  walletMethodLabel,
+  walletTxStatusLabel,
+  type WalletTxStatus,
+} from "@/lib/constants";
 
 const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
 
@@ -33,6 +39,17 @@ function randomCodeNonce(): string {
 }
 
 type DepositMethod = "vnpay" | "bank" | "usdt";
+
+// Yêu cầu nạp USDT đang chờ (đã cấp số USDT định danh riêng) — xem
+// POST /api/wallet/deposit-usdt/intent. Buyer PHẢI có 1 cái đang PENDING
+// trước khi route xác nhận TxID có thể tự động cộng tiền (LAUNCH_AUDIT.md #1).
+type UsdtDepositIntentView = {
+  id: string;
+  vndAmount: number;
+  usdtAmount: string;
+  address: string;
+  expiresAt: string;
+};
 
 type WalletTransaction = {
   id: string;
@@ -178,6 +195,8 @@ export default function DepositPanel({
   const [error, setError] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [codeNonce, setCodeNonce] = useState(() => randomCodeNonce());
+  const [usdtIntent, setUsdtIntent] = useState<UsdtDepositIntentView | null>(null);
+  const [usdtIntentLoading, setUsdtIntentLoading] = useState(false);
 
   const transferCode = session?.user?.id
     ? `NAP${session.user.id.slice(-6).toUpperCase()}${codeNonce}`
@@ -195,6 +214,19 @@ export default function DepositPanel({
     if (!session) return;
     (async () => {
       await loadTransactions();
+    })();
+  }, [session]);
+
+  // Khôi phục yêu cầu nạp USDT đang chờ (nếu có) — buyer refresh trang giữa
+  // chừng không mất số USDT định danh/địa chỉ đã cấp.
+  useEffect(() => {
+    if (!session) return;
+    (async () => {
+      const res = await fetch("/api/wallet/deposit-usdt/intent");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.intent) setUsdtIntent(data.intent);
+      }
     })();
   }, [session]);
 
@@ -221,6 +253,30 @@ export default function DepositPanel({
       </div>
     );
   }
+
+  const handleCreateUsdtIntent = async () => {
+    setError(null);
+    setMessage(null);
+    if (!amount || amount < MIN_USDT_DEPOSIT_VND || amount > MAX_USDT_DEPOSIT_VND) {
+      setError(
+        `Số tiền nạp USDT phải từ ${formatVnd(MIN_USDT_DEPOSIT_VND)} đến ${formatVnd(MAX_USDT_DEPOSIT_VND)}.`
+      );
+      return;
+    }
+    setUsdtIntentLoading(true);
+    const res = await fetch("/api/wallet/deposit-usdt/intent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vndAmount: amount }),
+    });
+    const data = await res.json();
+    setUsdtIntentLoading(false);
+    if (!res.ok) {
+      setError(data.error ?? "Không thể tạo yêu cầu nạp USDT.");
+      return;
+    }
+    setUsdtIntent(data);
+  };
 
   const handleSubmit = async () => {
     setError(null);
@@ -252,6 +308,10 @@ export default function DepositPanel({
         setError("Nạp tiền bằng USDT chưa được bật.");
         return;
       }
+      if (!usdtIntent) {
+        setError("Vui lòng tạo yêu cầu nạp USDT trước (chọn số tiền rồi bấm \"Tạo yêu cầu\").");
+        return;
+      }
       if (!txid.trim()) {
         setError("Vui lòng nhập mã giao dịch (TxID) sau khi chuyển USDT.");
         return;
@@ -270,11 +330,17 @@ export default function DepositPanel({
       }
       if (data.pending) {
         setMessage(data.message ?? "Đang chờ xác minh, liên hệ admin nếu chờ lâu.");
-      } else {
-        setMessage(
-          `Đã xác minh và cộng ${formatVnd(data.credited)} vào ví (${data.usdtAmount} USDT, tỷ giá ${data.rate.toLocaleString("vi-VN")}đ/USDT).`
-        );
+      } else if (data.creditedToSelf) {
+        setMessage(`Đã xác minh và cộng ${formatVnd(data.credited)} vào ví (${data.usdtAmount} USDT).`);
+        setUsdtIntent(null);
         await update();
+      } else {
+        // Giao dịch khớp yêu cầu của MỘT TÀI KHOẢN KHÁC (vd TxID này vốn của
+        // người khác) — tiền đã cộng đúng cho chủ yêu cầu đó, KHÔNG PHẢI
+        // tài khoản đang đăng nhập, nên không được báo "đã cộng vào ví bạn".
+        setMessage(
+          "Đã xác minh giao dịch trên blockchain, nhưng số tiền được cộng vào đúng tài khoản đã tạo yêu cầu nạp cho mã USDT này (không phải tài khoản bạn đang đăng nhập). Nếu bạn cho rằng có nhầm lẫn, vui lòng liên hệ admin."
+        );
       }
       setTxid("");
       loadTransactions();
@@ -476,7 +542,7 @@ export default function DepositPanel({
             </SectionCard>
           </Reveal>
 
-          {method !== "usdt" && (
+          {(method !== "usdt" || !usdtIntent) && (
             <Reveal delay={0.08}>
               <SectionCard icon={Banknote} title="Số tiền nạp">
                 <div className="flex flex-col gap-4">
@@ -502,7 +568,7 @@ export default function DepositPanel({
                     <div className="relative">
                       <input
                         type="number"
-                        min={10000}
+                        min={method === "usdt" ? MIN_USDT_DEPOSIT_VND : 10000}
                         step={10000}
                         value={amount ?? ""}
                         onChange={(e) => setAmount(Number(e.target.value) || null)}
@@ -568,18 +634,53 @@ export default function DepositPanel({
             </Reveal>
           )}
 
-          {method === "usdt" && usdtInfo && (
+          {method === "usdt" && usdtInfo && !usdtIntent && (
             <Reveal delay={0.11}>
-              <SectionCard icon={DollarSign} title="Gửi USDT (mạng TRC20)">
+              <SectionCard icon={DollarSign} title="Bước 1 — Tạo yêu cầu nạp USDT">
                 <div className="flex flex-col gap-4">
+                  <p className="text-xs leading-relaxed text-muted">
+                    Mạng TRC20 không hỗ trợ ghi nội dung chuyển khoản riêng, nên hệ thống sẽ cấp cho bạn{" "}
+                    <b className="text-foreground">1 số USDT định danh riêng</b> (kèm vài số thập phân duy nhất) —
+                    bạn cần chuyển ĐÚNG số đó (không làm tròn) để hệ thống tự nhận đúng giao dịch của bạn, không
+                    thể bị người khác &ldquo;cướp&rdquo; nhầm.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleCreateUsdtIntent}
+                    disabled={
+                      usdtIntentLoading || !amount || amount < MIN_USDT_DEPOSIT_VND || amount > MAX_USDT_DEPOSIT_VND
+                    }
+                    className="flex items-center justify-center gap-2 rounded-full bg-brand py-3 text-sm font-black text-ink shadow-sm transition hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-md disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
+                  >
+                    {usdtIntentLoading
+                      ? "Đang tạo yêu cầu..."
+                      : `Tạo yêu cầu nạp ${amount ? formatVnd(amount) : ""}`}
+                  </button>
+                </div>
+              </SectionCard>
+            </Reveal>
+          )}
+
+          {method === "usdt" && usdtInfo && usdtIntent && (
+            <Reveal delay={0.11}>
+              <SectionCard icon={DollarSign} title="Bước 2 — Chuyển USDT & xác nhận">
+                <div className="flex flex-col gap-4">
+                  <div className="rounded-xl border-2 border-brand-dark/50 bg-brand-light/25 p-3.5">
+                    <p className="text-[10.5px] font-black uppercase tracking-wide text-brand-dark">
+                      Chuyển ĐÚNG số USDT sau (bắt buộc chính xác từng số thập phân)
+                    </p>
+                    <p className="mt-0.5 truncate font-mono text-xl font-black tracking-wide text-foreground">
+                      {usdtIntent.usdtAmount} USDT
+                    </p>
+                  </div>
                   <div className="rounded-xl border border-border-c px-3">
-                    <CopyField label="Địa chỉ ví USDT-TRC20" value={usdtInfo.address} />
+                    <CopyField label="Địa chỉ ví USDT-TRC20" value={usdtIntent.address} />
                   </div>
                   <p className="text-xs leading-relaxed text-muted">
-                    <b className="text-foreground">Bước 1:</b> Tự chuyển USDT (bất kỳ số lượng nào bạn muốn nạp)
-                    từ ví/sàn của bạn tới địa chỉ trên. <b className="text-foreground">Bước 2:</b> Dán mã giao
-                    dịch (TxID) bên dưới — hệ thống tự đọc đúng số USDT thật đã nhận trên blockchain và quy đổi
-                    ra VNĐ, không cần bạn khai số tiền.
+                    Sau khi xác minh, hệ thống sẽ cộng đúng{" "}
+                    <b className="text-foreground">{formatVnd(usdtIntent.vndAmount)}</b> vào ví. Yêu cầu hết hạn lúc{" "}
+                    <b className="text-foreground">{new Date(usdtIntent.expiresAt).toLocaleString("vi-VN")}</b> —
+                    quá hạn phải tạo yêu cầu mới (số USDT định danh cũ sẽ không còn hiệu lực).
                   </p>
                   <div>
                     <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">
@@ -598,6 +699,18 @@ export default function DepositPanel({
                     Chỉ gửi USDT trên mạng TRC20 (Tron) — gửi sai mạng có thể
                     mất tiền. Hệ thống xác minh trên blockchain trước khi cộng tiền, có thể mất vài giây.
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUsdtIntent(null);
+                      setTxid("");
+                      setError(null);
+                      setMessage(null);
+                    }}
+                    className="self-start text-xs font-bold text-muted hover:text-foreground hover:underline"
+                  >
+                    Huỷ, đổi số tiền khác
+                  </button>
                 </div>
               </SectionCard>
             </Reveal>
@@ -616,19 +729,24 @@ export default function DepositPanel({
                 </p>
               )}
 
-              <button
-                onClick={handleSubmit}
-                disabled={loading || (method === "usdt" ? !usdtInfo || !txid.trim() : !amount)}
-                className="flex items-center justify-center gap-2 rounded-full bg-brand py-3.5 text-sm font-black text-ink shadow-sm transition hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-md disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
-              >
-                {loading
-                  ? "Đang xử lý..."
-                  : method === "vnpay"
-                    ? `Nạp ${amount ? formatVnd(amount) : ""}`
-                    : method === "usdt"
-                      ? "Xác minh & nạp tiền"
-                      : "Tôi đã chuyển khoản, xác nhận yêu cầu"}
-              </button>
+              {/* Ở bước 1 của USDT (chưa có yêu cầu), nút hành động là "Tạo yêu
+                  cầu" bên trong SectionCard riêng phía trên — ẩn nút chung
+                  này để tránh 2 nút cùng lúc không rõ nút nào làm gì. */}
+              {!(method === "usdt" && !usdtIntent) && (
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading || (method === "usdt" ? !usdtInfo || !usdtIntent || !txid.trim() : !amount)}
+                  className="flex items-center justify-center gap-2 rounded-full bg-brand py-3.5 text-sm font-black text-ink shadow-sm transition hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-md disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
+                >
+                  {loading
+                    ? "Đang xử lý..."
+                    : method === "vnpay"
+                      ? `Nạp ${amount ? formatVnd(amount) : ""}`
+                      : method === "usdt"
+                        ? "Xác minh & nạp tiền"
+                        : "Tôi đã chuyển khoản, xác nhận yêu cầu"}
+                </button>
+              )}
             </div>
           </Reveal>
         </div>

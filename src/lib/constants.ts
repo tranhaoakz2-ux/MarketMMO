@@ -346,3 +346,16 @@ export const walletMethodLabel: Record<string, string> = {
 // lẫn UI (SellerWithdrawPanel.tsx).
 export const MIN_WITHDRAW_AMOUNT = 50000;
 export const MIN_USDT_WITHDRAW_AMOUNT = 300000;
+
+// ── Nạp USDT TRC20 — đặt trước yêu cầu (UsdtDepositIntent), vá
+// LAUNCH_AUDIT.md #1. Validate CẢ API (deposit-usdt/intent/route.ts) lẫn UI
+// (DepositPanel.tsx).
+export const MIN_USDT_DEPOSIT_VND = 50000;
+export const MAX_USDT_DEPOSIT_VND = 200_000_000;
+// Buyer phải chuyển + submit TxID trong ngần này phút kể từ lúc tạo yêu cầu
+// — đủ rộng cho thao tác chuyển tay + Tron xác nhận (~1-3 phút), đủ hẹp để
+// mã định danh không chiếm chỗ quá lâu.
+export const USDT_DEPOSIT_INTENT_EXPIRY_MINUTES = 45;
+// Số lần thử lại tối đa khi mã ngẫu nhiên (6 số thập phân cuối) trùng với 1
+// yêu cầu khác đang PENDING — trùng cực hiếm (~1/999.999), vài lần thử là đủ.
+export const USDT_DEPOSIT_INTENT_MAX_COLLISION_RETRIES = 5;
