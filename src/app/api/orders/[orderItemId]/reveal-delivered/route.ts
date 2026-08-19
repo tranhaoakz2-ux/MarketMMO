@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/authz";
+import { requireUserRateLimited } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { decryptSensitiveFields } from "@/lib/service-crypto";
 import { markReceivedIfNeeded } from "@/lib/warranty";
@@ -28,7 +28,12 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ orderItemId: string }> }
 ) {
-  const { session, error } = await requireUser();
+  // Rate-limit (LAUNCH_AUDIT.md #24) — route nhận orderItemId trực tiếp từ
+  // client, cùng lớp "oracle route" với tools/check-*/discount-preview dù
+  // rủi ro thực tế thấp (404 đồng nhất cho id sai, không tin ai xem đơn
+  // người khác). 30 lần/5 phút đủ rộng cho buyer xem nhiều dòng hàng trong
+  // 1 đơn, đủ hẹp để chặn dò id hàng loạt.
+  const { session, error } = await requireUserRateLimited("reveal-delivered", 30, 5 * 60_000);
   if (error) return error;
 
   const { orderItemId } = await params;
