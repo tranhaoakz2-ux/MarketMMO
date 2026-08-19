@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { requireUser } from "@/lib/authz";
-import { ESCROW_HOLD_DAYS, SERVICE_DELIVERY_METHODS } from "@/lib/constants";
+import { ESCROW_HOLD_DAYS, MAX_CHECKOUT_ITEM_QUANTITY, SERVICE_DELIVERY_METHODS } from "@/lib/constants";
 import { accrueCommission } from "@/lib/commission";
 import { feeAmountOf, getEffectiveFeePercent } from "@/lib/platform-fee";
 import { computeDiscountAmount, distributeDiscount, isDiscountCodeUsable } from "@/lib/discount";
@@ -36,7 +36,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Giỏ hàng trống." }, { status: 400 });
   }
   for (const item of items) {
-    if (!item.productId || !Number.isInteger(item.quantity) || item.quantity < 1) {
+    if (
+      !item.productId ||
+      !Number.isInteger(item.quantity) ||
+      item.quantity < 1 ||
+      item.quantity > MAX_CHECKOUT_ITEM_QUANTITY
+    ) {
       return NextResponse.json({ error: "Dữ liệu giỏ hàng không hợp lệ." }, { status: 400 });
     }
   }

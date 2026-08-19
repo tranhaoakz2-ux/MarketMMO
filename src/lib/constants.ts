@@ -89,6 +89,15 @@ export const MIN_WARRANTY_HOURS_PRODUCT = 24;
 export const MAX_PRODUCT_PRICE_VND = 500_000_000; // 500 triệu đồng
 export const MAX_PRODUCT_STOCK = 100_000;
 
+// Trần số lượng mua/1 dòng hàng lúc checkout (LAUNCH_AUDIT.md #23) — trước
+// đây chỉ chặn preOrder=true (kho số học/kho thật vốn đã tự giới hạn qua
+// tồn kho thật, riêng preOrder cho phép trừ kho âm nên không có gì chặn
+// buyer đặt số lượng cực lớn 1 lần). Áp trần chung cho MỌI dòng hàng (đơn
+// giản hơn phải phân biệt preOrder ngay ở bước validate input thô, trước
+// khi có dữ liệu Product) — không ảnh hưởng đơn hàng thật, chỉ chặn số
+// lượng phi lý.
+export const MAX_CHECKOUT_ITEM_QUANTITY = 1000;
+
 // Chặn spam đăng sản phẩm hàng loạt (PRODUCT_LISTING_AUDIT.md #2) — mỗi
 // seller tối đa ngần này lần gọi POST /api/seller/products trong 1 giờ.
 // Đủ rộng cho seller đăng nhiều sản phẩm thật trong ngày, đủ hẹp để chặn
