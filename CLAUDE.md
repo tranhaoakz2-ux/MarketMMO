@@ -164,7 +164,12 @@ scripts/tmp-xxx.mjs`, **xoá file sau khi dùng xong** — không để lại sc
 test một lần trong repo. Kỹ thuật hay dùng để test qua HTTP thật (không phải
 gọi thẳng Prisma) khi cần né Turnstile: mint session cookie bằng
 `next-auth/jwt`'s `encode()` cho tài khoản seller/buyer/admin demo, gọi
-thẳng route API.
+thẳng route API. **Lưu ý rate-limit khi viết test loop**: `POST
+/api/seller/products`/`.../categories` bị giới hạn theo `seller.id`
+(`src/lib/rate-limit.ts`, in-memory theo tiến trình) — test spam nhiều bản
+ghi liên tiếp bằng CÙNG 1 seller demo sẽ tự dính 429 giữa chừng và làm
+sai lệch các test khác chạy sau trong cùng script; dùng seller demo khác
+nhau cho từng nhóm test độc lập (xem mục "Tài khoản demo" bên dưới).
 
 **4. Trước khi sửa 1 hệ thống nghiệp vụ**: đọc đúng mục liên quan trong
 `docs/ARCHITECTURE.md` trước — đừng suy đoán lại từ tên biến/route, nhiều

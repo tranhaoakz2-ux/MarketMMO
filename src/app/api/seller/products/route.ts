@@ -1,15 +1,23 @@
 import { NextResponse } from "next/server";
 import { requireSeller, requireSellerRateLimited } from "@/lib/authz";
 import {
+  DUPLICATE_PRODUCT_WINDOW_HOURS,
   MAX_PRODUCT_PRICE_VND,
   MAX_PRODUCT_STOCK,
   MIN_WARRANTY_HOURS_PRODUCT,
+  PRODUCT_DESCRIPTION_MAX_LENGTH,
+  PRODUCT_DESCRIPTION_MIN_LENGTH,
+  PRODUCT_NAME_MAX_LENGTH,
+  PRODUCT_NAME_MIN_LENGTH,
+  PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH,
+  PRODUCT_SHORT_DESCRIPTION_MIN_LENGTH,
   SELLER_PRODUCT_CREATE_LIMIT,
   SELLER_PRODUCT_CREATE_WINDOW_MS,
   SERVICE_CREDENTIAL_MAX_WINDOW_HOURS,
   SERVICE_CREDENTIAL_MIN_WINDOW_HOURS,
   SERVICE_DELIVERY_METHODS,
   SERVICE_FIELD_INPUT_TYPES,
+  SERVICE_FIELDS_MAX_COUNT,
   type WarrantyUnit,
 } from "@/lib/constants";
 import { getMySellerProducts } from "@/lib/queries";
@@ -53,24 +61,62 @@ export async function POST(req: Request) {
   const stockRaw = form.get("stock");
   const image = form.get("image");
 
-  if (name.length < 5 || name.length > 150) {
+  if (name.length < PRODUCT_NAME_MIN_LENGTH || name.length > PRODUCT_NAME_MAX_LENGTH) {
     return NextResponse.json(
-      { error: "Tên sản phẩm phải từ 5-150 ký tự." },
+      { error: `Tên sản phẩm phải từ ${PRODUCT_NAME_MIN_LENGTH}-${PRODUCT_NAME_MAX_LENGTH} ký tự.` },
       { status: 400 }
     );
   }
   if (!categoryId) {
     return NextResponse.json({ error: "Vui lòng chọn danh mục." }, { status: 400 });
   }
-  if (shortDescription.length < 10 || shortDescription.length > 200) {
+  if (
+    shortDescription.length < PRODUCT_SHORT_DESCRIPTION_MIN_LENGTH ||
+    shortDescription.length > PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH
+  ) {
     return NextResponse.json(
-      { error: "Mô tả ngắn phải từ 10-200 ký tự." },
+      {
+        error: `Mô tả ngắn phải từ ${PRODUCT_SHORT_DESCRIPTION_MIN_LENGTH}-${PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH} ký tự.`,
+      },
       { status: 400 }
     );
   }
-  if (descriptionRaw.length < 20) {
+  // PRODUCT_LISTING_AUDIT.md #6 — trước đây KHÔNG có trần tối đa cho mô tả
+  // chi tiết.
+  if (
+    descriptionRaw.length < PRODUCT_DESCRIPTION_MIN_LENGTH ||
+    descriptionRaw.length > PRODUCT_DESCRIPTION_MAX_LENGTH
+  ) {
     return NextResponse.json(
-      { error: "Mô tả chi tiết phải có ít nhất 20 ký tự." },
+      {
+        error: `Mô tả chi tiết phải từ ${PRODUCT_DESCRIPTION_MIN_LENGTH}-${PRODUCT_DESCRIPTION_MAX_LENGTH.toLocaleString("vi-VN")} ký tự.`,
+      },
+      { status: 400 }
+    );
+  }
+
+  // PRODUCT_LISTING_AUDIT.md #3 — chặn đăng trùng NHẸ NHÀNG: chỉ chặn khi
+  // CHÍNH seller này vừa đăng đúng tên đó (không phân biệt hoa/thường) và
+  // bản ghi cũ còn PENDING/APPROVED trong DUPLICATE_PRODUCT_WINDOW_HOURS gần
+  // nhất — không chặn nếu bản ghi cũ đã REJECTED (seller sửa và đăng lại sau
+  // khi bị từ chối là hợp lệ) hoặc đã quá lâu (đăng lại hàng đã hết/bán tiếp
+  // tuần sau là bình thường, không phải spam). Không áp dụng giữa các seller
+  // khác nhau — trùng tên giữa 2 gian hàng là chuyện thường.
+  const duplicateSince = new Date(Date.now() - DUPLICATE_PRODUCT_WINDOW_HOURS * 3600_000);
+  const duplicate = await prisma.product.findFirst({
+    where: {
+      sellerId: seller!.id,
+      name: { equals: name, mode: "insensitive" },
+      status: { in: ["PENDING", "APPROVED"] },
+      createdAt: { gte: duplicateSince },
+    },
+    select: { id: true },
+  });
+  if (duplicate) {
+    return NextResponse.json(
+      {
+        error: `Bạn đã đăng sản phẩm "${name}" gần đây và đang chờ duyệt/đã duyệt. Vui lòng đợi hoặc đổi tên nếu đây là sản phẩm khác.`,
+      },
       { status: 400 }
     );
   }
@@ -167,6 +213,13 @@ export async function POST(req: Request) {
     if (!Array.isArray(fieldsParsed) || fieldsParsed.length === 0) {
       return NextResponse.json(
         { error: "Vui lòng khai ít nhất 1 trường buyer cần nhập cho dịch vụ." },
+        { status: 400 }
+      );
+    }
+    // PRODUCT_LISTING_AUDIT.md #7 — trước đây không giới hạn số field.
+    if (fieldsParsed.length > SERVICE_FIELDS_MAX_COUNT) {
+      return NextResponse.json(
+        { error: `Chỉ được khai tối đa ${SERVICE_FIELDS_MAX_COUNT} trường thông tin cho 1 dịch vụ.` },
         { status: 400 }
       );
     }

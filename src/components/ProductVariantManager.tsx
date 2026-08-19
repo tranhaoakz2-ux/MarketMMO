@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatVnd } from "@/lib/format";
-import { PRODUCT_STATUS_LABEL, type ProductStatus } from "@/lib/constants";
+import { PRODUCT_MAX_VARIANTS, PRODUCT_STATUS_LABEL, type ProductStatus } from "@/lib/constants";
 import type { Product } from "@/data/products";
 import MegaSaleBadge from "@/components/MegaSaleBadge";
 import MegaSaleModal from "@/components/MegaSaleModal";
@@ -186,12 +186,30 @@ function StockEntryPanel({
   );
 }
 
-function AddVariantForm({ productId, onCreated }: { productId: string; onCreated: () => void }) {
+function AddVariantForm({
+  productId,
+  onCreated,
+  atLimit,
+}: {
+  productId: string;
+  onCreated: () => void;
+  // PRODUCT_LISTING_AUDIT.md #8 — server (POST .../variants) đã chặn cứng,
+  // đây chỉ là UX: ẩn form thay vì để seller điền xong mới bị 400.
+  atLimit: boolean;
+}) {
   const [label, setLabel] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  if (atLimit) {
+    return (
+      <p className="rounded-lg border border-dashed border-border-c bg-surface-alt px-3 py-2 text-xs font-semibold text-muted">
+        Sản phẩm đã đạt tối đa {PRODUCT_MAX_VARIANTS} phiên bản.
+      </p>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -389,8 +407,14 @@ function ManageModal({
         )}
 
         <div className="mt-4">
-          <p className="mb-1.5 text-xs font-bold text-foreground">Thêm phiên bản mới</p>
-          <AddVariantForm productId={product.id} onCreated={onChanged} />
+          <p className="mb-1.5 text-xs font-bold text-foreground">
+            Thêm phiên bản mới ({variants.length}/{PRODUCT_MAX_VARIANTS})
+          </p>
+          <AddVariantForm
+            productId={product.id}
+            onCreated={onChanged}
+            atLimit={variants.length >= PRODUCT_MAX_VARIANTS}
+          />
         </div>
       </div>
     </div>

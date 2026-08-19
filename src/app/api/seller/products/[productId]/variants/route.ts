@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireSeller } from "@/lib/authz";
-import { MAX_PRODUCT_PRICE_VND, MAX_PRODUCT_STOCK } from "@/lib/constants";
+import { MAX_PRODUCT_PRICE_VND, MAX_PRODUCT_STOCK, PRODUCT_MAX_VARIANTS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(
@@ -41,6 +41,16 @@ export async function POST(
   if (!Number.isInteger(stock) || stock < 0 || stock > MAX_PRODUCT_STOCK) {
     return NextResponse.json(
       { error: `Số lượng kho phải là số nguyên từ 0 đến ${MAX_PRODUCT_STOCK.toLocaleString("vi-VN")}.` },
+      { status: 400 }
+    );
+  }
+
+  // PRODUCT_LISTING_AUDIT.md #8 — trước đây không giới hạn số variant/sản
+  // phẩm.
+  const variantCount = await prisma.productVariant.count({ where: { productId } });
+  if (variantCount >= PRODUCT_MAX_VARIANTS) {
+    return NextResponse.json(
+      { error: `Sản phẩm đã đạt tối đa ${PRODUCT_MAX_VARIANTS} phiên bản.` },
       { status: 400 }
     );
   }

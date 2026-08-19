@@ -4,10 +4,18 @@ import { Check, ImagePlus, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   MIN_WARRANTY_HOURS_PRODUCT,
+  PRODUCT_DESCRIPTION_MAX_LENGTH,
+  PRODUCT_DESCRIPTION_MIN_LENGTH,
+  PRODUCT_MAX_VARIANTS,
+  PRODUCT_NAME_MAX_LENGTH,
+  PRODUCT_NAME_MIN_LENGTH,
+  PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH,
+  PRODUCT_SHORT_DESCRIPTION_MIN_LENGTH,
   SERVICE_DELIVERY_METHOD_LABEL,
   SERVICE_DELIVERY_METHODS,
   SERVICE_FIELD_INPUT_TYPE_LABEL,
   SERVICE_FIELD_INPUT_TYPES,
+  SERVICE_FIELDS_MAX_COUNT,
   type ServiceDeliveryMethod,
   type ServiceFieldInputType,
 } from "@/lib/constants";
@@ -331,6 +339,36 @@ export default function AddProductForm({
       setError("Vui lòng chọn ảnh sản phẩm.");
       return;
     }
+    // PRODUCT_LISTING_AUDIT.md #6 — HTML minLength/maxLength trên input chỉ
+    // là gợi ý UI, không chặn khi seller sửa DOM/gọi API trực tiếp — server
+    // là chốt chặn thật, nhưng vẫn check JS ở đây để báo lỗi ngay tại chỗ
+    // thay vì chờ round-trip API.
+    if (name.trim().length < PRODUCT_NAME_MIN_LENGTH || name.trim().length > PRODUCT_NAME_MAX_LENGTH) {
+      setError(`Tên sản phẩm phải từ ${PRODUCT_NAME_MIN_LENGTH}-${PRODUCT_NAME_MAX_LENGTH} ký tự.`);
+      return;
+    }
+    if (
+      shortDescription.trim().length < PRODUCT_SHORT_DESCRIPTION_MIN_LENGTH ||
+      shortDescription.trim().length > PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH
+    ) {
+      setError(
+        `Mô tả ngắn phải từ ${PRODUCT_SHORT_DESCRIPTION_MIN_LENGTH}-${PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH} ký tự.`
+      );
+      return;
+    }
+    if (
+      description.trim().length < PRODUCT_DESCRIPTION_MIN_LENGTH ||
+      description.trim().length > PRODUCT_DESCRIPTION_MAX_LENGTH
+    ) {
+      setError(
+        `Mô tả chi tiết phải từ ${PRODUCT_DESCRIPTION_MIN_LENGTH}-${PRODUCT_DESCRIPTION_MAX_LENGTH.toLocaleString("vi-VN")} ký tự.`
+      );
+      return;
+    }
+    if (variants.length > PRODUCT_MAX_VARIANTS) {
+      setError(`Chỉ được thêm tối đa ${PRODUCT_MAX_VARIANTS} phiên bản cho 1 sản phẩm.`);
+      return;
+    }
     for (const v of variants) {
       if (!v.label.trim() || !v.price) {
         setError("Vui lòng điền đủ tên và giá cho mọi phiên bản đã thêm.");
@@ -344,6 +382,10 @@ export default function AddProductForm({
       }
       if (serviceFields.length === 0) {
         setError("Vui lòng khai ít nhất 1 trường thông tin buyer cần nhập cho dịch vụ.");
+        return;
+      }
+      if (serviceFields.length > SERVICE_FIELDS_MAX_COUNT) {
+        setError(`Chỉ được khai tối đa ${SERVICE_FIELDS_MAX_COUNT} trường thông tin cho 1 dịch vụ.`);
         return;
       }
       for (const f of serviceFields) {
@@ -625,8 +667,8 @@ export default function AddProductForm({
             <input
               type="text"
               required
-              minLength={5}
-              maxLength={150}
+              minLength={PRODUCT_NAME_MIN_LENGTH}
+              maxLength={PRODUCT_NAME_MAX_LENGTH}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="VD: Gmail Việt Nam random full 2020-2023"
@@ -813,9 +855,10 @@ export default function AddProductForm({
           <button
             type="button"
             onClick={addVariantRow}
-            className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-brand-dark"
+            disabled={variants.length >= PRODUCT_MAX_VARIANTS}
+            className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Plus className="h-3.5 w-3.5" /> Thêm phiên bản
+            <Plus className="h-3.5 w-3.5" /> Thêm phiên bản ({variants.length}/{PRODUCT_MAX_VARIANTS})
           </button>
         </div>
 
@@ -1104,9 +1147,10 @@ export default function AddProductForm({
               <button
                 type="button"
                 onClick={addServiceField}
-                className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-brand-dark"
+                disabled={serviceFields.length >= SERVICE_FIELDS_MAX_COUNT}
+                className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Plus className="h-3.5 w-3.5" /> Thêm trường
+                <Plus className="h-3.5 w-3.5" /> Thêm trường ({serviceFields.length}/{SERVICE_FIELDS_MAX_COUNT})
               </button>
             </div>
 
@@ -1179,8 +1223,8 @@ export default function AddProductForm({
         <input
           type="text"
           required
-          minLength={10}
-          maxLength={200}
+          minLength={PRODUCT_SHORT_DESCRIPTION_MIN_LENGTH}
+          maxLength={PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH}
           value={shortDescription}
           onChange={(e) => setShortDescription(e.target.value)}
           placeholder="1 câu ngắn hiện trên thẻ sản phẩm"
@@ -1189,10 +1233,16 @@ export default function AddProductForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-semibold text-foreground">Mô tả chi tiết</label>
+        <label className="mb-1 flex items-center justify-between text-sm font-semibold text-foreground">
+          <span>Mô tả chi tiết</span>
+          <span className="text-[11px] font-normal text-muted">
+            {description.trim().length}/{PRODUCT_DESCRIPTION_MAX_LENGTH.toLocaleString("vi-VN")} ký tự
+          </span>
+        </label>
         <textarea
           required
-          minLength={20}
+          minLength={PRODUCT_DESCRIPTION_MIN_LENGTH}
+          maxLength={PRODUCT_DESCRIPTION_MAX_LENGTH}
           rows={5}
           value={description}
           onChange={(e) => setDescription(e.target.value)}

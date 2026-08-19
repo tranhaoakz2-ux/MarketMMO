@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireSeller } from "@/lib/authz";
+import { requireSellerRateLimited } from "@/lib/authz";
+import { SELLER_CATEGORY_CREATE_LIMIT, SELLER_CATEGORY_CREATE_WINDOW_MS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { slugifyCategory } from "@/lib/slug";
 
@@ -11,7 +12,13 @@ import { slugifyCategory } from "@/lib/slug";
 // getAllCategories trong src/lib/queries.ts) cho tới khi admin duyệt tại
 // POST /api/admin/categories/[id].
 export async function POST(req: Request) {
-  const { seller, error } = await requireSeller();
+  // Rate-limit theo seller (PRODUCT_LISTING_AUDIT.md #4) — category là thao
+  // tác hiếm, ngưỡng thấp hơn hẳn đăng sản phẩm.
+  const { seller, error } = await requireSellerRateLimited(
+    "seller-categories-create",
+    SELLER_CATEGORY_CREATE_LIMIT,
+    SELLER_CATEGORY_CREATE_WINDOW_MS
+  );
   if (error) return error;
 
   const body = await req.json().catch(() => null);

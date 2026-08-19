@@ -92,6 +92,41 @@ export const MAX_PRODUCT_STOCK = 100_000;
 export const SELLER_PRODUCT_CREATE_LIMIT = 20;
 export const SELLER_PRODUCT_CREATE_WINDOW_MS = 60 * 60 * 1000; // 1 giờ
 
+// ── Ràng buộc độ dài tên/mô tả sản phẩm (PRODUCT_LISTING_AUDIT.md #6) —
+// validate CẢ API (POST /api/seller/products) lẫn UI (AddProductForm). Tên
+// và mô tả ngắn đã có min/max từ trước, chỉ gom vào hằng số dùng chung; mô
+// tả chi tiết trước đây KHÔNG có trần tối đa — 4.000 ký tự đủ cho vài đoạn
+// văn giới thiệu chi tiết, không cho phép phình vô hạn.
+export const PRODUCT_NAME_MIN_LENGTH = 5;
+export const PRODUCT_NAME_MAX_LENGTH = 150;
+export const PRODUCT_SHORT_DESCRIPTION_MIN_LENGTH = 10;
+export const PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH = 200;
+export const PRODUCT_DESCRIPTION_MIN_LENGTH = 20;
+export const PRODUCT_DESCRIPTION_MAX_LENGTH = 4000;
+
+// Trần số field buyer-cần-nhập cho 1 dịch vụ (PRODUCT_LISTING_AUDIT.md #7) —
+// seller khai quá nhiều field vừa khó dùng cho buyer vừa có thể lạm dụng để
+// phình payload/DB. 20 field là dư sức cho dịch vụ phức tạp nhất trên sàn.
+export const SERVICE_FIELDS_MAX_COUNT = 20;
+
+// Trần số phiên bản (ProductVariant) cho 1 sản phẩm (PRODUCT_LISTING_AUDIT.md
+// #8) — chặn tạo hàng nghìn variant vô nghĩa cho 1 sản phẩm.
+export const PRODUCT_MAX_VARIANTS = 30;
+
+// Chặn đăng trùng nhẹ nhàng (PRODUCT_LISTING_AUDIT.md #3) — CÙNG 1 seller
+// đăng lại đúng tên sản phẩm (không phân biệt hoa/thường) còn PENDING/
+// APPROVED trong khoảng thời gian này thì bị chặn. Cố tình loại trừ
+// REJECTED (không cản seller sửa và đăng lại sau khi bị từ chối) và không
+// áp dụng giữa các seller khác nhau (tên trùng giữa 2 gian hàng là bình
+// thường, không phải spam).
+export const DUPLICATE_PRODUCT_WINDOW_HOURS = 24;
+
+// Chặn spam đề xuất danh mục mới (PRODUCT_LISTING_AUDIT.md #4) — category
+// là thao tác hiếm (chỉ cần khi chưa có danh mục khớp), ngưỡng thấp hơn hẳn
+// đăng sản phẩm.
+export const SELLER_CATEGORY_CREATE_LIMIT = 10;
+export const SELLER_CATEGORY_CREATE_WINDOW_MS = 60 * 60 * 1000; // 1 giờ
+
 // ── Đặt trước (pre-order) — xây lại 2026-08-14 ──
 // Thời gian giao hàng seller CAM KẾT khi bật "Đặt trước" cho 1 sản phẩm
 // (Product.preOrderDeliveryValue/Unit) — validate CẢ API

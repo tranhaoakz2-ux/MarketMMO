@@ -139,6 +139,21 @@ DB. Định danh 1 dòng theo `(productId, variantId)`.
 | **TUT_TRICK** | bắt buộc =1 | không claim/trừ | `JSON.stringify([product.tutTrickContent])` — nội dung cố định, bán lặp lại vô hạn | — |
 | **TOOL** | tự do | như PRODUCT kho thật | ciphertext AES-256-GCM (nếu có kho); `toolUsageGuide`/`toolDeliveryLink` đọc **live** từ `Product` lúc reveal (không snapshot) | `ProductStockItem` |
 
+### Validate đăng sản phẩm — `POST /api/seller/products`
+
+Rate-limit theo seller (`requireSellerRateLimited`, `SELLER_PRODUCT_CREATE_LIMIT`
+= 20/`SELLER_PRODUCT_CREATE_WINDOW_MS` = 1 giờ — `src/lib/constants.ts`).
+Chặn đăng trùng nhẹ nhàng: cùng seller đăng lại đúng tên (không phân biệt
+hoa/thường) còn `PENDING`/`APPROVED` trong `DUPLICATE_PRODUCT_WINDOW_HOURS`
+(24h) → 400 (loại trừ `REJECTED`, không cản resubmit sau khi bị từ chối).
+Độ dài `name`/`shortDescription`/`description`, giá/kho (`MAX_PRODUCT_PRICE_VND`
+= 500 triệu, `MAX_PRODUCT_STOCK` = 100.000), số `serviceFields`
+(`SERVICE_FIELDS_MAX_COUNT` = 20) và số `ProductVariant`/sản phẩm
+(`PRODUCT_MAX_VARIANTS` = 30) đều có trần cấu hình được qua hằng số trong
+`constants.ts`, validate cả `AddProductForm.tsx` lẫn server (server là chốt
+chặn thật). Chi tiết đầy đủ + lịch sử phát hiện: xem `PRODUCT_LISTING_AUDIT.md`
+(local-only, không push).
+
 ### SERVICE — buyer cung cấp thông tin cho seller
 
 Seller khai `Product.serviceDeliveryMethods` (JSON mảng mã trong
