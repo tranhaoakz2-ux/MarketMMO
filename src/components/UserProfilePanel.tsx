@@ -277,7 +277,7 @@ export default function UserProfilePanel({
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Ít nhất 6 ký tự"
+                      placeholder="Ít nhất 8 ký tự"
                     />
                     <TextField
                       label="Xác nhận mật khẩu mới"

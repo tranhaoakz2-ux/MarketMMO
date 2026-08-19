@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-import { PASSWORD_RESET_MAX_ATTEMPTS } from "@/lib/constants";
+import { MIN_PASSWORD_LENGTH, PASSWORD_RESET_MAX_ATTEMPTS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -36,8 +36,11 @@ export async function POST(req: Request) {
   if (!email || !/^\S+@\S+\.\S+$/.test(email) || !/^\d{6}$/.test(code) || !password) {
     return NextResponse.json({ error: "Thiếu thông tin." }, { status: 400 });
   }
-  if (password.length < 6) {
-    return NextResponse.json({ error: "Mật khẩu phải có ít nhất 6 ký tự." }, { status: 400 });
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return NextResponse.json(
+      { error: `Mật khẩu phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự.` },
+      { status: 400 }
+    );
   }
 
   // Rate-limit theo CẢ email lẫn IP — giới hạn số lần đoán mã cho 1 email/IP

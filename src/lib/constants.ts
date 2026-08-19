@@ -1,3 +1,7 @@
+// Độ dài mật khẩu tối thiểu — áp dụng đồng nhất cho đăng ký, đổi mật khẩu,
+// và đặt lại mật khẩu (quên mật khẩu). Xem LAUNCH_AUDIT.md #22.
+export const MIN_PASSWORD_LENGTH = 8;
+
 export type Role = "BUYER" | "SELLER" | "ADMIN";
 
 export const roleLabel: Record<Role, string> = {

@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authz";
+import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
 // Đổi mật khẩu khi ĐANG ĐĂNG NHẬP — khác luồng "Quên mật khẩu" (OTP qua
@@ -17,8 +18,11 @@ export async function POST(req: Request) {
   if (!oldPassword || !newPassword) {
     return NextResponse.json({ error: "Thiếu thông tin." }, { status: 400 });
   }
-  if (newPassword.length < 6) {
-    return NextResponse.json({ error: "Mật khẩu mới phải có ít nhất 6 ký tự." }, { status: 400 });
+  if (newPassword.length < MIN_PASSWORD_LENGTH) {
+    return NextResponse.json(
+      { error: `Mật khẩu mới phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự.` },
+      { status: 400 }
+    );
   }
 
   const user = await prisma.user.findUnique({

@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { generateReferralCode } from "@/lib/referral";
 import { rateLimit } from "@/lib/rate-limit";
@@ -54,9 +55,9 @@ export async function POST(req: Request) {
   if (!/^\S+@\S+\.\S+$/.test(email)) {
     return NextResponse.json({ error: "Email không hợp lệ." }, { status: 400 });
   }
-  if (password.length < 6) {
+  if (password.length < MIN_PASSWORD_LENGTH) {
     return NextResponse.json(
-      { error: "Mật khẩu phải có ít nhất 6 ký tự." },
+      { error: `Mật khẩu phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự.` },
       { status: 400 }
     );
   }
