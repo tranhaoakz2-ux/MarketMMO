@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireSeller } from "@/lib/authz";
+import { MAX_PRODUCT_PRICE_VND, MAX_PRODUCT_STOCK } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
 async function loadOwnedVariant(
@@ -45,9 +46,13 @@ export async function PATCH(
   }
   if (body?.price !== undefined) {
     const price = Number(body.price);
-    if (!Number.isFinite(price) || price < 1000) {
+    // PRODUCT_LISTING_AUDIT.md #5 — cùng lớp bug với route tạo variant/sản
+    // phẩm gốc.
+    if (!Number.isInteger(price) || price < 1000 || price > MAX_PRODUCT_PRICE_VND) {
       return NextResponse.json(
-        { error: "Giá phiên bản phải từ 1.000đ trở lên." },
+        {
+          error: `Giá phiên bản phải là số nguyên, từ 1.000đ đến ${MAX_PRODUCT_PRICE_VND.toLocaleString("vi-VN")}đ.`,
+        },
         { status: 400 }
       );
     }
@@ -55,9 +60,9 @@ export async function PATCH(
   }
   if (body?.stock !== undefined) {
     const stock = Number(body.stock);
-    if (!Number.isInteger(stock) || stock < 0) {
+    if (!Number.isInteger(stock) || stock < 0 || stock > MAX_PRODUCT_STOCK) {
       return NextResponse.json(
-        { error: "Số lượng kho phải là số nguyên không âm." },
+        { error: `Số lượng kho phải là số nguyên từ 0 đến ${MAX_PRODUCT_STOCK.toLocaleString("vi-VN")}.` },
         { status: 400 }
       );
     }

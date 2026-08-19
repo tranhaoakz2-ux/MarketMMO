@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireSeller } from "@/lib/authz";
+import { requireSeller, requireSellerRateLimited } from "@/lib/authz";
 import {
+  MAX_PRODUCT_PRICE_VND,
+  MAX_PRODUCT_STOCK,
   MIN_WARRANTY_HOURS_PRODUCT,
+  SELLER_PRODUCT_CREATE_LIMIT,
+  SELLER_PRODUCT_CREATE_WINDOW_MS,
   SERVICE_CREDENTIAL_MAX_WINDOW_HOURS,
   SERVICE_CREDENTIAL_MIN_WINDOW_HOURS,
   SERVICE_DELIVERY_METHODS,
@@ -27,7 +31,13 @@ export async function GET() {
 // là lần đầu tiên seller tạo được SẢN PHẨM GỐC mới (trước đây chỉ thêm được
 // phiên bản/variant cho sản phẩm có sẵn qua /quan-ly-san-pham).
 export async function POST(req: Request) {
-  const { seller, error } = await requireSeller();
+  // Rate-limit theo seller (PRODUCT_LISTING_AUDIT.md #2) — chặn spam đăng
+  // hàng loạt sản phẩm PENDING làm ngập hàng chờ duyệt admin.
+  const { seller, error } = await requireSellerRateLimited(
+    "seller-products-create",
+    SELLER_PRODUCT_CREATE_LIMIT,
+    SELLER_PRODUCT_CREATE_WINDOW_MS
+  );
   if (error) return error;
 
   const form = await req.formData().catch(() => null);
@@ -64,16 +74,25 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
+  // PRODUCT_LISTING_AUDIT.md #5 — price trước đây chỉ check Number.isFinite
+  // (Product.price là cột Int trong Postgres), giá trị thập phân/vượt Int32
+  // lọt qua rồi gây lỗi runtime không kiểm soát lúc ghi DB. Giờ ép nguyên +
+  // chặn trần hợp lý.
   const price = Number(priceRaw);
-  if (!Number.isFinite(price) || price < 1000) {
+  if (!Number.isInteger(price) || price < 1000 || price > MAX_PRODUCT_PRICE_VND) {
     return NextResponse.json(
-      { error: "Giá phải là số, tối thiểu 1.000đ." },
+      {
+        error: `Giá phải là số nguyên, từ 1.000đ đến ${MAX_PRODUCT_PRICE_VND.toLocaleString("vi-VN")}đ.`,
+      },
       { status: 400 }
     );
   }
   const stock = Number(stockRaw);
-  if (!Number.isInteger(stock) || stock < 0) {
-    return NextResponse.json({ error: "Kho phải là số nguyên >= 0." }, { status: 400 });
+  if (!Number.isInteger(stock) || stock < 0 || stock > MAX_PRODUCT_STOCK) {
+    return NextResponse.json(
+      { error: `Kho phải là số nguyên từ 0 đến ${MAX_PRODUCT_STOCK.toLocaleString("vi-VN")}.` },
+      { status: 400 }
+    );
   }
   if (!(image instanceof File) || image.size === 0) {
     return NextResponse.json({ error: "Vui lòng chọn ảnh sản phẩm." }, { status: 400 });
@@ -294,38 +313,50 @@ export async function POST(req: Request) {
     slug = `${slug}-${Date.now().toString(36)}`;
   }
 
-  const product = await prisma.$transaction(async (tx) => {
-    const p = await tx.product.create({
-      data: {
-        slug,
-        name,
-        shortDescription,
-        description: JSON.stringify(description),
-        attributes: JSON.stringify([]),
-        price,
-        stock,
-        imageUrl,
-        status: "PENDING",
-        categoryId,
-        sellerId: seller!.id,
-        productType,
-        serviceDeliveryMethods:
-          productType === "SERVICE" ? JSON.stringify(serviceDeliveryMethods) : null,
-        credentialViewWindowHours: productType === "SERVICE" ? credentialViewWindowHours : null,
-        tutTrickContent,
-        toolUsageGuide,
-        toolDeliveryLink,
-        warrantyValue,
-        warrantyUnit,
-      },
-    });
-    if (productType === "SERVICE") {
-      await tx.serviceFieldDefinition.createMany({
-        data: serviceFieldsData.map((f) => ({ ...f, productId: p.id })),
+  // PRODUCT_LISTING_AUDIT.md #5 — bọc try/catch quanh transaction: mọi lỗi
+  // ghi DB không lường trước (race trùng slug hiếm gặp, ràng buộc DB khác...)
+  // trả 400 gọn gàng thay vì để lộ 500/stack trace ra response.
+  let product: { id: string; slug: string };
+  try {
+    product = await prisma.$transaction(async (tx) => {
+      const p = await tx.product.create({
+        data: {
+          slug,
+          name,
+          shortDescription,
+          description: JSON.stringify(description),
+          attributes: JSON.stringify([]),
+          price,
+          stock,
+          imageUrl,
+          status: "PENDING",
+          categoryId,
+          sellerId: seller!.id,
+          productType,
+          serviceDeliveryMethods:
+            productType === "SERVICE" ? JSON.stringify(serviceDeliveryMethods) : null,
+          credentialViewWindowHours: productType === "SERVICE" ? credentialViewWindowHours : null,
+          tutTrickContent,
+          toolUsageGuide,
+          toolDeliveryLink,
+          warrantyValue,
+          warrantyUnit,
+        },
       });
-    }
-    return p;
-  });
+      if (productType === "SERVICE") {
+        await tx.serviceFieldDefinition.createMany({
+          data: serviceFieldsData.map((f) => ({ ...f, productId: p.id })),
+        });
+      }
+      return p;
+    });
+  } catch (err) {
+    console.error("Tạo sản phẩm thất bại:", err);
+    return NextResponse.json(
+      { error: "Không thể đăng sản phẩm lúc này, vui lòng thử lại." },
+      { status: 400 }
+    );
+  }
 
   return NextResponse.json({ id: product.id, slug: product.slug });
 }

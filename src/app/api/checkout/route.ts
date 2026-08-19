@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       const order = await prisma.$transaction(async (tx) => {
       const products = await tx.product.findMany({
         where: { id: { in: items.map((i) => i.productId) } },
-        include: { variants: true },
+        include: { variants: true, seller: { select: { suspended: true } } },
       });
 
       let total = 0;
@@ -107,6 +107,22 @@ export async function POST(req: Request) {
         const product = products.find((p) => p.id === item.productId);
         if (!product) {
           throw new Error(`Sản phẩm không tồn tại: ${item.productId}`);
+        }
+        // AUDIT LỖ HỔNG P0 (PRODUCT_LISTING_AUDIT.md #1) — checkout trước đây
+        // KHÔNG kiểm tra status, cho phép mua thẳng sản phẩm PENDING/REJECTED
+        // qua API dù trang chi tiết đã ẩn (chỉ chặn ở tầng hiển thị, không
+        // chặn ở tầng giao dịch). Chặn CỨNG ở đây — tầng duy nhất tiền thật
+        // sự bị trừ — trước khi đụng tới giá/kho/bất kỳ bước nào khác.
+        if (product.status !== "APPROVED") {
+          throw new Error(
+            `"${product.name}" hiện chưa được duyệt hoặc đã bị từ chối, không thể mua.`
+          );
+        }
+        if (!product.isActive) {
+          throw new Error(`"${product.name}" hiện đã bị ẩn khỏi sàn, không thể mua.`);
+        }
+        if (product.seller.suspended) {
+          throw new Error(`Gian hàng bán "${product.name}" hiện đang bị tạm khoá, không thể mua.`);
         }
 
         let unitPrice = product.price;

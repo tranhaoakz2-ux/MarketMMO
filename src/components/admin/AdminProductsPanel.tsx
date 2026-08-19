@@ -5,7 +5,7 @@
 // vẫn THẬT: fetch GET /api/admin/products, POST /api/admin/products/[id]
 // {action:"approve"|"reject"} — không đổi 1 dòng logic nghiệp vụ. API route
 // đã có sẵn requireAdmin() (không đụng tới).
-import { Check, ExternalLink, PackageSearch, ShieldAlert, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, ExternalLink, PackageSearch, ShieldAlert, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button, Card, EmptyState, ListSkeleton, formatVndDemo } from "@/components/admin-demo/AdminDemoKit";
 
@@ -14,6 +14,9 @@ type PendingProduct = {
   slug: string;
   name: string;
   shortDescription: string;
+  description: string[];
+  tutTrickContent: string | null;
+  toolUsageGuide: string | null;
   price: number;
   stock: number;
   imageUrl: string | null;
@@ -35,6 +38,10 @@ export default function AdminProductsPanel() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  // PRODUCT_LISTING_AUDIT.md #10 — mô tả chi tiết/nội dung TUT_TRICK/TOOL
+  // gấp gọn mặc định (có thể dài tới 20.000 ký tự), admin tự bung ra xem
+  // trước khi duyệt thay vì hiện tràn lan luôn.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const handleCopyLink = async (id: string, link: string) => {
     await navigator.clipboard.writeText(link);
@@ -104,6 +111,57 @@ export default function AdminProductsPanel() {
                   {new Date(p.createdAt).toLocaleString("vi-VN")}
                 </p>
                 <p className="mt-1 text-xs text-[var(--adm-text)]/70">{p.shortDescription}</p>
+
+                <button
+                  type="button"
+                  onClick={() => setExpandedId((cur) => (cur === p.id ? null : p.id))}
+                  className="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-[var(--adm-brand)] hover:underline"
+                >
+                  {expandedId === p.id ? (
+                    <>
+                      <ChevronUp className="h-3 w-3" /> Ẩn nội dung đầy đủ
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-3 w-3" /> Xem nội dung đầy đủ trước khi duyệt
+                    </>
+                  )}
+                </button>
+                {expandedId === p.id && (
+                  <div className="mt-2 flex flex-col gap-2 rounded-lg border border-[var(--adm-border)] bg-[var(--adm-surface-2)] p-3">
+                    <div>
+                      <p className="mb-1 text-[10px] font-bold uppercase text-[var(--adm-muted)]">
+                        Mô tả chi tiết
+                      </p>
+                      <div className="flex flex-col gap-1 text-[12px] leading-relaxed text-[var(--adm-text)]">
+                        {p.description.map((line, i) => (
+                          <p key={i}>{line}</p>
+                        ))}
+                      </div>
+                    </div>
+                    {p.productType === "TUT_TRICK" && p.tutTrickContent && (
+                      <div>
+                        <p className="mb-1 text-[10px] font-bold uppercase text-[var(--adm-muted)]">
+                          Nội dung hướng dẫn đầy đủ (buyer trả tiền để xem — CHỈ admin thấy được ở đây)
+                        </p>
+                        <p className="whitespace-pre-wrap text-[12px] leading-relaxed text-[var(--adm-text)]">
+                          {p.tutTrickContent}
+                        </p>
+                      </div>
+                    )}
+                    {p.productType === "TOOL" && p.toolUsageGuide && (
+                      <div>
+                        <p className="mb-1 text-[10px] font-bold uppercase text-[var(--adm-muted)]">
+                          Quy trình sử dụng tool đầy đủ
+                        </p>
+                        <p className="whitespace-pre-wrap text-[12px] leading-relaxed text-[var(--adm-text)]">
+                          {p.toolUsageGuide}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Tool/AI Agent giao bằng LINK TẢI — chỉ hiện link dạng
                     TEXT để admin đọc trỏ đi đâu, KHÔNG phải nút mở/tải tự
                     động (tránh admin lỡ tay click mở file lạ trên máy cá

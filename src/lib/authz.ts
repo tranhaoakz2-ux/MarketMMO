@@ -114,6 +114,30 @@ export async function requireSeller() {
   return { session, seller, error: null };
 }
 
+// Như requireSeller(), thêm rate-limit theo seller.id cho các route dễ bị
+// spam hàng loạt (đăng sản phẩm...). Trả 429 kèm Retry-After khi vượt
+// ngưỡng — xem PRODUCT_LISTING_AUDIT.md #2.
+export async function requireSellerRateLimited(
+  routeKey: string,
+  limit: number,
+  windowMs: number
+) {
+  const { session, seller, error } = await requireSeller();
+  if (error) return { session: null, seller: null, error };
+  const rl = rateLimit(`${routeKey}:${seller!.id}`, limit, windowMs);
+  if (!rl.ok) {
+    return {
+      session: null,
+      seller: null,
+      error: NextResponse.json(
+        { error: `Bạn thao tác quá nhanh. Vui lòng thử lại sau ${rl.retryAfterSec} giây.` },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+      ),
+    };
+  }
+  return { session, seller, error: null };
+}
+
 export async function requireAdmin() {
   const session = await auth();
   if (!session?.user) {

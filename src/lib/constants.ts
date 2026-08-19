@@ -78,6 +78,20 @@ export const WARRANTY_UNIT_LABEL: Record<WarrantyUnit, string> = {
 // rác — validate ở CẢ API (POST /api/seller/products) lẫn UI (AddProductForm).
 export const MIN_WARRANTY_HOURS_PRODUCT = 24;
 
+// Sàn giá/kho hợp lý khi seller đăng sản phẩm/phiên bản — chặn số phi lý
+// hoặc vượt phạm vi Int32 của Postgres (2.147.483.647) gây lỗi runtime khi
+// ghi DB (PRODUCT_LISTING_AUDIT.md #5). Không phải giới hạn nghiệp vụ cứng,
+// chỉ là trần an toàn — seller hợp pháp gần như không bao giờ chạm ngưỡng.
+export const MAX_PRODUCT_PRICE_VND = 500_000_000; // 500 triệu đồng
+export const MAX_PRODUCT_STOCK = 100_000;
+
+// Chặn spam đăng sản phẩm hàng loạt (PRODUCT_LISTING_AUDIT.md #2) — mỗi
+// seller tối đa ngần này lần gọi POST /api/seller/products trong 1 giờ.
+// Đủ rộng cho seller đăng nhiều sản phẩm thật trong ngày, đủ hẹp để chặn
+// script spam hàng trăm bản ghi PENDING làm ngập hàng chờ duyệt admin.
+export const SELLER_PRODUCT_CREATE_LIMIT = 20;
+export const SELLER_PRODUCT_CREATE_WINDOW_MS = 60 * 60 * 1000; // 1 giờ
+
 // ── Đặt trước (pre-order) — xây lại 2026-08-14 ──
 // Thời gian giao hàng seller CAM KẾT khi bật "Đặt trước" cho 1 sản phẩm
 // (Product.preOrderDeliveryValue/Unit) — validate CẢ API
