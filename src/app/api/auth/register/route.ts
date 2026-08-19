@@ -66,8 +66,18 @@ export async function POST(req: Request) {
     where: { OR: [{ email }, { username }] },
   });
   if (existing) {
+    // LAUNCH_AUDIT.md #21 — trước đây nói rõ "Email hoặc username này đã
+    // được sử dụng", đủ để 1 kẻ dò kết hợp username ngẫu nhiên (chắc chắn
+    // không trùng) + email mục tiêu để suy ra CHẮC CHẮN email đó đã có tài
+    // khoản (email enumeration). Đổi sang message chung chung — cùng
+    // nguyên tắc chống enumeration đã áp dụng ở forgot-password/route.ts —
+    // vẫn hướng dẫn được hành động tiếp theo mà không xác nhận field nào
+    // trùng.
     return NextResponse.json(
-      { error: "Email hoặc username này đã được sử dụng." },
+      {
+        error:
+          "Không thể đăng ký với thông tin đã nhập. Vui lòng thử lại với email/username khác, hoặc đăng nhập nếu bạn đã có tài khoản.",
+      },
       { status: 409 }
     );
   }
