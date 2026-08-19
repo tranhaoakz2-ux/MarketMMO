@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
@@ -8,6 +9,27 @@ import { sendSystemMessage } from "@/lib/system-bot";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const USERNAME_RE = /^[a-zA-Z0-9]{3,20}$/;
+
+// Cùng message chung chung như nhánh kiểm tra trùng trước đó (LAUNCH_AUDIT.md
+// #21) — dùng lại cho case RACE (2 request trùng email/username xử lý gần
+// như đồng thời, cả 2 cùng vượt qua findFirst trước khi 1 trong 2 commit).
+const DUPLICATE_MESSAGE =
+  "Không thể đăng ký với thông tin đã nhập. Vui lòng thử lại với email/username khác, hoặc đăng nhập nếu bạn đã có tài khoản.";
+
+// P2002 (unique constraint) trên field cụ thể — dùng để phân biệt race va
+// trùng EMAIL/USERNAME (lỗi thật, không nên retry, trả 409 ngay) với va
+// trùng referralCode (dự kiến được, vòng lặp bên dưới tự sinh mã mới thử
+// lại). Không dùng try/catch chung chung nuốt mọi lỗi như trước (LAUNCH_AUDIT.md
+// #20) — trước đây MỌI lỗi đều bị coi là "trùng referralCode" nên race trên
+// email/username retry đủ 5 lần vô ích rồi mới trả 500 sai status.
+function isUniqueViolationOn(err: unknown, field: string): boolean {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError &&
+    err.code === "P2002" &&
+    Array.isArray((err.meta as { target?: unknown })?.target) &&
+    (err.meta!.target as string[]).includes(field)
+  );
+}
 
 export async function POST(req: Request) {
   // Rate-limit đăng ký theo IP — giữ NGUYÊN thông báo rõ ("email/username đã
@@ -120,8 +142,15 @@ export async function POST(req: Request) {
           signupIp,
         },
       });
-    } catch {
-      // Trùng referralCode — vòng lặp thử lại với mã mới.
+    } catch (err) {
+      // Race thật (2 request cùng email/username lọt qua findFirst gần như
+      // đồng thời) — trả 409 ngay, KHÔNG retry (retry cũng sẽ luôn thất bại
+      // vì nguyên nhân không đổi).
+      if (isUniqueViolationOn(err, "email") || isUniqueViolationOn(err, "username")) {
+        return NextResponse.json({ error: DUPLICATE_MESSAGE }, { status: 409 });
+      }
+      // Còn lại coi là trùng referralCode (xác suất rất thấp) — vòng lặp
+      // thử lại với mã mới ở lượt kế tiếp.
     }
   }
   if (!user) {
