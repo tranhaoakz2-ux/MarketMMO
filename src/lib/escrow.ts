@@ -5,7 +5,7 @@ import { purgeServiceIntakeSecrets } from "@/lib/service-intake";
 import { getEffectiveEscrowReleaseAt, markReceivedIfNeeded } from "@/lib/warranty";
 
 // Giải ngân MỌI OrderItem đã đến hạn ký quỹ — tách ra từ
-// POST /api/admin/escrow/release để dùng CHUNG với POST /api/cron/daily
+// POST /api/admin/escrow/release để dùng CHUNG với GET /api/cron/daily
 // (chạy tự động mỗi ngày, actor SYSTEM) mà không viết trùng logic. Route
 // admin gọi với actor ADMIN (kèm logAdminAction riêng ở route đó); cron gọi
 // với actor SYSTEM (không có adminId nên không ghi AdminAuditLog — dấu vết

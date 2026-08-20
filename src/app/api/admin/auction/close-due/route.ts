@@ -4,7 +4,7 @@ import { logAdminAction } from "@/lib/audit";
 import { closeDueAuctionSessions } from "@/lib/auction";
 
 // Nút admin "Chốt phiên" bấm tay — dùng khi cron chưa kịp chạy hoặc cần test.
-// Gọi CHUNG hàm với cron (POST /api/cron/daily) — idempotent, bấm nhiều lần
+// Gọi CHUNG hàm với cron (GET /api/cron/daily) — idempotent, bấm nhiều lần
 // không chốt trùng (xem closeAuctionSession() trong src/lib/auction.ts).
 export async function POST() {
   const { session, error } = await requireAdmin();

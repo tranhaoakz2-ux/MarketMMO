@@ -47,7 +47,8 @@ pháp lý chính thức — xem `docs/ARCHITECTURE.md` để biết logic thật
 - **Mã hoá dữ liệu nhạy cảm**: AES-256-GCM (`src/lib/service-crypto.ts`,
   Node `crypto` built-in) cho field dịch vụ nhạy cảm và kho credential TOOL
   — bắt buộc `SERVICE_CREDENTIAL_ENCRYPTION_KEY`, fail-closed nếu thiếu.
-- **Cron**: Vercel Cron (`vercel.json`) — `POST /api/cron/daily`, 1
+- **Cron**: Vercel Cron (`vercel.json`) — `GET /api/cron/daily` (PHẢI là
+  GET, Vercel Cron không gọi được method khác — dùng POST từng gây 405), 1
   lần/ngày (16:00 UTC = 23:00 VN), bảo vệ bằng `CRON_SECRET`. Xem
   `docs/ARCHITECTURE.md` §6 để biết việc gì ĐÃ tự động và việc gì CHƯA.
 
@@ -76,7 +77,7 @@ server đang chạy, sai cổng DATABASE_URL...). Dùng skill này thay vì dò 
 
 ```
 docker-compose.yml       # Postgres riêng cho dự án (cổng host 5433)
-vercel.json               # cấu hình cron (POST /api/cron/daily)
+vercel.json               # cấu hình cron (GET /api/cron/daily)
 prisma/
   schema.prisma            # toàn bộ model — nguồn chân lý duy nhất về DB
   seed.ts                    # nạp category/product/seller/admin/buyer demo

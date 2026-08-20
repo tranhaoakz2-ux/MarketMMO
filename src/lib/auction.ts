@@ -308,7 +308,7 @@ export async function closeAuctionSession(sessionId: string): Promise<{
 }
 
 // Quét + chốt MỌI phiên đã qua windowEnd nhưng còn OPEN — dùng chung cho cả
-// POST /api/cron/daily (tự động) và nút admin "Chốt phiên" (bấm tay khi cần,
+// GET /api/cron/daily (tự động) và nút admin "Chốt phiên" (bấm tay khi cần,
 // vd test hoặc cron chưa kịp chạy) — không viết trùng logic 2 nơi.
 export async function closeDueAuctionSessions(now: Date = new Date()): Promise<{ sessionsClosed: number }> {
   const due = await prisma.auctionSession.findMany({

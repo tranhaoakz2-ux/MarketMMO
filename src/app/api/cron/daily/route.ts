@@ -9,6 +9,11 @@ import { closeDueAuctionSessions } from "@/lib/auction";
 // này nếu biến môi trường CRON_SECRET đã được set trên project — thiếu biến
 // hoặc sai giá trị → 401, fail-closed).
 //
+// PHẢI là GET, không phải POST: Vercel Cron Jobs luôn gọi endpoint bằng
+// HTTP GET (không cấu hình được method khác) — route trước đây chỉ export
+// POST nên Next.js tự trả 405 Method Not Allowed cho mọi lần Vercel Cron
+// gọi thật, cron không bao giờ chạy được dù CRON_SECRET đã đúng.
+//
 // Mỗi lần chạy: LUÔN giải ngân escrow đến hạn (đúng logic route admin bấm
 // tay, chỉ khác actor SYSTEM thay vì ADMIN). Chốt phiên đấu giá gọi
 // closeDueAuctionSessions() KHÔNG cần điều kiện "hôm nay có phải Chủ Nhật
@@ -22,7 +27,7 @@ function timingSafeEqualStr(a: string, b: string): boolean {
   return timingSafeEqual(bufA, bufB);
 }
 
-export async function POST(req: Request) {
+export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json({ error: "CRON_SECRET chưa được cấu hình." }, { status: 401 });

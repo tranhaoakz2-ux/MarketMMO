@@ -285,15 +285,18 @@ Hàm chính (`src/lib/warranty.ts`):
 5. Gate nguyên tử `ESCROW→RELEASED`, set `releasedAt`, ghi
    `OrderStatusHistory`, cộng ví seller = `price×quantity − platformFeeAmount`.
 
-### CRON — `vercel.json` + `POST /api/cron/daily`
+### CRON — `vercel.json` + `GET /api/cron/daily`
 
 ```json
 { "crons": [{ "path": "/api/cron/daily", "schedule": "0 16 * * *" }] }
 ```
 Chạy **1 lần/ngày, 16:00 UTC = 23:00 giờ VN** (gộp mọi việc vào 1 route vì
-giới hạn 2 cron/ngày của gói Vercel Hobby). Xác thực bằng header
-`Authorization: Bearer <CRON_SECRET>` (`timingSafeEqual`, fail-closed nếu
-thiếu biến). Route gọi song song `releaseDueEscrow({type:"SYSTEM"})` và
+giới hạn 2 cron/ngày của gói Vercel Hobby). Route PHẢI export `GET` — Vercel
+Cron luôn gọi bằng HTTP GET, không cấu hình được method khác; route từng
+chỉ export `POST` khiến Vercel Cron nhận 405 Method Not Allowed mỗi lần
+gọi thật (bug đã vá 2026-08-19). Xác thực bằng header `Authorization:
+Bearer <CRON_SECRET>` (`timingSafeEqual`, fail-closed nếu thiếu biến).
+Route gọi song song `releaseDueEscrow({type:"SYSTEM"})` và
 `closeDueAuctionSessions()` (mục 10).
 
 **CHƯA có cron cho** (đọc đúng comment trong code, không suy diễn):
