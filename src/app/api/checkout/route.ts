@@ -415,10 +415,18 @@ export async function POST(req: Request) {
           deliveryDeadline = new Date(Date.now() + deliveryHours * 3600_000);
         }
 
-        // = thời điểm mua + ServerDetail.provisionSlaHours SNAPSHOT (seller
-        // sửa provisionSlaHours sau đó KHÔNG ảnh hưởng đơn đã mua, cùng
-        // nguyên tắc deliveryDeadline/warrantyHours ở trên).
-        const manualDeliveryDeadline = isManualProvision
+        // VPS/Server hỗ trợ CẢ HAI kiểu giao, phân nhánh theo NỘI DUNG KHO
+        // (không theo deliveryMethod): kho CÓ dữ liệu → claimedStockItemIds
+        // đã khác rỗng ở nhánh "if (stockItemTotal > 0)" phía trên, đơn giao
+        // TỰ ĐỘNG y hệt mọi sản phẩm kho khác → KHÔNG được gắn
+        // manualDeliveryDeadline (nếu không, đơn đã giao xong vẫn bị coi là
+        // "chờ giao thủ công", có thể bị cron tự huỷ + hoàn tiền dù buyer đã
+        // nhận hàng — lỗ hổng đã phát hiện, chặn tại đây). Chỉ đơn KHÔNG claim
+        // được gì từ kho (claimedStockItemIds rỗng) mới thật sự đi luồng
+        // MANUAL_PROVISION — = thời điểm mua + ServerDetail.provisionSlaHours
+        // SNAPSHOT (seller sửa provisionSlaHours sau đó KHÔNG ảnh hưởng đơn
+        // đã mua, cùng nguyên tắc deliveryDeadline/warrantyHours ở trên).
+        const manualDeliveryDeadline = isManualProvision && claimedStockItemIds.length === 0
           ? new Date(Date.now() + product.serverDetail!.provisionSlaHours * 3600_000)
           : null;
 
@@ -564,7 +572,12 @@ export async function POST(req: Request) {
           : item.isPreOrder && item.deliveryDeadline
             ? item.deliveryDeadline
             : defaultEscrowReleaseAt;
-        const initialStatus = item.isManualProvision ? "AWAITING_SELLER_DELIVERY" : "ESCROW";
+        // Nguồn sự thật DUY NHẤT cho quyết định "đơn này có cần seller giao
+        // tay hay không" — dùng manualDeliveryDeadline (đã null hoá ở trên
+        // khi kho có claim được nội dung) thay vì isManualProvision (chỉ là
+        // cấu hình Product, không phản ánh đơn NÀY có hàng sẵn trong kho hay
+        // không).
+        const initialStatus = item.manualDeliveryDeadline ? "AWAITING_SELLER_DELIVERY" : "ESCROW";
         const orderItem = await tx.orderItem.create({
           data: {
             orderId: createdOrder.id,

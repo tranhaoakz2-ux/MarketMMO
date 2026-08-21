@@ -124,13 +124,36 @@ export async function POST(
     expiresAtByLine = parsed;
   }
 
-  // TOOL: credential PHẢI mã hoá at-rest (tái dùng AES-256-GCM của Dịch vụ,
-  // src/lib/service-crypto.ts) — fail-closed, mã hoá TOÀN BỘ dòng TRƯỚC khi
-  // chạm DB, lỗi bất kỳ dòng nào (thường là thiếu SERVICE_CREDENTIAL_ENCRYPTION_KEY)
-  // chặn cả request, không ghi nửa vời. Sản phẩm/phiên bản khác (PRODUCT/
-  // TUT_TRICK) giữ nguyên hành vi cũ 100% — content vẫn plaintext.
+  // VPS/Server giao TỰ ĐỘNG từ kho (deliveryMethod="MANUAL_PROVISION" +
+  // seller có điền kho — xem quyết định "phân nhánh theo NỘI DUNG KHO" ở
+  // POST /api/checkout) — mỗi dòng PHẢI đúng định dạng IP|Port|User|Pass (4
+  // phần, phân tách bằng "|"). Validate CỨNG ở đây (không chỉ ở form) vì đây
+  // là điểm duy nhất mọi lối nhập kho đều phải đi qua — kể cả
+  // ProductVariantManager.tsx (seller nhập kho SAU khi đăng sản phẩm, không
+  // qua AddProductForm) — nên validate client-side ở form KHÔNG đủ để chặn.
+  const isVpsStock = product.productType === "PRODUCT" && product.deliveryMethod === "MANUAL_PROVISION";
+  if (isVpsStock) {
+    for (let i = 0; i < lines.length; i++) {
+      const parts = lines[i]!.split("|").map((p) => p.trim());
+      if (parts.length !== 4 || parts.some((p) => !p)) {
+        return NextResponse.json(
+          {
+            error: `Dòng ${i + 1} sai định dạng — VPS/Server phải đúng 4 phần "IP|Port|User|Pass", không được để trống phần nào.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+  }
+
+  // TOOL/VPS: credential PHẢI mã hoá at-rest (tái dùng AES-256-GCM của Dịch
+  // vụ, src/lib/service-crypto.ts) — fail-closed, mã hoá TOÀN BỘ dòng TRƯỚC
+  // khi chạm DB, lỗi bất kỳ dòng nào (thường là thiếu
+  // SERVICE_CREDENTIAL_ENCRYPTION_KEY) chặn cả request, không ghi nửa vời.
+  // Sản phẩm/phiên bản khác (PRODUCT thường/TUT_TRICK) giữ nguyên hành vi cũ
+  // 100% — content vẫn plaintext, KHÔNG bị đụng bởi thay đổi này.
   let encryptedLines: { content: string; encryption: string }[] | null = null;
-  if (product.productType === "TOOL") {
+  if (product.productType === "TOOL" || isVpsStock) {
     try {
       encryptedLines = lines.map((line) => {
         const blob = encryptSensitiveFields({ content: line });
@@ -149,7 +172,7 @@ export async function POST(
       return NextResponse.json(
         {
           error:
-            "Hệ thống chưa sẵn sàng nhận kho credential TOOL lúc này (thiếu cấu hình mã hoá), vui lòng liên hệ hỗ trợ.",
+            "Hệ thống chưa sẵn sàng nhận kho credential lúc này (thiếu cấu hình mã hoá), vui lòng liên hệ hỗ trợ.",
         },
         { status: 500 }
       );

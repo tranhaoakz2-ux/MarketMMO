@@ -452,6 +452,37 @@ export default function AddProductForm({
         setError(`Thời hạn cấp phát phải là số nguyên >= ${MIN_PROVISION_SLA_HOURS} giờ.`);
         return;
       }
+      // Báo lỗi SỚM cho seller — chốt chặn THẬT nằm ở server
+      // (POST /api/seller/products/[id]/stock, áp dụng cho MỌI lối nhập kho
+      // kể cả ProductVariantManager, không chỉ form này).
+      const findBadVpsLine = (text: string): number | null => {
+        const lines = text
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean);
+        for (let i = 0; i < lines.length; i++) {
+          const parts = lines[i]!.split("|").map((p) => p.trim());
+          if (parts.length !== 4 || parts.some((p) => !p)) return i + 1;
+        }
+        return null;
+      };
+      if (variants.length === 0) {
+        const badLine = findBadVpsLine(baseStockItems);
+        if (badLine !== null) {
+          setError(`Kho máy chủ — dòng ${badLine} sai định dạng, phải đúng 4 phần "IP|Port|User|Pass".`);
+          return;
+        }
+      } else {
+        for (const v of variants) {
+          const badLine = findBadVpsLine(v.stockItems);
+          if (badLine !== null) {
+            setError(
+              `Kho phiên bản "${v.label || "(chưa đặt tên)"}" — dòng ${badLine} sai định dạng, phải đúng 4 phần "IP|Port|User|Pass".`
+            );
+            return;
+          }
+        }
+      }
     }
     if (productType === "TUT_TRICK") {
       const len = tutTrickContent.trim().length;
@@ -878,26 +909,13 @@ export default function AddProductForm({
               <label className="mb-1 block text-sm font-semibold text-foreground">Kho</label>
               <input
                 type="number"
-                required={!baseStockItems.trim() && deliveryMethod !== "MANUAL_PROVISION"}
+                required={!baseStockItems.trim()}
                 min={0}
-                disabled={
-                  deliveryMethod === "MANUAL_PROVISION" ||
-                  (variants.length === 0 && Boolean(baseStockItems.trim()))
-                }
-                value={
-                  deliveryMethod === "MANUAL_PROVISION"
-                    ? ""
-                    : variants.length === 0 && baseStockItems.trim()
-                      ? ""
-                      : stock
-                }
+                disabled={variants.length === 0 && Boolean(baseStockItems.trim())}
+                value={variants.length === 0 && baseStockItems.trim() ? "" : stock}
                 onChange={(e) => setStock(e.target.value)}
                 placeholder={
-                  deliveryMethod === "MANUAL_PROVISION"
-                    ? "Không áp dụng cho VPS/Server"
-                    : variants.length === 0 && baseStockItems.trim()
-                      ? "Tự tính theo kho"
-                      : "VD: 50"
+                  variants.length === 0 && baseStockItems.trim() ? "Tự tính theo kho" : "VD: 50"
                 }
                 className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none disabled:bg-surface-alt disabled:text-muted"
               />
@@ -951,9 +969,7 @@ export default function AddProductForm({
         </div>
       </div>
 
-      {((productType === "PRODUCT" && deliveryMethod === "AUTO_STOCK") ||
-        productType === "TOOL" ||
-        productType === "SERVICE") && (
+      {(productType === "PRODUCT" || productType === "TOOL" || productType === "SERVICE") && (
       <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -962,14 +978,18 @@ export default function AddProductForm({
                 ? "Phiên bản / Gói + Kho tài khoản tool"
                 : productType === "SERVICE"
                   ? "Gói giá (tuỳ chọn)"
-                  : "Phiên bản / Gói (tuỳ chọn)"}
+                  : productType === "PRODUCT" && deliveryMethod === "MANUAL_PROVISION"
+                    ? "Kho máy chủ (tuỳ chọn)"
+                    : "Phiên bản / Gói (tuỳ chọn)"}
             </p>
             <p className="text-[11px] text-muted">
               {productType === "TOOL"
                 ? "Kho dữ liệu giao hàng bên dưới sẽ TỰ ĐỘNG MÃ HOÁ trước khi lưu (mỗi buyer nhận 1 tài khoản tool riêng, không ai nhận trùng)."
                 : productType === "SERVICE"
                   ? "Thêm nhiều mốc giá cho dịch vụ (VD: gói 100 follow, gói 500 follow...). Dịch vụ không có kho — buyer tự cung cấp thông tin cần thiết ngay khi đặt đơn."
-                  : "Chỉ điền nếu sản phẩm có nhiều loại/gói giá khác nhau. Bỏ qua nếu chỉ bán 1 loại duy nhất."}
+                  : productType === "PRODUCT" && deliveryMethod === "MANUAL_PROVISION"
+                    ? "Điền kho bên dưới nếu muốn giao TỰ ĐỘNG ngay khi thanh toán (sẽ TỰ ĐỘNG MÃ HOÁ). Để trống nếu muốn tự nhập thông tin đăng nhập theo từng đơn (giao thủ công)."
+                    : "Chỉ điền nếu sản phẩm có nhiều loại/gói giá khác nhau. Bỏ qua nếu chỉ bán 1 loại duy nhất."}
             </p>
           </div>
           <button
@@ -1052,7 +1072,11 @@ export default function AddProductForm({
                       value={v.stockItems}
                       onChange={(e) => updateVariant(v.key, "stockItems", e.target.value)}
                       rows={2}
-                      placeholder="Kho dữ liệu giao hàng thật cho phiên bản này (tuỳ chọn) — mỗi dòng 1 sản phẩm sẽ giao cho khách"
+                      placeholder={
+                        productType === "PRODUCT" && deliveryMethod === "MANUAL_PROVISION"
+                          ? "Mỗi dòng là 1 máy chủ sẽ giao TỰ ĐỘNG cho khách (sẽ được MÃ HOÁ), đúng 4 phần IP|Port|User|Pass, ví dụ:\n103.10.20.30|22|root|MatKhau123\n103.10.20.31|22|root|MatKhau456"
+                          : "Kho dữ liệu giao hàng thật cho phiên bản này (tuỳ chọn) — mỗi dòng 1 sản phẩm sẽ giao cho khách"
+                      }
                       className="mt-2 w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-[11px] bg-surface text-foreground focus:border-brand-dark focus:outline-none"
                     />
 
@@ -1106,7 +1130,11 @@ export default function AddProductForm({
         {variants.length === 0 && productType !== "SERVICE" && (
           <div className="mt-3">
             <label className="mb-1 block text-sm font-semibold text-foreground">
-              {productType === "TOOL" ? "Kho tài khoản tool" : "Kho dữ liệu giao hàng thật (tuỳ chọn)"}
+              {productType === "TOOL"
+                ? "Kho tài khoản tool"
+                : productType === "PRODUCT" && deliveryMethod === "MANUAL_PROVISION"
+                  ? "Kho máy chủ (tuỳ chọn — để trống = giao thủ công)"
+                  : "Kho dữ liệu giao hàng thật (tuỳ chọn)"}
             </label>
             <textarea
               value={baseStockItems}
@@ -1115,7 +1143,9 @@ export default function AddProductForm({
               placeholder={
                 productType === "TOOL"
                   ? "Mỗi dòng là 1 tài khoản tool sẽ giao TỰ ĐỘNG cho khách (sẽ được MÃ HOÁ), ví dụ:\ntool1@example.com|MatKhau123\ntool2@example.com|MatKhau456"
-                  : "Mỗi dòng là 1 sản phẩm sẽ giao TỰ ĐỘNG cho khách, ví dụ:\nemail1@gmail.com|MatKhau123|MaKhoiPhuc\nemail2@gmail.com|MatKhau456|MaKhoiPhuc"
+                  : productType === "PRODUCT" && deliveryMethod === "MANUAL_PROVISION"
+                    ? "Mỗi dòng là 1 máy chủ sẽ giao TỰ ĐỘNG cho khách (sẽ được MÃ HOÁ), đúng 4 phần IP|Port|User|Pass, ví dụ:\n103.10.20.30|22|root|MatKhau123\n103.10.20.31|22|root|MatKhau456"
+                    : "Mỗi dòng là 1 sản phẩm sẽ giao TỰ ĐỘNG cho khách, ví dụ:\nemail1@gmail.com|MatKhau123|MaKhoiPhuc\nemail2@gmail.com|MatKhau456|MaKhoiPhuc"
               }
               className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
             />
@@ -1173,9 +1203,12 @@ export default function AddProductForm({
         <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
           <p className="text-sm font-bold text-foreground">Thông số máy chủ (VPS/Server)</p>
           <p className="text-[11px] text-muted">
-            Bạn KHÔNG nhập thông tin đăng nhập ở đây — chỉ khai spec để buyer tham khảo. Sau khi có
-            đơn, bạn vào &ldquo;Đơn Sản Phẩm&rdquo; để nhập IP/Port/Username/Password cho ĐÚNG đơn
-            đó, trong hạn đã đặt bên dưới.
+            Đây chỉ là spec để buyer tham khảo, KHÔNG phải nơi nhập thông tin đăng nhập. VPS/Server hỗ
+            trợ CẢ HAI kiểu giao: nếu bạn điền &ldquo;Kho máy chủ&rdquo; bên trên, hệ thống giao TỰ
+            ĐỘNG ngay khi buyer thanh toán (đã mã hoá). Nếu để trống kho, đơn sẽ ở trạng thái chờ —
+            bạn vào &ldquo;Máy Chủ (VPS)&rdquo; để tự nhập IP/Port/Username/Password cho ĐÚNG đơn đó,
+            trong hạn cấp phát đặt ở &ldquo;Hạn cấp phát sau thanh toán&rdquo; bên dưới, nếu không sẽ
+            tự động hoàn tiền cho buyer.
           </p>
 
           <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
