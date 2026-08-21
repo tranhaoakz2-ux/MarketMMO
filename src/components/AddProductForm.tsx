@@ -4,7 +4,6 @@ import { Check, ImagePlus, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   DEFAULT_PROVISION_SLA_HOURS,
-  DELIVERY_METHOD_LABEL,
   MIN_PROVISION_SLA_HOURS,
   MIN_WARRANTY_HOURS_PRODUCT,
   PRODUCT_DESCRIPTION_MAX_LENGTH,
@@ -197,13 +196,24 @@ export default function AddProductForm({
 
   // Đổi loại sản phẩm — reset noWarranty nếu đang chọn "Sản phẩm" (checkbox
   // "Không bảo hành" bị khoá/ẩn tác dụng cho loại này, tránh state kẹt lại
-  // true từ lúc còn ở loại khác rồi chuyển sang PRODUCT).
+  // true từ lúc còn ở loại khác rồi chuyển sang PRODUCT). LUÔN ép
+  // deliveryMethod về AUTO_STOCK — "Máy chủ (VPS)" là ô chọn RIÊNG
+  // (handleSelectVps bên dưới), không đi qua hàm này, nên bấm bất kỳ ô nào
+  // trong 4 ô còn lại phải rời khỏi MANUAL_PROVISION nếu trước đó đang chọn VPS.
   const handleProductType = (type: typeof productType) => {
     setProductType(type);
     if (type === "PRODUCT") setNoWarranty(false);
-    // deliveryMethod chỉ có ý nghĩa cho PRODUCT — ép về mặc định khi đổi
-    // sang loại khác, tránh state kẹt lại MANUAL_PROVISION.
-    if (type !== "PRODUCT") setDeliveryMethod("AUTO_STOCK");
+    setDeliveryMethod("AUTO_STOCK");
+  };
+
+  // "Máy chủ (VPS)" — CHỈ tách ở UI thành 1 ô chọn ngang hàng với 4 loại
+  // trên (không tạo productType mới): bên dưới vẫn set đúng
+  // productType="PRODUCT" + deliveryMethod="MANUAL_PROVISION" như cơ chế
+  // VPS hiện có (server/checkout/schema không đổi gì).
+  const handleSelectVps = () => {
+    setProductType("PRODUCT");
+    setDeliveryMethod("MANUAL_PROVISION");
+    setNoWarranty(false);
   };
 
   const toggleServiceDeliveryMethod = (method: ServiceDeliveryMethod) => {
@@ -654,12 +664,12 @@ export default function AddProductForm({
 
       <div>
         <label className="mb-1.5 block text-sm font-semibold text-foreground">Loại sản phẩm</label>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <button
             type="button"
             onClick={() => handleProductType("PRODUCT")}
             className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
-              productType === "PRODUCT"
+              productType === "PRODUCT" && deliveryMethod === "AUTO_STOCK"
                 ? "border-brand bg-brand text-ink"
                 : "border-border-c bg-surface text-foreground hover:border-brand-dark"
             }`}
@@ -667,6 +677,20 @@ export default function AddProductForm({
             Sản phẩm
             <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
               Seller giao sẵn nội dung (tài khoản, mã kích hoạt...)
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSelectVps}
+            className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
+              productType === "PRODUCT" && deliveryMethod === "MANUAL_PROVISION"
+                ? "border-brand bg-brand text-ink"
+                : "border-border-c bg-surface text-foreground hover:border-brand-dark"
+            }`}
+          >
+            Máy chủ (VPS)
+            <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
+              Bạn tự nhập thông tin đăng nhập cho từng đơn sau khi buyer thanh toán
             </span>
           </button>
           <button
@@ -713,44 +737,6 @@ export default function AddProductForm({
           </button>
         </div>
       </div>
-
-      {productType === "PRODUCT" && (
-        <div>
-          <label className="mb-1.5 block text-sm font-semibold text-foreground">
-            Phương thức giao hàng
-          </label>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => setDeliveryMethod("AUTO_STOCK")}
-              className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
-                deliveryMethod === "AUTO_STOCK"
-                  ? "border-brand bg-brand text-ink"
-                  : "border-border-c bg-surface text-foreground hover:border-brand-dark"
-              }`}
-            >
-              {DELIVERY_METHOD_LABEL.AUTO_STOCK}
-              <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
-                Giao ngay từ kho dữ liệu text lúc thanh toán
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setDeliveryMethod("MANUAL_PROVISION")}
-              className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
-                deliveryMethod === "MANUAL_PROVISION"
-                  ? "border-brand bg-brand text-ink"
-                  : "border-border-c bg-surface text-foreground hover:border-brand-dark"
-              }`}
-            >
-              {DELIVERY_METHOD_LABEL.MANUAL_PROVISION}
-              <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
-                Bạn tự nhập thông tin đăng nhập cho từng đơn sau khi buyer thanh toán
-              </span>
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="grid gap-4 sm:grid-cols-[160px_1fr]">
         <div>
