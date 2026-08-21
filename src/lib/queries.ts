@@ -188,7 +188,7 @@ async function attachRealRatings<T extends { id: string; rating: number | null; 
 export async function getAllCategories() {
   return prisma.category.findMany({
     where: { status: "APPROVED", isActive: true, children: { none: {} } },
-    orderBy: { name: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 }
 

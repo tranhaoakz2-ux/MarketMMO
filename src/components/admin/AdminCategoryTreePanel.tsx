@@ -7,6 +7,8 @@
 // xuất) — 2 panel độc lập, cùng hiện trên /admin/danh-muc.
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
   ChevronDown,
   ChevronRight,
   FolderTree,
@@ -198,6 +200,46 @@ export default function AdminCategoryTreePanel() {
     load();
   };
 
+  // Đổi thứ tự trong CÙNG 1 nhóm cha (parentId===null cũng tính là 1 nhóm) —
+  // KHÔNG bao giờ cho nhảy sang nhóm cha khác. `categories` đã sort sẵn theo
+  // [sortOrder asc, name asc] từ API nên lọc theo đúng parentId là ra ĐÚNG
+  // thứ tự hiển thị hiện tại của nhóm đó, không cần sort lại.
+  //
+  // Đánh số lại TOÀN BỘ nhóm anh em thành 0,1,2... sau khi hoán đổi (thay vì
+  // chỉ swap 2 giá trị sortOrder cho nhau) — nhiều danh mục cũ đang cùng
+  // sortOrder=0 (giá trị mặc định), swap trực tiếp 2 số bằng nhau sẽ KHÔNG
+  // tạo ra thay đổi thứ tự nào cả. Đánh số lại đảm bảo luôn di chuyển được.
+  const moveCategory = async (node: FlatCategory, direction: "up" | "down") => {
+    const siblings = categories.filter((c) => c.parentId === node.parentId);
+    const index = siblings.findIndex((c) => c.id === node.id);
+    const swapWith = direction === "up" ? index - 1 : index + 1;
+    if (index === -1 || swapWith < 0 || swapWith >= siblings.length) return;
+
+    const reordered = [...siblings];
+    [reordered[index], reordered[swapWith]] = [reordered[swapWith], reordered[index]];
+
+    setBusyId(node.id);
+    setRowError(null);
+    try {
+      for (let i = 0; i < reordered.length; i++) {
+        if (reordered[i].sortOrder === i) continue;
+        const res = await fetch(`/api/admin/category-tree/${reordered[i].id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sortOrder: i }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          setRowError({ id: node.id, message: data?.error ?? "Không thể đổi thứ tự." });
+          break;
+        }
+      }
+    } finally {
+      setBusyId(null);
+      load();
+    }
+  };
+
   const tree = buildTree(categories);
   const excludedForParentSelect = form?.mode === "edit" && form.id
     ? selfAndDescendantIds(categories, form.id)
@@ -209,6 +251,13 @@ export default function AdminCategoryTreePanel() {
   function renderNode(node: TreeNode, depth: number) {
     const isCollapsed = collapsed.has(node.id);
     const hasChildren = node.children.length > 0;
+    // Vị trí trong đúng nhóm anh em (cùng parentId) — quyết định ẩn/vô hiệu
+    // nút lên/xuống ở 2 đầu danh sách. KHÔNG dùng node.children (đó là con
+    // CỦA node này, không phải anh em của node).
+    const siblings = categories.filter((c) => c.parentId === node.parentId);
+    const siblingIndex = siblings.findIndex((c) => c.id === node.id);
+    const isFirstSibling = siblingIndex <= 0;
+    const isLastSibling = siblingIndex === siblings.length - 1;
     return (
       <div key={node.id}>
         <div
@@ -247,6 +296,28 @@ export default function AdminCategoryTreePanel() {
             {node.productCount} sản phẩm
           </span>
           <div className="flex shrink-0 items-center gap-1.5">
+            {!isFirstSibling && (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={busyId === node.id}
+                onClick={() => moveCategory(node, "up")}
+                aria-label="Di chuyển lên"
+              >
+                <ArrowUp className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {!isLastSibling && (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={busyId === node.id}
+                onClick={() => moveCategory(node, "down")}
+                aria-label="Di chuyển xuống"
+              >
+                <ArrowDown className="h-3.5 w-3.5" />
+              </Button>
+            )}
             <Button size="sm" variant="ghost" onClick={() => openCreate(node.id)}>
               <Plus className="h-3.5 w-3.5" /> Con
             </Button>
