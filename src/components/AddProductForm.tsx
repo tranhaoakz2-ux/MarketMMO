@@ -965,17 +965,25 @@ export default function AddProductForm({
         </div>
       </div>
 
-      {((productType === "PRODUCT" && deliveryMethod === "AUTO_STOCK") || productType === "TOOL") && (
+      {((productType === "PRODUCT" && deliveryMethod === "AUTO_STOCK") ||
+        productType === "TOOL" ||
+        productType === "SERVICE") && (
       <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
         <div className="flex items-center justify-between gap-2">
           <div>
             <p className="text-sm font-bold text-foreground">
-              {productType === "TOOL" ? "Phiên bản / Gói + Kho tài khoản tool" : "Phiên bản / Gói (tuỳ chọn)"}
+              {productType === "TOOL"
+                ? "Phiên bản / Gói + Kho tài khoản tool"
+                : productType === "SERVICE"
+                  ? "Gói giá (tuỳ chọn)"
+                  : "Phiên bản / Gói (tuỳ chọn)"}
             </p>
             <p className="text-[11px] text-muted">
               {productType === "TOOL"
                 ? "Kho dữ liệu giao hàng bên dưới sẽ TỰ ĐỘNG MÃ HOÁ trước khi lưu (mỗi buyer nhận 1 tài khoản tool riêng, không ai nhận trùng)."
-                : "Chỉ điền nếu sản phẩm có nhiều loại/gói giá khác nhau. Bỏ qua nếu chỉ bán 1 loại duy nhất."}
+                : productType === "SERVICE"
+                  ? "Thêm nhiều mốc giá cho dịch vụ (VD: gói 100 follow, gói 500 follow...). Dịch vụ không có kho — buyer tự cung cấp thông tin cần thiết ngay khi đặt đơn."
+                  : "Chỉ điền nếu sản phẩm có nhiều loại/gói giá khác nhau. Bỏ qua nếu chỉ bán 1 loại duy nhất."}
             </p>
           </div>
           <button
@@ -992,14 +1000,24 @@ export default function AddProductForm({
           <div className="mt-3 flex flex-col gap-3">
             {variants.map((v) => (
               <div key={v.key} className="rounded-lg border border-border-c bg-surface p-2.5">
-                <div className="grid gap-2 sm:grid-cols-[1fr_120px_100px_auto]">
+                <div
+                  className={`grid gap-2 ${
+                    productType === "SERVICE"
+                      ? "sm:grid-cols-[1fr_140px_auto]"
+                      : "sm:grid-cols-[1fr_120px_100px_auto]"
+                  }`}
+                >
                   <input
                     type="text"
                     required
                     minLength={3}
                     value={v.label}
                     onChange={(e) => updateVariant(v.key, "label", e.target.value)}
-                    placeholder="Tên phiên bản (VD: Domain .US - Thuê 24h)"
+                    placeholder={
+                      productType === "SERVICE"
+                        ? "Tên gói (VD: Gói 100 follow)"
+                        : "Tên phiên bản (VD: Domain .US - Thuê 24h)"
+                    }
                     className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
                   />
                   <input
@@ -1012,15 +1030,19 @@ export default function AddProductForm({
                     placeholder="Giá (đ)"
                     className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
                   />
-                  <input
-                    type="number"
-                    min={0}
-                    disabled={Boolean(v.stockItems.trim())}
-                    value={v.stockItems.trim() ? "" : v.stock}
-                    onChange={(e) => updateVariant(v.key, "stock", e.target.value)}
-                    placeholder={v.stockItems.trim() ? "Tự tính theo kho" : "Kho"}
-                    className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs focus:border-brand-dark focus:outline-none disabled:bg-surface-alt disabled:text-muted"
-                  />
+                  {/* Dịch vụ không có khái niệm tồn kho — chỉ hiện label + giá.
+                      Ẩn hẳn ô "Kho" (số lượng) cho variant loại Dịch vụ. */}
+                  {productType !== "SERVICE" && (
+                    <input
+                      type="number"
+                      min={0}
+                      disabled={Boolean(v.stockItems.trim())}
+                      value={v.stockItems.trim() ? "" : v.stock}
+                      onChange={(e) => updateVariant(v.key, "stock", e.target.value)}
+                      placeholder={v.stockItems.trim() ? "Tự tính theo kho" : "Kho"}
+                      className="rounded-lg border border-border-c px-2.5 py-1.5 text-xs focus:border-brand-dark focus:outline-none disabled:bg-surface-alt disabled:text-muted"
+                    />
+                  )}
                   <button
                     type="button"
                     onClick={() => removeVariantRow(v.key)}
@@ -1030,57 +1052,72 @@ export default function AddProductForm({
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                <textarea
-                  value={v.stockItems}
-                  onChange={(e) => updateVariant(v.key, "stockItems", e.target.value)}
-                  rows={2}
-                  placeholder="Kho dữ liệu giao hàng thật cho phiên bản này (tuỳ chọn) — mỗi dòng 1 sản phẩm sẽ giao cho khách"
-                  className="mt-2 w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-[11px] bg-surface text-foreground focus:border-brand-dark focus:outline-none"
-                />
 
-                <label className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
-                  <input
-                    type="checkbox"
-                    checked={v.hasExpiry}
-                    onChange={(e) => toggleVariantExpiry(v.key, e.target.checked)}
-                    className="h-3.5 w-3.5"
-                  />
-                  Lô kho này có thời hạn sử dụng (vd ChatGPT Plus, Netflix...)
-                </label>
-                {v.hasExpiry && (
-                  <div className="mt-1.5 flex flex-col gap-1.5 rounded-lg border border-border-c bg-surface-alt/50 p-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-semibold text-foreground">Gói đầy đủ:</span>
-                      <select
-                        value={v.nominalTermDays}
-                        onChange={(e) => updateVariant(v.key, "nominalTermDays", e.target.value)}
-                        className="rounded-lg border border-border-c bg-surface px-2 py-1 text-[11px] text-foreground focus:border-brand-dark focus:outline-none"
-                      >
-                        <option value="7">7 ngày</option>
-                        <option value="30">30 ngày (1 tháng)</option>
-                        <option value="60">60 ngày (2 tháng)</option>
-                        <option value="90">90 ngày (3 tháng)</option>
-                        <option value="180">180 ngày (6 tháng)</option>
-                        <option value="365">365 ngày (12 tháng)</option>
-                      </select>
-                    </div>
+                {/* Ẩn HOÀN TOÀN ô "Kho dữ liệu giao hàng thật"/thời hạn cho
+                    variant loại Dịch vụ — dịch vụ không giao nội dung tự động
+                    từ kho, buyer tự cung cấp thông tin qua ServiceIntake lúc
+                    đặt đơn. Để lọt field này sẽ khiến checkout hiểu nhầm sang
+                    chế độ "giao từ kho thật" thay vì thu ServiceIntake (xem
+                    nhánh stockItemTotal>0 trong POST /api/checkout — nhánh đó
+                    KHÔNG loại trừ productType="SERVICE"). */}
+                {productType !== "SERVICE" && (
+                  <>
                     <textarea
-                      value={v.expiresAtItems}
-                      onChange={(e) => updateVariant(v.key, "expiresAtItems", e.target.value)}
+                      value={v.stockItems}
+                      onChange={(e) => updateVariant(v.key, "stockItems", e.target.value)}
                       rows={2}
-                      placeholder={
-                        "Ngày hết hạn của TỪNG dòng ở ô kho phía trên, khớp đúng theo số thứ tự dòng — để trống dòng nào nếu dòng đó không có hạn, vd:\n2026-04-20\n2026-05-15"
-                      }
-                      className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-[11px] bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+                      placeholder="Kho dữ liệu giao hàng thật cho phiên bản này (tuỳ chọn) — mỗi dòng 1 sản phẩm sẽ giao cho khách"
+                      className="mt-2 w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-[11px] bg-surface text-foreground focus:border-brand-dark focus:outline-none"
                     />
-                  </div>
+
+                    <label className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={v.hasExpiry}
+                        onChange={(e) => toggleVariantExpiry(v.key, e.target.checked)}
+                        className="h-3.5 w-3.5"
+                      />
+                      Lô kho này có thời hạn sử dụng (vd ChatGPT Plus, Netflix...)
+                    </label>
+                    {v.hasExpiry && (
+                      <div className="mt-1.5 flex flex-col gap-1.5 rounded-lg border border-border-c bg-surface-alt/50 p-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-semibold text-foreground">Gói đầy đủ:</span>
+                          <select
+                            value={v.nominalTermDays}
+                            onChange={(e) => updateVariant(v.key, "nominalTermDays", e.target.value)}
+                            className="rounded-lg border border-border-c bg-surface px-2 py-1 text-[11px] text-foreground focus:border-brand-dark focus:outline-none"
+                          >
+                            <option value="7">7 ngày</option>
+                            <option value="30">30 ngày (1 tháng)</option>
+                            <option value="60">60 ngày (2 tháng)</option>
+                            <option value="90">90 ngày (3 tháng)</option>
+                            <option value="180">180 ngày (6 tháng)</option>
+                            <option value="365">365 ngày (12 tháng)</option>
+                          </select>
+                        </div>
+                        <textarea
+                          value={v.expiresAtItems}
+                          onChange={(e) => updateVariant(v.key, "expiresAtItems", e.target.value)}
+                          rows={2}
+                          placeholder={
+                            "Ngày hết hạn của TỪNG dòng ở ô kho phía trên, khớp đúng theo số thứ tự dòng — để trống dòng nào nếu dòng đó không có hạn, vd:\n2026-04-20\n2026-05-15"
+                          }
+                          className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-[11px] bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ))}
           </div>
         )}
 
-        {variants.length === 0 && (
+        {/* Cùng lý do với khối "của từng variant" ở trên — dịch vụ không có
+            kho, ẩn hẳn khối này khi chưa thêm variant nào để không lỡ tạo
+            ProductStockItem cho 1 sản phẩm Dịch vụ. */}
+        {variants.length === 0 && productType !== "SERVICE" && (
           <div className="mt-3">
             <label className="mb-1 block text-sm font-semibold text-foreground">
               {productType === "TOOL" ? "Kho tài khoản tool" : "Kho dữ liệu giao hàng thật (tuỳ chọn)"}
