@@ -24,6 +24,7 @@ export const dynamic = "force-dynamic";
 
 const statusStyle: Record<OrderStatus, string> = {
   ESCROW: "border-brand-dark/30 bg-brand-light/40 text-brand-dark",
+  AWAITING_SELLER_DELIVERY: "border-brand-dark/30 bg-brand-light/40 text-brand-dark",
   RELEASED: "border-success/30 bg-success/10 text-success",
   CANCELLED: "border-danger/30 bg-danger/10 text-danger",
   DISPUTED: "border-danger/30 bg-danger/10 text-danger",
@@ -63,9 +64,11 @@ export default async function OrdersPage() {
           deliveredPayload: true,
           isPreOrder: true,
           deliveryDeadline: true,
+          manualDeliveryDeadline: true,
           product: {
             select: {
               productType: true,
+              deliveryMethod: true,
               // Chỉ lấy ẢNH THUMBNAIL công khai (imageUrl) + slug category để
               // fallback icon — giống hệt cách giỏ hàng đang hiển thị ảnh sản
               // phẩm (ProductThumbnail.tsx). KHÔNG liên quan/không ảnh hưởng
@@ -182,6 +185,15 @@ export default async function OrdersPage() {
         // TOOL: quy trình sử dụng + credential đã giải mã, hiện cả 2 trong
         // cùng 1 panel (xem DeliveredPayloadButton mode="tool").
         isTool: item.product?.productType === "TOOL",
+        // Giao thủ công (VPS/Server) — CHƯA giao (status vẫn
+        // AWAITING_SELLER_DELIVERY, đọc TỪ CHÍNH OrderItem, không join
+        // Product, cùng nguyên tắc isUndeliveredPreOrder ở trên).
+        isAwaitingManualDelivery:
+          item.product?.deliveryMethod === "MANUAL_PROVISION" && item.status === "AWAITING_SELLER_DELIVERY",
+        manualDeliveryDeadline: item.manualDeliveryDeadline,
+        // VPS/Server: nội dung nhiều dòng (IP/Port/Username/Password/SSH/Notes)
+        // — dùng lại mode="guide" (khối văn bản đầy đủ), không cần mode riêng.
+        isManualProvision: item.product?.deliveryMethod === "MANUAL_PROVISION",
       };
     })
   );
@@ -291,10 +303,22 @@ export default async function OrdersPage() {
                           ĐẶT TRƯỚC — chờ người bán giao
                         </span>
                       )}
+                      {row.isAwaitingManualDelivery && (
+                        <>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-info/10 px-2 py-0.5 text-[10px] font-bold text-info">
+                            VPS/SERVER — chờ người bán nhập thông tin
+                          </span>
+                          <p className="text-[10px] font-semibold text-brand-dark">
+                            {row.manualDeliveryDeadline && row.manualDeliveryDeadline > new Date()
+                              ? `Người bán còn hạn nhập đến ${row.manualDeliveryDeadline.toLocaleString("vi-VN")}`
+                              : "Đã quá hạn — hệ thống sẽ tự động hoàn tiền"}
+                          </p>
+                        </>
+                      )}
                       {(row.hasDeliveredPayload || row.canReveal) && row.status !== "CANCELLED" && (
                         <DeliveredPayloadButton
                           orderItemId={row.itemId}
-                          mode={row.isTutTrick ? "guide" : row.isTool ? "tool" : "credential"}
+                          mode={row.isTutTrick || row.isManualProvision ? "guide" : row.isTool ? "tool" : "credential"}
                           alreadyReceived={row.alreadyReceived}
                         />
                       )}

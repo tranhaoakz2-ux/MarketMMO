@@ -3,6 +3,9 @@
 import { Check, ImagePlus, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
+  DEFAULT_PROVISION_SLA_HOURS,
+  DELIVERY_METHOD_LABEL,
+  MIN_PROVISION_SLA_HOURS,
   MIN_WARRANTY_HOURS_PRODUCT,
   PRODUCT_DESCRIPTION_MAX_LENGTH,
   PRODUCT_DESCRIPTION_MIN_LENGTH,
@@ -11,11 +14,18 @@ import {
   PRODUCT_NAME_MIN_LENGTH,
   PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH,
   PRODUCT_SHORT_DESCRIPTION_MIN_LENGTH,
+  SERVER_BILLING_CYCLE_LABEL,
+  SERVER_BILLING_CYCLES,
+  SERVER_KIND_LABEL,
+  SERVER_KINDS,
   SERVICE_DELIVERY_METHOD_LABEL,
   SERVICE_DELIVERY_METHODS,
   SERVICE_FIELD_INPUT_TYPE_LABEL,
   SERVICE_FIELD_INPUT_TYPES,
   SERVICE_FIELDS_MAX_COUNT,
+  type DeliveryMethod,
+  type ServerBillingCycle,
+  type ServerKind,
   type ServiceDeliveryMethod,
   type ServiceFieldInputType,
 } from "@/lib/constants";
@@ -141,6 +151,22 @@ export default function AddProductForm({
   const [productType, setProductType] = useState<"PRODUCT" | "SERVICE" | "TUT_TRICK" | "TOOL">(
     "PRODUCT"
   );
+  // Giao thủ công (VPS/Server) — CHỈ áp dụng cho productType="PRODUCT" (xem
+  // Product.deliveryMethod trong schema.prisma). Khi chọn MANUAL_PROVISION,
+  // ẩn hẳn khối "Kho dữ liệu giao hàng thật" (không có ý nghĩa — seller nhập
+  // credential theo TỪNG đơn sau khi thanh toán, không phải kho có sẵn).
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("AUTO_STOCK");
+  const [serverKind, setServerKind] = useState<ServerKind>("VPS");
+  const [cpuCores, setCpuCores] = useState("");
+  const [ramGb, setRamGb] = useState("");
+  const [storageGb, setStorageGb] = useState("");
+  const [storageType, setStorageType] = useState("");
+  const [bandwidth, setBandwidth] = useState("");
+  const [osOptions, setOsOptions] = useState("");
+  const [serverLocation, setServerLocation] = useState("");
+  const [billingCycle, setBillingCycle] = useState<ServerBillingCycle>("ONE_TIME");
+  const [uptimeSla, setUptimeSla] = useState("");
+  const [provisionSlaHours, setProvisionSlaHours] = useState(String(DEFAULT_PROVISION_SLA_HOURS));
   const [serviceDeliveryMethods, setServiceDeliveryMethods] = useState<ServiceDeliveryMethod[]>([]);
   const [credentialViewWindowHours, setCredentialViewWindowHours] = useState("");
   const [serviceFields, setServiceFields] = useState<DraftServiceField[]>([]);
@@ -175,6 +201,9 @@ export default function AddProductForm({
   const handleProductType = (type: typeof productType) => {
     setProductType(type);
     if (type === "PRODUCT") setNoWarranty(false);
+    // deliveryMethod chỉ có ý nghĩa cho PRODUCT — ép về mặc định khi đổi
+    // sang loại khác, tránh state kẹt lại MANUAL_PROVISION.
+    if (type !== "PRODUCT") setDeliveryMethod("AUTO_STOCK");
   };
 
   const toggleServiceDeliveryMethod = (method: ServiceDeliveryMethod) => {
@@ -313,6 +342,18 @@ export default function AddProductForm({
     setBaseExpiresAtItems("");
     setVariants([]);
     setProductType("PRODUCT");
+    setDeliveryMethod("AUTO_STOCK");
+    setServerKind("VPS");
+    setCpuCores("");
+    setRamGb("");
+    setStorageGb("");
+    setStorageType("");
+    setBandwidth("");
+    setOsOptions("");
+    setServerLocation("");
+    setBillingCycle("ONE_TIME");
+    setUptimeSla("");
+    setProvisionSlaHours(String(DEFAULT_PROVISION_SLA_HOURS));
     setServiceDeliveryMethods([]);
     setCredentialViewWindowHours("");
     setServiceFields([]);
@@ -395,6 +436,13 @@ export default function AddProductForm({
         }
       }
     }
+    if (productType === "PRODUCT" && deliveryMethod === "MANUAL_PROVISION") {
+      const sla = Number(provisionSlaHours);
+      if (!Number.isInteger(sla) || sla < MIN_PROVISION_SLA_HOURS) {
+        setError(`Thời hạn cấp phát phải là số nguyên >= ${MIN_PROVISION_SLA_HOURS} giờ.`);
+        return;
+      }
+    }
     if (productType === "TUT_TRICK") {
       const len = tutTrickContent.trim().length;
       if (len < 20 || len > 20000) {
@@ -438,9 +486,36 @@ export default function AddProductForm({
     // Nếu sẽ dán kho ngay cho sản phẩm gốc (không có phiên bản), gửi stock=0
     // và để bước "nhập kho" bên dưới tự cộng đúng theo số dòng — tránh cộng
     // trùng nếu seller lỡ điền cả 2 nơi.
-    form.append("stock", variants.length === 0 && baseStockItems.trim() ? "0" : stock);
+    form.append(
+      "stock",
+      deliveryMethod === "MANUAL_PROVISION"
+        ? "0"
+        : variants.length === 0 && baseStockItems.trim()
+          ? "0"
+          : stock
+    );
     form.append("image", image);
     form.append("productType", productType);
+    if (productType === "PRODUCT") {
+      form.append("deliveryMethod", deliveryMethod);
+      if (deliveryMethod === "MANUAL_PROVISION") {
+        form.append("serverKind", serverKind);
+        form.append("billingCycle", billingCycle);
+        form.append("provisionSlaHours", provisionSlaHours);
+        if (cpuCores.trim()) form.append("cpuCores", cpuCores.trim());
+        if (ramGb.trim()) form.append("ramGb", ramGb.trim());
+        if (storageGb.trim()) form.append("storageGb", storageGb.trim());
+        if (storageType.trim()) form.append("storageType", storageType.trim());
+        if (bandwidth.trim()) form.append("bandwidth", bandwidth.trim());
+        if (serverLocation.trim()) form.append("location", serverLocation.trim());
+        if (uptimeSla.trim()) form.append("uptimeSla", uptimeSla.trim());
+        const osList = osOptions
+          .split(",")
+          .map((o) => o.trim())
+          .filter(Boolean);
+        if (osList.length > 0) form.append("osOptions", JSON.stringify(osList));
+      }
+    }
     if (noWarranty) {
       form.append("noWarranty", "true");
     } else {
@@ -639,6 +714,44 @@ export default function AddProductForm({
         </div>
       </div>
 
+      {productType === "PRODUCT" && (
+        <div>
+          <label className="mb-1.5 block text-sm font-semibold text-foreground">
+            Phương thức giao hàng
+          </label>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setDeliveryMethod("AUTO_STOCK")}
+              className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
+                deliveryMethod === "AUTO_STOCK"
+                  ? "border-brand bg-brand text-ink"
+                  : "border-border-c bg-surface text-foreground hover:border-brand-dark"
+              }`}
+            >
+              {DELIVERY_METHOD_LABEL.AUTO_STOCK}
+              <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
+                Giao ngay từ kho dữ liệu text lúc thanh toán
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeliveryMethod("MANUAL_PROVISION")}
+              className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
+                deliveryMethod === "MANUAL_PROVISION"
+                  ? "border-brand bg-brand text-ink"
+                  : "border-border-c bg-surface text-foreground hover:border-brand-dark"
+              }`}
+            >
+              {DELIVERY_METHOD_LABEL.MANUAL_PROVISION}
+              <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
+                Bạn tự nhập thông tin đăng nhập cho từng đơn sau khi buyer thanh toán
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-[160px_1fr]">
         <div>
           <label className="mb-1.5 block text-sm font-semibold text-foreground">Ảnh sản phẩm</label>
@@ -779,13 +892,26 @@ export default function AddProductForm({
               <label className="mb-1 block text-sm font-semibold text-foreground">Kho</label>
               <input
                 type="number"
-                required={!baseStockItems.trim()}
+                required={!baseStockItems.trim() && deliveryMethod !== "MANUAL_PROVISION"}
                 min={0}
-                disabled={variants.length === 0 && Boolean(baseStockItems.trim())}
-                value={variants.length === 0 && baseStockItems.trim() ? "" : stock}
+                disabled={
+                  deliveryMethod === "MANUAL_PROVISION" ||
+                  (variants.length === 0 && Boolean(baseStockItems.trim()))
+                }
+                value={
+                  deliveryMethod === "MANUAL_PROVISION"
+                    ? ""
+                    : variants.length === 0 && baseStockItems.trim()
+                      ? ""
+                      : stock
+                }
                 onChange={(e) => setStock(e.target.value)}
                 placeholder={
-                  variants.length === 0 && baseStockItems.trim() ? "Tự tính theo kho" : "VD: 50"
+                  deliveryMethod === "MANUAL_PROVISION"
+                    ? "Không áp dụng cho VPS/Server"
+                    : variants.length === 0 && baseStockItems.trim()
+                      ? "Tự tính theo kho"
+                      : "VD: 50"
                 }
                 className="w-full rounded-lg border border-border-c px-3 py-2 text-sm focus:border-brand-dark focus:outline-none disabled:bg-surface-alt disabled:text-muted"
               />
@@ -839,7 +965,7 @@ export default function AddProductForm({
         </div>
       </div>
 
-      {(productType === "PRODUCT" || productType === "TOOL") && (
+      {((productType === "PRODUCT" && deliveryMethod === "AUTO_STOCK") || productType === "TOOL") && (
       <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -1018,6 +1144,157 @@ export default function AddProductForm({
           </div>
         )}
       </div>
+      )}
+
+      {productType === "PRODUCT" && deliveryMethod === "MANUAL_PROVISION" && (
+        <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
+          <p className="text-sm font-bold text-foreground">Thông số máy chủ (VPS/Server)</p>
+          <p className="text-[11px] text-muted">
+            Bạn KHÔNG nhập thông tin đăng nhập ở đây — chỉ khai spec để buyer tham khảo. Sau khi có
+            đơn, bạn vào &ldquo;Đơn Sản Phẩm&rdquo; để nhập IP/Port/Username/Password cho ĐÚNG đơn
+            đó, trong hạn đã đặt bên dưới.
+          </p>
+
+          <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-foreground">Loại</label>
+              <select
+                value={serverKind}
+                onChange={(e) => setServerKind(e.target.value as ServerKind)}
+                className="w-full rounded-lg border border-border-c bg-surface px-2.5 py-2 text-xs text-foreground focus:border-brand-dark focus:outline-none"
+              >
+                {SERVER_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {SERVER_KIND_LABEL[k]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-foreground">Chu kỳ thanh toán</label>
+              <select
+                value={billingCycle}
+                onChange={(e) => setBillingCycle(e.target.value as ServerBillingCycle)}
+                className="w-full rounded-lg border border-border-c bg-surface px-2.5 py-2 text-xs text-foreground focus:border-brand-dark focus:outline-none"
+              >
+                {SERVER_BILLING_CYCLES.map((c) => (
+                  <option key={c} value={c}>
+                    {SERVER_BILLING_CYCLE_LABEL[c]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-foreground">Số nhân CPU</label>
+              <input
+                type="number"
+                min={0}
+                value={cpuCores}
+                onChange={(e) => setCpuCores(e.target.value)}
+                placeholder="VD: 4"
+                className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-foreground">RAM (GB)</label>
+              <input
+                type="number"
+                min={0}
+                value={ramGb}
+                onChange={(e) => setRamGb(e.target.value)}
+                placeholder="VD: 8"
+                className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-foreground">Dung lượng lưu trữ (GB)</label>
+              <input
+                type="number"
+                min={0}
+                value={storageGb}
+                onChange={(e) => setStorageGb(e.target.value)}
+                placeholder="VD: 100"
+                className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-foreground">Loại ổ đĩa</label>
+              <input
+                type="text"
+                maxLength={100}
+                value={storageType}
+                onChange={(e) => setStorageType(e.target.value)}
+                placeholder="VD: NVMe SSD"
+                className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-foreground">Băng thông</label>
+              <input
+                type="text"
+                maxLength={100}
+                value={bandwidth}
+                onChange={(e) => setBandwidth(e.target.value)}
+                placeholder="VD: Không giới hạn"
+                className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-foreground">Vị trí đặt máy chủ</label>
+              <input
+                type="text"
+                maxLength={100}
+                value={serverLocation}
+                onChange={(e) => setServerLocation(e.target.value)}
+                placeholder="VD: Singapore"
+                className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-foreground">Cam kết uptime</label>
+              <input
+                type="text"
+                maxLength={100}
+                value={uptimeSla}
+                onChange={(e) => setUptimeSla(e.target.value)}
+                placeholder="VD: 99.9%"
+                className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-foreground">
+                Hạn cấp phát sau thanh toán (giờ)
+              </label>
+              <input
+                type="number"
+                required
+                min={MIN_PROVISION_SLA_HOURS}
+                value={provisionSlaHours}
+                onChange={(e) => setProvisionSlaHours(e.target.value)}
+                placeholder={String(DEFAULT_PROVISION_SLA_HOURS)}
+                className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="mt-2.5">
+            <label className="mb-1 block text-xs font-semibold text-foreground">
+              Hệ điều hành hỗ trợ (cách nhau bằng dấu phẩy)
+            </label>
+            <input
+              type="text"
+              value={osOptions}
+              onChange={(e) => setOsOptions(e.target.value)}
+              placeholder="VD: Ubuntu 22.04, Windows Server 2022, CentOS 7"
+              className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+            />
+          </div>
+
+          <p className="mt-2.5 rounded-lg bg-brand-light/20 px-2.5 py-2 text-[11px] leading-relaxed text-foreground/80">
+            Nếu bạn không nhập đủ thông tin đăng nhập trong hạn ở trên, hệ thống sẽ TỰ ĐỘNG huỷ đơn
+            + hoàn 100% tiền cho buyer, bạn không nhận được gì cho đơn đó.
+          </p>
+        </div>
       )}
 
       {productType === "TUT_TRICK" && (

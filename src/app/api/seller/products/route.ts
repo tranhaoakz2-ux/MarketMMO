@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireSeller, requireSellerRateLimited } from "@/lib/authz";
 import {
+  DELIVERY_METHODS,
   DUPLICATE_PRODUCT_WINDOW_HOURS,
   MAX_PRODUCT_PRICE_VND,
   MAX_PRODUCT_STOCK,
+  MIN_PROVISION_SLA_HOURS,
   MIN_WARRANTY_HOURS_PRODUCT,
   PRODUCT_DESCRIPTION_MAX_LENGTH,
   PRODUCT_DESCRIPTION_MIN_LENGTH,
@@ -13,6 +15,8 @@ import {
   PRODUCT_SHORT_DESCRIPTION_MIN_LENGTH,
   SELLER_PRODUCT_CREATE_LIMIT,
   SELLER_PRODUCT_CREATE_WINDOW_MS,
+  SERVER_BILLING_CYCLES,
+  SERVER_KINDS,
   SERVICE_CREDENTIAL_MAX_WINDOW_HOURS,
   SERVICE_CREDENTIAL_MIN_WINDOW_HOURS,
   SERVICE_DELIVERY_METHODS,
@@ -301,6 +305,85 @@ export async function POST(req: Request) {
     }
   }
 
+  // Giao thủ công (VPS/Server) — CHỈ có ý nghĩa cho productType="PRODUCT"
+  // (tài khoản/dữ liệu; dịch vụ/TUT-Trick/Tool có cơ chế giao riêng của
+  // chúng). Client không gửi/gửi rác → mặc định "AUTO_STOCK", giữ nguyên
+  // hành vi cũ.
+  const deliveryMethodRaw = String(form.get("deliveryMethod") ?? "AUTO_STOCK").trim().toUpperCase();
+  if (!(DELIVERY_METHODS as readonly string[]).includes(deliveryMethodRaw)) {
+    return NextResponse.json({ error: "Phương thức giao hàng không hợp lệ." }, { status: 400 });
+  }
+  const deliveryMethod =
+    productType === "PRODUCT" ? (deliveryMethodRaw as "AUTO_STOCK" | "MANUAL_PROVISION") : "AUTO_STOCK";
+
+  let serverDetailData: {
+    kind: string;
+    cpuCores: number | null;
+    ramGb: number | null;
+    storageGb: number | null;
+    storageType: string | null;
+    bandwidth: string | null;
+    osOptions: string | null;
+    location: string | null;
+    billingCycle: string;
+    uptimeSla: string | null;
+    provisionSlaHours: number;
+  } | null = null;
+
+  if (deliveryMethod === "MANUAL_PROVISION") {
+    const kindRaw = String(form.get("serverKind") ?? "VPS").trim().toUpperCase();
+    if (!(SERVER_KINDS as readonly string[]).includes(kindRaw)) {
+      return NextResponse.json({ error: "Loại máy chủ không hợp lệ." }, { status: 400 });
+    }
+    const billingRaw = String(form.get("billingCycle") ?? "ONE_TIME").trim().toUpperCase();
+    if (!(SERVER_BILLING_CYCLES as readonly string[]).includes(billingRaw)) {
+      return NextResponse.json({ error: "Chu kỳ thanh toán không hợp lệ." }, { status: 400 });
+    }
+    const slaRaw = form.get("provisionSlaHours");
+    const slaNum = Number(slaRaw);
+    if (!Number.isInteger(slaNum) || slaNum < MIN_PROVISION_SLA_HOURS) {
+      return NextResponse.json(
+        { error: `Thời hạn cấp phát phải là số nguyên >= ${MIN_PROVISION_SLA_HOURS} giờ.` },
+        { status: 400 }
+      );
+    }
+
+    const intOrNull = (key: string): number | null => {
+      const raw = form.get(key);
+      if (raw === null || String(raw).trim() === "") return null;
+      const num = Number(raw);
+      return Number.isInteger(num) && num >= 0 ? num : null;
+    };
+    const strOrNull = (key: string, max: number): string | null => {
+      const raw = String(form.get(key) ?? "").trim();
+      return raw ? raw.slice(0, max) : null;
+    };
+
+    let osOptionsParsed: unknown;
+    try {
+      osOptionsParsed = JSON.parse(String(form.get("osOptions") ?? "[]"));
+    } catch {
+      osOptionsParsed = [];
+    }
+    const osOptions = Array.isArray(osOptionsParsed)
+      ? osOptionsParsed.filter((o): o is string => typeof o === "string" && o.trim() !== "").slice(0, 20)
+      : [];
+
+    serverDetailData = {
+      kind: kindRaw,
+      cpuCores: intOrNull("cpuCores"),
+      ramGb: intOrNull("ramGb"),
+      storageGb: intOrNull("storageGb"),
+      storageType: strOrNull("storageType", 100),
+      bandwidth: strOrNull("bandwidth", 100),
+      osOptions: osOptions.length > 0 ? JSON.stringify(osOptions) : null,
+      location: strOrNull("location", 100),
+      billingCycle: billingRaw,
+      uptimeSla: strOrNull("uptimeSla", 100),
+      provisionSlaHours: slaNum,
+    };
+  }
+
   // Thời gian bảo hành (áp dụng cho CẢ 4 loại hàng) — checkbox "Không bảo
   // hành" gửi noWarranty=true → value=0 tường minh, không phụ thuộc client
   // gửi đúng warrantyValue=0 hay không. PRODUCT (tài khoản/dữ liệu kho thật)
@@ -394,12 +477,16 @@ export async function POST(req: Request) {
           toolDeliveryLink,
           warrantyValue,
           warrantyUnit,
+          deliveryMethod,
         },
       });
       if (productType === "SERVICE") {
         await tx.serviceFieldDefinition.createMany({
           data: serviceFieldsData.map((f) => ({ ...f, productId: p.id })),
         });
+      }
+      if (serverDetailData) {
+        await tx.serverDetail.create({ data: { ...serverDetailData, productId: p.id } });
       }
       return p;
     });

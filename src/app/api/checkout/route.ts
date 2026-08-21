@@ -57,7 +57,7 @@ export async function POST(req: Request) {
       const order = await prisma.$transaction(async (tx) => {
       const products = await tx.product.findMany({
         where: { id: { in: items.map((i) => i.productId) } },
-        include: { variants: true, seller: { select: { suspended: true } } },
+        include: { variants: true, seller: { select: { suspended: true } }, serverDetail: true },
       });
 
       let total = 0;
@@ -106,6 +106,12 @@ export async function POST(req: Request) {
         // (xem OrderItem.isPreOrder/deliveryDeadline trong schema.prisma).
         isPreOrder: boolean;
         deliveryDeadline: Date | null;
+        // Giao thủ công (VPS/Server) — TÁCH RIÊNG khỏi isPreOrder/deliveryDeadline
+        // ở trên (build-separate theo quyết định đã chốt, xem
+        // src/lib/manual-provision.ts). manualDeliveryDeadline = thời điểm mua +
+        // ServerDetail.provisionSlaHours SNAPSHOT.
+        isManualProvision: boolean;
+        manualDeliveryDeadline: Date | null;
       }[] = [];
 
       for (const item of items) {
@@ -141,6 +147,12 @@ export async function POST(req: Request) {
         // buyer — cũng không có khái niệm "tồn kho" như dịch vụ (không claim/
         // tiêu hao ProductStockItem, không trừ Product.stock có điều kiện).
         const isTutTrick = product.productType === "TUT_TRICK";
+        // Giao thủ công (VPS/Server) — cũng không có khái niệm "tồn kho"
+        // (seller tự nhập credential theo TỪNG đơn sau khi thanh toán, không
+        // claim/tiêu hao ProductStockItem). Ưu tiên CAO HƠN preOrder nếu
+        // seller lỡ bật cả 2 cờ — 2 cơ chế hạn giao khác nhau không nên chồng
+        // lên nhau, xem "isPreOrder" ép false bên dưới khi isManualProvision.
+        const isManualProvision = product.deliveryMethod === "MANUAL_PROVISION";
 
         if (item.variantId) {
           variant = product.variants.find((v) => v.id === item.variantId);
@@ -283,6 +295,19 @@ export async function POST(req: Request) {
             );
           }
           deliveredPayload = JSON.stringify([product.tutTrickContent]);
+        } else if (isManualProvision) {
+          // Ép quantity=1 — mỗi đơn VPS là 1 máy chủ do seller tự cấp phát
+          // riêng, không có ý nghĩa "mua nhiều" như sản phẩm kho.
+          if (item.quantity !== 1) {
+            throw new Error(`"${displayLabel}" là VPS/Server — chỉ mua được số lượng 1 mỗi lần.`);
+          }
+          if (!product.serverDetail) {
+            throw new Error(
+              `"${displayLabel}" chưa được người bán cấu hình đủ thông tin máy chủ — vui lòng liên hệ người bán.`
+            );
+          }
+          // deliveredPayload GIỮ NGUYÊN null — chưa có gì để giao, seller nhập
+          // credential SAU khi thanh toán (xem POST /api/seller/orders/[id]/deliver-manual).
         } else if (!product.preOrder && !isService) {
           if (item.variantId) {
             if (variant!.stock < item.quantity) {
@@ -370,7 +395,10 @@ export async function POST(req: Request) {
         // dòng hàng này claim được kho thật ngay (deliveredPayload khác null)
         // — trường hợp đó tự nhiên được coi là "đã giao" ở mọi nơi kiểm tra
         // `deliveredPayload === null`, không cần tắt isPreOrder riêng.
-        const isPreOrder = product.preOrder;
+        // MANUAL_PROVISION ép isPreOrder=false dù Product.preOrder có bật hay
+        // không — 2 cơ chế hạn giao (deliveryDeadline vs manualDeliveryDeadline)
+        // không dùng chung được, xem comment isManualProvision ở trên.
+        const isPreOrder = !isManualProvision && product.preOrder;
         let deliveryDeadline: Date | null = null;
         if (isPreOrder) {
           if (product.preOrderDeliveryValue === null) {
@@ -386,6 +414,13 @@ export async function POST(req: Request) {
           );
           deliveryDeadline = new Date(Date.now() + deliveryHours * 3600_000);
         }
+
+        // = thời điểm mua + ServerDetail.provisionSlaHours SNAPSHOT (seller
+        // sửa provisionSlaHours sau đó KHÔNG ảnh hưởng đơn đã mua, cùng
+        // nguyên tắc deliveryDeadline/warrantyHours ở trên).
+        const manualDeliveryDeadline = isManualProvision
+          ? new Date(Date.now() + product.serverDetail!.provisionSlaHours * 3600_000)
+          : null;
 
         total += unitPrice * item.quantity;
         itemsToCreate.push({
@@ -404,10 +439,13 @@ export async function POST(req: Request) {
           warrantyHours: toWarrantyHours(product.warrantyValue, product.warrantyUnit === "hour" ? "hour" : "day"),
           isPreOrder,
           deliveryDeadline,
+          isManualProvision,
+          manualDeliveryDeadline,
           // Chỉ cần trừ kho có điều kiện khi dùng kho số học + không preOrder +
           // không phải dịch vụ (dịch vụ không có tồn kho để trừ).
           // Kho thật đã claim nguyên tử ở trên; preOrder cho phép âm.
-          guardLegacyStock: stockItemTotal === 0 && !product.preOrder && !isService && !isTutTrick,
+          guardLegacyStock:
+            stockItemTotal === 0 && !product.preOrder && !isService && !isTutTrick && !isManualProvision,
         });
       }
 
@@ -514,9 +552,19 @@ export async function POST(req: Request) {
         // khi seller giao + buyer nhận, warrantyExpiresAt (tính từ receivedAt)
         // sẽ vượt qua mốc này và getEffectiveEscrowReleaseAt() tự gia hạn
         // đúng theo bảo hành — không cần code riêng cho giai đoạn đó.
-        const escrowReleaseAt = item.isPreOrder && item.deliveryDeadline
-          ? item.deliveryDeadline
-          : defaultEscrowReleaseAt;
+        // Giao thủ công (VPS): escrowReleaseAt = manualDeliveryDeadline, MIRROR
+        // đúng cách đặt trước dùng deliveryDeadline (đã grep xác nhận an toàn
+        // trước khi viết SQL — xem prisma/pending-sql/2026-08-21-manual-provisioning.sql):
+        // đơn chỉ thật sự vào vòng xét giải ngân SAU KHI status chuyển sang
+        // ESCROW (seller đã nhập credential), lúc đó lưới an toàn auto-confirm
+        // trong releaseDueEscrow() + MIN_WARRANTY_HOURS_PRODUCT đảm bảo buyer
+        // luôn có cửa sổ bảo hành thật trước khi giải ngân.
+        const escrowReleaseAt = item.isManualProvision && item.manualDeliveryDeadline
+          ? item.manualDeliveryDeadline
+          : item.isPreOrder && item.deliveryDeadline
+            ? item.deliveryDeadline
+            : defaultEscrowReleaseAt;
+        const initialStatus = item.isManualProvision ? "AWAITING_SELLER_DELIVERY" : "ESCROW";
         const orderItem = await tx.orderItem.create({
           data: {
             orderId: createdOrder.id,
@@ -527,7 +575,7 @@ export async function POST(req: Request) {
             productName: item.productName,
             quantity: item.quantity,
             price: item.price,
-            status: "ESCROW",
+            status: initialStatus,
             escrowReleaseAt,
             deliveredPayload: item.deliveredPayload,
             deliveredExpiresAt: item.deliveredExpiresAt,
@@ -537,6 +585,7 @@ export async function POST(req: Request) {
             warrantyHours: item.warrantyHours,
             isPreOrder: item.isPreOrder,
             deliveryDeadline: item.deliveryDeadline,
+            manualDeliveryDeadline: item.manualDeliveryDeadline,
           },
         });
 
@@ -544,7 +593,7 @@ export async function POST(req: Request) {
         await logOrderStatusChange(tx, {
           orderItemId: orderItem.id,
           fromStatus: null,
-          toStatus: "ESCROW",
+          toStatus: initialStatus,
           actor: { type: "BUYER", id: buyer.id },
           note: "Đặt đơn",
         });

@@ -117,6 +117,47 @@ export default function BuyBox({ product }: { product: Product }) {
         </div>
       )}
 
+      {/* Giao thủ công (VPS/Server) — minh bạch spec + cam kết thời hạn nhập
+          credential TRƯỚC khi buyer bấm mua, cùng nguyên tắc khối "Đặt
+          trước" ở trên. */}
+      {product.deliveryMethod === "MANUAL_PROVISION" && (
+        <div className="flex flex-col gap-1.5 rounded-lg border border-info/30 bg-info/10 px-3 py-2.5 text-xs text-foreground/85">
+          <p className="flex items-center gap-1.5 font-black text-info">
+            <Clock className="h-3.5 w-3.5" /> GIAO THỦ CÔNG — người bán tự cấp phát
+          </p>
+          {product.serverDetail && (
+            <ul className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+              {product.serverDetail.cpuCores != null && <li>CPU: {product.serverDetail.cpuCores} nhân</li>}
+              {product.serverDetail.ramGb != null && <li>RAM: {product.serverDetail.ramGb}GB</li>}
+              {product.serverDetail.storageGb != null && (
+                <li>
+                  Lưu trữ: {product.serverDetail.storageGb}GB{" "}
+                  {product.serverDetail.storageType ? `(${product.serverDetail.storageType})` : ""}
+                </li>
+              )}
+              {product.serverDetail.bandwidth && <li>Băng thông: {product.serverDetail.bandwidth}</li>}
+              {product.serverDetail.location && <li>Vị trí: {product.serverDetail.location}</li>}
+              {product.serverDetail.uptimeSla && <li>Uptime: {product.serverDetail.uptimeSla}</li>}
+              {product.serverDetail.osOptions && product.serverDetail.osOptions.length > 0 && (
+                <li className="col-span-2">HĐH: {product.serverDetail.osOptions.join(", ")}</li>
+              )}
+            </ul>
+          )}
+          <p>
+            Người bán cam kết nhập thông tin đăng nhập trong{" "}
+            <b className="font-bold text-foreground">
+              {product.serverDetail?.provisionSlaHours ?? "?"} giờ
+            </b>{" "}
+            kể từ lúc thanh toán.
+          </p>
+          <p className="flex items-start gap-1.5 text-info">
+            <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            Tiền của bạn được giữ ký quỹ, KHÔNG chuyển cho người bán ngay. Nếu quá hạn mà chưa
+            nhập thông tin, hệ thống TỰ ĐỘNG hoàn 100% tiền về ví bạn.
+          </p>
+        </div>
+      )}
+
       {hasVariants && (
         <div>
           <span className="mb-1.5 block text-xs font-bold uppercase text-foreground">

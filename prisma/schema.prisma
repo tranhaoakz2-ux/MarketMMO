@@ -537,6 +537,17 @@ model Product {
   // WARRANTY_WINDOW_HOURS (đó là SLA xử lý khiếu nại, không liên quan).
   credentialViewWindowHours Int?
 
+  // "AUTO_STOCK" (mặc định, giữ nguyên hành vi cũ — giao ngay từ kho dữ liệu
+  // text/ProductStockItem lúc thanh toán) | "MANUAL_PROVISION" (VPS/Server —
+  // seller tự nhập credential theo TỪNG đơn sau khi thanh toán, xem
+  // OrderItem.status "AWAITING_SELLER_DELIVERY" + serverDetail bên dưới cho
+  // spec). String tự do theo đúng quy ước dự án (không dùng enum Postgres) —
+  // xem DeliveryMethod union trong src/lib/constants.ts.
+  deliveryMethod String @default("AUTO_STOCK")
+  // Chỉ có ý nghĩa khi deliveryMethod="MANUAL_PROVISION". Chưa hỗ trợ sửa
+  // sau khi tạo ở v1 (đăng sản phẩm mới nếu cần đổi spec).
+  serverDetail ServerDetail?
+
   // productType="TUT_TRICK" — bán NỘI DUNG HƯỚNG DẪN (kiến thức/quy trình),
   // bán lặp lại vô hạn cho nhiều buyer khác nhau (KHÔNG claim/tiêu hao như
   // ProductStockItem, KHÔNG có khái niệm kho). Đây là nội dung ĐẦY ĐỦ, riêng
@@ -599,6 +610,34 @@ model Product {
   @@index([status, isActive, categoryId])
   @@index([status, isActive, createdAt])
   @@index([status, isActive, sold])
+}
+
+// Spec VPS/Dedicated cho sản phẩm deliveryMethod="MANUAL_PROVISION" — 1-1
+// với Product. Chưa hỗ trợ sửa sau khi tạo (v1). kind/billingCycle là String
+// tự do theo đúng quy ước dự án (không enum Postgres) — union type khai ở
+// src/lib/constants.ts. osOptions lưu JSON-string mảng (đúng quy ước dự án,
+// xem Product.attributes) — KHÔNG dùng Postgres String[].
+model ServerDetail {
+  id        String  @id @default(cuid())
+  productId String  @unique
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  kind        String  @default("VPS") // "VPS" | "DEDICATED"
+  cpuCores    Int?
+  ramGb       Int?
+  storageGb   Int?
+  storageType String?
+  bandwidth   String?
+  osOptions   String?
+  location    String?
+  billingCycle String @default("ONE_TIME") // "ONE_TIME" | "MONTHLY" | ...
+  uptimeSla   String?
+  // Seller phải nhập credential trong vòng bao nhiêu giờ sau thanh toán —
+  // dùng để tính OrderItem.manualDeliveryDeadline lúc checkout. Validate
+  // >=1 ở API (xem MIN_PROVISION_SLA_HOURS trong src/lib/constants.ts).
+  provisionSlaHours Int @default(24)
+
+  createdAt DateTime @default(now())
 }
 
 // Seller tự định nghĩa danh sách field buyer PHẢI nhập khi đặt 1 dịch vụ cụ
@@ -902,6 +941,17 @@ model OrderItem {
   // POST /api/admin/preorders/refund-overdue tự hoàn 100% cho buyer. null
   // khi isPreOrder=false.
   deliveryDeadline DateTime?
+
+  // Giao thủ công (VPS/Server, deliveryMethod="MANUAL_PROVISION" — TÁCH
+  // RIÊNG khỏi deliveryDeadline ở trên, đó là của pre-order). = thời điểm mua
+  // + ServerDetail.provisionSlaHours SNAPSHOT lúc checkout. Đơn khởi tạo ở
+  // status="AWAITING_SELLER_DELIVERY"; escrowReleaseAt lúc checkout = CHÍNH
+  // mốc này (mirror đúng cách pre-order dùng deliveryDeadline làm
+  // escrowReleaseAt — xem POST /api/checkout). Quá hạn mà seller chưa nhập
+  // credential (status vẫn AWAITING_SELLER_DELIVERY) → tự huỷ + hoàn 100%
+  // cho buyer (xem src/lib/manual-provision.ts). null khi không phải đơn
+  // MANUAL_PROVISION.
+  manualDeliveryDeadline DateTime?
 
   dispute       Dispute?
   stockItems    ProductStockItem[]

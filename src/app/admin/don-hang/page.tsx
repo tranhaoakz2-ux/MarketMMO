@@ -20,6 +20,7 @@ export const dynamic = "force-dynamic";
 const statusFilters: { key: OrderStatus | "ALL"; label: string }[] = [
   { key: "ALL", label: "Tất cả" },
   { key: "ESCROW", label: "Đang ký quỹ" },
+  { key: "AWAITING_SELLER_DELIVERY", label: "Chờ seller giao (thủ công)" },
   { key: "RELEASED", label: "Hoàn thành" },
   { key: "DISPUTED", label: "Đang tranh chấp" },
   { key: "CANCELLED", label: "Đã huỷ" },
@@ -27,6 +28,7 @@ const statusFilters: { key: OrderStatus | "ALL"; label: string }[] = [
 
 const toneOf: Record<OrderStatus, Tone> = {
   ESCROW: "warn",
+  AWAITING_SELLER_DELIVERY: "warn",
   RELEASED: "success",
   DISPUTED: "danger",
   CANCELLED: "neutral",

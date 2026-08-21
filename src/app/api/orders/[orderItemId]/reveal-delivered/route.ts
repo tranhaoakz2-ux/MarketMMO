@@ -54,6 +54,7 @@ export async function POST(
         product: {
           select: {
             productType: true,
+            deliveryMethod: true,
             toolUsageGuide: true,
             toolDeliveryLink: true,
           },
@@ -78,6 +79,14 @@ export async function POST(
     // động gọi route này KHI CHƯA có nút hiện trên UI (gọi thẳng API) mới rơi
     // vào nhánh này trong điều kiện bình thường.
     if (item.isPreOrder && item.deliveredPayload === null) {
+      return { kind: "not_delivered_yet" as const };
+    }
+    // Giao thủ công (VPS/Server) — seller CHƯA nhập credential (status vẫn
+    // "AWAITING_SELLER_DELIVERY", đọc TỪ CHÍNH OrderItem thay vì Product —
+    // tránh seller đổi Product.deliveryMethod sau khi bán để né chặn này,
+    // cùng nguyên tắc isPreOrder snapshot ở trên). TUYỆT ĐỐI không được set
+    // receivedAt/bắt đầu bảo hành trên thứ chưa nhận.
+    if (item.product?.deliveryMethod === "MANUAL_PROVISION" && item.status === "AWAITING_SELLER_DELIVERY") {
       return { kind: "not_delivered_yet" as const };
     }
 
@@ -106,7 +115,7 @@ export async function POST(
   }
   if (result.kind === "not_delivered_yet") {
     return NextResponse.json(
-      { error: "Đơn đặt trước này chưa được người bán giao, chưa có gì để xem." },
+      { error: "Người bán chưa giao đơn này, chưa có gì để xem." },
       { status: 400 }
     );
   }

@@ -50,6 +50,7 @@ type SellerOrderItem = {
   serviceIntake?: ServiceIntakeSummary | null;
   deliveryDeadline?: Date | null;
   hasDelivered?: boolean;
+  manualDeliveryDeadline?: Date | null;
 };
 
 function deliveryMethodLabel(method: string): string {
@@ -58,6 +59,7 @@ function deliveryMethodLabel(method: string): string {
 
 const STATUS_TONE: Record<OrderStatus, Tone> = {
   ESCROW: "warn",
+  AWAITING_SELLER_DELIVERY: "warn",
   RELEASED: "success",
   CANCELLED: "neutral",
   DISPUTED: "danger",
@@ -77,11 +79,13 @@ export default function SellerOrdersTable({
   emptyLabel,
   showServiceColumn = false,
   showPreOrderColumn = false,
+  showManualProvisionColumn = false,
 }: {
   items: SellerOrderItem[];
   emptyLabel: string;
   showServiceColumn?: boolean;
   showPreOrderColumn?: boolean;
+  showManualProvisionColumn?: boolean;
 }) {
   const router = useRouter();
   const [q, setQ] = useState("");
@@ -101,6 +105,50 @@ export default function SellerOrdersTable({
   const [deliverContent, setDeliverContent] = useState("");
   const [deliverBusy, setDeliverBusy] = useState(false);
   const [deliverError, setDeliverError] = useState<string | null>(null);
+
+  const [provisionItem, setProvisionItem] = useState<SellerOrderItem | null>(null);
+  const [provisionForm, setProvisionForm] = useState({
+    ip: "",
+    port: "",
+    username: "",
+    password: "",
+    sshKey: "",
+    notes: "",
+  });
+  const [provisionBusy, setProvisionBusy] = useState(false);
+  const [provisionError, setProvisionError] = useState<string | null>(null);
+
+  const openProvision = (o: SellerOrderItem) => {
+    setProvisionItem(o);
+    setProvisionForm({ ip: "", port: "", username: "", password: "", sshKey: "", notes: "" });
+    setProvisionError(null);
+  };
+  const closeProvision = () => {
+    setProvisionItem(null);
+    setProvisionError(null);
+  };
+  const submitProvision = async () => {
+    if (!provisionItem) return;
+    if (!provisionForm.ip.trim() || !provisionForm.port.trim() || !provisionForm.username.trim() || !provisionForm.password.trim()) {
+      setProvisionError("Vui lòng nhập đủ IP, Port, Username, Password.");
+      return;
+    }
+    setProvisionBusy(true);
+    setProvisionError(null);
+    const res = await fetch(`/api/seller/orders/${provisionItem.id}/deliver-manual`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(provisionForm),
+    });
+    const data = await res.json().catch(() => null);
+    setProvisionBusy(false);
+    if (!res.ok) {
+      setProvisionError(data?.error ?? "Không thể giao thông tin.");
+      return;
+    }
+    setProvisionItem(null);
+    router.refresh();
+  };
 
   const openDeliver = (o: SellerOrderItem) => {
     setDeliverItem(o);
@@ -314,6 +362,46 @@ export default function SellerOrdersTable({
           },
         ]
       : []),
+    ...(showManualProvisionColumn
+      ? [
+          {
+            key: "manual-provision",
+            header: "Máy chủ (VPS)",
+            render: (o: SellerOrderItem) => {
+              if (o.status === "CANCELLED") {
+                return (
+                  <span className="text-[10px] font-semibold text-muted">
+                    Đã hoàn tiền (quá hạn giao)
+                  </span>
+                );
+              }
+              if (o.status !== "AWAITING_SELLER_DELIVERY") {
+                return (
+                  <span className="flex items-center gap-1 text-[10px] font-semibold text-success">
+                    <PackageCheck className="h-3 w-3" /> Đã giao — chờ buyer nhận
+                  </span>
+                );
+              }
+              const overdue = o.manualDeliveryDeadline ? o.manualDeliveryDeadline <= new Date() : false;
+              return (
+                <div className="flex flex-col items-start gap-1">
+                  {o.manualDeliveryDeadline && (
+                    <span className={`flex items-center gap-1 text-[10px] font-semibold ${overdue ? "text-danger" : "text-muted"}`}>
+                      <Clock className="h-3 w-3" />
+                      {overdue
+                        ? "Đã quá hạn — chờ hệ thống tự hoàn tiền"
+                        : `Hạn nhập: ${o.manualDeliveryDeadline.toLocaleString("vi-VN")}`}
+                    </span>
+                  )}
+                  <Button size="sm" disabled={overdue} onClick={() => openProvision(o)}>
+                    <PackageCheck className="h-3.5 w-3.5" /> Nhập thông tin server
+                  </Button>
+                </div>
+              );
+            },
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -457,6 +545,108 @@ export default function SellerOrdersTable({
               </Button>
               <Button disabled={deliverBusy} onClick={submitDeliver}>
                 {deliverBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                Xác nhận đã giao
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {provisionItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={closeProvision}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border-c bg-surface p-6 shadow-2xl"
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="truncate text-base font-black text-foreground">
+                  Nhập thông tin server — {provisionItem.productName}
+                </h3>
+                <p className="mt-0.5 text-xs text-muted">
+                  Thông tin sẽ được mã hoá trước khi lưu. Buyer chỉ xem được sau khi bạn xác nhận,
+                  bảo hành bắt đầu tính từ lúc buyer bấm xem.
+                </p>
+              </div>
+              <button onClick={closeProvision} className="shrink-0 text-muted hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-foreground">IP *</label>
+                <input
+                  type="text"
+                  value={provisionForm.ip}
+                  onChange={(e) => setProvisionForm((f) => ({ ...f, ip: e.target.value }))}
+                  placeholder="VD: 103.10.20.30"
+                  className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-foreground">Port *</label>
+                <input
+                  type="text"
+                  value={provisionForm.port}
+                  onChange={(e) => setProvisionForm((f) => ({ ...f, port: e.target.value }))}
+                  placeholder="VD: 22"
+                  className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-foreground">Username *</label>
+                <input
+                  type="text"
+                  value={provisionForm.username}
+                  onChange={(e) => setProvisionForm((f) => ({ ...f, username: e.target.value }))}
+                  placeholder="VD: root"
+                  className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-foreground">Password *</label>
+                <input
+                  type="text"
+                  value={provisionForm.password}
+                  onChange={(e) => setProvisionForm((f) => ({ ...f, password: e.target.value }))}
+                  className="w-full rounded-lg border border-border-c px-2.5 py-2 text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+                />
+              </div>
+            </div>
+            <div className="mt-2.5">
+              <label className="mb-1 block text-xs font-semibold text-foreground">SSH Key (tuỳ chọn)</label>
+              <Textarea
+                rows={2}
+                value={provisionForm.sshKey}
+                onChange={(e) => setProvisionForm((f) => ({ ...f, sshKey: e.target.value }))}
+                placeholder="Dán private key nếu buyer đăng nhập bằng SSH key thay vì mật khẩu"
+              />
+            </div>
+            <div className="mt-2.5">
+              <label className="mb-1 block text-xs font-semibold text-foreground">Ghi chú (tuỳ chọn)</label>
+              <Textarea
+                rows={2}
+                value={provisionForm.notes}
+                onChange={(e) => setProvisionForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="VD: hướng dẫn đăng nhập lần đầu, lưu ý đổi mật khẩu..."
+              />
+            </div>
+
+            {provisionError && (
+              <p className="mt-2 rounded-lg bg-danger/10 px-3 py-2 text-xs font-semibold text-danger">
+                {provisionError}
+              </p>
+            )}
+            <div className="mt-3 flex justify-end gap-2">
+              <Button variant="secondary" onClick={closeProvision}>
+                Huỷ
+              </Button>
+              <Button disabled={provisionBusy} onClick={submitProvision}>
+                {provisionBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                 Xác nhận đã giao
               </Button>
             </div>

@@ -130,6 +130,25 @@ export type Product = {
       riêng tư). warrantyValue=0 nghĩa là "Không bảo hành". */
   warrantyValue?: number;
   warrantyUnit?: "hour" | "day";
+  /** Chỉ có ý nghĩa khi productType="PRODUCT". "AUTO_STOCK" (mặc định, giao
+      ngay từ kho text) | "MANUAL_PROVISION" (VPS/Server — seller tự nhập
+      credential theo TỪNG đơn sau khi thanh toán, xem CLAUDE.md). */
+  deliveryMethod?: "AUTO_STOCK" | "MANUAL_PROVISION";
+  /** Chỉ có ý nghĩa khi deliveryMethod="MANUAL_PROVISION" — spec VPS/Dedicated
+      AN TOÀN hiển thị công khai (không phải credential). */
+  serverDetail?: {
+    kind: "VPS" | "DEDICATED";
+    cpuCores: number | null;
+    ramGb: number | null;
+    storageGb: number | null;
+    storageType: string | null;
+    bandwidth: string | null;
+    osOptions?: string[];
+    location: string | null;
+    billingCycle: "ONE_TIME" | "MONTHLY" | "QUARTERLY" | "YEARLY";
+    uptimeSla: string | null;
+    provisionSlaHours: number;
+  };
 };
 
 export const products: Product[] = [

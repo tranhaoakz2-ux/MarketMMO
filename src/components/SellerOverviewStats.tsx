@@ -33,6 +33,7 @@ const RANGES: { key: RangeKey; label: string }[] = [
 
 const statusDotClass: Record<OrderStatus, string> = {
   ESCROW: "bg-brand-dark",
+  AWAITING_SELLER_DELIVERY: "bg-brand-dark",
   RELEASED: "bg-success",
   CANCELLED: "bg-muted",
   DISPUTED: "bg-danger",

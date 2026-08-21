@@ -23,6 +23,7 @@ const productInclude = {
   seller: { include: { user: { select: { lastActiveAt: true } } } },
   variants: { orderBy: { sortOrder: "asc" } },
   serviceFields: { orderBy: { sortOrder: "asc" } },
+  serverDetail: true,
 } satisfies Prisma.ProductInclude;
 
 type ProductWithRelations = Prisma.ProductGetPayload<{ include: typeof productInclude }>;
@@ -130,6 +131,24 @@ function mapProduct(p: ProductWithRelations): Product {
     })),
     warrantyValue: p.warrantyValue,
     warrantyUnit: p.warrantyUnit as "hour" | "day",
+    deliveryMethod: p.deliveryMethod as "AUTO_STOCK" | "MANUAL_PROVISION",
+    serverDetail: p.serverDetail
+      ? {
+          kind: p.serverDetail.kind as "VPS" | "DEDICATED",
+          cpuCores: p.serverDetail.cpuCores,
+          ramGb: p.serverDetail.ramGb,
+          storageGb: p.serverDetail.storageGb,
+          storageType: p.serverDetail.storageType,
+          bandwidth: p.serverDetail.bandwidth,
+          osOptions: p.serverDetail.osOptions
+            ? (JSON.parse(p.serverDetail.osOptions) as string[])
+            : undefined,
+          location: p.serverDetail.location,
+          billingCycle: p.serverDetail.billingCycle as "ONE_TIME" | "MONTHLY" | "QUARTERLY" | "YEARLY",
+          uptimeSla: p.serverDetail.uptimeSla,
+          provisionSlaHours: p.serverDetail.provisionSlaHours,
+        }
+      : undefined,
   };
 }
 
@@ -1093,6 +1112,50 @@ export async function getSellerPreOrderItems(sellerId: string) {
   }));
 }
 
+// Đơn giao thủ công (VPS/Server, Product.deliveryMethod="MANUAL_PROVISION")
+// — mirror đúng pattern getSellerPreOrderItems() (tab riêng, tách khỏi
+// getSellerOrderItems() chung). `manualDeliveryDeadline`/`hasDelivered` dùng
+// để UI biết còn hạn nhập credential hay không (xem SellerOrdersTable.tsx).
+export async function getSellerManualProvisionItems(sellerId: string) {
+  const rows = await prisma.orderItem.findMany({
+    where: { sellerId, product: { deliveryMethod: "MANUAL_PROVISION" } },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      orderId: true,
+      productName: true,
+      variantLabel: true,
+      quantity: true,
+      price: true,
+      status: true,
+      escrowReleaseAt: true,
+      createdAt: true,
+      manualDeliveryDeadline: true,
+      deliveredPayload: true,
+      order: { select: { orderCode: true, buyer: { select: { name: true, username: true, email: true } } } },
+      product: { select: { category: { select: { name: true } } } },
+    },
+  });
+
+  return rows.map((item) => ({
+    id: item.id,
+    orderId: item.orderId,
+    orderCode: item.order.orderCode,
+    productName: item.productName,
+    variantLabel: item.variantLabel,
+    categoryName: item.product.category.name,
+    buyerName:
+      item.order.buyer.name ?? item.order.buyer.username ?? item.order.buyer.email ?? "Người mua",
+    quantity: item.quantity,
+    price: item.price,
+    status: item.status as OrderStatus,
+    escrowReleaseAt: item.escrowReleaseAt,
+    createdAt: item.createdAt,
+    manualDeliveryDeadline: item.manualDeliveryDeadline,
+    hasDelivered: item.deliveredPayload !== null,
+  }));
+}
+
 export async function getSellerDisputes(sellerId: string) {
   const disputes = await prisma.dispute.findMany({
     where: { orderItem: { sellerId } },
@@ -1193,7 +1256,13 @@ export async function getSellerOrderStatusBreakdown(
     where: { sellerId, createdAt: { gte: from, lte: to } },
     _count: { _all: true },
   });
-  const result: Record<OrderStatus, number> = { ESCROW: 0, RELEASED: 0, CANCELLED: 0, DISPUTED: 0 };
+  const result: Record<OrderStatus, number> = {
+    ESCROW: 0,
+    AWAITING_SELLER_DELIVERY: 0,
+    RELEASED: 0,
+    CANCELLED: 0,
+    DISPUTED: 0,
+  };
   for (const row of counts) {
     result[row.status as OrderStatus] = row._count._all;
   }

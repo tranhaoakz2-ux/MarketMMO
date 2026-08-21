@@ -10,7 +10,19 @@ export const roleLabel: Record<Role, string> = {
   ADMIN: "Quản trị viên",
 };
 
-export type OrderStatus = "ESCROW" | "RELEASED" | "CANCELLED" | "DISPUTED";
+export type OrderStatus =
+  | "ESCROW"
+  | "RELEASED"
+  | "CANCELLED"
+  | "DISPUTED"
+  // Giao thủ công (VPS/Server, deliveryMethod="MANUAL_PROVISION") — đơn khởi
+  // tạo ở trạng thái này NGAY khi thanh toán xong THAY VÌ "ESCROW" (tiền vẫn
+  // giữ ký quỹ như bình thường, chỉ khác ở chỗ chưa có nội dung giao). Seller
+  // nhập credential trước manualDeliveryDeadline → chuyển thẳng sang "ESCROW"
+  // (mọi logic bảo hành/giải ngân sau đó dùng lại nguyên trạng thái ESCROW đã
+  // có, không có trạng thái "DELIVERED" riêng). Quá hạn chưa giao → "CANCELLED"
+  // + hoàn 100% cho buyer, KHÔNG giải ngân. Xem src/lib/manual-provision.ts.
+  | "AWAITING_SELLER_DELIVERY";
 
 export type WalletTxType =
   | "DEPOSIT"
@@ -251,6 +263,7 @@ export const orderStatusLabel: Record<OrderStatus, string> = {
   RELEASED: "Hoàn thành",
   CANCELLED: "Đã hủy",
   DISPUTED: "Đang tranh chấp",
+  AWAITING_SELLER_DELIVERY: "Chờ seller giao (thủ công)",
 };
 
 export const walletTxStatusLabel: Record<WalletTxStatus, string> = {
@@ -372,3 +385,40 @@ export const USDT_DEPOSIT_INTENT_EXPIRY_MINUTES = 45;
 // Số lần thử lại tối đa khi mã ngẫu nhiên (6 số thập phân cuối) trùng với 1
 // yêu cầu khác đang PENDING — trùng cực hiếm (~1/999.999), vài lần thử là đủ.
 export const USDT_DEPOSIT_INTENT_MAX_COLLISION_RETRIES = 5;
+
+// ── Giao hàng thủ công theo đơn (manual provisioning, VPS/Server) — xem
+// Product.deliveryMethod/ServerDetail, OrderItem.manualDeliveryDeadline
+// trong prisma/schema.prisma + src/lib/manual-provision.ts. ──
+
+export const DELIVERY_METHODS = ["AUTO_STOCK", "MANUAL_PROVISION"] as const;
+export type DeliveryMethod = (typeof DELIVERY_METHODS)[number];
+
+export const DELIVERY_METHOD_LABEL: Record<DeliveryMethod, string> = {
+  AUTO_STOCK: "Tự động (kho dữ liệu text)",
+  MANUAL_PROVISION: "Thủ công theo đơn (VPS/Server)",
+};
+
+export const SERVER_KINDS = ["VPS", "DEDICATED"] as const;
+export type ServerKind = (typeof SERVER_KINDS)[number];
+
+export const SERVER_KIND_LABEL: Record<ServerKind, string> = {
+  VPS: "VPS",
+  DEDICATED: "Máy chủ riêng (Dedicated)",
+};
+
+export const SERVER_BILLING_CYCLES = ["ONE_TIME", "MONTHLY", "QUARTERLY", "YEARLY"] as const;
+export type ServerBillingCycle = (typeof SERVER_BILLING_CYCLES)[number];
+
+export const SERVER_BILLING_CYCLE_LABEL: Record<ServerBillingCycle, string> = {
+  ONE_TIME: "Thanh toán 1 lần",
+  MONTHLY: "Hàng tháng",
+  QUARTERLY: "Hàng quý",
+  YEARLY: "Hàng năm",
+};
+
+// Số giờ seller được phép cấu hình để nhập credential sau khi buyer thanh
+// toán (Product.serverDetail.provisionSlaHours / snapshot
+// OrderItem.manualDeliveryDeadline). Quá hạn mà chưa giao → tự hoàn tiền
+// 100%, xem src/lib/manual-provision.ts.
+export const MIN_PROVISION_SLA_HOURS = 1;
+export const DEFAULT_PROVISION_SLA_HOURS = 24;

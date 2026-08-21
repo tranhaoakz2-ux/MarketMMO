@@ -5,6 +5,7 @@ import type { Tone } from "@/components/seller-demo/DemoKit";
 
 export const ORDER_STATUS_TONE: Record<OrderStatus, Tone> = {
   ESCROW: "warn",
+  AWAITING_SELLER_DELIVERY: "warn",
   RELEASED: "success",
   CANCELLED: "neutral",
   DISPUTED: "danger",

@@ -2,6 +2,7 @@ import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { releaseDueEscrow } from "@/lib/escrow";
 import { closeDueAuctionSessions } from "@/lib/auction";
+import { refundOverdueManualProvisionItems } from "@/lib/manual-provision";
 
 // Cron DUY NHẤT/ngày (gộp escrow + đấu giá để không vượt giới hạn 2 cron của
 // gói Vercel Hobby) — cấu hình lịch chạy trong vercel.json ("crons"), bảo vệ
@@ -37,10 +38,13 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Không có quyền." }, { status: 401 });
   }
 
-  const [{ released }, { sessionsClosed }] = await Promise.all([
+  const [{ released }, { sessionsClosed }, { refunded: manualProvisionRefunded }] = await Promise.all([
     releaseDueEscrow({ type: "SYSTEM" }),
     closeDueAuctionSessions(),
+    // Đơn giao thủ công (VPS/Server) seller không nhập credential đúng hạn —
+    // tự huỷ + hoàn 100% cho buyer, xem src/lib/manual-provision.ts.
+    refundOverdueManualProvisionItems({ type: "SYSTEM" }),
   ]);
 
-  return NextResponse.json({ released, sessionsClosed });
+  return NextResponse.json({ released, sessionsClosed, manualProvisionRefunded });
 }
