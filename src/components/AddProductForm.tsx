@@ -155,6 +155,13 @@ export default function AddProductForm({
   // ẩn hẳn khối "Kho dữ liệu giao hàng thật" (không có ý nghĩa — seller nhập
   // credential theo TỪNG đơn sau khi thanh toán, không phải kho có sẵn).
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("AUTO_STOCK");
+  // "Tài khoản AI" — KHÔNG phải productType riêng (vẫn productType="PRODUCT"
+  // + deliveryMethod="AUTO_STOCK", giữ nguyên 100% luồng giao hàng/checkout/
+  // escrow của Sản phẩm thường). Chỉ là 1 cờ UI ép "luôn có thời hạn sử dụng"
+  // (ẩn checkbox on/off, bắt buộc nhập ngày hết hạn mọi dòng) — gửi kèm
+  // `requiresExpiryStock=true` lúc tạo sản phẩm để SERVER cũng chốt chặn thật
+  // (xem POST /api/seller/products và .../stock), không chỉ ẩn ở UI.
+  const [isAiType, setIsAiType] = useState(false);
   const [serverKind, setServerKind] = useState<ServerKind>("VPS");
   const [cpuCores, setCpuCores] = useState("");
   const [ramGb, setRamGb] = useState("");
@@ -204,6 +211,7 @@ export default function AddProductForm({
     setProductType(type);
     if (type === "PRODUCT") setNoWarranty(false);
     setDeliveryMethod("AUTO_STOCK");
+    setIsAiType(false);
   };
 
   // "Máy chủ (VPS)" — CHỈ tách ở UI thành 1 ô chọn ngang hàng với 4 loại
@@ -214,6 +222,17 @@ export default function AddProductForm({
     setProductType("PRODUCT");
     setDeliveryMethod("MANUAL_PROVISION");
     setNoWarranty(false);
+    setIsAiType(false);
+  };
+
+  // "Tài khoản AI" — cùng cách tách UI như VPS ở trên: vẫn productType=
+  // "PRODUCT" + deliveryMethod="AUTO_STOCK" (y hệt "Sản phẩm"), chỉ bật thêm
+  // cờ isAiType để ép hiển thị/bắt buộc phần thời hạn bên dưới.
+  const handleSelectAi = () => {
+    setProductType("PRODUCT");
+    setDeliveryMethod("AUTO_STOCK");
+    setNoWarranty(false);
+    setIsAiType(true);
   };
 
   const toggleServiceDeliveryMethod = (method: ServiceDeliveryMethod) => {
@@ -353,6 +372,7 @@ export default function AddProductForm({
     setVariants([]);
     setProductType("PRODUCT");
     setDeliveryMethod("AUTO_STOCK");
+    setIsAiType(false);
     setServerKind("VPS");
     setCpuCores("");
     setRamGb("");
@@ -446,6 +466,50 @@ export default function AddProductForm({
             `Phiên bản "${emptyVariant.label || "(chưa đặt tên)"}" chưa có dữ liệu kho — thêm ít nhất 1 sản phẩm vào kho trước khi đăng.`
           );
           return;
+        }
+      }
+    }
+    // Tài khoản AI: bắt buộc mọi dòng kho có ngày hết hạn — báo lỗi SỚM ở
+    // đây, nhưng chốt chặn THẬT nằm ở server (POST .../stock, xem
+    // requiresExpiryStock) vì kho được gửi ở bước SAU, tách rời lệnh tạo
+    // sản phẩm, cùng nguyên tắc đã áp cho định dạng kho VPS phía dưới.
+    if (isAiType) {
+      const findMissingExpiryLine = (items: string, expires: string): number | null => {
+        const itemLines = items
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean);
+        const expiryLines = expires.split("\n").map((l) => l.trim());
+        for (let i = 0; i < itemLines.length; i++) {
+          if (!expiryLines[i]) return i + 1;
+        }
+        return null;
+      };
+      if (variants.length === 0) {
+        if (!baseNominalTermDays || Number(baseNominalTermDays) < 1) {
+          setError("Vui lòng chọn số ngày của gói đầy đủ cho tài khoản AI.");
+          return;
+        }
+        const badLine = findMissingExpiryLine(baseStockItems, baseExpiresAtItems);
+        if (badLine !== null) {
+          setError(
+            `Tài khoản AI bắt buộc nhập ngày hết hạn cho mọi dòng kho — dòng ${badLine} đang để trống.`
+          );
+          return;
+        }
+      } else {
+        for (const v of variants) {
+          if (!v.nominalTermDays || Number(v.nominalTermDays) < 1) {
+            setError(`Phiên bản "${v.label || "(chưa đặt tên)"}" thiếu số ngày của gói đầy đủ.`);
+            return;
+          }
+          const badLine = findMissingExpiryLine(v.stockItems, v.expiresAtItems);
+          if (badLine !== null) {
+            setError(
+              `Phiên bản "${v.label || "(chưa đặt tên)"}" — dòng ${badLine} chưa nhập ngày hết hạn (bắt buộc cho tài khoản AI).`
+            );
+            return;
+          }
         }
       }
     }
@@ -562,6 +626,7 @@ export default function AddProductForm({
     form.append("productType", productType);
     if (productType === "PRODUCT") {
       form.append("deliveryMethod", deliveryMethod);
+      if (isAiType) form.append("requiresExpiryStock", "true");
       if (deliveryMethod === "MANUAL_PROVISION") {
         form.append("serverKind", serverKind);
         form.append("billingCycle", billingCycle);
@@ -631,7 +696,7 @@ export default function AddProductForm({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             items: baseStockItems,
-            ...(baseHasExpiry
+            ...(baseHasExpiry || isAiType
               ? {
                   expiresAt: baseExpiresAtItems,
                   nominalTermDays: Number(baseNominalTermDays),
@@ -668,7 +733,7 @@ export default function AddProductForm({
             body: JSON.stringify({
               variantId: variantData.variant.id,
               items: v.stockItems,
-              ...(v.hasExpiry
+              ...(v.hasExpiry || isAiType
                 ? { expiresAt: v.expiresAtItems, nominalTermDays: Number(v.nominalTermDays) }
                 : {}),
             }),
@@ -723,7 +788,7 @@ export default function AddProductForm({
             type="button"
             onClick={() => handleProductType("PRODUCT")}
             className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
-              productType === "PRODUCT" && deliveryMethod === "AUTO_STOCK"
+              productType === "PRODUCT" && deliveryMethod === "AUTO_STOCK" && !isAiType
                 ? "border-brand bg-brand text-ink"
                 : "border-border-c bg-surface text-foreground hover:border-brand-dark"
             }`}
@@ -731,6 +796,20 @@ export default function AddProductForm({
             Sản phẩm
             <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
               Seller giao sẵn nội dung (tài khoản, mã kích hoạt...)
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSelectAi}
+            className={`rounded-lg border-2 px-3 py-2 text-left text-xs font-bold transition ${
+              productType === "PRODUCT" && deliveryMethod === "AUTO_STOCK" && isAiType
+                ? "border-brand bg-brand text-ink"
+                : "border-border-c bg-surface text-foreground hover:border-brand-dark"
+            }`}
+          >
+            Tài khoản AI (có hạn dùng)
+            <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
+              ChatGPT Plus, Grok... bắt buộc khai ngày hết hạn, giá tự giảm theo ngày còn lại
             </span>
           </button>
           <button
@@ -1103,16 +1182,23 @@ export default function AddProductForm({
                       className="mt-2 w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-[11px] bg-surface text-foreground focus:border-brand-dark focus:outline-none"
                     />
 
-                    <label className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
-                      <input
-                        type="checkbox"
-                        checked={v.hasExpiry}
-                        onChange={(e) => toggleVariantExpiry(v.key, e.target.checked)}
-                        className="h-3.5 w-3.5"
-                      />
-                      Lô kho này có thời hạn sử dụng (vd ChatGPT Plus, Netflix...)
-                    </label>
-                    {v.hasExpiry && (
+                    {isAiType ? (
+                      <p className="mt-2 text-[11px] font-semibold text-brand-dark">
+                        Tài khoản AI luôn có thời hạn sử dụng — bắt buộc nhập ngày hết hạn cho mọi
+                        dòng bên dưới.
+                      </p>
+                    ) : (
+                      <label className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
+                        <input
+                          type="checkbox"
+                          checked={v.hasExpiry}
+                          onChange={(e) => toggleVariantExpiry(v.key, e.target.checked)}
+                          className="h-3.5 w-3.5"
+                        />
+                        Lô kho này có thời hạn sử dụng (vd ChatGPT Plus, Netflix...)
+                      </label>
+                    )}
+                    {(v.hasExpiry || isAiType) && (
                       <div className="mt-1.5 flex flex-col gap-1.5 rounded-lg border border-border-c bg-surface-alt/50 p-2">
                         <div className="flex items-center gap-1.5">
                           <span className="text-[11px] font-semibold text-foreground">Gói đầy đủ:</span>
@@ -1180,16 +1266,23 @@ export default function AddProductForm({
               phẩm&rdquo; bên dưới.
             </p>
 
-            <label className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
-              <input
-                type="checkbox"
-                checked={baseHasExpiry}
-                onChange={(e) => setBaseHasExpiry(e.target.checked)}
-                className="h-3.5 w-3.5"
-              />
-              Lô kho này có thời hạn sử dụng (vd ChatGPT Plus, Netflix...)
-            </label>
-            {baseHasExpiry && (
+            {isAiType ? (
+              <p className="mt-2 text-[11px] font-semibold text-brand-dark">
+                Tài khoản AI luôn có thời hạn sử dụng — bắt buộc nhập ngày hết hạn cho mọi dòng bên
+                dưới.
+              </p>
+            ) : (
+              <label className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
+                <input
+                  type="checkbox"
+                  checked={baseHasExpiry}
+                  onChange={(e) => setBaseHasExpiry(e.target.checked)}
+                  className="h-3.5 w-3.5"
+                />
+                Lô kho này có thời hạn sử dụng (vd ChatGPT Plus, Netflix...)
+              </label>
+            )}
+            {(baseHasExpiry || isAiType) && (
               <div className="mt-1.5 flex flex-col gap-1.5 rounded-lg border border-border-c bg-surface-alt/50 p-2">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[11px] font-semibold text-foreground">Gói đầy đủ:</span>

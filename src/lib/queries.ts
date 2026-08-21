@@ -133,6 +133,7 @@ function mapProduct(p: ProductWithRelations): Product {
     warrantyValue: p.warrantyValue,
     warrantyUnit: p.warrantyUnit as "hour" | "day",
     deliveryMethod: p.deliveryMethod as "AUTO_STOCK" | "MANUAL_PROVISION",
+    requiresExpiryStock: p.requiresExpiryStock,
     serverDetail: p.serverDetail
       ? {
           kind: p.serverDetail.kind as "VPS" | "DEDICATED",

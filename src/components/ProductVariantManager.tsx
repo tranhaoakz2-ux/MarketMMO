@@ -39,12 +39,19 @@ function StockEntryPanel({
   variantId,
   stockManaged,
   stockAvailable,
+  requiresExpiryStock,
   onAdded,
 }: {
   productId: string;
   variantId?: string;
   stockManaged?: boolean;
   stockAvailable?: number;
+  // Sản phẩm loại "Tài khoản AI" (Product.requiresExpiryStock=true) — ép
+  // luôn hiện + bắt buộc nhập ngày hết hạn, ẩn checkbox on/off. Đây là
+  // đường nhập kho THỨ HAI (sau khi sản phẩm đã tạo/đang bán) — phải ép
+  // giống hệt AddProductForm.tsx, không thì seller né được qua đường này.
+  // Chốt chặn THẬT vẫn ở server (POST .../stock), đây chỉ là UX.
+  requiresExpiryStock?: boolean;
   onAdded: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -55,6 +62,7 @@ function StockEntryPanel({
   // Không lưu ở đâu khác ngoài state cục bộ này, "sản phẩm có thời hạn hay
   // không" tự suy ra từ dữ liệu kho (có dòng expiresAt != null) sau khi lưu.
   const [hasExpiry, setHasExpiry] = useState(false);
+  const effectiveHasExpiry = hasExpiry || Boolean(requiresExpiryStock);
   const [expiresAtText, setExpiresAtText] = useState("");
   const [nominalTermDays, setNominalTermDays] = useState("30");
 
@@ -65,6 +73,27 @@ function StockEntryPanel({
 
   const handleSubmit = async () => {
     setError(null);
+    // Tài khoản AI: bắt buộc mọi dòng kho có ngày hết hạn — báo lỗi SỚM ở
+    // đây, chốt chặn THẬT vẫn ở server (POST .../stock đọc
+    // Product.requiresExpiryStock).
+    if (requiresExpiryStock) {
+      if (!nominalTermDays || Number(nominalTermDays) < 1) {
+        setError("Vui lòng chọn số ngày của gói đầy đủ cho tài khoản AI.");
+        return;
+      }
+      const itemLines = text
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean);
+      const expiryLines = expiresAtText.split("\n").map((l) => l.trim());
+      const badLine = itemLines.findIndex((_, i) => !expiryLines[i]);
+      if (badLine !== -1) {
+        setError(
+          `Tài khoản AI bắt buộc nhập ngày hết hạn cho mọi dòng kho — dòng ${badLine + 1} đang để trống.`
+        );
+        return;
+      }
+    }
     setLoading(true);
     const res = await fetch(`/api/seller/products/${productId}/stock`, {
       method: "POST",
@@ -72,7 +101,7 @@ function StockEntryPanel({
       body: JSON.stringify({
         variantId,
         items: text,
-        ...(hasExpiry
+        ...(effectiveHasExpiry
           ? { expiresAt: expiresAtText, nominalTermDays: Number(nominalTermDays) }
           : {}),
       }),
@@ -121,17 +150,24 @@ function StockEntryPanel({
             className="w-full rounded-lg border border-border-c px-2.5 py-1.5 font-mono text-xs bg-surface text-foreground focus:border-brand-dark focus:outline-none"
           />
 
-          <label className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
-            <input
-              type="checkbox"
-              checked={hasExpiry}
-              onChange={(e) => setHasExpiry(e.target.checked)}
-              className="h-3.5 w-3.5"
-            />
-            Lô này có thời hạn sử dụng (vd ChatGPT Plus, Netflix...)
-          </label>
+          {requiresExpiryStock ? (
+            <p className="text-[11px] font-semibold text-brand-dark">
+              Tài khoản AI luôn có thời hạn sử dụng — bắt buộc nhập ngày hết hạn cho mọi dòng bên
+              dưới.
+            </p>
+          ) : (
+            <label className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
+              <input
+                type="checkbox"
+                checked={hasExpiry}
+                onChange={(e) => setHasExpiry(e.target.checked)}
+                className="h-3.5 w-3.5"
+              />
+              Lô này có thời hạn sử dụng (vd ChatGPT Plus, Netflix...)
+            </label>
+          )}
 
-          {hasExpiry && (
+          {effectiveHasExpiry && (
             <div className="flex flex-col gap-1.5 rounded-lg border border-border-c bg-surface p-2">
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] font-semibold text-foreground">Gói đầy đủ:</span>
@@ -366,6 +402,7 @@ function ManageModal({
               productId={product.id}
               stockManaged={product.stockManaged}
               stockAvailable={product.stockAvailable}
+              requiresExpiryStock={product.requiresExpiryStock}
               onAdded={onChanged}
             />
           </div>
@@ -400,6 +437,7 @@ function ManageModal({
                   variantId={v.id}
                   stockManaged={v.stockManaged}
                   stockAvailable={v.stockAvailable}
+                  requiresExpiryStock={product.requiresExpiryStock}
                   onAdded={onChanged}
                 />
               </div>

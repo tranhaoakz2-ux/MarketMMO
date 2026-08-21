@@ -316,6 +316,15 @@ export async function POST(req: Request) {
   const deliveryMethod =
     productType === "PRODUCT" ? (deliveryMethodRaw as "AUTO_STOCK" | "MANUAL_PROVISION") : "AUTO_STOCK";
 
+  // "Tài khoản AI" — cờ seller bật khi chọn ô riêng ở form đăng (KHÔNG phải
+  // productType mới, xem Product.requiresExpiryStock trong schema.prisma).
+  // Chỉ có ý nghĩa cho Sản phẩm giao tự động từ kho — mutually exclusive với
+  // VPS/Dịch vụ/TUT-Trick/TOOL, y hệt cách "Máy chủ (VPS)" tách UI trước đó.
+  const requiresExpiryStock =
+    productType === "PRODUCT" &&
+    deliveryMethod === "AUTO_STOCK" &&
+    String(form.get("requiresExpiryStock") ?? "") === "true";
+
   let serverDetailData: {
     kind: string;
     cpuCores: number | null;
@@ -478,6 +487,7 @@ export async function POST(req: Request) {
           warrantyValue,
           warrantyUnit,
           deliveryMethod,
+          requiresExpiryStock,
         },
       });
       if (productType === "SERVICE") {

@@ -548,6 +548,16 @@ model Product {
   // sau khi tạo ở v1 (đăng sản phẩm mới nếu cần đổi spec).
   serverDetail ServerDetail?
 
+  // "Tài khoản AI" (ChatGPT Plus, Grok...) — seller bật cờ này khi chọn ô
+  // riêng ở form đăng (KHÔNG phải productType mới, vẫn productType="PRODUCT"
+  // + deliveryMethod="AUTO_STOCK" y hệt Sản phẩm thường). Khi true, POST
+  // /api/seller/products/[productId]/stock BẮT BUỘC mọi dòng kho seller nhập
+  // sau này phải có ProductStockItem.expiresAt + nominalTermDays hợp lệ,
+  // không cho bỏ trống — chốt chặn ở server, không chỉ ẩn checkbox UI. Default
+  // false migration-safe cho sản phẩm cũ (xem prisma/pending-sql/2026-08-21-
+  // product-requires-expiry.sql).
+  requiresExpiryStock Boolean @default(false)
+
   // productType="TUT_TRICK" — bán NỘI DUNG HƯỚNG DẪN (kiến thức/quy trình),
   // bán lặp lại vô hạn cho nhiều buyer khác nhau (KHÔNG claim/tiêu hao như
   // ProductStockItem, KHÔNG có khái niệm kho). Đây là nội dung ĐẦY ĐỦ, riêng

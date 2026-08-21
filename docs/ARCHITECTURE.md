@@ -673,6 +673,7 @@ gian — đọc để hiểu schema đã tiến hoá thế nào:
 | `2026-08-17-seller-cover.sql` | `Seller.coverUrl` |
 | `2026-08-18-tool-delivery-link-file.sql` | `Product.toolDeliveryLink`/`toolFileUrl`/`toolFileName`/`toolFileSize` — giao TOOL bằng link/file (3 cột file sau đó bị **deprecated**, xem mục 3) |
 | `2026-08-19-usdt-deposit-intent.sql` | Model `UsdtDepositIntent` — vá lỗ hổng front-run TxID nạp USDT (buyer đặt trước số USDT định danh riêng, xem §11) |
+| `2026-08-21-product-requires-expiry.sql` | `Product.requiresExpiryStock` — loại "Tài khoản AI" tách UI khỏi Sản phẩm thường (vẫn `productType=PRODUCT`+`AUTO_STOCK`), ép server bắt buộc `ProductStockItem.expiresAt` cho mọi lô kho khi bật cờ này |
 
 > Khi thêm schema mới: tạo file `prisma/pending-sql/YYYY-MM-DD-mo-ta-ngan.sql`,
 > để user tự chạy trên Neon, rồi mới cập nhật `schema.prisma` + chạy `npx

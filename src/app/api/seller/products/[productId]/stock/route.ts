@@ -35,13 +35,32 @@ export async function POST(
   // Thời hạn sử dụng — ô textarea THỨ 2, khớp theo SỐ THỨ TỰ DÒNG với ô nội
   // dung (dòng N của expiresAt = hạn của dòng N ở items). Để trống dòng nào
   // nghĩa là đơn vị đó không có hạn (trộn được trong cùng batch). Rỗng toàn
-  // bộ = không đơn vị nào có hạn (không đổi hành vi cũ).
+  // bộ = không đơn vị nào có hạn (không đổi hành vi cũ) — TRỪ sản phẩm
+  // "Tài khoản AI" (requiresExpiryStock=true), xem chặn cứng bên dưới.
   const rawExpiresAt: string = typeof body?.expiresAt === "string" ? body.expiresAt : "";
   const nominalTermDaysRaw = body?.nominalTermDays;
   const nominalTermDays =
     typeof nominalTermDaysRaw === "number" && Number.isFinite(nominalTermDaysRaw)
       ? Math.trunc(nominalTermDaysRaw)
       : null;
+
+  // "Tài khoản AI" — CHỐT CHẶN THẬT ở đây (route DUY NHẤT mọi lối nhập kho
+  // đi qua, cả AddProductForm lẫn ProductVariantManager — xem comment
+  // isVpsStock bên dưới cùng nguyên tắc), không chỉ ẩn checkbox ở UI.
+  if (product.requiresExpiryStock) {
+    if (!rawExpiresAt.trim()) {
+      return NextResponse.json(
+        { error: "Sản phẩm Tài khoản AI bắt buộc phải khai ngày hết hạn cho mọi dòng kho." },
+        { status: 400 }
+      );
+    }
+    if (!nominalTermDays || nominalTermDays < 1) {
+      return NextResponse.json(
+        { error: "Sản phẩm Tài khoản AI bắt buộc phải chọn số ngày của gói đầy đủ." },
+        { status: 400 }
+      );
+    }
+  }
 
   if (variantId) {
     const variant = product.variants.find((v) => v.id === variantId);
@@ -107,8 +126,20 @@ export async function POST(
       );
     }
     const parsed: (Date | null)[] = [];
-    for (const raw of expiresAtLinesRaw) {
+    for (let i = 0; i < expiresAtLinesRaw.length; i++) {
+      const raw = expiresAtLinesRaw[i]!;
       if (!raw) {
+        // Sản phẩm thường: dòng trống = đơn vị đó không có hạn (trộn được).
+        // "Tài khoản AI": KHÔNG được để lọt dòng "không hạn" nào trong kho —
+        // đây chính là chốt chặn thật (server, không chỉ ẩn checkbox UI).
+        if (product.requiresExpiryStock) {
+          return NextResponse.json(
+            {
+              error: `Sản phẩm Tài khoản AI bắt buộc mọi dòng có ngày hết hạn — dòng ${i + 1} đang để trống.`,
+            },
+            { status: 400 }
+          );
+        }
         parsed.push(null);
         continue;
       }

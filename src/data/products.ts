@@ -134,6 +134,13 @@ export type Product = {
       ngay từ kho text) | "MANUAL_PROVISION" (VPS/Server — seller tự nhập
       credential theo TỪNG đơn sau khi thanh toán, xem CLAUDE.md). */
   deliveryMethod?: "AUTO_STOCK" | "MANUAL_PROVISION";
+  /** "Tài khoản AI" (ChatGPT Plus, Grok...) — ép mọi lô kho seller nhập SAU
+      này (form đăng lẫn ProductVariantManager) BẮT BUỘC có ngày hết hạn,
+      chặn ở server (POST .../stock) chứ không chỉ ẩn UI. KHÔNG phải
+      productType riêng — vẫn productType="PRODUCT" + deliveryMethod=
+      "AUTO_STOCK" y hệt Sản phẩm thường, giữ nguyên 100% logic giao hàng/
+      prorate/checkout/escrow đã có (xem prorate.ts, POST /api/checkout). */
+  requiresExpiryStock?: boolean;
   /** Chỉ có ý nghĩa khi deliveryMethod="MANUAL_PROVISION" — spec VPS/Dedicated
       AN TOÀN hiển thị công khai (không phải credential). */
   serverDetail?: {
