@@ -484,20 +484,38 @@ export default function ProductVariantManager() {
     );
   }
 
-  const filtered = products.filter(
-    (p) =>
-      (statusFilter === "ALL" || (p.status ?? "APPROVED") === statusFilter) &&
-      p.name.toLowerCase().includes(q.toLowerCase())
-  );
-  const rejectedWithNote = filtered.filter((p) => p.status === "REJECTED" && p.adminNote);
-  // Hết hàng — tính LIVE từ chính `products` đã fetch (không lọc theo
-  // statusFilter/tìm kiếm hiện tại, luôn hiện đủ để seller không bỏ sót) qua
-  // isOutOfStock() DÙNG CHUNG với badge buyer thấy (ProductCard.tsx/
+  // Hết hàng — tính LIVE từ TOÀN BỘ `products` đã fetch (không phụ thuộc
+  // statusFilter/tìm kiếm hiện tại — banner ở dưới luôn hiện đủ, không bỏ
+  // sót) qua isOutOfStock() DÙNG CHUNG với badge buyer thấy (ProductCard.tsx/
   // CategoryProductCard.tsx) — chỉ cảnh báo sản phẩm ĐÃ DUYỆT (PENDING/
   // REJECTED chưa/không còn hiện công khai, "hết hàng" không có ý nghĩa gì).
   const outOfStockProducts = products.filter((p) => p.status === "APPROVED" && isOutOfStock(p));
+  const outOfStockIds = new Set(outOfStockProducts.map((p) => p.id));
+
+  // "OUT_OF_STOCK" là sentinel riêng, KHÔNG phải 1 ProductStatus thật — lọc
+  // theo tồn kho (tính live) thay vì theo status duyệt như 4 tab còn lại.
+  // Sản phẩm hết hàng vẫn khớp bình thường ở tab ALL/APPROVED — đây chỉ là
+  // 1 lát cắt lọc THÊM, không di chuyển/ẩn sản phẩm khỏi các tab khác.
+  const filtered = products.filter(
+    (p) =>
+      (statusFilter === "ALL"
+        ? true
+        : statusFilter === "OUT_OF_STOCK"
+          ? outOfStockIds.has(p.id)
+          : (p.status ?? "APPROVED") === statusFilter) &&
+      p.name.toLowerCase().includes(q.toLowerCase())
+  );
+  const rejectedWithNote = filtered.filter((p) => p.status === "REJECTED" && p.adminNote);
   const active = products.find((p) => p.id === activeId) ?? null;
   const megaSaleProduct = products.find((p) => p.id === megaSaleId) ?? null;
+  // Tab thứ 5, thêm vào CUỐI hàng tab status — nhãn kèm số đếm khi >0.
+  const statusFilterOptions = [
+    ...FILTERS,
+    {
+      value: "OUT_OF_STOCK",
+      label: outOfStockProducts.length > 0 ? `Đã Hết Hàng (${outOfStockProducts.length})` : "Đã Hết Hàng",
+    },
+  ];
 
   const columns: Column<Product>[] = [
     {
@@ -606,7 +624,7 @@ export default function ProductVariantManager() {
       <div className="mb-4">
         <FilterBar>
           <SearchInput value={q} onChange={setQ} placeholder="Tìm theo tên sản phẩm..." />
-          <Segmented value={statusFilter} onChange={setStatusFilter} options={FILTERS} />
+          <Segmented value={statusFilter} onChange={setStatusFilter} options={statusFilterOptions} />
         </FilterBar>
       </div>
 
@@ -661,9 +679,15 @@ export default function ProductVariantManager() {
             rows={filtered}
             rowKey={(p) => p.id}
             empty={
-              <EmptyState icon={Package} title="Chưa có sản phẩm">
-                Bấm &quot;Đăng sản phẩm mới&quot; ở trên để bắt đầu bán.
-              </EmptyState>
+              statusFilter === "OUT_OF_STOCK" ? (
+                <EmptyState icon={PackageX} title="Không có sản phẩm nào hết hàng">
+                  Mọi sản phẩm đang bán đều còn kho — không cần bơm thêm lúc này.
+                </EmptyState>
+              ) : (
+                <EmptyState icon={Package} title="Chưa có sản phẩm">
+                  Bấm &quot;Đăng sản phẩm mới&quot; ở trên để bắt đầu bán.
+                </EmptyState>
+              )
             }
           />
         </>
