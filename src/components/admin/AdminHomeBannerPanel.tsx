@@ -27,6 +27,7 @@ import {
   TextInput,
   Textarea,
 } from "@/components/admin-demo/AdminDemoKit";
+import { isValidCtaHref } from "@/lib/banner-link";
 
 type HomeBannerRow = {
   id: string;
@@ -437,6 +438,7 @@ function SmallBannerEditor({
 }) {
   const [title, setTitle] = useState(row?.title ?? "");
   const [description, setDescription] = useState(row?.description ?? "");
+  const [ctaHref, setCtaHref] = useState(row?.ctaHref ?? "");
   const [saving, setSaving] = useState(false);
   const dirtyRef = useRef(false);
 
@@ -444,12 +446,19 @@ function SmallBannerEditor({
     if (dirtyRef.current) return;
     setTitle(row?.title ?? "");
     setDescription(row?.description ?? "");
+    setCtaHref(row?.ctaHref ?? "");
   }, [row]);
 
   const save = async () => {
-    setSaving(true);
     setError(null);
-    const payload = { title: title.trim(), description: description.trim() };
+    // Báo sớm ở client — chốt chặn THẬT nằm ở server (POST/PATCH
+    // /api/admin/home-banners, xem src/lib/banner-link.ts).
+    if (ctaHref.trim() && !isValidCtaHref(ctaHref)) {
+      setError('Link đích không hợp lệ — phải bắt đầu bằng "/" (nội bộ) hoặc "http(s)://" (bên ngoài).');
+      return;
+    }
+    setSaving(true);
+    const payload = { title: title.trim(), description: description.trim(), ctaHref: ctaHref.trim() };
     const res = row
       ? await fetch(`/api/admin/home-banners/${row.id}`, {
           method: "PATCH",
@@ -516,6 +525,19 @@ function SmallBannerEditor({
               setDescription(e.target.value);
             }}
             maxLength={60}
+          />
+        </Field>
+        <Field
+          label="Link đích (tuỳ chọn)"
+          hint='Để trống = chỉ trang trí, không bấm được. Nội bộ: "/danh-muc/gmail". Bên ngoài: "https://...", tự mở tab mới.'
+        >
+          <TextInput
+            value={ctaHref}
+            onChange={(e) => {
+              dirtyRef.current = true;
+              setCtaHref(e.target.value);
+            }}
+            maxLength={200}
           />
         </Field>
         <div>

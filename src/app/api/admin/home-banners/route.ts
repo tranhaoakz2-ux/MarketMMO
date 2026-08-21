@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { logAdminAction } from "@/lib/audit";
+import { isValidCtaHref } from "@/lib/banner-link";
 
 const VALID_SLOTS = ["LARGE", "SMALL_1", "SMALL_2"];
 
@@ -59,6 +60,17 @@ export async function POST(req: Request) {
     typeof body?.description === "string" && body.description.trim() ? body.description.trim() : null;
   const ctaLabel = typeof body?.ctaLabel === "string" && body.ctaLabel.trim() ? body.ctaLabel.trim() : null;
   const ctaHref = typeof body?.ctaHref === "string" && body.ctaHref.trim() ? body.ctaHref.trim() : null;
+
+  // Banner NHỎ (SMALL_1/SMALL_2) render cả thẻ thành href công khai cho MỌI
+  // khách trang chủ — chặn cứng định dạng sai/nguy hiểm (javascript:, data:...).
+  // Banner LỚN giữ nguyên hành vi cũ 100% (không validate) — không đổi gì ở
+  // luồng đang chạy đúng.
+  if (slot !== "LARGE" && ctaHref && !isValidCtaHref(ctaHref)) {
+    return NextResponse.json(
+      { error: "Link đích không hợp lệ — phải bắt đầu bằng \"/\" (nội bộ) hoặc \"http(s)://\" (bên ngoài)." },
+      { status: 400 }
+    );
+  }
 
   const banner = await prisma.homeBanner.create({
     data: { slot, sortOrder, imageUrl, title, description, ctaLabel, ctaHref },

@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, ShieldCheck, Zap } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { isExternalHref } from "@/lib/banner-link";
 import type { HomeBannerSlide } from "@/lib/home-banners";
 
 const ROTATE_INTERVAL_MS = 5000;
@@ -222,19 +223,39 @@ function SmallBannerCard({
     </div>
   );
 
+  // Có link (admin đặt qua ctaHref) thì thêm hiệu ứng hover gợi ý bấm được —
+  // KHÔNG đổi gì khi không có link (giữ nguyên trang trí tĩnh như trước).
   const baseClass = `relative h-28 overflow-hidden rounded-2xl sm:h-36 lg:h-auto lg:flex-1 ${
     variant === "light" ? "border-2 border-brand bg-surface" : "bg-ink"
-  }`;
+  } ${slide.ctaHref ? "transition hover:-translate-y-0.5 hover:shadow-md" : ""}`;
 
-  if (slide.imageUrl) {
+  const inner = slide.imageUrl ? (
+    <>
+      <Image src={slide.imageUrl} alt={slide.title} fill sizes="33vw" className="object-cover" />
+      <div className={`absolute inset-0 ${variant === "light" ? "bg-white/70" : "bg-ink/70"}`} />
+      <div className="relative h-full">{content}</div>
+    </>
+  ) : (
+    content
+  );
+
+  // Rỗng = trang trí tĩnh y hệt trước đây (KHÔNG bấm được) — chỉ khi admin
+  // đặt ctaHref mới bọc thành link. Ngoài sàn (isExternalHref) mở tab mới +
+  // rel="noopener noreferrer" (an toàn, không cần hộp thoại xác nhận — link
+  // chỉ do admin đặt).
+  if (!slide.ctaHref) {
+    return <div className={baseClass}>{inner}</div>;
+  }
+  if (isExternalHref(slide.ctaHref)) {
     return (
-      <div className={baseClass}>
-        <Image src={slide.imageUrl} alt={slide.title} fill sizes="33vw" className="object-cover" />
-        <div className={`absolute inset-0 ${variant === "light" ? "bg-white/70" : "bg-ink/70"}`} />
-        <div className="relative h-full">{content}</div>
-      </div>
+      <a href={slide.ctaHref} target="_blank" rel="noopener noreferrer" className={baseClass}>
+        {inner}
+      </a>
     );
   }
-
-  return <div className={baseClass}>{content}</div>;
+  return (
+    <Link href={slide.ctaHref} className={baseClass}>
+      {inner}
+    </Link>
+  );
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { logAdminAction } from "@/lib/audit";
+import { isValidCtaHref } from "@/lib/banner-link";
 
 // PATCH — sửa ảnh/tiêu đề/mô tả/CTA/ẩn-hiện/thứ tự của 1 banner. Chỉ update
 // field nào có mặt trong body (giữ nguyên field khác) — cùng quy ước với
@@ -34,6 +35,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     sortOrder?: number;
     isActive?: boolean;
   } = {};
+
+  // Banner NHỎ (SMALL_1/SMALL_2) render cả thẻ thành href công khai cho MỌI
+  // khách trang chủ — chặn cứng định dạng sai/nguy hiểm (javascript:, data:...).
+  // Banner LỚN (existing.slot==="LARGE") giữ nguyên hành vi cũ 100% — không
+  // validate, không đổi gì ở luồng đang chạy đúng.
+  if (
+    existing.slot !== "LARGE" &&
+    typeof body.ctaHref === "string" &&
+    body.ctaHref.trim() &&
+    !isValidCtaHref(body.ctaHref)
+  ) {
+    return NextResponse.json(
+      { error: "Link đích không hợp lệ — phải bắt đầu bằng \"/\" (nội bộ) hoặc \"http(s)://\" (bên ngoài)." },
+      { status: 400 }
+    );
+  }
 
   for (const key of ["imageUrl", "title", "description", "ctaLabel", "ctaHref"] as const) {
     if (typeof body[key] === "string") {
