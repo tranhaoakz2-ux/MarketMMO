@@ -688,7 +688,7 @@ export default function AddProductForm({
                 : "border-border-c bg-surface text-foreground hover:border-brand-dark"
             }`}
           >
-            Máy chủ (VPS)
+            Máy Chủ (VPS/Server)
             <span className="mt-0.5 block text-[10px] font-semibold opacity-80">
               Bạn tự nhập thông tin đăng nhập cho từng đơn sau khi buyer thanh toán
             </span>
