@@ -426,6 +426,29 @@ export default function AddProductForm({
         return;
       }
     }
+    // Chặn đăng khi kho rỗng (chống seller đăng "kho số đếm không nội dung"
+    // lấy tiền buyer) — CHỈ áp cho Sản phẩm giao tự động từ kho. KHÔNG áp
+    // cho TOOL (hợp lệ khi giao thuần qua link tải, không cần kho),
+    // SERVICE/TUT-Trick (không có khái niệm kho), VPS thủ công (kho trống là
+    // HỢP LỆ — đó chính là ý seller chọn giao tay). Chỉ báo sớm ở đây — chốt
+    // chặn THẬT nằm ở server lúc admin duyệt (không thể chặn sớm hơn vì kho
+    // được gửi lên ở bước SAU, tách rời lệnh tạo sản phẩm).
+    if (productType === "PRODUCT" && deliveryMethod === "AUTO_STOCK") {
+      if (variants.length === 0) {
+        if (!baseStockItems.trim()) {
+          setError('Chưa có dữ liệu kho — thêm ít nhất 1 sản phẩm vào ô "Kho dữ liệu giao hàng thật" trước khi đăng.');
+          return;
+        }
+      } else {
+        const emptyVariant = variants.find((v) => !v.stockItems.trim());
+        if (emptyVariant) {
+          setError(
+            `Phiên bản "${emptyVariant.label || "(chưa đặt tên)"}" chưa có dữ liệu kho — thêm ít nhất 1 sản phẩm vào kho trước khi đăng.`
+          );
+          return;
+        }
+      }
+    }
     if (productType === "SERVICE") {
       if (serviceDeliveryMethods.length === 0) {
         setError("Vui lòng chọn ít nhất 1 phương thức bàn giao cho dịch vụ.");

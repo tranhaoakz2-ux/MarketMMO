@@ -1,11 +1,12 @@
 "use client";
 
-import { Database, Flame, Layers, LogIn, Package, Plus, Store, Trash2, X } from "lucide-react";
+import { Database, Flame, Layers, LogIn, Package, PackageX, Plus, Store, Trash2, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatVnd } from "@/lib/format";
 import { PRODUCT_MAX_VARIANTS, PRODUCT_STATUS_LABEL, type ProductStatus } from "@/lib/constants";
+import { isOutOfStock } from "@/lib/stock-status";
 import type { Product } from "@/data/products";
 import MegaSaleBadge from "@/components/MegaSaleBadge";
 import MegaSaleModal from "@/components/MegaSaleModal";
@@ -489,6 +490,12 @@ export default function ProductVariantManager() {
       p.name.toLowerCase().includes(q.toLowerCase())
   );
   const rejectedWithNote = filtered.filter((p) => p.status === "REJECTED" && p.adminNote);
+  // Hết hàng — tính LIVE từ chính `products` đã fetch (không lọc theo
+  // statusFilter/tìm kiếm hiện tại, luôn hiện đủ để seller không bỏ sót) qua
+  // isOutOfStock() DÙNG CHUNG với badge buyer thấy (ProductCard.tsx/
+  // CategoryProductCard.tsx) — chỉ cảnh báo sản phẩm ĐÃ DUYỆT (PENDING/
+  // REJECTED chưa/không còn hiện công khai, "hết hàng" không có ý nghĩa gì).
+  const outOfStockProducts = products.filter((p) => p.status === "APPROVED" && isOutOfStock(p));
   const active = products.find((p) => p.id === activeId) ?? null;
   const megaSaleProduct = products.find((p) => p.id === megaSaleId) ?? null;
 
@@ -607,6 +614,35 @@ export default function ProductVariantManager() {
         <p className="py-4 text-center text-sm text-muted">Đang tải...</p>
       ) : (
         <>
+          {/* Cảnh báo hết hàng — tính live qua isOutOfStock(), tự ẩn ngay khi
+              seller bơm kho lại (không cache/không cột trạng thái riêng).
+              Đặt TRƯỚC bảng, KHÔNG che FilterBar/nút "Đăng sản phẩm mới" ở
+              trên — chỉ 1 khối cảnh báo gọn, không phải modal chặn thao tác. */}
+          {outOfStockProducts.length > 0 && (
+            <div className="mb-3 flex flex-col gap-2 rounded-lg border border-orange-500/30 bg-orange-500/5 p-3">
+              <p className="flex items-center gap-1.5 text-xs font-bold text-orange-600">
+                <PackageX className="h-3.5 w-3.5 shrink-0" />
+                {outOfStockProducts.length} sản phẩm đang hết hàng — buyer không mua được, bơm thêm
+                kho để mở bán lại:
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {outOfStockProducts.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setActiveId(p.id)}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-orange-500/20 bg-surface px-2.5 py-1.5 text-left text-xs font-semibold text-foreground transition hover:border-orange-500/50 hover:text-orange-600"
+                  >
+                    <span className="min-w-0 truncate">{p.name}</span>
+                    <span className="shrink-0 flex items-center gap-1 text-[11px] font-bold text-orange-600">
+                      <Database className="h-3 w-3" /> Bơm kho ngay
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {rejectedWithNote.length > 0 && (
             <div className="mb-3 flex flex-col gap-2">
               {rejectedWithNote.map((p) => (

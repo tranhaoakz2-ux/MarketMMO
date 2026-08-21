@@ -1,9 +1,10 @@
-import { BadgeCheck, Crown, ShieldCheck, Star } from "lucide-react";
+import { BadgeCheck, Crown, PackageX, ShieldCheck, Star } from "lucide-react";
 import Link from "next/link";
 import MegaSaleLogo from "@/components/MegaSaleLogo";
 import ProductThumbnail from "@/components/ProductThumbnail";
 import type { Product } from "@/data/products";
 import { formatVnd } from "@/lib/format";
+import { isOutOfStock } from "@/lib/stock-status";
 
 // Đồng bộ với phân loại "Dịch vụ" ở CategoryTabs.tsx/Header.tsx: schema chưa
 // tách bảng dịch vụ khỏi sản phẩm, nên coi 3 category liên quan tới cày
@@ -13,13 +14,19 @@ const serviceCategorySlugs = new Set(["boosting", "chatgpt", "youtube"]);
 export default function CategoryProductCard({ product }: { product: Product }) {
   const typeLabel = serviceCategorySlugs.has(product.categorySlug) ? "Dịch vụ" : "Sản phẩm";
   const filledStars = product.rating !== null ? Math.round(product.rating) : 0;
+  const outOfStock = isOutOfStock(product);
 
   return (
     <Link
       href={`/san-pham/${product.slug}`}
       className="group relative flex flex-col rounded-lg border-2 border-transparent bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand hover:shadow-[0_12px_28px_rgba(224,196,0,0.25),0_4px_10px_rgba(0,0,0,0.05)]"
     >
-      {product.megaSale?.active && (
+      {outOfStock && (
+        <span className="absolute -right-2.5 -top-2.5 z-10 flex items-center gap-1 rounded-full bg-ink px-2.5 py-1 text-[10px] font-black text-white shadow">
+          <PackageX className="h-3 w-3" /> HẾT HÀNG
+        </span>
+      )}
+      {product.megaSale?.active && !outOfStock && (
         <span className="absolute -right-2.5 -top-2.5 z-10">
           <MegaSaleLogo size={64} className="h-12 w-12 sm:h-16 sm:w-16" />
         </span>
@@ -44,7 +51,9 @@ export default function CategoryProductCard({ product }: { product: Product }) {
             )}
           </div>
           <div className="min-w-0 text-left sm:mt-2 sm:w-full sm:text-center">
-            <p className="text-sm font-bold text-success">Tồn kho: {product.stock}</p>
+            <p className={`text-sm font-bold ${outOfStock ? "text-danger" : "text-success"}`}>
+              Tồn kho: {product.stock}
+            </p>
             {product.megaSale?.active ? (
               <>
                 <p className="mt-1 text-xs text-muted line-through">

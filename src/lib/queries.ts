@@ -10,6 +10,7 @@ import {
 } from "@/lib/constants";
 import { computeEffectivePrice, type MegaSaleFields } from "@/lib/mega-sale";
 import type { ListingSortKey } from "@/lib/product-listing-sort";
+import { isOutOfStock } from "@/lib/stock-status";
 import { getAuctionSetting, findCurrentWeekSession } from "@/lib/auction";
 import { getAuctionWindowFor, isWithinAuctionWindow } from "@/lib/auction-schedule";
 
@@ -1372,6 +1373,28 @@ export async function getSellerAttentionCounts(sellerId: string) {
   }
 
   return { pendingProducts, openDisputes, lowStock };
+}
+
+// Đếm sản phẩm ĐÃ DUYỆT của seller đang "hết hàng" — dùng CHUNG isOutOfStock()
+// (src/lib/stock-status.ts) với badge buyer thấy ở ProductCard/CategoryProductCard,
+// để khớp tuyệt đối "seller thấy X sản phẩm hết hàng" với "buyer thấy đúng X
+// sản phẩm có nhãn HẾT HÀNG". Chỉ select tối thiểu (không dùng
+// getMySellerProducts() — nặng hơn nhiều, không cần thiết chỉ để đếm badge
+// sidebar, hàm đó gọi trên MỌI trang trong /trang-ban-hang qua layout.tsx).
+// Chỉ tính status="APPROVED" — sản phẩm PENDING/REJECTED chưa/không còn hiện
+// công khai, "hết hàng" không có ý nghĩa cảnh báo gì với chúng.
+export async function getSellerOutOfStockCount(sellerId: string): Promise<number> {
+  const products = await prisma.product.findMany({
+    where: { sellerId, status: "APPROVED" },
+    select: {
+      stock: true,
+      productType: true,
+      deliveryMethod: true,
+      preOrder: true,
+      variants: { select: { stock: true } },
+    },
+  });
+  return products.filter(isOutOfStock).length;
 }
 
 // Snapshot gian hàng cho card "Gian hàng của bạn" — rating tính động giống

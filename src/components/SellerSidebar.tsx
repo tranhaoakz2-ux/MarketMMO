@@ -50,12 +50,18 @@ export default function SellerSidebar({
   verified,
   insuranceBalance,
   insuranceFundTarget,
+  outOfStockCount,
 }: {
   shopName: string;
   avatarUrl?: string | null;
   verified: boolean;
   insuranceBalance: number;
   insuranceFundTarget: number;
+  // Số sản phẩm ĐÃ DUYỆT đang hết hàng (isOutOfStock(), xem
+  // getSellerOutOfStockCount() trong src/lib/queries.ts) — hiện badge cạnh
+  // "Sản Phẩm" khi >0, tự biến mất khi seller bơm kho lại (tính live, không
+  // cache).
+  outOfStockCount: number;
 }) {
   const pathname = usePathname();
 
@@ -97,6 +103,7 @@ export default function SellerSidebar({
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
+            const badgeCount = item.href === "/trang-ban-hang/san-pham" ? outOfStockCount : 0;
             return (
               <Link
                 key={item.href}
@@ -108,7 +115,17 @@ export default function SellerSidebar({
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                {item.label}
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                {badgeCount > 0 && (
+                  <span
+                    title={`${badgeCount} sản phẩm đang hết hàng`}
+                    className={`shrink-0 rounded-full px-1.5 py-px text-[10.5px] font-extrabold tabular-nums ${
+                      active ? "bg-ink/15 text-ink" : "bg-danger/15 text-danger"
+                    }`}
+                  >
+                    {badgeCount}
+                  </span>
+                )}
               </Link>
             );
           })}

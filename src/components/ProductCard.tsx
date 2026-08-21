@@ -1,19 +1,26 @@
-import { BadgeCheck, Clock, Eye, Flame, PackageCheck, RotateCcw, ShieldCheck, Star } from "lucide-react";
+import { BadgeCheck, Clock, Eye, Flame, PackageCheck, PackageX, RotateCcw, ShieldCheck, Star } from "lucide-react";
 import Link from "next/link";
 import MegaSaleLogo from "@/components/MegaSaleLogo";
 import ProductThumbnail from "@/components/ProductThumbnail";
 import SellerAvatar from "@/components/SellerAvatar";
 import type { Product } from "@/data/products";
 import { formatVnd } from "@/lib/format";
+import { isOutOfStock } from "@/lib/stock-status";
 import { formatProductWarranty } from "@/lib/warranty";
 
 export default function ProductCard({ product }: { product: Product }) {
+  const outOfStock = isOutOfStock(product);
   return (
     <Link
       href={`/san-pham/${product.slug}`}
       className="group relative flex flex-col rounded-lg border-2 border-brand bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-dark hover:shadow-[0_12px_28px_rgba(224,196,0,0.35),0_4px_10px_rgba(0,0,0,0.05)]"
     >
-      {product.megaSale?.active && (
+      {outOfStock && (
+        <span className="absolute -right-2.5 -top-2.5 z-10 flex items-center gap-1 rounded-full bg-ink px-2.5 py-1 text-[10px] font-black text-white shadow">
+          <PackageX className="h-3 w-3" /> HẾT HÀNG
+        </span>
+      )}
+      {product.megaSale?.active && !outOfStock && (
         <span className="absolute -right-2.5 -top-2.5 z-10">
           <MegaSaleLogo size={52} className="h-11 w-11 sm:h-[52px] sm:w-[52px]" />
         </span>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getAuthSession, getSellerForUser } from "@/lib/authz";
+import { getSellerOutOfStockCount } from "@/lib/queries";
 import { getInsuranceFundTarget } from "@/lib/site-config";
 import { PRIVATE_ROBOTS } from "@/lib/seo";
 import Header from "@/components/Header";
@@ -28,6 +29,7 @@ export default async function SellerDashboardLayout({
   if (!seller) redirect("/tro-thanh-nguoi-ban");
 
   const insuranceFundTarget = await getInsuranceFundTarget();
+  const outOfStockCount = await getSellerOutOfStockCount(seller.id);
 
   return (
     <>
@@ -49,6 +51,7 @@ export default async function SellerDashboardLayout({
                 verified={seller.verified}
                 insuranceBalance={seller.insuranceBalance}
                 insuranceFundTarget={insuranceFundTarget}
+                outOfStockCount={outOfStockCount}
               />
               <div className="min-w-0 flex-1">{children}</div>
             </div>

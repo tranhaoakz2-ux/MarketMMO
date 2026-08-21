@@ -7,6 +7,7 @@ import { feeAmountOf, getEffectiveFeePercent } from "@/lib/platform-fee";
 import { computeDiscountAmount, distributeDiscount, isDiscountCodeUsable } from "@/lib/discount";
 import { computeEffectivePrice } from "@/lib/mega-sale";
 import { generateOrderCode, ORDER_CODE_MAX_RETRIES } from "@/lib/order-code";
+import { notifySellerOutOfStock } from "@/lib/notify-seller";
 import { logOrderStatusChange } from "@/lib/order-status-history";
 import { computeProratedPrice } from "@/lib/prorate";
 import { encryptSensitiveFields } from "@/lib/service-crypto";
@@ -53,6 +54,11 @@ export async function POST(req: Request) {
   // tại chỗ" như ensureReferralCode() (hàm đó không nằm trong transaction).
   for (let attempt = 0; attempt < ORDER_CODE_MAX_RETRIES; attempt++) {
     const orderCode = generateOrderCode();
+    // Gom lại trong lúc chạy transaction, gửi Telegram THẬT sau khi commit
+    // thành công (xem lý do ở chỗ push bên dưới) — khai báo NGOÀI transaction
+    // để không mất dữ liệu nếu transaction phải retry (đổi orderCode) do
+    // trùng mã, đảm bảo mỗi lần thử lại bắt đầu từ mảng rỗng.
+    const outOfStockNotifications: { sellerId: string; productName: string }[] = [];
     try {
       const order = await prisma.$transaction(async (tx) => {
       const products = await tx.product.findMany({
@@ -638,6 +644,7 @@ export async function POST(req: Request) {
         // buyer mua song song đơn vị cuối (bug B3) — updateMany trả count=0
         // nếu không đủ → throw, rollback cả transaction. Dòng đã claim kho
         // thật hoặc preOrder thì trừ vô điều kiện như cũ (đã nguyên tử/cho âm).
+        let stockAfterDecrement: number | null = null;
         if (item.variantId) {
           if (item.guardLegacyStock) {
             const dec = await tx.productVariant.updateMany({
@@ -653,6 +660,9 @@ export async function POST(req: Request) {
               data: { stock: { decrement: item.quantity }, sold: { increment: item.quantity } },
             });
           }
+          stockAfterDecrement = (
+            await tx.productVariant.findUnique({ where: { id: item.variantId }, select: { stock: true } })
+          )?.stock ?? null;
         } else {
           if (item.guardLegacyStock) {
             const dec = await tx.product.updateMany({
@@ -668,6 +678,33 @@ export async function POST(req: Request) {
               data: { stock: { decrement: item.quantity }, sold: { increment: item.quantity } },
             });
           }
+          stockAfterDecrement = (
+            await tx.product.findUnique({ where: { id: item.productId }, select: { stock: true } })
+          )?.stock ?? null;
+        }
+
+        // Báo seller khi kho VỪA chạm 0 (Quy tắc "hết hàng") — CHỈ cho dòng
+        // hàng mà stock thật sự là tín hiệu tồn kho (loại trừ preOrder/dịch
+        // vụ/VPS-thủ-công, giống hệt điều kiện isOutOfStock() dùng ở UI, xem
+        // src/lib/stock-status.ts). "Vừa chạm 0" = stockAfterDecrement<=0 VÀ
+        // trước lần trừ này còn dương (stockAfterDecrement + quantity > 0) —
+        // tránh gửi lặp lại ở mọi đơn mua sau khi đã về 0/âm từ trước.
+        const eligibleForOutOfStockNotify =
+          !item.isPreOrder &&
+          !item.isManualProvision &&
+          !item.serviceIntakeData &&
+          (item.guardLegacyStock || item.claimedStockItemIds.length > 0);
+        if (
+          eligibleForOutOfStockNotify &&
+          stockAfterDecrement !== null &&
+          stockAfterDecrement <= 0 &&
+          stockAfterDecrement + item.quantity > 0
+        ) {
+          // Chỉ GOM lại ở đây (không gọi Telegram ngay) — gọi network I/O
+          // bên trong transaction DB là rủi ro (giữ connection lâu/không đảm
+          // bảo chạy xong nếu transaction rollback). Gửi thật SAU KHI
+          // transaction commit thành công, xem dưới cuối hàm.
+          outOfStockNotifications.push({ sellerId: item.sellerId, productName: item.productName });
         }
       }
 
@@ -715,6 +752,19 @@ export async function POST(req: Request) {
 
       return createdOrder;
       });
+
+      // Gửi thông báo "hết hàng" cho seller SAU KHI đơn đã tạo thành công —
+      // best-effort, KHÔNG được để lỗi gửi Telegram làm fail response
+      // checkout (buyer đã trả tiền thành công, đơn đã tạo xong).
+      for (const n of outOfStockNotifications) {
+        const seller = await prisma.seller.findUnique({
+          where: { id: n.sellerId },
+          select: { telegramChatId: true, telegramLinkCode: true },
+        });
+        if (seller) {
+          await notifySellerOutOfStock(seller, n.productName).catch(() => {});
+        }
+      }
 
       return NextResponse.json({ orderId: order.id, orderCode: order.orderCode });
     } catch (err) {

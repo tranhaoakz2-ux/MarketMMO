@@ -9,6 +9,7 @@ import MegaSaleBadge from "@/components/MegaSaleBadge";
 import { useCart } from "@/context/CartContext";
 import type { Product } from "@/data/products";
 import { formatVnd } from "@/lib/format";
+import { isOutOfStock } from "@/lib/stock-status";
 
 const MAX_QTY_CAP = 50;
 
@@ -40,7 +41,12 @@ export default function BuyBox({ product }: { product: Product }) {
   const effectiveStock = selectedVariant ? selectedVariant.stock : product.stock;
   const hasTimedStock = selectedVariant ? selectedVariant.hasTimedStock : product.hasTimedStock;
   const maxQty = Math.max(1, Math.min(effectiveStock, MAX_QTY_CAP));
-  const canBuy = !hasVariants || (selectedVariant !== null && effectiveStock > 0);
+  // BUG ĐÃ VÁ: trước đây `canBuy = !hasVariants || (...)` — sản phẩm KHÔNG
+  // có variant luôn `canBuy=true` bất kể product.stock, kể cả 0 (chỉ server
+  // mới chặn được ở bước checkout). Giờ dùng isOutOfStock() dùng chung với
+  // ProductCard.tsx — tự loại trừ đúng SERVICE/TUT_TRICK/VPS-thủ-công/
+  // preOrder (những loại KHÔNG dùng stock để giới hạn mua).
+  const canBuy = hasVariants ? selectedVariant !== null && effectiveStock > 0 : !isOutOfStock(product);
 
   const handleAddToCart = () => {
     addItem(
