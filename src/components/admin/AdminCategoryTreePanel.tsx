@@ -251,6 +251,12 @@ export default function AdminCategoryTreePanel() {
   function renderNode(node: TreeNode, depth: number) {
     const isCollapsed = collapsed.has(node.id);
     const hasChildren = node.children.length > 0;
+    // Cấp gốc (parentId=null, depth=0) LUÔN hiển thị như 1 nhóm cha — dù
+    // hiện tại 0 con hay chưa (seller/admin có thể thêm con bất cứ lúc nào).
+    // Cấp con thật sự (depth>0) vẫn giữ nguyên quy tắc cũ: có con mới hiện
+    // như nhóm, không thì hiện như lá (khớp đúng ý nghĩa "sản phẩm chỉ gán
+    // vào category lá" — con của Nguyên Liệu như Gmail vẫn phải là lá).
+    const showAsGroup = depth === 0 || hasChildren;
     // Vị trí trong đúng nhóm anh em (cùng parentId) — quyết định ẩn/vô hiệu
     // nút lên/xuống ở 2 đầu danh sách. KHÔNG dùng node.children (đó là con
     // CỦA node này, không phải anh em của node).
@@ -264,7 +270,7 @@ export default function AdminCategoryTreePanel() {
           className="flex flex-wrap items-center gap-2 border-b border-[var(--adm-border)] py-2.5 last:border-0"
           style={depth > 0 ? { paddingLeft: depth * 22 } : undefined}
         >
-          {hasChildren ? (
+          {showAsGroup ? (
             <button
               type="button"
               onClick={() => toggleCollapse(node.id)}
@@ -276,7 +282,7 @@ export default function AdminCategoryTreePanel() {
             <span className="w-4 shrink-0" />
           )}
           <span className="min-w-0 flex-1">
-            <span className={`text-sm ${hasChildren ? "font-black" : "font-semibold"} text-[var(--adm-text)]`}>
+            <span className={`text-sm ${showAsGroup ? "font-black" : "font-semibold"} text-[var(--adm-text)]`}>
               {node.name}
             </span>
             <span className="ml-2 text-[11px] text-[var(--adm-muted)]">/{node.slug}</span>
@@ -347,7 +353,18 @@ export default function AdminCategoryTreePanel() {
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {rowError.message}
           </p>
         )}
-        {hasChildren && !isCollapsed && node.children.map((child) => renderNode(child, depth + 1))}
+        {showAsGroup && !isCollapsed && (
+          hasChildren ? (
+            node.children.map((child) => renderNode(child, depth + 1))
+          ) : (
+            <p
+              className="border-b border-[var(--adm-border)] py-2.5 text-xs text-[var(--adm-muted)] last:border-0"
+              style={{ paddingLeft: (depth + 1) * 22 + 24 }}
+            >
+              Chưa có danh mục con.
+            </p>
+          )
+        )}
       </div>
     );
   }
