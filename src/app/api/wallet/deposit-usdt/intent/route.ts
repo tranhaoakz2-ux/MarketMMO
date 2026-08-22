@@ -8,7 +8,7 @@ import {
 } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { getUsdtInfo } from "@/lib/payment/deposit";
-import { getLiveUsdtVndRate } from "@/lib/payment/exchange-rate";
+import { getUsdtDepositRate } from "@/lib/payment/exchange-rate";
 import { rateLimit } from "@/lib/rate-limit";
 
 const USDT_DECIMALS_FACTOR = BigInt(1_000_000);
@@ -62,10 +62,13 @@ export async function POST(req: Request) {
     );
   }
 
+  // Tỷ giá NẠP đã áp biên sàn (spread) — CÙNG hàm với chỗ hiển thị ước tính
+  // trên /nap-tien (src/app/nap-tien/page.tsx), không tách nguồn riêng để
+  // tránh lệch số như tỷ giá hiển thị/tính tiền trước đây.
   let rate: number;
   let source: "coingecko" | "fallback";
   try {
-    ({ rate, source } = await getLiveUsdtVndRate());
+    ({ rate, baseSource: source } = await getUsdtDepositRate());
   } catch (err) {
     const message = err instanceof Error ? err.message : "Không lấy được tỷ giá USDT/VNĐ lúc này.";
     return NextResponse.json({ error: message }, { status: 503 });

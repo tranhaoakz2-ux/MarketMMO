@@ -115,7 +115,12 @@ export default function AdminPaymentConfigPanel() {
   }
 
   const vnpayKeys: PaymentConfigKey[] = ["vnpay_tmn_code", "vnpay_hash_secret"];
-  const usdtKeys: PaymentConfigKey[] = ["usdt_trc20_address", "usdt_vnd_rate"];
+  const usdtKeys: PaymentConfigKey[] = [
+    "usdt_trc20_address",
+    "usdt_vnd_rate",
+    "usdt_deposit_margin_percent",
+    "usdt_withdraw_margin_percent",
+  ];
   const bankKeys: PaymentConfigKey[] = ["bank_name", "bank_account_number", "bank_account_holder", "bank_bin"];
   const sepayKeys: PaymentConfigKey[] = ["sepay_webhook_secret", "sepay_api_key"];
 
@@ -200,14 +205,12 @@ export default function AdminPaymentConfigPanel() {
           aside={
             <SourceTag
               source={
-                config.usdt_trc20_address.source === "db" || config.usdt_vnd_rate.source === "db"
-                  ? "db"
-                  : config.usdt_trc20_address.source
+                usdtKeys.some((k) => config[k].source === "db") ? "db" : config.usdt_trc20_address.source
               }
             />
           }
         >
-          USDT TRC20 (nạp tiền)
+          USDT TRC20 (nạp/rút tiền)
         </SectionTitle>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Địa chỉ ví TRC20">
@@ -217,13 +220,35 @@ export default function AdminPaymentConfigPanel() {
               placeholder="Chưa cấu hình"
             />
           </Field>
-          <Field label="Tỷ giá VNĐ / 1 USDT" hint="Cập nhật theo thị trường">
+          <Field label="Tỷ giá dự phòng VNĐ / 1 USDT" hint="Chỉ dùng khi CoinGecko lỗi/timeout — bình thường hệ thống lấy giá live">
             <TextInput
               type="number"
               min="1"
               value={values.usdt_vnd_rate ?? ""}
               onChange={(e) => setField("usdt_vnd_rate", e.target.value)}
               placeholder="Chưa cấu hình"
+            />
+          </Field>
+          <Field label="Biên khi NẠP (%)" hint="Buyer nạp USDT nhận tỷ giá THẤP hơn giá live theo % này — mặc định 4%">
+            <TextInput
+              type="number"
+              min="0"
+              max="99.99"
+              step="0.1"
+              value={values.usdt_deposit_margin_percent ?? ""}
+              onChange={(e) => setField("usdt_deposit_margin_percent", e.target.value)}
+              placeholder="Mặc định 4"
+            />
+          </Field>
+          <Field label="Biên khi RÚT (%)" hint="Seller rút USDT nhận tỷ giá CAO hơn giá live theo % này — mặc định 4%">
+            <TextInput
+              type="number"
+              min="0"
+              max="99.99"
+              step="0.1"
+              value={values.usdt_withdraw_margin_percent ?? ""}
+              onChange={(e) => setField("usdt_withdraw_margin_percent", e.target.value)}
+              placeholder="Mặc định 4"
             />
           </Field>
         </div>

@@ -375,9 +375,15 @@ tiền, `updateMany` gate `walletBalance>=amount`), không phải khoá mềm.
   buộc `bankName`/`accountNumber`/`accountHolder` → gộp JSON vào
   `WalletTransaction.recipientInfo`.
 - **USDT TRC20** (`method:"usdt_trc20"`): `amount >= MIN_USDT_WITHDRAW_AMOUNT`
-  (300.000đ), validate địa chỉ TRC20. Tỷ giá lấy server-side
-  (`getLiveUsdtVndRate()`, CoinGecko + fallback) và **khoá tại thời điểm tạo
-  yêu cầu** (không tính lại lúc admin duyệt).
+  (300.000đ), validate địa chỉ TRC20. Tỷ giá lấy server-side qua
+  `getUsdtWithdrawRate()` (`src/lib/payment/exchange-rate.ts`) — giá live
+  CoinGecko (hoặc fallback `usdt_vnd_rate` nếu CoinGecko lỗi) **đã áp thêm
+  biên sàn** `usdt_withdraw_margin_percent` (PaymentConfig, mặc định 4%,
+  seller nhận ÍT USDT hơn giá live) rồi mới **khoá tại thời điểm tạo yêu
+  cầu** (không tính lại lúc admin duyệt). Chiều nạp dùng hàm song song
+  `getUsdtDepositRate()` với `usdt_deposit_margin_percent` (buyer phải gửi
+  NHIỀU USDT hơn giá live) — 2 hàm này là nguồn DUY NHẤT cho cả chỗ tính
+  tiền lẫn chỗ hiển thị ước tính ở mỗi chiều, tránh lệch số.
 
 **Admin duyệt** (`POST /api/admin/withdrawals/[id]`): `approve` chỉ đổi
 trạng thái (tiền đã trừ từ lúc tạo, không đụng ví lần 2); `reject` hoàn lại
@@ -448,7 +454,30 @@ tiên hơn `.env`**, thiếu cả 2 thì tính năng tự ẩn/disable.
 |---|---|---|
 | **VNPay** | Create → redirect có chữ ký HMAC-SHA512 → Return URL (hiển thị cho user) + **IPN** (nguồn chân lý thật để cộng ví, server-to-server, có retry) | Khung code đầy đủ, đã sửa bug encode chữ ký (`application/x-www-form-urlencoded`: space→`+`) — **chưa hoạt động**, thiếu `VNPAY_TMN_CODE`/`VNPAY_HASH_SECRET` thật |
 | **SePay webhook** (`POST /api/webhook/sepay`) | Webhook báo biến động số dư ngân hàng real-time. Xác thực: HMAC-SHA256 trên raw body (`x-sepay-signature`) HOẶC API Key — `timingSafeEqual`, fail-closed 503 nếu thiếu cả 2 secret. Khớp mã "NAP..." trong nội dung CK với `WalletTransaction.note` (14 ngày gần nhất) → tự CONFIRMED. Không khớp → lưu `SepayUnmatchedTransaction` cho admin gán tay. | **Chưa hoạt động** — `SEPAY_WEBHOOK_SECRET`/`SEPAY_API_KEY` rỗng, route đang fail-closed |
-| **USDT TRC20** (`POST /api/wallet/deposit-usdt/intent` + `POST /api/wallet/deposit-usdt`) | **2 bước** (đổi 2026-08-19, vá lỗ hổng front-run TxID — xem `LAUNCH_AUDIT.md` local): (1) buyer đặt trước 1 `UsdtDepositIntent` — nhập VNĐ muốn nạp, server cấp 1 số USDT ĐỊNH DANH RIÊNG (phần nguyên ≈ quy đổi, 6 số thập phân cuối random duy nhất trong các intent đang PENDING), hạn 45 phút; (2) buyer chuyển ĐÚNG số đó rồi dán TxID — server xác minh on-chain thật qua TronGrid (`gettransactioninfobyid`, kiểm `receipt.result==="SUCCESS"`, quét event log `Transfer` đúng contract + đúng ví sàn, đọc số tiền từ log không tin calldata) rồi **khớp số USDT thực nhận với đúng 1 intent PENDING** — cộng ví **chủ intent**, KHÔNG PHỤ THUỘC ai gọi API xác nhận (trước đây cộng thẳng cho người gọi, bị lợi dụng "cướp" TxID công khai trên Tronscan). Không khớp intent nào → không cộng cho ai, rơi về PENDING cho admin đối chiếu tay. Chống trùng bằng **unique index** trên `gatewayRef` + gate nguyên tử trên intent (`PENDING→MATCHED`). | **Sẵn sàng hoạt động ngay khi có `usdt_trc20_address` thật** — không phụ thuộc secret bên thứ 3 (TronGrid public endpoint) |
+| **USDT TRC20** (`POST /api/wallet/deposit-usdt/intent` + `POST /api/wallet/deposit-usdt`) | **2 bước** (đổi 2026-08-19, vá lỗ hổng front-run TxID — xem `LAUNCH_AUDIT.md` local): (1) buyer đặt trước 1 `UsdtDepositIntent` — nhập VNĐ muốn nạp, server cấp 1 số USDT ĐỊNH DANH RIÊNG tính theo `getUsdtDepositRate()` (giá live CoinGecko/fallback **đã áp biên sàn** `usdt_deposit_margin_percent`, mặc định 4% — xem §11b, phần nguyên ≈ quy đổi, 6 số thập phân cuối random duy nhất trong các intent đang PENDING), hạn 45 phút; (2) buyer chuyển ĐÚNG số đó rồi dán TxID — server xác minh on-chain thật qua TronGrid (`gettransactioninfobyid`, kiểm `receipt.result==="SUCCESS"`, quét event log `Transfer` đúng contract + đúng ví sàn, đọc số tiền từ log không tin calldata) rồi **khớp số USDT thực nhận với đúng 1 intent PENDING** — cộng ví **chủ intent** đúng bằng `vndAmount` đã đóng băng lúc tạo intent (không tính lại theo tỷ giá), KHÔNG PHỤ THUỘC ai gọi API xác nhận (trước đây cộng thẳng cho người gọi, bị lợi dụng "cướp" TxID công khai trên Tronscan). Không khớp intent nào → không cộng cho ai, rơi về PENDING cho admin đối chiếu tay. Chống trùng bằng **unique index** trên `gatewayRef` + gate nguyên tử trên intent (`PENDING→MATCHED`). | **Sẵn sàng hoạt động ngay khi có `usdt_trc20_address` thật** — không phụ thuộc secret bên thứ 3 (TronGrid public endpoint) |
+
+### 11b. Biên lợi nhuận sàn (spread) tỷ giá USDT/VNĐ
+
+`src/lib/payment/exchange-rate.ts` có 2 hàm tách biệt, **nguồn DUY NHẤT** cho
+cả chỗ tính tiền lẫn chỗ hiển thị ước tính ở mỗi chiều (không có nơi nào khác
+gọi thẳng `getLiveUsdtVndRate()` — nguồn RAW nội bộ — ngoài 2 hàm này):
+
+- `getUsdtDepositRate()` = giá RAW × (1 − `usdt_deposit_margin_percent`/100)
+  — dùng ở `POST /api/wallet/deposit-usdt/intent` (tính số USDT buyer phải
+  chuyển) VÀ `/nap-tien` (số hiển thị "1 USDT ≈ Xđ").
+- `getUsdtWithdrawRate()` = giá RAW × (1 + `usdt_withdraw_margin_percent`/100)
+  — dùng ở `POST /api/seller/withdraw-request` (tính số USDT trả seller) VÀ
+  `GET /api/seller/usdt-rate` (số xem trước trên `SellerWithdrawPanel`).
+
+Cả 2 key `usdt_deposit_margin_percent`/`usdt_withdraw_margin_percent` là
+`PaymentConfig` thường (không migration, giống `usdt_vnd_rate`), admin đổi
+qua `/admin/cai-dat`, validate `[0, 100)`. Thiếu cả DB lẫn `.env` → mặc định
+**4%** (code-hoá cứng `DEFAULT_USDT_MARGIN_PERCENT`, không phải 0%, đây là
+lựa chọn nghiệp vụ đã chốt — sàn luôn ăn biên trừ khi admin chủ động đặt 0).
+Chưa có audit trail lưu riêng biên/tỷ giá gốc theo từng giao dịch (`rate`
+lưu trên `UsdtDepositIntent`/`WalletTransaction` là số ĐÃ áp biên) — nếu cần
+tra lời/lỗ theo từng giao dịch sau này, cần thêm cột `baseRate`/
+`marginPercent` (chưa làm, để sau).
 | **Bank thủ công** | `getBankInfo()` chỉ đọc cấu hình hiển thị — buyer tạo `WalletTransaction PENDING`, admin duyệt tay tại `/admin/nap-tien`. Là **nền** cho SePay đối chiếu, không bị thay thế. | Luôn hoạt động nếu điền đủ 3 field |
 
 ---

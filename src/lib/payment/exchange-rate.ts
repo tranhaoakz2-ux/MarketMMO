@@ -53,3 +53,53 @@ export async function getLiveUsdtVndRate(): Promise<UsdtRateResult> {
 
   throw new Error("Không thể xác định tỷ giá USDT/VNĐ lúc này, vui lòng thử lại sau.");
 }
+
+// Biên lợi nhuận sàn (spread) — sàn "mua USDT rẻ, bán USDT đắt" so với giá
+// live, chênh lệch 2 đầu là lời của sàn. Mặc định 4% cho cả nạp/rút (chốt
+// nghiệp vụ) khi admin CHƯA cấu hình gì (thiếu cả DB lẫn .env) — KHÁC hành
+// vi "để trống = 0%" thường thấy ở các config khác trong dự án, cố ý theo
+// đúng yêu cầu "đặt mặc định 4% sẵn, admin đổi được sau".
+const DEFAULT_USDT_MARGIN_PERCENT = 4;
+
+export type UsdtMarginRateResult = {
+  /** Tỷ giá ĐÃ áp biên — dùng để tính tiền thật VÀ hiển thị, luôn cùng 1 số. */
+  rate: number;
+  /** Tỷ giá RAW trước khi áp biên (live CoinGecko hoặc fallback cố định). */
+  baseRate: number;
+  baseSource: "coingecko" | "fallback";
+  marginPercent: number;
+};
+
+async function resolveMarginPercent(key: "usdt_deposit_margin_percent" | "usdt_withdraw_margin_percent"): Promise<number> {
+  const raw = await getPaymentConfig(key);
+  if (raw === undefined || raw.trim() === "") return DEFAULT_USDT_MARGIN_PERCENT;
+  const n = Number(raw);
+  // Giá trị trong DB/env đã được validate lúc admin lưu (PATCH /api/admin/
+  // payment-config), nhưng .env có thể bị sửa tay sai — phòng thủ thêm ở
+  // đây, rơi về mặc định thay vì áp biên vô lý (âm/quá 100%).
+  return Number.isFinite(n) && n >= 0 && n < 100 ? n : DEFAULT_USDT_MARGIN_PERCENT;
+}
+
+// Tỷ giá dùng cho luồng NẠP (buyer gửi USDT, nhận VNĐ) — sàn "mua USDT rẻ
+// hơn" giá live, nên rate THẤP hơn (buyer phải gửi NHIỀU USDT hơn cho cùng 1
+// số VNĐ muốn nạp). Nguồn DUY NHẤT cho cả chỗ TÍNH tiền
+// (POST /api/wallet/deposit-usdt/intent) lẫn chỗ HIỂN THỊ (/nap-tien) — gọi
+// cùng hàm này ở cả 2 nơi để không bao giờ lệch số.
+export async function getUsdtDepositRate(): Promise<UsdtMarginRateResult> {
+  const { rate: baseRate, source: baseSource } = await getLiveUsdtVndRate();
+  const marginPercent = await resolveMarginPercent("usdt_deposit_margin_percent");
+  const rate = baseRate * (1 - marginPercent / 100);
+  return { rate, baseRate, baseSource, marginPercent };
+}
+
+// Tỷ giá dùng cho luồng RÚT (seller nhận USDT, trừ VNĐ) — sàn "bán USDT đắt
+// hơn" giá live, nên rate CAO hơn (seller nhận ÍT USDT hơn cho cùng 1 số VNĐ
+// muốn rút). Nguồn DUY NHẤT cho cả chỗ TÍNH tiền
+// (POST /api/seller/withdraw-request) lẫn chỗ HIỂN THỊ (GET /api/seller/
+// usdt-rate, preview trên SellerWithdrawPanel).
+export async function getUsdtWithdrawRate(): Promise<UsdtMarginRateResult> {
+  const { rate: baseRate, source: baseSource } = await getLiveUsdtVndRate();
+  const marginPercent = await resolveMarginPercent("usdt_withdraw_margin_percent");
+  const rate = baseRate * (1 + marginPercent / 100);
+  return { rate, baseRate, baseSource, marginPercent };
+}

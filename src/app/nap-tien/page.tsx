@@ -4,17 +4,35 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Reveal from "@/components/Reveal";
 import { getBankInfo, getUsdtInfo } from "@/lib/payment/deposit";
+import { getUsdtDepositRate } from "@/lib/payment/exchange-rate";
 import { isSepayConfigured } from "@/lib/payment/sepay";
 import { isVnpayConfigured } from "@/lib/payment/vnpay";
 import { PRIVATE_ROBOTS } from "@/lib/seo";
 
 export default async function DepositPage() {
-  const [vnpayEnabled, bankInfo, usdtInfo, sepayEnabled] = await Promise.all([
+  const [vnpayEnabled, bankInfo, usdtInfoRaw, sepayEnabled] = await Promise.all([
     isVnpayConfigured(),
     getBankInfo(),
     getUsdtInfo(),
     isSepayConfigured(),
   ]);
+  // Số hiển thị "1 USDT ≈ Xđ" PHẢI là tỷ giá ĐÃ áp biên sàn — cùng hàm
+  // getUsdtDepositRate() với chỗ tính số USDT buyer bắt buộc phải chuyển
+  // (POST /api/wallet/deposit-usdt/intent), tránh lệch số hiển thị/tính tiền
+  // như tỷ giá USDT trước đây. getUsdtInfo() chỉ còn dùng để lấy địa chỉ ví +
+  // xác định tính năng có bật hay không (rate tĩnh của nó không dùng để hiện
+  // nữa). getUsdtDepositRate() gọi CoinGecko (network) — lỗi ở đây KHÔNG được
+  // làm sập cả trang nạp tiền (VNPay/bank vẫn phải hiện được), nên tạm ẩn mỗi
+  // ô USDT nếu tính lỗi, người dùng vẫn dùng được 2 phương thức còn lại.
+  let usdtInfo = null as (typeof usdtInfoRaw & { rate: number }) | null;
+  if (usdtInfoRaw) {
+    try {
+      const { rate } = await getUsdtDepositRate();
+      usdtInfo = { ...usdtInfoRaw, rate };
+    } catch {
+      usdtInfo = null;
+    }
+  }
   return (
     <>
       <Header />

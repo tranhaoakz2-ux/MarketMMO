@@ -20,6 +20,7 @@ export async function GET() {
 }
 
 const USDT_RATE_KEY: PaymentConfigKey = "usdt_vnd_rate";
+const USDT_MARGIN_KEYS: PaymentConfigKey[] = ["usdt_deposit_margin_percent", "usdt_withdraw_margin_percent"];
 
 // PATCH — body { updates: Record<key, string|null> }. Giá trị null/rỗng =
 // xoá dòng DB (quay về fallback .env). Ghi AdminAuditLog CHỈ tên key đã đổi,
@@ -48,6 +49,22 @@ export async function PATCH(req: Request) {
       if (!Number.isFinite(rate) || rate <= 0) {
         return NextResponse.json({ error: "Tỷ giá USDT/VNĐ phải là số dương." }, { status: 400 });
       }
+    }
+  }
+
+  // Biên lợi nhuận sàn (spread) khi nạp/rút USDT — phải trong [0, 100). Bằng
+  // hoặc vượt 100% sẽ làm tỷ giá nạp <= 0 (rate_nạp = live × (1 − biên/100)),
+  // vỡ phép chia lúc tính số USDT buyer cần chuyển.
+  for (const key of USDT_MARGIN_KEYS) {
+    if (!(key in updates)) continue;
+    const raw = updates[key];
+    if (raw === null || raw === "") continue;
+    const percent = Number(raw);
+    if (!Number.isFinite(percent) || percent < 0 || percent >= 100) {
+      return NextResponse.json(
+        { error: "Biên tỷ giá USDT phải là số từ 0 đến dưới 100 (%)." },
+        { status: 400 }
+      );
     }
   }
 

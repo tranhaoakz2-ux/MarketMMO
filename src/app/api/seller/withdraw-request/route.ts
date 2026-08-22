@@ -4,7 +4,7 @@ import { requireSeller } from "@/lib/authz";
 import { MIN_USDT_WITHDRAW_AMOUNT, MIN_WITHDRAW_AMOUNT } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { getSellerWalletHistory } from "@/lib/queries";
-import { getLiveUsdtVndRate } from "@/lib/payment/exchange-rate";
+import { getUsdtWithdrawRate } from "@/lib/payment/exchange-rate";
 import { isValidTrc20Address } from "@/lib/payment/trc20";
 
 // Trừ ví CÓ ĐIỀU KIỆN + nguyên tử (where "walletBalance >= amount" ngay
@@ -88,10 +88,12 @@ async function handleUsdtWithdraw(userId: string, amount: number, body: Record<s
   // Lấy tỷ giá SERVER-SIDE, KHÔNG tin số client gửi lên (client chỉ gửi lên
   // số VNĐ muốn rút) — chống giả mạo tỷ giá có lợi. Gọi TRƯỚC transaction vì
   // đây là network I/O (CoinGecko), không được giữ trong 1 DB transaction.
+  // Tỷ giá RÚT đã áp biên sàn (spread) — CÙNG hàm với chỗ hiển thị preview ở
+  // GET /api/seller/usdt-rate (SellerWithdrawPanel), không tách nguồn riêng.
   let rate: number;
   let source: "coingecko" | "fallback";
   try {
-    ({ rate, source } = await getLiveUsdtVndRate());
+    ({ rate, baseSource: source } = await getUsdtWithdrawRate());
   } catch (err) {
     const message = err instanceof Error ? err.message : "Không thể lấy tỷ giá USDT/VNĐ.";
     return NextResponse.json({ error: message }, { status: 503 });

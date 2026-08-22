@@ -16,7 +16,9 @@ export type PaymentConfigKey =
   | "bank_account_holder"
   | "bank_bin"
   | "sepay_webhook_secret"
-  | "sepay_api_key";
+  | "sepay_api_key"
+  | "usdt_deposit_margin_percent"
+  | "usdt_withdraw_margin_percent";
 
 const ENV_FALLBACK: Record<PaymentConfigKey, string | undefined> = {
   vnpay_tmn_code: process.env.VNPAY_TMN_CODE,
@@ -34,6 +36,14 @@ const ENV_FALLBACK: Record<PaymentConfigKey, string | undefined> = {
   // 503, không cộng tiền — xem src/app/api/webhook/sepay/route.ts.
   sepay_webhook_secret: process.env.SEPAY_WEBHOOK_SECRET,
   sepay_api_key: process.env.SEPAY_API_KEY,
+  // Biên lợi nhuận sàn (spread) áp lên tỷ giá USDT/VNĐ THEO CHIỀU GIAO DỊCH —
+  // KHÁC "usdt_vnd_rate" ở trên (đó chỉ là số dự phòng khi CoinGecko sập,
+  // không phải biên lời). Đọc + áp dụng trong src/lib/payment/exchange-rate.ts
+  // (getUsdtDepositRate()/getUsdtWithdrawRate()) — thiếu cả DB lẫn .env thì
+  // dùng mặc định DEFAULT_USDT_MARGIN_PERCENT=4 code-hoá sẵn (không phải 0%),
+  // theo yêu cầu nghiệp vụ đã chốt.
+  usdt_deposit_margin_percent: process.env.USDT_DEPOSIT_MARGIN_PERCENT,
+  usdt_withdraw_margin_percent: process.env.USDT_WITHDRAW_MARGIN_PERCENT,
 };
 
 export const ALL_PAYMENT_CONFIG_KEYS = Object.keys(ENV_FALLBACK) as PaymentConfigKey[];
