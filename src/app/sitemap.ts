@@ -11,7 +11,7 @@ import { getForumPosts } from "@/lib/forum";
 // Sitemap XML thật cho Googlebot (khác /sitemap-trang-web — trang HTML cho
 // người dùng đọc). Luôn dùng domain CHUẨN (SITE_URL), không phụ thuộc host
 // của request — kể cả khi bị truy cập qua market-mmo.vercel.app, URL trong
-// sitemap vẫn trỏ về marketmmo.vn (khớp canonical ở generateMetadata từng
+// sitemap vẫn trỏ về maketmmo.com (khớp canonical ở generateMetadata từng
 // trang). CHỈ liệt kê trang công khai — không đưa /gio-hang, /don-hang,
 // /tin-nhan, /trang-ban-hang/**, /admin/** ... vào đây.
 const STATIC_PAGES: { path: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] }[] = [

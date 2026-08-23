@@ -2,8 +2,8 @@
 // object robots dùng lại cho mọi trang riêng tư (giỏ hàng, đơn hàng, ví, tin
 // nhắn, khu vực người bán/admin...). Domain thật lấy từ NEXT_PUBLIC_SITE_URL
 // (đặt ở .env local + Environment Variables trên Vercel) — fallback về
-// https://marketmmo.vn nếu thiếu biến (không để trống rỗng gây lỗi URL).
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://marketmmo.vn").replace(/\/+$/, "");
+// https://maketmmo.com nếu thiếu biến (không để trống rỗng gây lỗi URL).
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://maketmmo.com").replace(/\/+$/, "");
 
 export const SITE_NAME = "MarketMMO";
 

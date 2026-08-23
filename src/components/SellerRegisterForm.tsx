@@ -89,7 +89,7 @@ export default function SellerRegisterForm() {
             <span>
               Gian hàng của bạn có trang riêng công khai{" "}
               <strong className="text-foreground">ngay lập tức</strong> tại địa chỉ
-              marketmmo.pro/shop/tên-gian-hàng.
+              maketmmo.com/shop/tên-gian-hàng.
             </span>
           </li>
           <li className="flex gap-2.5">

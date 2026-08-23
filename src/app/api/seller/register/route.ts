@@ -58,7 +58,7 @@ export async function POST(req: Request) {
         userId: session!.user.id,
         shopName,
         slug,
-        description: description || "Gian hàng mới trên marketmmo.vn.",
+        description: description || "Gian hàng mới trên maketmmo.com.",
         phone,
         facebookLink,
         level: 1,

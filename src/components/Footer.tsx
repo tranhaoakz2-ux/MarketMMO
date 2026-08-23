@@ -186,7 +186,7 @@ export default function Footer() {
                 Đăng ký bán hàng
               </h4>
               <p className="mt-3.5 max-w-xs text-sm leading-relaxed text-white/60">
-                Trở thành đối tác của marketmmo.vn để tiếp cận hàng ngàn
+                Trở thành đối tác của maketmmo.com để tiếp cận hàng ngàn
                 khách hàng và tối ưu doanh thu của bạn.
               </p>
               <Link

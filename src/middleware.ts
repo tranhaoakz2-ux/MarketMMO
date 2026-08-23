@@ -20,7 +20,7 @@ const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 // dung). Đây là lớp bổ sung cho robots.ts (chặn crawl theo host tương tự) —
 // dùng cả 2 vì robots.txt chỉ khuyến nghị bot tuân theo, còn HTTP header là
 // chỉ dẫn trực tiếp trên từng response, chắc chắn hơn.
-let canonicalHost = "marketmmo.vn";
+let canonicalHost = "maketmmo.com";
 try {
   canonicalHost = new URL(SITE_URL).host;
 } catch {

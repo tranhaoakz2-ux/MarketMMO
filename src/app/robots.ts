@@ -7,14 +7,14 @@ import { SITE_URL } from "@/lib/seo";
 // chắc chắn không rò rỉ trang chứa dữ liệu người dùng ra kết quả tìm kiếm.
 //
 // Đọc header Host của chính request để phân biệt domain chuẩn
-// (marketmmo.vn) với domain tạm (market-mmo.vercel.app) — khi truy cập qua
+// (maketmmo.com) với domain tạm (market-mmo.vercel.app) — khi truy cập qua
 // domain KHÔNG PHẢI domain chuẩn, chặn crawl toàn bộ site để tránh 2 domain
 // cùng được index song song gây nội dung trùng lặp (xem thêm middleware.ts,
 // nơi gắn header X-Robots-Tag cho cùng mục đích ở tầng response).
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const h = await headers();
   const host = h.get("host") ?? "";
-  let canonicalHost = "marketmmo.vn";
+  let canonicalHost = "maketmmo.com";
   try {
     canonicalHost = new URL(SITE_URL).host;
   } catch {
