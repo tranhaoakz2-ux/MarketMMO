@@ -122,14 +122,14 @@ export default function Footer() {
                 <span className="flex h-10 shrink-0 items-center rounded-lg bg-brand px-2 shadow-sm">
                   <Image
                     src="/logo-mark.png"
-                    alt="MarketMMO"
+                    alt="MaketMMO"
                     width={35}
                     height={28}
                     className="h-7 w-auto object-contain"
                   />
                 </span>
                 <h3 className="text-lg font-black">
-                  MARKET<span className="text-brand">MMO</span>.VN
+                  MAKET<span className="text-brand">MMO</span>.COM
                 </h3>
               </div>
               <p className="mt-3.5 max-w-xs text-sm leading-relaxed text-white/60">
@@ -219,7 +219,7 @@ export default function Footer() {
         </Reveal>
 
         <div className="border-t border-white/10 py-4 text-center text-xs text-white/50">
-          © 2026 MARKETMMO.VN. Tất cả quyền được bảo lưu.
+          © 2026 MAKETMMO.COM. Tất cả quyền được bảo lưu.
         </div>
       </div>
 

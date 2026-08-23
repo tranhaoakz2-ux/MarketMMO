@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     const url = await createVnpayPaymentUrl({
       amount,
       txnRef: tx.id,
-      orderInfo: `Nap tien vi MarketMMO - ${tx.id}`,
+      orderInfo: `Nap tien vi MaketMMO - ${tx.id}`,
       ipAddr,
     });
     await prisma.walletTransaction.update({

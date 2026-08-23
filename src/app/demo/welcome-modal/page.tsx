@@ -18,7 +18,7 @@ export default function WelcomeModalDemoPage() {
             Demo: Popup chào mừng
           </h1>
           <p className="mt-4 text-sm leading-relaxed text-muted sm:text-base">
-            Đây là trang xem trước popup &quot;Chào mừng đến với MarketMMO&quot;. Popup sẽ tự
+            Đây là trang xem trước popup &quot;Chào mừng đến với MaketMMO&quot;. Popup sẽ tự
             hiện bên dưới sau khoảng nửa giây — đúng hành vi dự kiến khi khách vào trang
             chủ lần đầu. Header/Footer trên trang này là component thật của site, chỉ phần
             nội dung giữa trang là placeholder cho trang demo.

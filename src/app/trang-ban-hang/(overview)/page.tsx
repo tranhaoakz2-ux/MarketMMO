@@ -123,4 +123,4 @@ export default async function SellerOverviewPage({
   );
 }
 
-export const metadata = { title: "Tổng Quan — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Tổng Quan — Quản Lý Bán Hàng — MaketMMO" };

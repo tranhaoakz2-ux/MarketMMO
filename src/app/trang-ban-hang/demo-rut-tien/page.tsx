@@ -5,4 +5,4 @@ export default function DemoWithdrawPage() {
   return <DemoWithdraw />;
 }
 
-export const metadata = { title: "Demo · Rút tiền — MarketMMO" };
+export const metadata = { title: "Demo · Rút tiền — MaketMMO" };

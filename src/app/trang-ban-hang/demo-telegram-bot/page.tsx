@@ -5,4 +5,4 @@ export default function DemoTelegramPage() {
   return <DemoTelegram />;
 }
 
-export const metadata = { title: "Demo · Telegram Bot — MarketMMO" };
+export const metadata = { title: "Demo · Telegram Bot — MaketMMO" };

@@ -104,7 +104,7 @@ export default function AdminOverviewStats({
             Chào {adminName} 👋
           </h1>
           <p className="mt-1 text-sm text-[var(--adm-muted)]">
-            Toàn cảnh nền tảng MarketMMO — số liệu cập nhật theo thời gian thực.
+            Toàn cảnh nền tảng MaketMMO — số liệu cập nhật theo thời gian thực.
           </p>
         </div>
 

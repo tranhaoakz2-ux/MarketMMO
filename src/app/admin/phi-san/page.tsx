@@ -9,4 +9,4 @@ export default async function AdminPlatformFeePage() {
   return <AdminPlatformFeePanel />;
 }
 
-export const metadata = { title: "Phí sàn — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Phí sàn — Admin Control Center — MaketMMO" };

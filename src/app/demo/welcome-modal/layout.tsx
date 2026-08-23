@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Demo: Popup chào mừng — MarketMMO",
+  title: "Demo: Popup chào mừng — MaketMMO",
   robots: { index: false, follow: false },
 };
 

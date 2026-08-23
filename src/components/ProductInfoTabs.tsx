@@ -72,7 +72,7 @@ export default function ProductInfoTabs({
         <div className="flex flex-col gap-3 p-6 text-sm leading-relaxed text-foreground/80">
           <p>
             Sản phẩm này hỗ trợ giao hàng/kích hoạt tự động qua hệ thống API của
-            MarketMMO dành cho đối tác/nhà phát triển.
+            MaketMMO dành cho đối tác/nhà phát triển.
           </p>
           <Link href="/tai-lieu-api" className="font-semibold text-brand-dark hover:underline">
             Xem tài liệu tích hợp API →

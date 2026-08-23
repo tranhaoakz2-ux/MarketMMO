@@ -24,7 +24,7 @@ export async function generateMetadata({
   const post = await getForumPostById(postId);
   if (!post) return {};
 
-  const title = `${post.title} — Diễn đàn MarketMMO`;
+  const title = `${post.title} — Diễn đàn MaketMMO`;
   const description = truncate(post.content);
   const url = absoluteUrl(`/dien-dan/${post.id}`);
 

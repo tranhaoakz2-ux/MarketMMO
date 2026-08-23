@@ -5,4 +5,4 @@ export default function DemoSellerProductsPage() {
   return <DemoSellerProducts />;
 }
 
-export const metadata = { title: "Demo · Sản phẩm — MarketMMO" };
+export const metadata = { title: "Demo · Sản phẩm — MaketMMO" };

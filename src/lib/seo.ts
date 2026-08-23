@@ -5,7 +5,7 @@
 // https://maketmmo.com nếu thiếu biến (không để trống rỗng gây lỗi URL).
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://maketmmo.com").replace(/\/+$/, "");
 
-export const SITE_NAME = "MarketMMO";
+export const SITE_NAME = "MaketMMO";
 
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/logo-full.png`;
 

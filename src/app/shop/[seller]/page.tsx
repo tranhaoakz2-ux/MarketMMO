@@ -44,9 +44,9 @@ export async function generateMetadata({
   const shop = await getSellerBySlug(sellerSlug);
   if (!shop || shop.suspended) return {};
 
-  const title = `${shop.shopName} — Gian hàng trên MarketMMO`;
+  const title = `${shop.shopName} — Gian hàng trên MaketMMO`;
   const description = truncate(
-    shop.description || `Gian hàng ${shop.shopName} với ${shop.productCount} sản phẩm đang bán trên MarketMMO.`
+    shop.description || `Gian hàng ${shop.shopName} với ${shop.productCount} sản phẩm đang bán trên MaketMMO.`
   );
   const url = absoluteUrl(`/shop/${shop.slug}`);
 

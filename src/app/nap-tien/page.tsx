@@ -38,7 +38,7 @@ export default async function DepositPage() {
       <Header />
       <main className="flex-1 bg-background">
         <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 lg:px-8">
-          <h1 className="sr-only">Nạp tiền vào ví MarketMMO</h1>
+          <h1 className="sr-only">Nạp tiền vào ví MaketMMO</h1>
           <Breadcrumb items={[{ label: "Trang chủ", href: "/" }, { label: "Nạp tiền" }]} />
         </div>
 
@@ -56,6 +56,6 @@ export default async function DepositPage() {
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Nạp tiền — MarketMMO",
+  title: "Nạp tiền — MaketMMO",
   robots: PRIVATE_ROBOTS,
 };

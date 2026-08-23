@@ -39,4 +39,4 @@ export default async function ChatPage() {
   );
 }
 
-export const metadata = { title: "Tin nhắn — MarketMMO", robots: PRIVATE_ROBOTS };
+export const metadata = { title: "Tin nhắn — MaketMMO", robots: PRIVATE_ROBOTS };

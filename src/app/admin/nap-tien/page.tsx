@@ -17,4 +17,4 @@ export default async function AdminDepositsPage() {
   );
 }
 
-export const metadata = { title: "Nạp tiền — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Nạp tiền — Admin Control Center — MaketMMO" };

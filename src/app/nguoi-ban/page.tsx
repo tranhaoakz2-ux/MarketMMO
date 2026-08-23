@@ -45,7 +45,7 @@ export default async function SellerDirectoryPage() {
               <div>
                 <h1 className="flex items-center gap-2 text-xl font-black text-foreground">
                   <Store className="h-5 w-5 text-brand-dark" /> Người bán trên
-                  MarketMMO
+                  MaketMMO
                 </h1>
                 <p className="mt-1 text-sm text-muted">
                   {sellers.length} gian hàng đang hoạt động — độ uy tín được
@@ -80,5 +80,5 @@ export default async function SellerDirectoryPage() {
 }
 
 export const metadata = {
-  title: "Người bán — MarketMMO",
+  title: "Người bán — MaketMMO",
 };

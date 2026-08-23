@@ -12,7 +12,7 @@ export default function ForgotPasswordPage() {
       <Header />
       <main className="flex-1 bg-background">
         <div className="mx-auto max-w-md px-4 py-8 sm:px-6 lg:px-8">
-          <h1 className="sr-only">Quên mật khẩu — Đặt lại mật khẩu MarketMMO</h1>
+          <h1 className="sr-only">Quên mật khẩu — Đặt lại mật khẩu MaketMMO</h1>
           <Breadcrumb
             items={[
               { label: "Trang chủ", href: "/" },
@@ -38,6 +38,6 @@ export default function ForgotPasswordPage() {
 }
 
 export const metadata = {
-  title: "Quên mật khẩu — MarketMMO",
+  title: "Quên mật khẩu — MaketMMO",
   robots: PRIVATE_ROBOTS,
 };

@@ -71,4 +71,4 @@ export default async function AdminSettingsPage() {
   );
 }
 
-export const metadata = { title: "Cài đặt hệ thống — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Cài đặt hệ thống — Admin Control Center — MaketMMO" };

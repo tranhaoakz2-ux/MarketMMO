@@ -30,7 +30,7 @@ export default async function LoginPage({
       <Header />
       <main className="flex-1 bg-background">
         <div className="mx-auto max-w-md px-4 py-8 sm:px-6 lg:px-8">
-          <h1 className="sr-only">Đăng nhập hoặc đăng ký tài khoản MarketMMO</h1>
+          <h1 className="sr-only">Đăng nhập hoặc đăng ký tài khoản MaketMMO</h1>
           <AuthForms
             googleEnabled={googleEnabled}
             turnstileSiteKey={turnstileSiteKey}
@@ -46,6 +46,6 @@ export default async function LoginPage({
 }
 
 export const metadata = {
-  title: "Đăng nhập / Đăng ký — MarketMMO",
+  title: "Đăng nhập / Đăng ký — MaketMMO",
   robots: PRIVATE_ROBOTS,
 };

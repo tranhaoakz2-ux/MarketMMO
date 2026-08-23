@@ -5,4 +5,4 @@ export default function DemoDiscountCodesPage() {
   return <DemoDiscountCodes />;
 }
 
-export const metadata = { title: "Demo · Mã giảm giá — MarketMMO" };
+export const metadata = { title: "Demo · Mã giảm giá — MaketMMO" };

@@ -241,7 +241,7 @@ export default function DepositPanel({
         <div>
           <p className="text-base font-bold text-foreground">Cần đăng nhập để nạp tiền</p>
           <p className="mt-1 text-sm text-muted">
-            Đăng nhập vào tài khoản MarketMMO để nạp tiền vào ví.
+            Đăng nhập vào tài khoản MaketMMO để nạp tiền vào ví.
           </p>
         </div>
         <Link

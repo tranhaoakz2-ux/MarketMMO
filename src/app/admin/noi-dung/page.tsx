@@ -19,4 +19,4 @@ export default async function AdminSiteContentPage() {
   );
 }
 
-export const metadata = { title: "Nội dung trang web — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Nội dung trang web — Admin Control Center — MaketMMO" };

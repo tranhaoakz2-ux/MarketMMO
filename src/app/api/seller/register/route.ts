@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   });
   if (existing) {
     return NextResponse.json(
-      { error: "Bạn đã có gian hàng trên MarketMMO rồi." },
+      { error: "Bạn đã có gian hàng trên MaketMMO rồi." },
       { status: 409 }
     );
   }
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
   try {
     await sendSystemMessage(
       session!.user.id,
-      `Chúc mừng bạn đã trở thành người bán trên MarketMMO!\n\nGian hàng của bạn đã được kích hoạt thành công. Bây giờ bạn có thể:\n• Đăng tải sản phẩm mới\n• Quản lý đơn hàng và doanh thu\n• Tương tác với khách hàng qua hệ thống Chat\n\nHãy truy cập vào Quản Lý Bán Hàng để bắt đầu nhé!`
+      `Chúc mừng bạn đã trở thành người bán trên MaketMMO!\n\nGian hàng của bạn đã được kích hoạt thành công. Bây giờ bạn có thể:\n• Đăng tải sản phẩm mới\n• Quản lý đơn hàng và doanh thu\n• Tương tác với khách hàng qua hệ thống Chat\n\nHãy truy cập vào Quản Lý Bán Hàng để bắt đầu nhé!`
     );
   } catch {
     // bỏ qua — không chặn đăng ký bán hàng nếu gửi tin thất bại

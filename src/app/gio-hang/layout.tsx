@@ -6,7 +6,7 @@ import { PRIVATE_ROBOTS } from "@/lib/seo";
 // `metadata`. Dùng layout.tsx (Server Component) làm nơi đặt metadata thay
 // thế, không đụng vào page.tsx hiện có.
 export const metadata: Metadata = {
-  title: "Giỏ hàng — MarketMMO",
+  title: "Giỏ hàng — MaketMMO",
   robots: PRIVATE_ROBOTS,
 };
 

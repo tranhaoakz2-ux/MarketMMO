@@ -19,7 +19,7 @@ const sections = [
   },
   {
     title: "5. Giới hạn trách nhiệm",
-    body: "MarketMMO đóng vai trò trung gian kết nối người mua và người bán, không chịu trách nhiệm về chất lượng nội dung, tính hợp pháp của cách sử dụng sản phẩm sau khi giao dịch hoàn tất, ngoại trừ các cam kết bảo hành được nêu rõ trong từng sản phẩm.",
+    body: "MaketMMO đóng vai trò trung gian kết nối người mua và người bán, không chịu trách nhiệm về chất lượng nội dung, tính hợp pháp của cách sử dụng sản phẩm sau khi giao dịch hoàn tất, ngoại trừ các cam kết bảo hành được nêu rõ trong từng sản phẩm.",
   },
   {
     title: "6. Thay đổi điều khoản",
@@ -41,5 +41,5 @@ export default function TermsOfServicePage() {
 }
 
 export const metadata = {
-  title: "Điều khoản dịch vụ — MarketMMO",
+  title: "Điều khoản dịch vụ — MaketMMO",
 };

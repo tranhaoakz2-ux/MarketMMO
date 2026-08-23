@@ -23,5 +23,5 @@ export default function Get2faPage() {
 }
 
 export const metadata = {
-  title: "Bộ Công Cụ Tiện Ích — MarketMMO",
+  title: "Bộ Công Cụ Tiện Ích — MaketMMO",
 };

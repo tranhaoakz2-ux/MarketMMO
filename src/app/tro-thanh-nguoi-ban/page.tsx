@@ -55,5 +55,5 @@ export default function BecomeSellerPage() {
 }
 
 export const metadata = {
-  title: "Đăng ký bán hàng — MarketMMO",
+  title: "Đăng ký bán hàng — MaketMMO",
 };

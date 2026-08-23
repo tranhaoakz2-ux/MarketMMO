@@ -10,4 +10,4 @@ export default async function AdminCommissionsPage() {
   return <AdminCommissionsPanel />;
 }
 
-export const metadata = { title: "Hoa hồng — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Hoa hồng — Admin Control Center — MaketMMO" };

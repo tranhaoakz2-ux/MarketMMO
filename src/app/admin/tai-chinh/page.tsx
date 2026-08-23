@@ -41,4 +41,4 @@ export default async function AdminFinancialHealthPage() {
   );
 }
 
-export const metadata = { title: "Sức khoẻ tài chính — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Sức khoẻ tài chính — Admin Control Center — MaketMMO" };

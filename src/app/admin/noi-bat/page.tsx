@@ -17,4 +17,4 @@ export default async function AdminFeaturedPage() {
   );
 }
 
-export const metadata = { title: "Nổi bật trang chủ — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Nổi bật trang chủ — Admin Control Center — MaketMMO" };

@@ -96,4 +96,4 @@ export default async function AdminOverviewPage({
   );
 }
 
-export const metadata = { title: "Tổng quan — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Tổng quan — Admin Control Center — MaketMMO" };

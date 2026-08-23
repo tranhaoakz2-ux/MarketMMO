@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     try {
       await sendTelegramMessage(
         chatId,
-        `Mã xác nhận liên kết MarketMMO của bạn là: ${linkCode}\n\nNhập mã này vào Quản Lý Bán Hàng > Telegram Bot để hoàn tất liên kết.`
+        `Mã xác nhận liên kết MaketMMO của bạn là: ${linkCode}\n\nNhập mã này vào Quản Lý Bán Hàng > Telegram Bot để hoàn tất liên kết.`
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Không thể gửi tin nhắn Telegram.";
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
     try {
       await sendTelegramMessage(
         seller!.telegramChatId,
-        `Xin chào ${seller!.shopName}! Đây là tin nhắn thử từ MarketMMO — kết nối Telegram Bot của bạn đang hoạt động tốt.`
+        `Xin chào ${seller!.shopName}! Đây là tin nhắn thử từ MaketMMO — kết nối Telegram Bot của bạn đang hoạt động tốt.`
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Gửi tin nhắn thử thất bại.";

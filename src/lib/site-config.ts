@@ -22,7 +22,7 @@ export type SiteConfigKey =
 const DEFAULTS: Record<SiteConfigKey, string> = {
   insurance_fund_target: "300000",
   header_ticker_text:
-    "🔔 MARKETMMO — Mua bán sản phẩm số phục vụ kiếm tiền online. Mọi giao dịch trên sàn đều hoàn toàn tự động và được ký quỹ an toàn.",
+    "🔔 MAKETMMO — Mua bán sản phẩm số phục vụ kiếm tiền online. Mọi giao dịch trên sàn đều hoàn toàn tự động và được ký quỹ an toàn.",
   footer_facebook_url: "",
   footer_youtube_url: "",
   footer_tiktok_url: "",

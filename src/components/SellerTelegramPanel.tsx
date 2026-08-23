@@ -67,7 +67,7 @@ export default function SellerTelegramPanel() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Telegram Bot"
-        subtitle="Liên kết Telegram để nhận thông báo đơn mới, khiếu nại, giải ngân... từ MarketMMO."
+        subtitle="Liên kết Telegram để nhận thông báo đơn mới, khiếu nại, giải ngân... từ MaketMMO."
       />
       {(error || message) && (
         <div className="flex flex-col gap-2">

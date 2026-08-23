@@ -66,6 +66,6 @@ export default async function UserProfilePage() {
 }
 
 export const metadata = {
-  title: "Hồ sơ cá nhân — MarketMMO",
+  title: "Hồ sơ cá nhân — MaketMMO",
   robots: PRIVATE_ROBOTS,
 };

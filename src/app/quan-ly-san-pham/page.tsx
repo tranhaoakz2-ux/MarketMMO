@@ -41,5 +41,5 @@ export default function ManageProductsPage() {
 }
 
 export const metadata = {
-  title: "Quản lý sản phẩm — MarketMMO",
+  title: "Quản lý sản phẩm — MaketMMO",
 };

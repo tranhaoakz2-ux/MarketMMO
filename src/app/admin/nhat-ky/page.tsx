@@ -82,4 +82,4 @@ export default async function AdminAuditLogPage({
   );
 }
 
-export const metadata = { title: "Nhật ký hoạt động — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Nhật ký hoạt động — Admin Control Center — MaketMMO" };

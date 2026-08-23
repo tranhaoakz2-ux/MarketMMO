@@ -76,5 +76,5 @@ export default async function SitemapPage() {
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Sitemap — MarketMMO",
+  title: "Sitemap — MaketMMO",
 };

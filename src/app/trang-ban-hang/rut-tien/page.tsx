@@ -12,4 +12,4 @@ export default async function SellerWithdrawPage() {
   return <SellerWithdrawPanel walletBalance={walletBalance} />;
 }
 
-export const metadata = { title: "Rút Tiền — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Rút Tiền — Quản Lý Bán Hàng — MaketMMO" };

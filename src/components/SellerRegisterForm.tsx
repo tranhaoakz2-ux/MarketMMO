@@ -24,7 +24,7 @@ export default function SellerRegisterForm() {
     return (
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-border-c bg-surface p-10 text-center shadow-sm">
         <p className="text-sm text-muted">
-          Bạn cần đăng nhập để đăng ký mở gian hàng trên MarketMMO.
+          Bạn cần đăng nhập để đăng ký mở gian hàng trên MaketMMO.
         </p>
         <Link
           href="/dang-nhap?callbackUrl=/tro-thanh-nguoi-ban"

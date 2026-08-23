@@ -19,7 +19,7 @@ import { formatVnd } from "@/lib/format";
 // Phải khớp CHÍNH XÁC DEFAULTS.header_ticker_text trong src/lib/site-config.ts
 // (state khởi tạo dùng giá trị này trước khi fetch xong, tránh flash nội dung).
 const DEFAULT_TICKER_TEXT =
-  "🔔 MARKETMMO — Mua bán sản phẩm số phục vụ kiếm tiền online. Mọi giao dịch trên sàn đều hoàn toàn tự động và được ký quỹ an toàn.";
+  "🔔 MAKETMMO — Mua bán sản phẩm số phục vụ kiếm tiền online. Mọi giao dịch trên sàn đều hoàn toàn tự động và được ký quỹ an toàn.";
 
 const simpleNavLinks = [
   { label: "Trang chủ", href: "/" },
@@ -170,7 +170,7 @@ export default function Header() {
             <span className="flex h-[54px] items-center sm:h-[60px]">
               <Image
                 src="/logo-mark.png"
-                alt="MarketMMO"
+                alt="MaketMMO"
                 width={75}
                 height={60}
                 className="h-full w-auto object-contain"
@@ -178,7 +178,7 @@ export default function Header() {
               />
             </span>
             <span className="text-[26px] font-black tracking-tight text-ink sm:text-[30px]">
-              MARKET<span className="text-white">MMO</span>
+              MAKET<span className="text-white">MMO</span>
             </span>
           </Link>
 

@@ -165,7 +165,7 @@ export async function POST(req: Request) {
   try {
     await sendSystemMessage(
       user.id,
-      `Chào mừng ${user.username} đến với MarketMMO!\n\nTài khoản của bạn đã được tạo thành công.\n\nMột số điều bạn có thể làm:\n• Mua sắm sản phẩm với giá tốt nhất\n• Nạp tiền để bắt đầu giao dịch\n• Đăng ký làm người bán để kiếm thu nhập\n\nNếu cần hỗ trợ, hãy nhắn tin cho chúng tôi!`
+      `Chào mừng ${user.username} đến với MaketMMO!\n\nTài khoản của bạn đã được tạo thành công.\n\nMột số điều bạn có thể làm:\n• Mua sắm sản phẩm với giá tốt nhất\n• Nạp tiền để bắt đầu giao dịch\n• Đăng ký làm người bán để kiếm thu nhập\n\nNếu cần hỗ trợ, hãy nhắn tin cho chúng tôi!`
     );
   } catch {
     // bỏ qua — không chặn đăng ký nếu gửi tin chào mừng thất bại

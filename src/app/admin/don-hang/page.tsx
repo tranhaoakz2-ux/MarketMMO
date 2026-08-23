@@ -183,4 +183,4 @@ export default async function AdminOrdersPage({
   );
 }
 
-export const metadata = { title: "Đơn hàng & Ký quỹ — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Đơn hàng & Ký quỹ — Admin Control Center — MaketMMO" };

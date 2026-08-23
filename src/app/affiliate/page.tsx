@@ -100,5 +100,5 @@ export default async function AffiliatePage() {
 }
 
 export const metadata = {
-  title: "Chương Trình Giới Thiệu — MarketMMO",
+  title: "Chương Trình Giới Thiệu — MaketMMO",
 };

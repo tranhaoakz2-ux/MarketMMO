@@ -2,8 +2,8 @@ import LegalPageLayout from "@/components/LegalPageLayout";
 
 const faqs = [
   {
-    q: "MarketMMO hoạt động theo mô hình nào?",
-    a: "MarketMMO là sàn giao dịch marketplace multi-vendor — nhiều người bán độc lập đăng sản phẩm/dịch vụ số (tài khoản, vật phẩm MMO, dịch vụ boosting), người mua thanh toán qua ví nội bộ và nhận hàng tự động ngay sau khi giao dịch hoàn tất.",
+    q: "MaketMMO hoạt động theo mô hình nào?",
+    a: "MaketMMO là sàn giao dịch marketplace multi-vendor — nhiều người bán độc lập đăng sản phẩm/dịch vụ số (tài khoản, vật phẩm MMO, dịch vụ boosting), người mua thanh toán qua ví nội bộ và nhận hàng tự động ngay sau khi giao dịch hoàn tất.",
   },
   {
     q: "Ký quỹ (escrow) hoạt động như thế nào?",
@@ -19,14 +19,14 @@ const faqs = [
   },
   {
     q: "Badge \"Bảo hiểm\" trên trang sản phẩm nghĩa là gì?",
-    a: "Đây là số dư quỹ bảo hiểm mà người bán đã tự nguyện nạp — không bắt buộc, chỉ là tín hiệu uy tín. Nếu phát sinh khiếu nại đủ điều kiện sau khi đơn đã giải ngân, MarketMMO có thể xem xét đền bù cho bạn từ quỹ này, tối đa bằng số dư quỹ hiện có của gian hàng tại thời điểm xử lý — đây không phải khoản bảo đảm cố định cho mọi giao dịch.",
+    a: "Đây là số dư quỹ bảo hiểm mà người bán đã tự nguyện nạp — không bắt buộc, chỉ là tín hiệu uy tín. Nếu phát sinh khiếu nại đủ điều kiện sau khi đơn đã giải ngân, MaketMMO có thể xem xét đền bù cho bạn từ quỹ này, tối đa bằng số dư quỹ hiện có của gian hàng tại thời điểm xử lý — đây không phải khoản bảo đảm cố định cho mọi giao dịch.",
   },
   {
-    q: "Làm sao để trở thành người bán trên MarketMMO?",
+    q: "Làm sao để trở thành người bán trên MaketMMO?",
     a: "Truy cập trang Đăng ký bán hàng, điền thông tin gian hàng và gửi đăng ký — gian hàng được kích hoạt ngay, không cần chờ duyệt. Sau đó bạn có thể đăng sản phẩm (mỗi sản phẩm sẽ qua admin kiểm duyệt trước khi hiển thị công khai), quản lý đơn hàng và nhận thanh toán qua ví.",
   },
   {
-    q: "Giao dịch trên MarketMMO có an toàn không?",
+    q: "Giao dịch trên MaketMMO có an toàn không?",
     a: "Mọi giao dịch được ký quỹ và ghi nhận nhật ký hoạt động. Chúng tôi nghiêm cấm sử dụng tài khoản/sản phẩm giao dịch trên sàn vào mục đích lừa đảo, giả mạo hoặc vi phạm pháp luật — xem chi tiết tại Điều khoản dịch vụ.",
   },
 ];
@@ -52,5 +52,5 @@ export default function FaqPage() {
 }
 
 export const metadata = {
-  title: "Câu hỏi thường gặp — MarketMMO",
+  title: "Câu hỏi thường gặp — MaketMMO",
 };

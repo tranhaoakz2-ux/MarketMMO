@@ -49,9 +49,9 @@ export async function generateMetadata({
   const product = await getProductBySlugDb(slug);
   if (!product) return {};
 
-  const title = `${product.name} — Mua tại MarketMMO`;
+  const title = `${product.name} — Mua tại MaketMMO`;
   const description = truncate(
-    product.shortDescription || product.description.join(" ") || `${product.name} bán bởi ${product.seller} trên MarketMMO.`
+    product.shortDescription || product.description.join(" ") || `${product.name} bán bởi ${product.seller} trên MaketMMO.`
   );
   const url = absoluteUrl(`/san-pham/${product.slug}`);
   const image = product.imageUrl ?? DEFAULT_OG_IMAGE;
@@ -107,7 +107,7 @@ export default async function ProductDetailPage({
               )}
               <div className="relative">
                 <span className="absolute left-0 top-0 z-10 rounded-md border border-brand bg-ink px-2.5 py-1 text-[11px] font-bold text-brand">
-                  KHO MARKETMMO
+                  KHO MAKETMMO
                 </span>
                 <button
                   className={`absolute z-10 grid h-9 w-9 place-items-center rounded-full bg-surface shadow ${

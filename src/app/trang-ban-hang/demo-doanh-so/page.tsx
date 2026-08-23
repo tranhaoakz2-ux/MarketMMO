@@ -11,4 +11,4 @@ export default function DemoDoanhSoPage() {
   return <DemoRevenueChart />;
 }
 
-export const metadata = { title: "Demo · Doanh số theo thời gian — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Demo · Doanh số theo thời gian — Quản Lý Bán Hàng — MaketMMO" };

@@ -21,7 +21,7 @@ export const WELCOME_MODAL_CONFIG = {
   // giác mượt hơn hiện ngay lập tức, không phải chặn tương tác của khách.
   autoOpenDelayMs: 500,
 
-  brandName: "MarketMMO",
+  brandName: "MaketMMO",
   // Dòng nhỏ, viết hoa, phía trên tiêu đề — nhấn định vị thương hiệu trước
   // khi vào lời chào. Để trống ("") nếu không muốn hiện dòng này.
   eyebrow: "SÀN GIAO DỊCH SỐ UY TÍN",

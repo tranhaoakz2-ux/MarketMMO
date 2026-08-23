@@ -5,7 +5,7 @@
 import { Resend } from "resend";
 import { PASSWORD_RESET_CODE_EXPIRY_MINUTES } from "@/lib/constants";
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "MarketMMO <onboarding@resend.dev>";
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "MaketMMO <onboarding@resend.dev>";
 
 export function isEmailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY);
@@ -27,7 +27,7 @@ export async function sendPasswordResetEmail(to: string, code: string): Promise<
     subject: `Mã xác nhận đặt lại mật khẩu: ${code}`,
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #111;">
-        <h2>Đặt lại mật khẩu MarketMMO</h2>
+        <h2>Đặt lại mật khẩu MaketMMO</h2>
         <p>Bạn (hoặc ai đó) vừa yêu cầu đặt lại mật khẩu cho tài khoản này. Nhập mã xác nhận bên dưới vào trang đặt lại mật khẩu:</p>
         <p style="text-align:center; margin: 24px 0;">
           <span style="background:#8DC63F;color:#111;padding:14px 28px;border-radius:12px;font-weight:bold;font-size:32px;letter-spacing:8px;display:inline-block;">${code}</span>

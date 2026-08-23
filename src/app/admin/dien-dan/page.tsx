@@ -17,4 +17,4 @@ export default async function AdminForumReportsPage() {
   );
 }
 
-export const metadata = { title: "Diễn đàn — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Diễn đàn — Admin Control Center — MaketMMO" };

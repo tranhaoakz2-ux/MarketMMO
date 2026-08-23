@@ -27,8 +27,8 @@ export async function generateMetadata({
   const category = await getCategoryBySlug(slug);
   if (!category) return {};
 
-  const title = `${category.name} — Mua bán ${category.name} uy tín | MarketMMO`;
-  const description = `Danh sách sản phẩm/dịch vụ ${category.name} trên MarketMMO — giao dịch ký quỹ an toàn, giao hàng tự động 24/7.`;
+  const title = `${category.name} — Mua bán ${category.name} uy tín | MaketMMO`;
+  const description = `Danh sách sản phẩm/dịch vụ ${category.name} trên MaketMMO — giao dịch ký quỹ an toàn, giao hàng tự động 24/7.`;
   const url = absoluteUrl(`/danh-muc/${slug}`);
 
   return {
@@ -172,7 +172,7 @@ export default async function CategoryPage({
             <Reveal delay={0.1}>
               <p className="mt-6 text-sm leading-relaxed text-muted">
                 <strong className="text-foreground">{category.name}</strong> là danh
-                mục sản phẩm số được giao dịch phổ biến trên MarketMMO — hỗ trợ
+                mục sản phẩm số được giao dịch phổ biến trên MaketMMO — hỗ trợ
                 đầy đủ các phương thức kiếm tiền online. Mọi giao dịch đều
                 được ký quỹ an toàn và giao hàng tự động ngay sau khi thanh
                 toán.

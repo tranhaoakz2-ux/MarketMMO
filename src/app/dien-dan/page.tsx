@@ -37,10 +37,10 @@ export default async function ForumPage() {
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h1 className="flex items-center gap-2 text-xl font-black text-foreground">
-                  <MessagesSquare className="h-5 w-5 text-brand-dark" /> Diễn đàn cộng đồng MarketMMO
+                  <MessagesSquare className="h-5 w-5 text-brand-dark" /> Diễn đàn cộng đồng MaketMMO
                 </h1>
                 <p className="mt-1 text-sm text-muted">
-                  {posts.length} bài viết — kinh nghiệm, chia sẻ và trao đổi từ cộng đồng MarketMMO.
+                  {posts.length} bài viết — kinh nghiệm, chia sẻ và trao đổi từ cộng đồng MaketMMO.
                 </p>
               </div>
               <ForumNewPostPanel />
@@ -112,5 +112,5 @@ export default async function ForumPage() {
 }
 
 export const metadata = {
-  title: "Diễn đàn — MarketMMO",
+  title: "Diễn đàn — MaketMMO",
 };

@@ -10,4 +10,4 @@ export default function DemoTongQuanPage() {
   return <DemoSellerOverview />;
 }
 
-export const metadata = { title: "Demo · Tổng quan — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Demo · Tổng quan — Quản Lý Bán Hàng — MaketMMO" };

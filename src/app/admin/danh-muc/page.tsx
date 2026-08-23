@@ -27,4 +27,4 @@ export default async function AdminCategoriesPage() {
   );
 }
 
-export const metadata = { title: "Danh mục mới — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Danh mục mới — Admin Control Center — MaketMMO" };

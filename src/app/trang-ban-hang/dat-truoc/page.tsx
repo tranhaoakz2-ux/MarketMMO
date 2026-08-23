@@ -28,4 +28,4 @@ export default async function SellerPreOrdersPage() {
   );
 }
 
-export const metadata = { title: "Đặt Trước — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Đặt Trước — Quản Lý Bán Hàng — MaketMMO" };

@@ -18,4 +18,4 @@ export default async function SellerProfilePage() {
   );
 }
 
-export const metadata = { title: "Hồ Sơ Cá Nhân — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Hồ Sơ Cá Nhân — Quản Lý Bán Hàng — MaketMMO" };

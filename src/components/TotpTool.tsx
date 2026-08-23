@@ -94,7 +94,7 @@ export default function TotpTool() {
           <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-dark" />
           Đây là chuỗi bí mật bạn nhận được khi bật xác minh 2 bước (thường ở
           dạng chữ và số, hiển thị cùng mã QR). Mã được tính toán hoàn toàn
-          trên trình duyệt của bạn — MarketMMO không lưu hay gửi mã bí mật
+          trên trình duyệt của bạn — MaketMMO không lưu hay gửi mã bí mật
           này đi bất cứ đâu.
         </p>
       </div>

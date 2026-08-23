@@ -201,4 +201,4 @@ export default async function SellerPromotionPage() {
   );
 }
 
-export const metadata = { title: "Quảng Bá (Đấu Giá) — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Quảng Bá (Đấu Giá) — Quản Lý Bán Hàng — MaketMMO" };

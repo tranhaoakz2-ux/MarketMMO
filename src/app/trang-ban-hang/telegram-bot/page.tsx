@@ -4,4 +4,4 @@ export default function SellerTelegramBotPage() {
   return <SellerTelegramPanel />;
 }
 
-export const metadata = { title: "Telegram Bot — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Telegram Bot — Quản Lý Bán Hàng — MaketMMO" };

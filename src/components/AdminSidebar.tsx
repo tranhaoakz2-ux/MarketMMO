@@ -110,7 +110,7 @@ export default function AdminSidebar({
           MM
         </div>
         <div className="min-w-0 flex-1 leading-[1.15]">
-          <div className="text-[13.5px] font-black tracking-wide">MARKETMMO</div>
+          <div className="text-[13.5px] font-black tracking-wide">MAKETMMO</div>
           <div className="truncate text-[10px] uppercase tracking-widest text-[var(--adm-muted)]">
             Admin Control Center
           </div>

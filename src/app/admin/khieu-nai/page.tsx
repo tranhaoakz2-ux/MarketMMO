@@ -14,4 +14,4 @@ export default async function AdminDisputesPage({
   return <AdminDisputesPanel openId={open} />;
 }
 
-export const metadata = { title: "Khiếu nại — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Khiếu nại — Admin Control Center — MaketMMO" };

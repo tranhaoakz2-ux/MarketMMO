@@ -212,7 +212,7 @@ export default async function OrdersPage() {
               <h1 className="flex items-center gap-2 text-xl font-black text-foreground">
                 <PackageSearch className="h-5 w-5 text-brand-dark" /> Lịch sử đơn hàng
               </h1>
-              <p className="mt-1 text-sm text-muted">{rows.length} đơn hàng đã đặt trên MarketMMO.</p>
+              <p className="mt-1 text-sm text-muted">{rows.length} đơn hàng đã đặt trên MaketMMO.</p>
             </div>
           </Reveal>
 
@@ -395,6 +395,6 @@ export default async function OrdersPage() {
 }
 
 export const metadata = {
-  title: "Lịch sử đơn hàng — MarketMMO",
+  title: "Lịch sử đơn hàng — MaketMMO",
   robots: PRIVATE_ROBOTS,
 };

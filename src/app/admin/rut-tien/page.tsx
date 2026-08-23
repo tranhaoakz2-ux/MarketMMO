@@ -17,4 +17,4 @@ export default async function AdminWithdrawalsPage() {
   );
 }
 
-export const metadata = { title: "Rút tiền — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Rút tiền — Admin Control Center — MaketMMO" };

@@ -15,4 +15,4 @@ export default function DemoProductOrdersPage() {
   );
 }
 
-export const metadata = { title: "Demo · Đơn sản phẩm — MarketMMO" };
+export const metadata = { title: "Demo · Đơn sản phẩm — MaketMMO" };

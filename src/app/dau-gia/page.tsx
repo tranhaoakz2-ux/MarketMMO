@@ -210,5 +210,5 @@ export default async function AuctionPage() {
 }
 
 export const metadata = {
-  title: "Đấu giá vị trí vàng — MarketMMO",
+  title: "Đấu giá vị trí vàng — MaketMMO",
 };

@@ -25,4 +25,4 @@ export default async function SellerManualProvisionPage() {
   );
 }
 
-export const metadata = { title: "Máy Chủ (VPS) — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Máy Chủ (VPS) — Quản Lý Bán Hàng — MaketMMO" };

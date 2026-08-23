@@ -9,4 +9,4 @@ export default async function AdminAuctionPage() {
   return <AdminAuctionPanel />;
 }
 
-export const metadata = { title: "Đấu giá vị trí vàng — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Đấu giá vị trí vàng — Admin Control Center — MaketMMO" };

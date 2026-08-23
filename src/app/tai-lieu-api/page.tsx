@@ -27,7 +27,7 @@ export default function ApiDocsPage() {
   return (
     <LegalPageLayout title="Tài liệu tích hợp API">
       <p>
-        MarketMMO cung cấp API cho đối tác/người bán muốn tích hợp tự động hoá
+        MaketMMO cung cấp API cho đối tác/người bán muốn tích hợp tự động hoá
         quy trình đăng sản phẩm, đồng bộ tồn kho và xử lý đơn hàng. Tài liệu
         dưới đây mô tả sơ bộ các endpoint chính — phiên bản đầy đủ (xác thực,
         rate limit, webhook) sẽ được công bố khi tính năng API hoàn thiện.
@@ -77,5 +77,5 @@ export default function ApiDocsPage() {
 }
 
 export const metadata = {
-  title: "Tài liệu tích hợp API — MarketMMO",
+  title: "Tài liệu tích hợp API — MaketMMO",
 };

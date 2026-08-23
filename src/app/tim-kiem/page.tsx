@@ -100,5 +100,5 @@ export default async function SearchPage({
 }
 
 export const metadata = {
-  title: "Tìm kiếm — MarketMMO",
+  title: "Tìm kiếm — MaketMMO",
 };

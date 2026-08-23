@@ -5,4 +5,4 @@ export default function DemoInsurancePage() {
   return <DemoInsurance />;
 }
 
-export const metadata = { title: "Demo · Quỹ bảo hiểm — MarketMMO" };
+export const metadata = { title: "Demo · Quỹ bảo hiểm — MaketMMO" };

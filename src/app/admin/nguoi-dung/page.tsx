@@ -17,4 +17,4 @@ export default async function AdminUsersPage() {
   );
 }
 
-export const metadata = { title: "Người dùng — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Người dùng — Admin Control Center — MaketMMO" };

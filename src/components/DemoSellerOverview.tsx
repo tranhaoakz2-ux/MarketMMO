@@ -339,7 +339,7 @@ export default function DemoSellerOverview() {
       <div className="flex items-start gap-2.5 rounded-2xl border border-border-c bg-surface-alt px-4 py-3 text-xs text-muted">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-dark" />
         <p>
-          Mọi giao dịch trên MarketMMO đều thực hiện trong hệ thống (ký quỹ, ví, thanh toán) — nghiêm cấm
+          Mọi giao dịch trên MaketMMO đều thực hiện trong hệ thống (ký quỹ, ví, thanh toán) — nghiêm cấm
           dẫn khách ra ngoài nền tảng.{" "}
           <Link href="/dieu-khoan-ban-hang" className="font-semibold text-foreground underline decoration-brand-dark/40 underline-offset-2 hover:decoration-brand-dark">
             Điều khoản bán hàng

@@ -5,4 +5,4 @@ export default function DemoDisputesPage() {
   return <DemoDisputes />;
 }
 
-export const metadata = { title: "Demo · Khiếu nại — MarketMMO" };
+export const metadata = { title: "Demo · Khiếu nại — MaketMMO" };

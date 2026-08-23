@@ -21,4 +21,4 @@ export default async function SellerProductOrdersPage() {
   );
 }
 
-export const metadata = { title: "Đơn Sản Phẩm — Quản Lý Bán Hàng — MarketMMO" };
+export const metadata = { title: "Đơn Sản Phẩm — Quản Lý Bán Hàng — MaketMMO" };

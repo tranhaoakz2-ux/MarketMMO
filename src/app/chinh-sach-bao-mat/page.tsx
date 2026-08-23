@@ -3,7 +3,7 @@ import LegalPageLayout from "@/components/LegalPageLayout";
 const sections = [
   {
     title: "1. Thông tin chúng tôi thu thập",
-    body: "MarketMMO thu thập thông tin tài khoản (tên đăng nhập, email, số điện thoại), dữ liệu giao dịch (đơn hàng, lịch sử nạp tiền), và dữ liệu kỹ thuật (địa chỉ IP, thiết bị, thời gian truy cập) nhằm vận hành và bảo vệ nền tảng.",
+    body: "MaketMMO thu thập thông tin tài khoản (tên đăng nhập, email, số điện thoại), dữ liệu giao dịch (đơn hàng, lịch sử nạp tiền), và dữ liệu kỹ thuật (địa chỉ IP, thiết bị, thời gian truy cập) nhằm vận hành và bảo vệ nền tảng.",
   },
   {
     title: "2. Mục đích sử dụng",
@@ -15,7 +15,7 @@ const sections = [
   },
   {
     title: "4. Bảo mật dữ liệu",
-    body: "MarketMMO áp dụng các biện pháp kỹ thuật và quản lý phù hợp để bảo vệ dữ liệu người dùng khỏi truy cập, sử dụng hoặc tiết lộ trái phép.",
+    body: "MaketMMO áp dụng các biện pháp kỹ thuật và quản lý phù hợp để bảo vệ dữ liệu người dùng khỏi truy cập, sử dụng hoặc tiết lộ trái phép.",
   },
   {
     title: "5. Quyền của người dùng",
@@ -41,5 +41,5 @@ export default function PrivacyPolicyPage() {
 }
 
 export const metadata = {
-  title: "Chính sách bảo mật — MarketMMO",
+  title: "Chính sách bảo mật — MaketMMO",
 };

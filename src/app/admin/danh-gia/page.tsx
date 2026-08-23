@@ -17,4 +17,4 @@ export default async function AdminReviewsPage() {
   );
 }
 
-export const metadata = { title: "Đánh giá — Admin Control Center — MarketMMO" };
+export const metadata = { title: "Đánh giá — Admin Control Center — MaketMMO" };

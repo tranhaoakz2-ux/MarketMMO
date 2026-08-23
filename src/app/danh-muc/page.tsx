@@ -133,7 +133,7 @@ export default async function AllProductsPage({
             <Reveal delay={0.1}>
               <p className="mt-6 text-sm leading-relaxed text-muted">
                 <strong className="text-foreground">Tất cả sản phẩm</strong> trên
-                MarketMMO — hỗ trợ đầy đủ các phương thức kiếm tiền online. Mọi
+                MaketMMO — hỗ trợ đầy đủ các phương thức kiếm tiền online. Mọi
                 giao dịch đều được ký quỹ an toàn và giao hàng tự động ngay sau
                 khi thanh toán.
               </p>

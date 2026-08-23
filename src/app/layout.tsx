@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const TITLE = "MarketMMO — Sàn giao dịch tài khoản & vật phẩm MMO uy tín";
+const TITLE = "MaketMMO — Sàn giao dịch tài khoản & vật phẩm MMO uy tín";
 const DESCRIPTION =
-  "MarketMMO là marketplace mua bán tài khoản số, vật phẩm/tiền tệ MMO và dịch vụ boosting, giao dịch ký quỹ an toàn, giao hàng tự động 24/7.";
+  "MaketMMO là marketplace mua bán tài khoản số, vật phẩm/tiền tệ MMO và dịch vụ boosting, giao dịch ký quỹ an toàn, giao hàng tự động 24/7.";
 
 export const metadata: Metadata = {
   // Resolve URL tương đối (canonical/OG image...) thành tuyệt đối ở mọi
