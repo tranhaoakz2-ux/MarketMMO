@@ -159,13 +159,17 @@ export default function WelcomeModal() {
                       key={f.title}
                       variants={cardItemVariants}
                       whileHover={{ y: -2 }}
-                      className="flex flex-col items-center rounded-xl border-[0.5px] border-border-c bg-surface px-3.5 py-[18px] text-center transition-colors duration-300 hover:border-brand/40"
+                      className="group rounded-2xl border border-black/[0.07] bg-black/[0.015] p-3.5 text-center transition-colors duration-300 hover:border-brand/70 hover:bg-black/[0.03] dark:border-white/[0.07] dark:bg-white/[0.03] dark:hover:bg-white/[0.05]"
                     >
-                      <div className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[11px] border-[1.5px] border-[#EF9F27] bg-transparent">
-                        <Icon className="h-[22px] w-[22px] text-[#BA7517]" strokeWidth={1.75} />
+                      <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-dark text-ink shadow-[0_6px_16px_-4px_var(--color-brand)]">
+                        <Icon className="h-[17px] w-[17px]" />
                       </div>
-                      <p className="mt-2.5 text-sm font-medium text-foreground">{f.title}</p>
-                      <p className="mt-0.5 text-xs leading-[1.55] text-muted">{f.description}</p>
+                      <p className="mt-2.5 text-[13px] font-bold text-ink/90 transition-colors duration-300 group-hover:text-brand-dark dark:text-white/90 dark:group-hover:text-brand">
+                        {f.title}
+                      </p>
+                      <p className="mt-0.5 text-[11px] leading-snug text-ink/50 dark:text-white/45">
+                        {f.description}
+                      </p>
                     </motion.div>
                   );
                 })}
@@ -176,18 +180,22 @@ export default function WelcomeModal() {
                   href={WELCOME_MODAL_CONFIG.fanpageUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-xl border-[0.5px] border-border-c bg-surface py-2.5 text-[13px] font-medium text-foreground/80 transition hover:border-brand/40"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-black/[0.08] bg-black/[0.02] py-2.5 text-[13px] font-semibold text-ink/70 transition hover:border-black/[0.16] hover:bg-black/[0.05] hover:text-ink dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white/75 dark:hover:border-white/[0.18] dark:hover:bg-white/[0.08] dark:hover:text-white"
                 >
-                  <span className="text-[18px] font-black leading-none text-[#185FA5]">f</span>
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#1877F2] text-[10px] font-black leading-none text-white">
+                    f
+                  </span>
                   Fanpage
                 </a>
                 <a
                   href={WELCOME_MODAL_CONFIG.telegramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-xl border-[0.5px] border-border-c bg-surface py-2.5 text-[13px] font-medium text-foreground/80 transition hover:border-brand/40"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-black/[0.08] bg-black/[0.02] py-2.5 text-[13px] font-semibold text-ink/70 transition hover:border-black/[0.16] hover:bg-black/[0.05] hover:text-ink dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white/75 dark:hover:border-white/[0.18] dark:hover:bg-white/[0.08] dark:hover:text-white"
                 >
-                  <Send className="h-[18px] w-[18px] -rotate-45 text-[#378ADD]" strokeWidth={1.75} />
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#26A5E4] text-white">
+                    <Send className="h-3 w-3 -rotate-45" />
+                  </span>
                   Telegram
                 </a>
               </div>
