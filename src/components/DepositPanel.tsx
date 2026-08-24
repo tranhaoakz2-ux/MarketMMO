@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  ArrowLeft,
   Banknote,
   Building2,
   Check,
@@ -443,6 +444,12 @@ export default function DepositPanel({
     setError(null);
   };
 
+  // Đã sang màn QR/thanh toán (Bước 3 ngân hàng, hoặc Bước 2 USDT đã có
+  // intent) — CHỈ ẨN HIỂN THỊ khối chọn phương thức + số tiền, không đụng
+  // state/API nào. VNPay redirect thẳng ra ngoài trang nên không có "màn
+  // thanh toán trong trang" tương ứng — không cần (và không có gì) để ẩn.
+  const inPaymentStep = (method === "bank" && bankPhase === "created") || (method === "usdt" && !!usdtIntent);
+
   return (
     <div className="flex flex-col gap-6">
       {/* Hero số dư — cùng ngôn ngữ với khối header trang Hồ sơ cá nhân (dải
@@ -478,6 +485,7 @@ export default function DepositPanel({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px] lg:items-start">
         <div className="flex flex-col gap-6">
+          {!inPaymentStep && (
           <Reveal delay={0.05}>
             <SectionCard icon={CreditCard} title="Chọn phương thức nạp tiền">
               <div className="flex flex-col gap-2.5">
@@ -607,8 +615,9 @@ export default function DepositPanel({
               </div>
             </SectionCard>
           </Reveal>
+          )}
 
-          {(method !== "usdt" || !usdtIntent) && !(method === "bank" && bankPhase === "created") && (
+          {!inPaymentStep && (
             <Reveal delay={0.08}>
               <SectionCard icon={Banknote} title="Số tiền nạp">
                 <div className="flex flex-col gap-4">
@@ -733,12 +742,16 @@ export default function DepositPanel({
                         : "Chuyển đúng số tiền và nội dung ở trên — admin sẽ xác nhận sau khi nhận được, có thể mất vài phút."}
                     </p>
 
+                    {/* Lối thoát DUY NHẤT khỏi Bước 3 — chỉ ẩn hiển thị, không
+                        gọi API huỷ nào (yêu cầu KHÔNG đụng backend); yêu cầu
+                        PENDING cũ cứ để tự hết hạn theo expiresAt đã có sẵn,
+                        webhook vẫn cộng đúng nếu tiền lỡ về sau đó. */}
                     <button
                       type="button"
                       onClick={handleBankReset}
-                      className="self-start text-xs font-bold text-muted hover:text-foreground hover:underline"
+                      className="flex items-center gap-1.5 self-start text-xs font-bold text-muted hover:text-foreground hover:underline"
                     >
-                      Huỷ, đổi số tiền khác
+                      <ArrowLeft className="h-3.5 w-3.5" /> Chọn lại / Hủy lệnh
                     </button>
                   </div>
                 )}
@@ -811,6 +824,9 @@ export default function DepositPanel({
                     Chỉ gửi USDT trên mạng TRC20 (Tron) — gửi sai mạng có thể
                     mất tiền. Hệ thống xác minh trên blockchain trước khi cộng tiền, có thể mất vài giây.
                   </p>
+                  {/* Lối thoát DUY NHẤT khỏi màn USDT — chỉ ẩn hiển thị, không
+                      gọi API huỷ intent nào (yêu cầu KHÔNG đụng backend); intent
+                      PENDING cũ cứ để tự hết hạn theo expiresAt đã có sẵn. */}
                   <button
                     type="button"
                     onClick={() => {
@@ -819,9 +835,9 @@ export default function DepositPanel({
                       setError(null);
                       setMessage(null);
                     }}
-                    className="self-start text-xs font-bold text-muted hover:text-foreground hover:underline"
+                    className="flex items-center gap-1.5 self-start text-xs font-bold text-muted hover:text-foreground hover:underline"
                   >
-                    Huỷ, đổi số tiền khác
+                    <ArrowLeft className="h-3.5 w-3.5" /> Chọn lại / Hủy lệnh
                   </button>
                 </div>
               </SectionCard>
