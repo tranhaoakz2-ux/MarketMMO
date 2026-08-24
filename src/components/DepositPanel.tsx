@@ -66,6 +66,18 @@ type UsdtDepositIntentView = {
   expiresAt: string;
 };
 
+// Yêu cầu nạp qua DV.net đang chờ — xem POST /api/wallet/deposit-dvnet. Khác
+// UsdtDepositIntentView ở chỗ không có address/usdtAmount cố định để hiển thị
+// (DV.net tự quản lý trên trang pay_url riêng), buyer chỉ cần mở payUrl rồi
+// chờ webhook tự cộng tiền — trang này poll trạng thái qua GET
+// /api/wallet/deposit/[id] (cùng route dùng cho luồng ngân hàng).
+type DvnetDepositView = {
+  id: string;
+  vndAmount: number;
+  payUrl: string;
+  expiresAt: string;
+};
+
 type WalletTransaction = {
   id: string;
   type: string;
@@ -194,11 +206,16 @@ export default function DepositPanel({
   vnpayEnabled,
   bankInfo,
   usdtInfo,
+  usdtEnabled,
+  usdtProvider,
   sepayEnabled,
 }: {
   vnpayEnabled: boolean;
   bankInfo: BankInfo | null;
   usdtInfo: UsdtInfo | null;
+  /** USDT tab bật hay không — trongrid xét usdtInfo, dvnet xét cấu hình DV.net (xem nap-tien/page.tsx). */
+  usdtEnabled: boolean;
+  usdtProvider: "trongrid" | "dvnet";
   sepayEnabled: boolean;
 }) {
   const { data: session, status, update } = useSession();
@@ -211,6 +228,9 @@ export default function DepositPanel({
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [usdtIntent, setUsdtIntent] = useState<UsdtDepositIntentView | null>(null);
   const [usdtIntentLoading, setUsdtIntentLoading] = useState(false);
+  const [dvnetIntent, setDvnetIntent] = useState<DvnetDepositView | null>(null);
+  const [dvnetIntentLoading, setDvnetIntentLoading] = useState(false);
+  const [dvnetStatus, setDvnetStatus] = useState<WalletTxStatus>("PENDING");
 
   // Bước 2 (nhập số tiền) -> Bước 3 (QR + đối soát) của luồng NGÂN HÀNG —
   // "created" chỉ bật sau khi server tạo xong WalletTransaction thật.
@@ -275,7 +295,7 @@ export default function DepositPanel({
   // Khôi phục yêu cầu nạp USDT đang chờ (nếu có) — buyer refresh trang giữa
   // chừng không mất số USDT định danh/địa chỉ đã cấp.
   useEffect(() => {
-    if (!session) return;
+    if (!session || usdtProvider !== "trongrid") return;
     (async () => {
       const res = await fetch("/api/wallet/deposit-usdt/intent");
       if (res.ok) {
@@ -283,7 +303,46 @@ export default function DepositPanel({
         if (data.intent) setUsdtIntent(data.intent);
       }
     })();
-  }, [session]);
+  }, [session, usdtProvider]);
+
+  // Khôi phục yêu cầu nạp DV.net đang chờ (nếu có, xem cùng lý do ở effect
+  // usdt phía trên).
+  useEffect(() => {
+    if (!session || usdtProvider !== "dvnet") return;
+    (async () => {
+      const res = await fetch("/api/wallet/deposit-dvnet");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.intent) setDvnetIntent(data.intent);
+      }
+    })();
+  }, [session, usdtProvider]);
+
+  // Poll trạng thái mỗi 4s trong lúc chờ webhook DV.net báo kết quả — cùng
+  // cơ chế/route trạng thái (GET /api/wallet/deposit/[id]) đã dùng cho luồng
+  // ngân hàng, tự chuyển "Nạp thành công" không cần F5.
+  useEffect(() => {
+    if (!dvnetIntent) return;
+    let cancelled = false;
+    const poll = async () => {
+      const res = await fetch(`/api/wallet/deposit/${dvnetIntent.id}`);
+      if (!res.ok || cancelled) return;
+      const data = await res.json();
+      if (cancelled) return;
+      setDvnetStatus(data.status);
+      if (data.status === "CONFIRMED") {
+        await update();
+        loadTransactions();
+      }
+    };
+    poll();
+    const interval = setInterval(poll, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dvnetIntent?.id]);
 
   if (status === "loading") return null;
 
@@ -333,6 +392,32 @@ export default function DepositPanel({
     setUsdtIntent(data);
   };
 
+  const handleCreateDvnetIntent = async () => {
+    setError(null);
+    setMessage(null);
+    if (!amount || amount < MIN_USDT_DEPOSIT_VND || amount > MAX_USDT_DEPOSIT_VND) {
+      setError(
+        `Số tiền nạp USDT phải từ ${formatVnd(MIN_USDT_DEPOSIT_VND)} đến ${formatVnd(MAX_USDT_DEPOSIT_VND)}.`
+      );
+      return;
+    }
+    setDvnetIntentLoading(true);
+    const res = await fetch("/api/wallet/deposit-dvnet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vndAmount: amount }),
+    });
+    const data = await res.json();
+    setDvnetIntentLoading(false);
+    if (!res.ok) {
+      setError(data.error ?? "Không thể tạo yêu cầu nạp qua DV.net.");
+      return;
+    }
+    setDvnetStatus("PENDING");
+    setDvnetIntent(data);
+    window.open(data.payUrl, "_blank", "noopener,noreferrer");
+  };
+
   const handleSubmit = async () => {
     setError(null);
     setMessage(null);
@@ -358,7 +443,7 @@ export default function DepositPanel({
       return;
     }
 
-    if (method === "usdt") {
+    if (method === "usdt" && usdtProvider === "trongrid") {
       if (!usdtInfo) {
         setError("Nạp tiền bằng USDT chưa được bật.");
         return;
@@ -448,7 +533,10 @@ export default function DepositPanel({
   // intent) — CHỈ ẨN HIỂN THỊ khối chọn phương thức + số tiền, không đụng
   // state/API nào. VNPay redirect thẳng ra ngoài trang nên không có "màn
   // thanh toán trong trang" tương ứng — không cần (và không có gì) để ẩn.
-  const inPaymentStep = (method === "bank" && bankPhase === "created") || (method === "usdt" && !!usdtIntent);
+  const inPaymentStep =
+    (method === "bank" && bankPhase === "created") ||
+    (method === "usdt" && usdtProvider === "trongrid" && !!usdtIntent) ||
+    (method === "usdt" && usdtProvider === "dvnet" && !!dvnetIntent);
 
   return (
     <div className="flex flex-col gap-6">
@@ -574,13 +662,13 @@ export default function DepositPanel({
                     method === "usdt"
                       ? "border-brand-dark bg-brand-light/30 shadow-sm"
                       : "border-border-c bg-surface hover:border-brand-dark/40 hover:bg-surface-alt"
-                  } ${!usdtInfo ? "cursor-not-allowed opacity-60 hover:border-border-c hover:bg-surface" : ""}`}
+                  } ${!usdtEnabled ? "cursor-not-allowed opacity-60 hover:border-border-c hover:bg-surface" : ""}`}
                 >
                   <input
                     type="radio"
                     name="method"
                     checked={method === "usdt"}
-                    disabled={!usdtInfo}
+                    disabled={!usdtEnabled}
                     onChange={() => setMethod("usdt")}
                     className="sr-only"
                   />
@@ -593,17 +681,21 @@ export default function DepositPanel({
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <p className="text-sm font-bold text-foreground">USDT (mạng TRC20)</p>
-                      {!usdtInfo && (
+                      <p className="text-sm font-bold text-foreground">
+                        USDT {usdtProvider === "dvnet" ? "(qua DV.net)" : "(mạng TRC20)"}
+                      </p>
+                      {!usdtEnabled && (
                         <span className="rounded-full border border-border-c bg-surface-alt px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-muted">
                           Chưa cấu hình
                         </span>
                       )}
                     </div>
                     <p className="mt-0.5 text-xs text-muted">
-                      {usdtInfo
+                      {usdtEnabled && usdtInfo
                         ? `Quy đổi theo tỷ giá 1 USDT ≈ ${usdtInfo.rate.toLocaleString("vi-VN")}đ`
-                        : "Thiếu USDT_TRC20_ADDRESS trong .env"}
+                        : usdtEnabled
+                          ? "Mở trang thanh toán DV.net riêng cho lượt nạp này"
+                          : "Tính năng nạp USDT hiện chưa khả dụng"}
                     </p>
                   </div>
                   {method === "usdt" && (
@@ -759,7 +851,7 @@ export default function DepositPanel({
             </Reveal>
           )}
 
-          {method === "usdt" && usdtInfo && !usdtIntent && (
+          {method === "usdt" && usdtProvider === "trongrid" && usdtInfo && !usdtIntent && (
             <Reveal delay={0.11}>
               <SectionCard icon={DollarSign} title="Bước 1 — Tạo yêu cầu nạp USDT">
                 <div className="flex flex-col gap-4">
@@ -786,7 +878,7 @@ export default function DepositPanel({
             </Reveal>
           )}
 
-          {method === "usdt" && usdtInfo && usdtIntent && (
+          {method === "usdt" && usdtProvider === "trongrid" && usdtInfo && usdtIntent && (
             <Reveal delay={0.11}>
               <SectionCard icon={DollarSign} title="Bước 2 — Chuyển USDT & xác nhận">
                 <div className="flex flex-col gap-4">
@@ -844,6 +936,95 @@ export default function DepositPanel({
             </Reveal>
           )}
 
+          {method === "usdt" && usdtProvider === "dvnet" && usdtEnabled && !dvnetIntent && (
+            <Reveal delay={0.11}>
+              <SectionCard icon={DollarSign} title="Bước 1 — Tạo yêu cầu nạp qua DV.net">
+                <div className="flex flex-col gap-4">
+                  <p className="text-xs leading-relaxed text-muted">
+                    Hệ thống sẽ mở 1 trang thanh toán riêng của DV.net cho lượt nạp này — chọn mạng/coin và thanh
+                    toán trên trang đó, ví sẽ tự động được cộng tiền ngay sau khi DV.net xác nhận nhận được, không
+                    cần quay lại nhập mã giao dịch.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleCreateDvnetIntent}
+                    disabled={
+                      dvnetIntentLoading || !amount || amount < MIN_USDT_DEPOSIT_VND || amount > MAX_USDT_DEPOSIT_VND
+                    }
+                    className="flex items-center justify-center gap-2 rounded-full bg-brand py-3 text-sm font-black text-ink shadow-sm transition hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-md disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
+                  >
+                    {dvnetIntentLoading
+                      ? "Đang tạo yêu cầu..."
+                      : `Mở trang thanh toán DV.net cho ${amount ? formatVnd(amount) : ""}`}
+                  </button>
+                </div>
+              </SectionCard>
+            </Reveal>
+          )}
+
+          {method === "usdt" && usdtProvider === "dvnet" && dvnetIntent && (
+            <Reveal delay={0.11}>
+              <SectionCard icon={DollarSign} title="Bước 2 — Hoàn tất thanh toán trên DV.net">
+                {dvnetStatus === "CONFIRMED" ? (
+                  <div className="flex flex-col items-center gap-3 py-6 text-center">
+                    <span className="grid h-14 w-14 place-items-center rounded-full bg-success/10 text-success">
+                      <CheckCircle2 className="h-7 w-7" />
+                    </span>
+                    <div>
+                      <p className="text-base font-black text-foreground">Nạp tiền thành công!</p>
+                      <p className="mt-1 text-sm text-muted">
+                        Số dư mới: <span className="font-bold text-foreground">{formatVnd(session.user.walletBalance)}</span>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDvnetIntent(null);
+                        setDvnetStatus("PENDING");
+                      }}
+                      className="mt-1 flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-xs font-bold text-ink transition hover:bg-brand-dark"
+                    >
+                      Nạp thêm lần nữa
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    <p className="flex items-center gap-2 rounded-xl bg-brand-light/25 px-3.5 py-2.5 text-xs font-semibold text-brand-dark">
+                      <Clock className="h-4 w-4 shrink-0 animate-pulse" /> Đang chờ DV.net xác nhận thanh toán —
+                      trang này tự cập nhật, không cần tải lại.
+                    </p>
+                    <a
+                      href={dvnetIntent.payUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 rounded-full bg-brand py-3 text-sm font-black text-ink shadow-sm transition hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-md"
+                    >
+                      Mở lại trang thanh toán DV.net
+                    </a>
+                    <p className="text-xs leading-relaxed text-muted">
+                      Sẽ cộng vào ví ước tính{" "}
+                      <b className="text-foreground">{formatVnd(dvnetIntent.vndAmount)}</b> (số cộng thật tính theo
+                      đúng số USD DV.net xác nhận đã nhận). Yêu cầu hết hạn lúc{" "}
+                      <b className="text-foreground">{new Date(dvnetIntent.expiresAt).toLocaleString("vi-VN")}</b> —
+                      tiền về trễ vẫn được cộng bình thường.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDvnetIntent(null);
+                        setError(null);
+                        setMessage(null);
+                      }}
+                      className="flex items-center gap-1.5 self-start text-xs font-bold text-muted hover:text-foreground hover:underline"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" /> Chọn lại / Ẩn màn này
+                    </button>
+                  </div>
+                )}
+              </SectionCard>
+            </Reveal>
+          )}
+
           <Reveal delay={0.14}>
             <div className="flex flex-col gap-3">
               {error && (
@@ -857,11 +1038,15 @@ export default function DepositPanel({
                 </p>
               )}
 
-              {/* Ẩn nút chung này ở 2 trường hợp đã có nút hành động RIÊNG bên
+              {/* Ẩn nút chung này ở các trường hợp đã có nút hành động RIÊNG bên
                   trong SectionCard phía trên (tránh 2 nút cùng lúc không rõ
-                  nút nào làm gì): USDT bước 1 chưa có yêu cầu (nút "Tạo yêu
-                  cầu"), và ngân hàng đã sang Bước 3 (nút "Huỷ"/"Nạp thêm"). */}
-              {!(method === "usdt" && !usdtIntent) && !(method === "bank" && bankPhase === "created") && (
+                  nút nào làm gì): USDT/trongrid bước 1 chưa có yêu cầu (nút
+                  "Tạo yêu cầu"), ngân hàng đã sang Bước 3 (nút "Huỷ"/"Nạp
+                  thêm"), và toàn bộ luồng USDT/dvnet (tự có nút riêng ở cả 2
+                  bước, không dùng nút chung này ở bước nào). */}
+              {!(method === "usdt" && usdtProvider === "trongrid" && !usdtIntent) &&
+                !(method === "usdt" && usdtProvider === "dvnet") &&
+                !(method === "bank" && bankPhase === "created") && (
                 <button
                   onClick={handleSubmit}
                   disabled={loading || (method === "usdt" ? !usdtInfo || !usdtIntent || !txid.trim() : !amount)}

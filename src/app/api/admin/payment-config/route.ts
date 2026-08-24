@@ -68,6 +68,16 @@ export async function PATCH(req: Request) {
     }
   }
 
+  if ("usdt_provider" in updates) {
+    const raw = updates.usdt_provider;
+    if (raw !== null && raw !== "" && raw !== "trongrid" && raw !== "dvnet") {
+      return NextResponse.json(
+        { error: "Cổng nạp USDT chỉ nhận giá trị \"trongrid\" hoặc \"dvnet\"." },
+        { status: 400 }
+      );
+    }
+  }
+
   const changedKeys: string[] = [];
   await prisma.$transaction(async (tx) => {
     for (const [key, rawValue] of entries) {

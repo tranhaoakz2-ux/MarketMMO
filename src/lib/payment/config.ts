@@ -18,7 +18,11 @@ export type PaymentConfigKey =
   | "sepay_webhook_secret"
   | "sepay_api_key"
   | "usdt_deposit_margin_percent"
-  | "usdt_withdraw_margin_percent";
+  | "usdt_withdraw_margin_percent"
+  | "usdt_provider"
+  | "dvnet_api_key"
+  | "dvnet_webhook_secret"
+  | "dvnet_api_base_url";
 
 const ENV_FALLBACK: Record<PaymentConfigKey, string | undefined> = {
   vnpay_tmn_code: process.env.VNPAY_TMN_CODE,
@@ -44,6 +48,23 @@ const ENV_FALLBACK: Record<PaymentConfigKey, string | undefined> = {
   // theo yêu cầu nghiệp vụ đã chốt.
   usdt_deposit_margin_percent: process.env.USDT_DEPOSIT_MARGIN_PERCENT,
   usdt_withdraw_margin_percent: process.env.USDT_WITHDRAW_MARGIN_PERCENT,
+  // Chọn cổng xử lý nạp USDT: "trongrid" (mặc định, địa chỉ tĩnh + xác minh
+  // on-chain qua TronGrid, xem usdt_trc20_address ở trên) hoặc "dvnet" (cổng
+  // DV.net — tạo ví/link thanh toán riêng từng lượt nạp qua API, webhook tự
+  // báo kết quả). Đặt thành key riêng (không phải chỉ .env) để đổi được
+  // ngay từ /admin/cai-dat, không cần deploy lại — dễ revert nếu DV.net có
+  // sự cố. Giá trị khác "dvnet" (kể cả rỗng/chưa cấu hình) → coi như "trongrid".
+  usdt_provider: process.env.USDT_PROVIDER,
+  // DV.net (non-custodial crypto payment gateway, github.com/dv-net) — API
+  // key dùng để GỌI DV.net tạo ví nạp (header x-api-key, xem
+  // src/lib/payment/dvnet.ts), KHÁC webhook secret bên dưới (dùng để XÁC
+  // MINH webhook DV.net gửi VỀ, không phải để gọi đi).
+  dvnet_api_key: process.env.DVNET_API_KEY,
+  dvnet_webhook_secret: process.env.DVNET_WEBHOOK_SECRET,
+  // Base URL API DV.net — mặc định "https://dv.net/api" nếu bỏ trống (xem
+  // DVNET_DEFAULT_BASE_URL trong dvnet.ts), chỉ cần điền nếu dashboard DV.net
+  // cấp domain/subdomain API riêng khác domain mặc định.
+  dvnet_api_base_url: process.env.DVNET_API_BASE_URL,
 };
 
 export const ALL_PAYMENT_CONFIG_KEYS = Object.keys(ENV_FALLBACK) as PaymentConfigKey[];

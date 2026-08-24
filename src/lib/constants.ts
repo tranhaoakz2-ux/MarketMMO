@@ -364,6 +364,10 @@ export const walletMethodLabel: Record<string, string> = {
   // đơn còn PENDING chờ admin duyệt tay vẫn giữ method "bank" cho tới khi
   // khớp được, xem src/app/api/webhook/sepay/route.ts).
   sepay: "Ngân hàng (SePay tự động)",
+  // Nạp USDT qua cổng DV.net (non-custodial, xem src/lib/payment/dvnet.ts) —
+  // tách khỏi "usdt" (TronGrid) vì khác cơ chế khớp giao dịch, chọn qua
+  // PaymentConfig "usdt_provider".
+  dvnet: "USDT (DV.net)",
 };
 
 // Mức rút tiền tối thiểu — dùng cho bank (cùng đơn vị VNĐ); USDT tách
@@ -385,6 +389,14 @@ export const USDT_DEPOSIT_INTENT_EXPIRY_MINUTES = 45;
 // Số lần thử lại tối đa khi mã ngẫu nhiên (6 số thập phân cuối) trùng với 1
 // yêu cầu khác đang PENDING — trùng cực hiếm (~1/999.999), vài lần thử là đủ.
 export const USDT_DEPOSIT_INTENT_MAX_COLLISION_RETRIES = 5;
+
+// ── Nạp USDT qua DV.net (WalletTransaction.depositCode = store_external_id
+// gửi cho DV.net, xem POST /api/wallet/deposit-dvnet + src/lib/payment/
+// dvnet.ts). Cùng khoảng thời gian với USDT_DEPOSIT_INTENT_EXPIRY_MINUTES
+// cho nhất quán — chỉ mang tính hiển thị, tiền về trễ vẫn được cộng (webhook
+// không kiểm tra hạn, giống nguyên tắc bank deposit).
+export const DVNET_DEPOSIT_EXPIRY_MINUTES = 45;
+export const DVNET_DEPOSIT_CODE_MAX_RETRIES = 5;
 
 // ── Nạp ngân hàng qua VietQR (WalletTransaction.depositCode/expiresAt) —
 // wizard 3 bước: chọn phương thức -> nhập số tiền -> server tạo record +

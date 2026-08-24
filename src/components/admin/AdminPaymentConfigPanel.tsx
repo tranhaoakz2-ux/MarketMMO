@@ -8,7 +8,7 @@
 // một cách vô tình.
 import { AlertTriangle, CheckCircle2, Eye, EyeOff, Loader2, RotateCcw, Save } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button, Card, Field, SectionTitle, StatusBadge, TextInput } from "@/components/admin-demo/AdminDemoKit";
+import { Button, Card, Field, Select, SectionTitle, StatusBadge, TextInput } from "@/components/admin-demo/AdminDemoKit";
 import type { PaymentConfigKey, PaymentConfigSource } from "@/lib/payment/config";
 
 type ConfigEntry = { value: string | undefined; source: PaymentConfigSource };
@@ -35,6 +35,7 @@ export default function AdminPaymentConfigPanel() {
   const [dirty, setDirty] = useState<Set<PaymentConfigKey>>(new Set());
   const [showSecret, setShowSecret] = useState(false);
   const [showSepaySecret, setShowSepaySecret] = useState(false);
+  const [showDvnetSecret, setShowDvnetSecret] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
 
@@ -120,9 +121,11 @@ export default function AdminPaymentConfigPanel() {
     "usdt_vnd_rate",
     "usdt_deposit_margin_percent",
     "usdt_withdraw_margin_percent",
+    "usdt_provider",
   ];
   const bankKeys: PaymentConfigKey[] = ["bank_name", "bank_account_number", "bank_account_holder", "bank_bin"];
   const sepayKeys: PaymentConfigKey[] = ["sepay_webhook_secret", "sepay_api_key"];
+  const dvnetKeys: PaymentConfigKey[] = ["dvnet_api_key", "dvnet_webhook_secret", "dvnet_api_base_url"];
 
   const groupDirty = (keys: PaymentConfigKey[]) => keys.some((k) => dirty.has(k));
 
@@ -212,6 +215,17 @@ export default function AdminPaymentConfigPanel() {
         >
           USDT TRC20 (nạp/rút tiền)
         </SectionTitle>
+        <div className="mb-4">
+          <Field label="Cổng xử lý nạp USDT" hint="Trongrid: địa chỉ ví tĩnh bên dưới + xác minh on-chain. DV.net: tạo link thanh toán riêng từng lượt qua API, xem thẻ DV.net bên dưới.">
+            <Select
+              value={values.usdt_provider || "trongrid"}
+              onChange={(e) => setField("usdt_provider", e.target.value)}
+            >
+              <option value="trongrid">TronGrid (địa chỉ tĩnh, mặc định)</option>
+              <option value="dvnet">DV.net (tạo link thanh toán riêng)</option>
+            </Select>
+          </Field>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Địa chỉ ví TRC20">
             <TextInput
@@ -369,6 +383,72 @@ export default function AdminPaymentConfigPanel() {
             Lưu
           </Button>
           <Button size="sm" variant="secondary" disabled={saving !== null} onClick={() => restoreToEnv(sepayKeys)}>
+            <RotateCcw className="h-3.5 w-3.5" /> Khôi phục .env
+          </Button>
+        </div>
+      </Card>
+
+      {/* DV.net */}
+      <Card>
+        <SectionTitle
+          aside={
+            <SourceTag
+              source={
+                config.dvnet_api_key.source === "db" || config.dvnet_webhook_secret.source === "db"
+                  ? "db"
+                  : config.dvnet_api_key.source
+              }
+            />
+          }
+        >
+          DV.net (cổng nạp USDT non-custodial, github.com/dv-net)
+        </SectionTitle>
+        <p className="mb-4 text-xs text-[var(--adm-muted)]">
+          Chỉ có tác dụng khi &quot;Cổng xử lý nạp USDT&quot; ở thẻ USDT phía trên đang chọn &quot;DV.net&quot;. API
+          Key dùng để GỌI DV.net tạo ví nạp; Webhook Secret dùng để XÁC MINH webhook DV.net gửi VỀ báo kết quả —
+          cần cả 2, thiếu 1 trong 2 tính năng tự tắt (fail-closed).
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="API Key">
+            <TextInput
+              value={values.dvnet_api_key ?? ""}
+              onChange={(e) => setField("dvnet_api_key", e.target.value)}
+              placeholder="Chưa cấu hình"
+            />
+          </Field>
+          <Field label="Webhook Secret">
+            <div className="relative">
+              <TextInput
+                type={showDvnetSecret ? "text" : "password"}
+                value={values.dvnet_webhook_secret ?? ""}
+                onChange={(e) => setField("dvnet_webhook_secret", e.target.value)}
+                placeholder="Chưa cấu hình"
+                className="pr-9"
+              />
+              <button
+                type="button"
+                onClick={() => setShowDvnetSecret((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--adm-muted)] hover:text-[var(--adm-text)]"
+                aria-label={showDvnetSecret ? "Ẩn" : "Hiện"}
+              >
+                {showDvnetSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </Field>
+          <Field label="Base URL API" hint="Bỏ trống dùng mặc định https://dv.net/api — chỉ điền nếu dashboard DV.net cấp domain/subdomain riêng khác.">
+            <TextInput
+              value={values.dvnet_api_base_url ?? ""}
+              onChange={(e) => setField("dvnet_api_base_url", e.target.value)}
+              placeholder="https://dv.net/api"
+            />
+          </Field>
+        </div>
+        <div className="mt-4 flex items-center gap-2">
+          <Button size="sm" disabled={!groupDirty(dvnetKeys) || saving !== null} onClick={() => save(dvnetKeys)}>
+            {saving === dvnetKeys.join(",") ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            Lưu
+          </Button>
+          <Button size="sm" variant="secondary" disabled={saving !== null} onClick={() => restoreToEnv(dvnetKeys)}>
             <RotateCcw className="h-3.5 w-3.5" /> Khôi phục .env
           </Button>
         </div>
