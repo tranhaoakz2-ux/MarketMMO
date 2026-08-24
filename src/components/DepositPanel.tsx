@@ -6,6 +6,7 @@ import {
   Building2,
   Check,
   CheckCircle2,
+  Clock,
   Copy,
   CreditCard,
   DollarSign,
@@ -22,7 +23,9 @@ import Reveal from "@/components/Reveal";
 import { formatVnd } from "@/lib/format";
 import type { BankInfo, UsdtInfo } from "@/lib/payment/deposit";
 import {
+  MAX_BANK_DEPOSIT_VND,
   MAX_USDT_DEPOSIT_VND,
+  MIN_BANK_DEPOSIT_VND,
   MIN_USDT_DEPOSIT_VND,
   walletMethodLabel,
   walletTxStatusLabel,
@@ -31,14 +34,25 @@ import {
 
 const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
 
-// Hậu tố ngẫu nhiên gắn thêm vào mã chuyển khoản (cùng với 6 ký tự cuối
-// userId) để mỗi yêu cầu nạp tiền có nội dung RIÊNG BIỆT — tránh trường hợp 2
-// lần nạp khác số tiền nhưng trùng nội dung, gây khó đối chiếu sao kê.
-function randomCodeNonce(): string {
-  return Math.random().toString(36).slice(2, 6).toUpperCase();
-}
-
 type DepositMethod = "vnpay" | "bank" | "usdt";
+
+// Yêu cầu nạp NGÂN HÀNG đã được SERVER tạo (POST /api/wallet/deposit-request)
+// — code/expiresAt do server sinh, KHÔNG tin số/mã từ client. Chỉ tồn tại
+// sau khi buyer bấm "Xác nhận" ở bước nhập số tiền (Bước 2), lúc đó mới
+// chuyển sang Bước 3 hiện QR (xem bankPhase bên dưới).
+type BankDeposit = {
+  id: string;
+  code: string;
+  amount: number;
+  expiresAt: string;
+};
+
+function formatCountdown(ms: number): string {
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
 
 // Yêu cầu nạp USDT đang chờ (đã cấp số USDT định danh riêng) — xem
 // POST /api/wallet/deposit-usdt/intent. Buyer PHẢI có 1 cái đang PENDING
@@ -194,13 +208,18 @@ export default function DepositPanel({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
-  const [codeNonce, setCodeNonce] = useState(() => randomCodeNonce());
   const [usdtIntent, setUsdtIntent] = useState<UsdtDepositIntentView | null>(null);
   const [usdtIntentLoading, setUsdtIntentLoading] = useState(false);
 
-  const transferCode = session?.user?.id
-    ? `NAP${session.user.id.slice(-6).toUpperCase()}${codeNonce}`
-    : "";
+  // Bước 2 (nhập số tiền) -> Bước 3 (QR + đối soát) của luồng NGÂN HÀNG —
+  // "created" chỉ bật sau khi server tạo xong WalletTransaction thật.
+  const [bankPhase, setBankPhase] = useState<"amount" | "created">("amount");
+  const [bankDeposit, setBankDeposit] = useState<BankDeposit | null>(null);
+  const [bankStatus, setBankStatus] = useState<WalletTxStatus>("PENDING");
+  // Seed lúc tạo deposit thành công (trong handleSubmit, không phải trong
+  // effect) để tránh cascading setState đồng bộ trong effect body — effect
+  // countdown bên dưới CHỈ chạy interval, không tự set giá trị đầu.
+  const [nowMs, setNowMs] = useState<number | null>(null);
 
   const loadTransactions = async () => {
     const res = await fetch("/api/wallet/transactions");
@@ -209,6 +228,41 @@ export default function DepositPanel({
       setTransactions(data.transactions);
     }
   };
+
+  // Poll trạng thái mỗi 4s trong lúc chờ webhook SePay khớp giao dịch — tự
+  // chuyển "Nạp thành công" không cần F5. Chạy tiếp tục kể cả sau khi đồng hồ
+  // đếm ngược về 0 (tiền chuyển trễ vẫn được cộng, xem POST /api/webhook/sepay).
+  useEffect(() => {
+    if (!(method === "bank" && bankPhase === "created" && bankDeposit)) return;
+    let cancelled = false;
+    const poll = async () => {
+      const res = await fetch(`/api/wallet/deposit/${bankDeposit.id}`);
+      if (!res.ok || cancelled) return;
+      const data = await res.json();
+      if (cancelled) return;
+      setBankStatus(data.status);
+      if (data.status === "CONFIRMED") {
+        await update();
+        loadTransactions();
+      }
+    };
+    poll();
+    const interval = setInterval(poll, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [method, bankPhase, bankDeposit?.id]);
+
+  // Đồng hồ đếm ngược tới expiresAt — tick mỗi giây. Giá trị ĐẦU seed lúc tạo
+  // deposit (handleSubmit), effect này chỉ thuê bao interval (không tự
+  // setState đồng bộ trong thân effect).
+  useEffect(() => {
+    if (!(method === "bank" && bankPhase === "created")) return;
+    const t = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [method, bankPhase, bankDeposit?.id]);
 
   useEffect(() => {
     if (!session) return;
@@ -347,34 +401,46 @@ export default function DepositPanel({
       return;
     }
 
-    if (!amount || amount < 10000) {
-      setError("Số tiền nạp tối thiểu là 10.000đ.");
+    if (method === "bank") {
+      if (!amount || amount < MIN_BANK_DEPOSIT_VND || amount > MAX_BANK_DEPOSIT_VND) {
+        setError(
+          `Số tiền nạp phải từ ${formatVnd(MIN_BANK_DEPOSIT_VND)} đến ${formatVnd(MAX_BANK_DEPOSIT_VND)}.`
+        );
+        return;
+      }
+      setLoading(true);
+      // Server tự sinh mã nội dung CK + hạn dùng — KHÔNG gửi mã từ client
+      // (khác hành vi cũ: trước đây client tự dựng "NAP..." rồi gửi kèm
+      // trong `note`, không có gì đảm bảo duy nhất/không đoán trước được).
+      const res = await fetch("/api/wallet/deposit-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, method: "bank" }),
+      });
+      const data = await res.json();
+      setLoading(false);
+      if (!res.ok) {
+        setError(data.error ?? "Không thể tạo yêu cầu nạp tiền.");
+        return;
+      }
+      setBankStatus("PENDING");
+      setBankDeposit({ id: data.id, code: data.code, amount: data.amount, expiresAt: data.expiresAt });
+      setBankPhase("created");
+      setNowMs(Date.now());
       return;
     }
-    setLoading(true);
-    const res = await fetch("/api/wallet/deposit-request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount,
-        method,
-        note: `Nội dung CK: ${transferCode}`,
-      }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) {
-      setError(data.error ?? "Không thể gửi yêu cầu nạp tiền.");
-      return;
-    }
-    setMessage(
-      sepayEnabled
-        ? "Đã ghi nhận yêu cầu. Chuyển khoản đúng nội dung ở trên — hệ thống sẽ tự động cộng tiền trong vài phút sau khi nhận được."
-        : "Đã gửi yêu cầu nạp tiền. Vui lòng chuyển khoản đúng nội dung ở trên, admin sẽ duyệt sau khi nhận được."
-    );
-    loadTransactions();
-    // Tạo mã mới cho lần nạp tiếp theo — tránh dùng lại đúng mã vừa gửi.
-    setCodeNonce(randomCodeNonce());
+  };
+
+  // "Huỷ, đổi số tiền khác" ở Bước 3, hoặc bấm lại sau khi hết hạn — quay về
+  // Bước 2. Yêu cầu CŨ vẫn còn PENDING trong DB (webhook vẫn cộng đúng nếu
+  // tiền về trễ, xem BANK_DEPOSIT_EXPIRY_MINUTES) — chỉ là UI không theo dõi
+  // tiếp nữa, buyer tạo yêu cầu MỚI với mã mới.
+  const handleBankReset = () => {
+    setBankPhase("amount");
+    setBankDeposit(null);
+    setBankStatus("PENDING");
+    setMessage(null);
+    setError(null);
   };
 
   return (
@@ -542,7 +608,7 @@ export default function DepositPanel({
             </SectionCard>
           </Reveal>
 
-          {(method !== "usdt" || !usdtIntent) && (
+          {(method !== "usdt" || !usdtIntent) && !(method === "bank" && bankPhase === "created") && (
             <Reveal delay={0.08}>
               <SectionCard icon={Banknote} title="Số tiền nạp">
                 <div className="flex flex-col gap-4">
@@ -568,7 +634,7 @@ export default function DepositPanel({
                     <div className="relative">
                       <input
                         type="number"
-                        min={method === "usdt" ? MIN_USDT_DEPOSIT_VND : 10000}
+                        min={method === "usdt" ? MIN_USDT_DEPOSIT_VND : MIN_BANK_DEPOSIT_VND}
                         step={10000}
                         value={amount ?? ""}
                         onChange={(e) => setAmount(Number(e.target.value) || null)}
@@ -585,51 +651,97 @@ export default function DepositPanel({
             </Reveal>
           )}
 
-          {method === "bank" && (
+          {method === "bank" && bankPhase === "created" && bankDeposit && (
             <Reveal delay={0.11}>
-              <SectionCard icon={Building2} title="Thông tin chuyển khoản">
-                <div className="flex flex-col gap-4">
-                  {bankInfo?.bin && (
-                    <div className="flex justify-center">
-                      <div className="rounded-2xl border border-border-c bg-white p-3 shadow-sm">
-                        {/* eslint-disable-next-line @next/next/no-img-element -- ảnh QR động từ VietQR, không phải asset tĩnh trong repo nên không dùng next/image được */}
-                        <img
-                          src={`https://img.vietqr.io/image/${bankInfo.bin}-${bankInfo.accountNumber}-compact2.png?amount=${amount ?? ""}&addInfo=${encodeURIComponent(transferCode)}&accountName=${encodeURIComponent(bankInfo.accountHolder)}`}
-                          alt="Mã QR chuyển khoản VietQR"
-                          className="h-52 w-52 rounded-lg object-contain sm:h-56 sm:w-56"
-                        />
+              <SectionCard icon={Building2} title="Bước 3 — Quét mã & chuyển khoản">
+                {bankStatus === "CONFIRMED" ? (
+                  <div className="flex flex-col items-center gap-3 py-6 text-center">
+                    <span className="grid h-14 w-14 place-items-center rounded-full bg-success/10 text-success">
+                      <CheckCircle2 className="h-7 w-7" />
+                    </span>
+                    <div>
+                      <p className="text-base font-black text-foreground">Nạp tiền thành công!</p>
+                      <p className="mt-1 text-sm text-muted">
+                        Đã cộng {formatVnd(bankDeposit.amount)} vào ví — số dư mới:{" "}
+                        <span className="font-bold text-foreground">{formatVnd(session.user.walletBalance)}</span>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleBankReset}
+                      className="mt-1 flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-xs font-bold text-ink transition hover:bg-brand-dark"
+                    >
+                      Nạp thêm lần nữa
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {bankInfo?.bin && (
+                      <div className="flex justify-center">
+                        <div className="rounded-2xl border border-border-c bg-white p-3 shadow-sm">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- ảnh QR động từ VietQR, không phải asset tĩnh trong repo nên không dùng next/image được */}
+                          <img
+                            src={`https://img.vietqr.io/image/${bankInfo.bin}-${bankInfo.accountNumber}-compact.png?amount=${bankDeposit.amount}&addInfo=${encodeURIComponent(bankDeposit.code)}&accountName=${encodeURIComponent(bankInfo.accountHolder)}`}
+                            alt="Mã QR chuyển khoản VietQR"
+                            className="h-52 w-52 rounded-lg object-contain sm:h-56 sm:w-56"
+                          />
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {!bankInfo && (
-                    <p className="text-xs leading-relaxed text-muted">
-                      Hệ thống chưa cấu hình sẵn số tài khoản — sau khi gửi yêu
-                      cầu, vui lòng liên hệ admin qua Zalo/Messenger (góc dưới
-                      bên phải trang) để được hướng dẫn chuyển khoản.
+                    {!bankInfo && (
+                      <p className="text-xs leading-relaxed text-muted">
+                        Hệ thống chưa cấu hình sẵn số tài khoản — vui lòng liên
+                        hệ admin qua Zalo/Messenger (góc dưới bên phải trang)
+                        để được hướng dẫn chuyển khoản.
+                      </p>
+                    )}
+
+                    <div
+                      className={`flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${
+                        nowMs !== null && new Date(bankDeposit.expiresAt).getTime() - nowMs <= 0
+                          ? "bg-danger/10 text-danger"
+                          : "bg-brand-light text-brand-dark"
+                      }`}
+                    >
+                      <Clock className="h-3.5 w-3.5" />
+                      {nowMs === null
+                        ? "—"
+                        : new Date(bankDeposit.expiresAt).getTime() - nowMs > 0
+                          ? `Hết hạn sau ${formatCountdown(new Date(bankDeposit.expiresAt).getTime() - nowMs)}`
+                          : "Đã hết hạn — chuyển khoản trễ vẫn được cộng tiền, có thể chậm hơn"}
+                    </div>
+
+                    {/* Số tiền + nội dung nhấn mạnh trực quan riêng — khách hay
+                        ghi/nhập sai 2 dòng này nhất, tách khỏi nhóm 3 dòng
+                        thông tin ngân hàng còn lại. */}
+                    <CopyField label="Số tiền chuyển khoản" value={formatVnd(bankDeposit.amount)} emphasize />
+                    <CopyField label="Nội dung chuyển khoản" value={bankDeposit.code} emphasize />
+
+                    {bankInfo && (
+                      <div className="divide-y divide-border-c rounded-xl border border-border-c px-3">
+                        <CopyField label="Ngân hàng" value={bankInfo.bankName} />
+                        <CopyField label="Số tài khoản" value={bankInfo.accountNumber} />
+                        <CopyField label="Chủ tài khoản" value={bankInfo.accountHolder} />
+                      </div>
+                    )}
+
+                    <p className="flex items-start gap-2 rounded-xl bg-brand-light/25 px-3.5 py-2.5 text-[11px] font-medium leading-relaxed text-brand-dark">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      {sepayEnabled
+                        ? "Quét mã QR bằng app ngân hàng để tự điền sẵn số tiền + nội dung — trang này sẽ tự cập nhật khi nhận được tiền, không cần tải lại."
+                        : "Chuyển đúng số tiền và nội dung ở trên — admin sẽ xác nhận sau khi nhận được, có thể mất vài phút."}
                     </p>
-                  )}
 
-                  {/* Nội dung chuyển khoản nhấn mạnh trực quan riêng — khách
-                      hay ghi sai dòng này nhất, đặt lên trước để dễ thấy/copy
-                      nhất, tách khỏi nhóm 3 dòng thông tin còn lại. */}
-                  <CopyField label="Nội dung chuyển khoản" value={transferCode} emphasize />
-
-                  {bankInfo && (
-                    <div className="divide-y divide-border-c rounded-xl border border-border-c px-3">
-                      <CopyField label="Ngân hàng" value={bankInfo.bankName} />
-                      <CopyField label="Số tài khoản" value={bankInfo.accountNumber} />
-                      <CopyField label="Chủ tài khoản" value={bankInfo.accountHolder} />
-                    </div>
-                  )}
-
-                  <p className="flex items-start gap-2 rounded-xl bg-brand-light/25 px-3.5 py-2.5 text-[11px] font-medium leading-relaxed text-brand-dark">
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    {sepayEnabled
-                      ? "Bắt buộc ghi đúng nội dung chuyển khoản ở trên để hệ thống tự động khớp và cộng tiền — thiếu/sai nội dung sẽ cần admin xử lý tay, có thể chậm hơn."
-                      : "Vui lòng chuyển đúng số tiền và ghi đúng nội dung trên để yêu cầu được duyệt nhanh hơn."}
-                  </p>
-                </div>
+                    <button
+                      type="button"
+                      onClick={handleBankReset}
+                      className="self-start text-xs font-bold text-muted hover:text-foreground hover:underline"
+                    >
+                      Huỷ, đổi số tiền khác
+                    </button>
+                  </div>
+                )}
               </SectionCard>
             </Reveal>
           )}
@@ -729,10 +841,11 @@ export default function DepositPanel({
                 </p>
               )}
 
-              {/* Ở bước 1 của USDT (chưa có yêu cầu), nút hành động là "Tạo yêu
-                  cầu" bên trong SectionCard riêng phía trên — ẩn nút chung
-                  này để tránh 2 nút cùng lúc không rõ nút nào làm gì. */}
-              {!(method === "usdt" && !usdtIntent) && (
+              {/* Ẩn nút chung này ở 2 trường hợp đã có nút hành động RIÊNG bên
+                  trong SectionCard phía trên (tránh 2 nút cùng lúc không rõ
+                  nút nào làm gì): USDT bước 1 chưa có yêu cầu (nút "Tạo yêu
+                  cầu"), và ngân hàng đã sang Bước 3 (nút "Huỷ"/"Nạp thêm"). */}
+              {!(method === "usdt" && !usdtIntent) && !(method === "bank" && bankPhase === "created") && (
                 <button
                   onClick={handleSubmit}
                   disabled={loading || (method === "usdt" ? !usdtInfo || !usdtIntent || !txid.trim() : !amount)}
@@ -744,7 +857,7 @@ export default function DepositPanel({
                       ? `Nạp ${amount ? formatVnd(amount) : ""}`
                       : method === "usdt"
                         ? "Xác minh & nạp tiền"
-                        : "Tôi đã chuyển khoản, xác nhận yêu cầu"}
+                        : `Xác nhận nạp ${amount ? formatVnd(amount) : ""}`}
                 </button>
               )}
             </div>

@@ -1171,6 +1171,16 @@ model WalletTransaction {
   createdAt   DateTime  @default(now())
   confirmedAt DateTime?
 
+  // Nạp ngân hàng qua VietQR (wizard 3 bước, xem DepositPanel.tsx) — sinh Ở
+  // SERVER lúc buyer xác nhận Bước 2 (POST /api/wallet/deposit-request),
+  // KHÔNG tin mã/hạn từ client. UNIQUE thật trong DB (index có điều kiện
+  // WHERE NOT NULL — các dòng WalletTransaction khác không có mã này).
+  // Webhook SePay (POST /api/webhook/sepay) khớp giao dịch theo depositCode
+  // tìm thấy trong nội dung chuyển khoản; vẫn cộng tiền dù đã quá expiresAt
+  // (an toàn cho khách), chỉ ghi thêm adminNote đánh dấu khớp trễ hạn.
+  depositCode String? @unique
+  expiresAt   DateTime?
+
   // Khoá ngoại thật tới đơn hàng liên quan (AUDIT LỖ HỔNG 1 — trước đây chỉ
   // nối qua chuỗi tự do trong `note`, không JOIN được, không đáng tin cậy
   // làm bằng chứng). null với DEPOSIT/WITHDRAW (không gắn đơn nào).

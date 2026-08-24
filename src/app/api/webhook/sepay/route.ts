@@ -116,21 +116,28 @@ export async function POST(req: Request) {
       createdAt: { gte: new Date(Date.now() - MATCH_WINDOW_DAYS * 24 * 3600 * 1000) },
     },
     orderBy: { createdAt: "asc" },
-    select: { id: true, userId: true, note: true },
+    select: { id: true, userId: true, note: true, expiresAt: true },
   });
 
   let matchedId: string | null = null;
   let matchedUserId: string | null = null;
+  let matchedExpiresAt: Date | null = null;
   for (const c of candidates) {
     const code = extractDepositCode(c.note);
     if (code && normalizedIncoming.includes(normalizeForMatch(code))) {
       matchedId = c.id;
       matchedUserId = c.userId;
+      matchedExpiresAt = c.expiresAt;
       break;
     }
   }
 
   if (matchedId && matchedUserId) {
+    // Quá expiresAt (wizard 3 bước ở /nap-tien, xem BANK_DEPOSIT_EXPIRY_MINUTES)
+    // mà tiền vẫn về sau đó -> VẪN CỘNG bình thường (an toàn cho khách, tiền
+    // thật đã nhận không có lý do gì để giữ lại), chỉ đánh dấu adminNote để
+    // admin biết đây là 1 trường hợp khớp trễ hạn, không phải lỗi hệ thống.
+    const isLateMatch = matchedExpiresAt !== null && matchedExpiresAt.getTime() < Date.now();
     try {
       const credited = await prisma.$transaction(async (t) => {
         // Gate NGUYÊN TỬ — chỉ khi row còn PENDING mới chuyển được, chặn 2
@@ -143,6 +150,11 @@ export async function POST(req: Request) {
             method: "sepay",
             gatewayRef: sepayId,
             confirmedAt: new Date(),
+            ...(isLateMatch
+              ? {
+                  adminNote: `Khớp SAU KHI hết hạn (expiresAt=${matchedExpiresAt!.toISOString()}) — vẫn cộng tiền bình thường, admin lưu ý đối chiếu.`,
+                }
+              : {}),
           },
         });
         if (gate.count === 0) return false;

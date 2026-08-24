@@ -386,6 +386,18 @@ export const USDT_DEPOSIT_INTENT_EXPIRY_MINUTES = 45;
 // yêu cầu khác đang PENDING — trùng cực hiếm (~1/999.999), vài lần thử là đủ.
 export const USDT_DEPOSIT_INTENT_MAX_COLLISION_RETRIES = 5;
 
+// ── Nạp ngân hàng qua VietQR (WalletTransaction.depositCode/expiresAt) —
+// wizard 3 bước: chọn phương thức -> nhập số tiền -> server tạo record +
+// hiện QR. Validate CẢ API (POST /api/wallet/deposit-request) lẫn UI
+// (DepositPanel.tsx). MAX khớp với MAX_USDT_DEPOSIT_VND cho nhất quán giữa
+// 2 phương thức (trước đây bank KHÔNG có trần, chỉ có sàn 10.000đ).
+export const MIN_BANK_DEPOSIT_VND = 10_000;
+export const MAX_BANK_DEPOSIT_VND = 200_000_000;
+// Buyer phải chuyển khoản trong ngần này phút kể từ lúc xác nhận — sau đó
+// webhook SePay VẪN cộng tiền nếu tiền về trễ (an toàn cho khách), chỉ đánh
+// dấu adminNote để admin biết đã khớp trễ hạn (xem POST /api/webhook/sepay).
+export const BANK_DEPOSIT_EXPIRY_MINUTES = 15;
+
 // ── Giao hàng thủ công theo đơn (manual provisioning, VPS/Server) — xem
 // Product.deliveryMethod/ServerDetail, OrderItem.manualDeliveryDeadline
 // trong prisma/schema.prisma + src/lib/manual-provision.ts. ──
