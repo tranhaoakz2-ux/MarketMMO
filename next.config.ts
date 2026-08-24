@@ -10,6 +10,9 @@ import type { NextConfig } from "next";
 //    (Siết sau bằng nonce nếu muốn — cần middleware sinh nonce mỗi request.)
 //  - style-src 'self' 'unsafe-inline': Tailwind/inline style + style Next chèn.
 //  - img-src 'self' data: blob: + Vercel Blob: ảnh sản phẩm/base64/preview.
+//    + img.vietqr.io: ảnh mã QR VietQR động ở /nap-tien (DepositPanel.tsx),
+//    dựng theo BIN ngân hàng admin cấu hình — thiếu domain này thì trình
+//    duyệt tự chặn ảnh (broken image) dù URL ảnh vẫn trả 200 bình thường.
 //  - font-src 'self' data:.
 //  - connect-src 'self' + Turnstile: fetch/XHR chỉ về server mình + Cloudflare
 //    challenge (VNPay là điều hướng full-page nên không cần ở đây).
@@ -22,7 +25,7 @@ const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.public.blob.vercel-storage.com",
+  "img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://img.vietqr.io",
   "font-src 'self' data:",
   "connect-src 'self' https://challenges.cloudflare.com",
   "frame-src https://challenges.cloudflare.com",
