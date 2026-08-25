@@ -30,12 +30,14 @@ import ProductThumbnail from "@/components/ProductThumbnail";
 import RatingStars from "@/components/RatingStars";
 import Reveal from "@/components/Reveal";
 import SellerActivityBadge from "@/components/SellerActivityBadge";
+import SellerLevelBadge from "@/components/SellerLevelBadge";
 import ServiceBuyBox from "@/components/ServiceBuyBox";
 import TutTrickBuyBox from "@/components/TutTrickBuyBox";
 import { formatVnd } from "@/lib/format";
 import { getRecentForumPosts } from "@/lib/forum";
 import { getProductBySlugDb, getProductReviews, getRelatedProductsDb } from "@/lib/queries";
 import { absoluteUrl, DEFAULT_OG_IMAGE, truncate } from "@/lib/seo";
+import { getSellerLevelConfigs, resolveLevelBadge } from "@/lib/seller-level";
 import { slugifySeller } from "@/lib/slug";
 import { formatProductWarranty } from "@/lib/warranty";
 
@@ -83,6 +85,8 @@ export default async function ProductDetailPage({
   const related = await getRelatedProductsDb(product);
   const referencePosts = await getRecentForumPosts(4);
   const productReviews = await getProductReviews(product.id);
+  const sellerLevelConfigs = await getSellerLevelConfigs();
+  const sellerLevelBadge = resolveLevelBadge(product.sellerLevel, sellerLevelConfigs);
 
   return (
     <>
@@ -168,9 +172,11 @@ export default async function ProductDetailPage({
                 >
                   {product.seller}
                 </Link>
-                <span className="rounded-full bg-ink px-2.5 py-1 text-[11px] font-bold text-brand">
-                  LV {product.sellerLevel}
-                </span>
+                <SellerLevelBadge
+                  level={sellerLevelBadge.level}
+                  name={sellerLevelBadge.name}
+                  tone={sellerLevelBadge.tone}
+                />
                 {product.verified && (
                   <span className="flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-xs font-bold text-success">
                     <BadgeCheck className="h-3.5 w-3.5" /> Đã xác thực

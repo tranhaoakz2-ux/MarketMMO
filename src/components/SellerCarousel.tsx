@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Star, Store } from "lucide-react";
 import SellerAvatar from "@/components/SellerAvatar";
+import SellerLevelBadge from "@/components/SellerLevelBadge";
+import type { SellerLevelBadge as SellerLevelBadgeData } from "@/lib/seller-level";
 
 export type SellerListItem = {
   id: string;
@@ -10,6 +12,7 @@ export type SellerListItem = {
   avatarUrl?: string | null;
   coverUrl?: string | null;
   level: number;
+  levelBadge: SellerLevelBadgeData;
   verified: boolean;
   productCount: number;
   avgRating: number;
@@ -51,9 +54,12 @@ function SellerCard({ seller }: { seller: SellerListItem }) {
           <h3 className="mt-1.5 line-clamp-2 text-[15px] font-bold leading-snug text-foreground transition-colors group-hover:text-brand-dark">
             {seller.shopName}
           </h3>
-          <span className="mt-1 inline-flex items-center rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-white">
-            Level {seller.level}
-          </span>
+          <SellerLevelBadge
+            level={seller.levelBadge.level}
+            name={seller.levelBadge.name}
+            tone={seller.levelBadge.tone}
+            className="mt-1"
+          />
 
           <div className="mt-2 flex w-full items-center justify-between">
             <p className="flex items-center gap-1 text-[15px] font-black text-danger">

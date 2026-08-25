@@ -248,6 +248,94 @@ export const DEFAULT_CAP_PERIOD_DAYS = 30;
 export const PLATFORM_FEE_SETTING_ID = "singleton";
 export const DEFAULT_PLATFORM_FEE_PERCENT = 10;
 
+// ── Hạng người bán (xem src/lib/seller-level.ts + model SellerLevelConfig/
+// SellerLevelSetting/SellerLevelHistory). Hằng dưới CHỈ là giá trị KHỞI TẠO
+// 5 dòng SellerLevelConfig + 1 dòng SellerLevelSetting lần đầu cần tới (lazy
+// -create, cùng mẫu PLATFORM_FEE_SETTING_ID ở trên) — admin sửa số thật qua
+// /admin/hang-nguoi-ban, KHÔNG deploy lại để đổi ngưỡng.
+export const SELLER_LEVEL_SETTING_ID = "singleton";
+
+export type SellerLevelBadgeTone = "gray" | "bronze" | "silver" | "gold" | "diamond";
+
+export type SellerLevelDefaultConfig = {
+  level: number;
+  name: string;
+  badgeTone: SellerLevelBadgeTone;
+  minDistinctBuyers: number;
+  minAvgRating: number;
+  minReviewCount: number;
+  maxDisputeRatePercent: number;
+  productLimit: number | null;
+  feeDiscountPercent: number;
+};
+
+// Ngưỡng buyer/rating/khiếu nại LV2-LV5 là số THẬT đã chốt với chủ dự án.
+// minReviewCount/productLimit là ĐỀ XUẤT (chưa có số gốc từ yêu cầu nghiệp
+// vụ) — admin xem/chỉnh ngay tại trang quản trị nếu thấy chưa hợp lý,
+// KHÔNG cần deploy lại. feeDiscountPercent = 0 mọi hạng — bắt buộc no-op
+// thật cho tới khi admin tự đặt số khác 0.
+export const SELLER_LEVEL_DEFAULT_CONFIGS: SellerLevelDefaultConfig[] = [
+  {
+    level: 1,
+    name: "Người bán mới",
+    badgeTone: "gray",
+    minDistinctBuyers: 0,
+    minAvgRating: 0,
+    minReviewCount: 0,
+    maxDisputeRatePercent: 100,
+    productLimit: 30,
+    feeDiscountPercent: 0,
+  },
+  {
+    level: 2,
+    name: "Đồng",
+    badgeTone: "bronze",
+    minDistinctBuyers: 10,
+    minAvgRating: 4.0,
+    minReviewCount: 5,
+    maxDisputeRatePercent: 10,
+    productLimit: 60,
+    feeDiscountPercent: 0,
+  },
+  {
+    level: 3,
+    name: "Bạc",
+    badgeTone: "silver",
+    minDistinctBuyers: 50,
+    minAvgRating: 4.3,
+    minReviewCount: 15,
+    maxDisputeRatePercent: 7,
+    productLimit: 150,
+    feeDiscountPercent: 0,
+  },
+  {
+    level: 4,
+    name: "Vàng",
+    badgeTone: "gold",
+    minDistinctBuyers: 200,
+    minAvgRating: 4.5,
+    minReviewCount: 40,
+    maxDisputeRatePercent: 5,
+    productLimit: 400,
+    feeDiscountPercent: 0,
+  },
+  {
+    level: 5,
+    name: "Kim cương",
+    badgeTone: "diamond",
+    minDistinctBuyers: 1000,
+    minAvgRating: 4.7,
+    minReviewCount: 100,
+    maxDisputeRatePercent: 3,
+    productLimit: null,
+    feeDiscountPercent: 0,
+  },
+];
+
+export const SELLER_LEVEL_DEFAULT_GRACE_DAYS = 14;
+export const SELLER_LEVEL_DEFAULT_DISPUTE_PARTIAL_WEIGHT = 0.5;
+export const SELLER_LEVEL_DEFAULT_DISPUTE_WINDOW_DAYS = 90;
+
 // ── Đấu giá vị trí vàng (xem src/lib/auction.ts + model AuctionSetting/
 // AuctionSession/AuctionBid). Hằng dưới CHỈ là giá trị KHỞI TẠO singleton
 // lần đầu; admin sửa qua Admin > Đấu giá vị trí vàng > Cài đặt.

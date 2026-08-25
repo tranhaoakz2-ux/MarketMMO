@@ -186,7 +186,26 @@ model Seller {
   // hay bất kỳ đâu khác trong hồ sơ — giữ giao dịch trong hệ thống, bảo vệ
   // escrow + phí sàn (xem CLAUDE.md).
   specialty   String?
+  // Hạng người bán — giá trị HIỆU LỰC hiện tại (tính tự động từ dữ liệu thật,
+  // xem recomputeSellerLevel() trong src/lib/seller-level.ts; ngưỡng/quyền
+  // lợi từng hạng ở model SellerLevelConfig). TRƯỚC ĐÂY chỉ là số tĩnh (1
+  // lúc đăng ký, 4 gán cứng cho seller demo) — giờ được cron/sự kiện tự
+  // cập nhật, TRỪ KHI levelOverride khác null (admin khoá).
   level       Int      @default(1)
+  // Khác null = admin GHI ĐÈ/KHOÁ hạng này — recomputeSellerLevel() bỏ qua
+  // hoàn toàn seller này (không tự tăng/tụt), `level` ở trên giữ đúng giá
+  // trị admin đặt. null = hoạt động tự động bình thường.
+  levelOverride              Int?
+  // Chống nhấp nháy khi TỤT hạng (xem recomputeSellerLevel()) — phát hiện
+  // dưới ngưỡng lần đầu thì ghi 2 field này (KHÔNG đổi `level` ngay), chỉ
+  // thực sự tụt sau khi vẫn dưới ngưỡng liên tục đủ
+  // SellerLevelSetting.downgradeGraceDays. Hồi phục lại ngưỡng cũ trước hạn
+  // thì xoá về null, không tụt.
+  levelDowngradePendingTo    Int?
+  levelDowngradePendingSince DateTime?
+  // Lần gần nhất recomputeSellerLevel() chạy tới seller này (theo dõi/debug,
+  // không phục vụ logic).
+  levelRecomputedAt          DateTime?
   // Badge "Đã xác thực" hiển thị công khai trên gian hàng — TRƯỚC ĐÂY được
   // set tự động khi admin duyệt xác thực CCCD (model SellerVerification, đã
   // xoá bỏ hoàn toàn do liên quan dữ liệu cá nhân nhạy cảm). Giờ là cờ admin
@@ -234,6 +253,8 @@ model Seller {
   // Audit: mỗi lần seller giải mã/xem field nhạy cảm của 1 đơn dịch vụ (xem
   // model ServiceCredentialAccessLog).
   credentialAccessLogs ServiceCredentialAccessLog[]
+  // Lịch sử đổi hạng — xem model SellerLevelHistory.
+  levelHistory SellerLevelHistory[]
 
   // suspended luôn có mặt trong where của mọi query công khai (seller:
   // {suspended: false}) — đã áp SQL tương ứng lên Neon thủ công (xem
@@ -1416,6 +1437,88 @@ model PlatformFeeSchedule {
   createdAt   DateTime @default(now())
 
   @@index([startAt, endAt])
+}
+
+// Hệ thống LEVEL (hạng) người bán — ngưỡng + quyền lợi TỪNG HẠNG (5 dòng,
+// level 1-5), admin sửa qua /admin/hang-nguoi-ban (KHÔNG hardcode rải rác).
+// 5 dòng + SellerLevelSetting bên dưới KHÔNG seed bằng SQL — lazy-create
+// bằng code lần đầu cần tới (cùng mẫu getPlatformFeeSetting() ở trên), giá
+// trị mặc định khai ở src/lib/constants.ts. Xem recomputeSellerLevel()
+// trong src/lib/seller-level.ts để biết ngưỡng dùng thế nào (đạt hạng khi
+// thoả ĐỒNG THỜI minDistinctBuyers + minAvgRating + minReviewCount +
+// maxDisputeRatePercent).
+model SellerLevelConfig {
+  level     Int    @id
+  name      String
+  // Tên preset màu badge cố định (gray|bronze|silver|gold|diamond) — xem
+  // src/components/SellerLevelBadge.tsx, KHÔNG lưu mã màu tuỳ ý để giữ đúng
+  // design system.
+  badgeTone String
+
+  // "Đơn hoàn thành" = SỐ BUYER KHÁC NHAU (distinct) có ít nhất 1 OrderItem
+  // status=RELEASED từ seller này, ĐÃ LOẠI tự mua (Order.buyerId !=
+  // Seller.userId) — chống gian lận tự tạo đơn ảo.
+  minDistinctBuyers     Int   @default(0)
+  minAvgRating          Float @default(0)
+  // Số review tối thiểu để đủ ĐIỀU KIỆN xét rating hạng này — chặn trường
+  // hợp rating cao ảo vì mẫu quá nhỏ (vd 1 review 5 sao).
+  minReviewCount        Int   @default(0)
+  // Tỉ lệ khiếu nại/hoàn tiền tối đa (%) trong cửa sổ
+  // SellerLevelSetting.disputeRateWindowDays gần nhất — PHẢI thấp hơn số
+  // này (< , không phải <=).
+  maxDisputeRatePercent Float @default(100)
+
+  // Quyền lợi — null = không giới hạn số sản phẩm đăng bán.
+  productLimit       Int?
+  // % TRỪ THẲNG vào phí sàn hiệu lực cho seller hạng này — mặc định 0 (KHÔNG
+  // có tác dụng gì) cho tới khi admin tự đặt khác 0. Không bao giờ để phí
+  // sau khi trừ xuống dưới 0 (chặn ở nơi tính, xem platform-fee.ts).
+  feeDiscountPercent Float @default(0)
+
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
+
+// Cấu hình CHUNG (không theo từng hạng) cho việc tính lại level — singleton
+// (id cố định "singleton", cùng quy ước PlatformFeeSetting/CommissionSetting
+// ở trên).
+model SellerLevelSetting {
+  id                    String   @id
+  // Số ngày seller phải LIÊN TỤC dưới ngưỡng hạng hiện tại trước khi bị tụt
+  // hạng thật — chống nhấp nháy do biến động ngắn hạn (1 review xấu, 1 đơn
+  // trễ...). Xem Seller.levelDowngradePendingSince.
+  downgradeGraceDays    Int      @default(14)
+  // Trọng số 1 khiếu nại RESOLVED_PARTIAL (hoàn 1 phần) tính vào tử số tỉ lệ
+  // khiếu nại — 0.5 = tính nửa lỗi so với hoàn toàn bộ (RESOLVED_REFUND) hay
+  // CANCELLED (luôn = 1.0, xem seller-level.ts).
+  disputePartialWeight Float    @default(0.5)
+  disputeRateWindowDays Int     @default(90)
+  // Lần gần nhất sweepAllSellerLevels() (cron/nút admin) chạy xong.
+  lastSweepAt           DateTime?
+}
+
+// Log MỖI LẦN đổi hạng — tăng/tụt tự động (cron/sự kiện), admin ghi đè/gỡ
+// ghi đè, hay backfill lần đầu triển khai. Tách khỏi AdminAuditLog (model đó
+// bắt buộc adminId, không hợp cho sự kiện HỆ THỐNG tự tính) — cùng lý do
+// OrderStatusHistory tách khỏi AdminAuditLog.
+model SellerLevelHistory {
+  id        String   @id @default(cuid())
+  sellerId  String
+  seller    Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  fromLevel Int
+  toLevel   Int
+  // "auto-upgrade" | "auto-downgrade" | "admin-override" | "admin-clear-override" | "backfill".
+  reason    String
+  // "SYSTEM" | "ADMIN" — ADMIN thì actorId là adminId (User.id).
+  actorType String
+  actorId   String?
+  // JSON snapshot chỉ số TẠI THỜI ĐIỂM đổi (distinctBuyers/avgRating/
+  // reviewCount/disputeRatePercent) — bằng chứng đối chiếu nếu seller thắc
+  // mắc sau này, không phải nguồn tính lại.
+  metricsSnapshot String?
+  createdAt DateTime @default(now())
+
+  @@index([sellerId])
 }
 
 // Lịch sử đổi % phí sàn MẶC ĐỊNH — ai đổi, từ bao nhiêu sang bao nhiêu, lúc nào

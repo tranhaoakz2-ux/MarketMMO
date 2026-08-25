@@ -1,12 +1,14 @@
 "use client";
 
-import { BadgeCheck, Calendar, Package, Search, ShieldCheck, Star, Trophy } from "lucide-react";
+import { BadgeCheck, Calendar, Package, Search, ShieldCheck, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import RatingStars from "@/components/RatingStars";
 import SellerAvatar from "@/components/SellerAvatar";
+import SellerLevelBadge from "@/components/SellerLevelBadge";
 import { formatVnd } from "@/lib/format";
+import type { SellerLevelBadge as SellerLevelBadgeData } from "@/lib/seller-level";
 
 // Shape phẳng, đã format sẵn phía server (page.tsx) — component này CHỈ lo
 // hiển thị/sắp xếp/lọc, không tự gọi lại getAllSellersWithStats() hay tính
@@ -17,6 +19,7 @@ export type SellerCardData = {
   slug: string;
   description: string;
   level: number;
+  levelBadge: SellerLevelBadgeData;
   verified: boolean;
   avatarUrl: string | null;
   coverUrl: string | null;
@@ -37,38 +40,7 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "products", label: "Nhiều sản phẩm nhất" },
 ];
 
-// Level không có trần cứng trong DB (Seller.level chỉ là Int @default(1)) dù
-// UI tham chiếu "Level 1-4" — nên bậc cao nhất áp dụng cho MỌI level >= 4,
-// không giả định đúng bằng 4.
-function levelTier(level: number): {
-  label: string;
-  className: string;
-  showTrophy: boolean;
-} {
-  if (level >= 4) {
-    return {
-      label: `Level ${level}`,
-      className: "border-brand-dark bg-brand text-ink shadow-sm",
-      showTrophy: true,
-    };
-  }
-  if (level >= 2) {
-    return {
-      label: `Level ${level}`,
-      className: "border-ink bg-ink text-white",
-      showTrophy: false,
-    };
-  }
-  return {
-    label: `Level ${level}`,
-    className: "border-border-c bg-surface-alt text-muted",
-    showTrophy: false,
-  };
-}
-
 function SellerDirectoryCard({ seller }: { seller: SellerCardData }) {
-  const tier = levelTier(seller.level);
-
   return (
     <Link
       href={`/shop/${seller.slug}`}
@@ -103,12 +75,12 @@ function SellerDirectoryCard({ seller }: { seller: SellerCardData }) {
           <h3 className="truncate text-base font-bold leading-snug text-foreground transition-colors group-hover:text-brand-dark">
             {seller.shopName}
           </h3>
-          <span
-            className={`mt-1.5 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${tier.className}`}
-          >
-            {tier.showTrophy && <Trophy className="h-2.5 w-2.5" />}
-            {tier.label}
-          </span>
+          <SellerLevelBadge
+            level={seller.levelBadge.level}
+            name={seller.levelBadge.name}
+            tone={seller.levelBadge.tone}
+            className="mt-1.5"
+          />
         </div>
 
         {seller.description && (
@@ -169,10 +141,12 @@ export default function SellerDirectory({ sellers }: { sellers: SellerCardData[]
         sorted.sort((a, b) => b.level - a.level || b.avgRating - a.avgRating);
         break;
       case "rating":
-        sorted.sort((a, b) => b.avgRating - a.avgRating || b.reviewCount - a.reviewCount);
+        // Hạng người bán làm tiêu chí PHỤ (chỉ phân định khi rating bằng
+        // nhau) — không đổi ý nghĩa "Đánh giá cao nhất" buyer đã chọn.
+        sorted.sort((a, b) => b.avgRating - a.avgRating || b.level - a.level || b.reviewCount - a.reviewCount);
         break;
       case "products":
-        sorted.sort((a, b) => b.productCount - a.productCount || b.avgRating - a.avgRating);
+        sorted.sort((a, b) => b.productCount - a.productCount || b.level - a.level || b.avgRating - a.avgRating);
         break;
       case "newest":
       default:

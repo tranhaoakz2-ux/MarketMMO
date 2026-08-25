@@ -20,6 +20,7 @@ export default async function SellerDirectoryPage() {
     slug: s.slug,
     description: s.description,
     level: s.level,
+    levelBadge: s.levelBadge,
     verified: s.verified,
     avatarUrl: s.avatarUrl,
     coverUrl: s.coverUrl,

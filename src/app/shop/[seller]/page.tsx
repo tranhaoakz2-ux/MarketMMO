@@ -18,7 +18,9 @@ import Header from "@/components/Header";
 import Avatar from "@/components/Avatar";
 import Pagination from "@/components/Pagination";
 import RatingStars from "@/components/RatingStars";
+import SellerActivityBadge from "@/components/SellerActivityBadge";
 import SellerAvatar from "@/components/SellerAvatar";
+import SellerLevelBadge from "@/components/SellerLevelBadge";
 import Reveal from "@/components/Reveal";
 import ReviewForm from "@/components/ReviewForm";
 import ShopProductList, { type ShopSortKey } from "@/components/ShopProductList";
@@ -99,7 +101,6 @@ export default async function ShopPage({
   ]);
 
   const seller = shop.shopName;
-  const sellerLevel = shop.level;
 
   return (
     <>
@@ -126,12 +127,12 @@ export default async function ShopPage({
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-xl font-black text-foreground">{seller}</h1>
-                  <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-brand">
-                    Level {sellerLevel}
-                  </span>
-                  <span className="rounded-full bg-brand-light px-2 py-0.5 text-[10px] font-bold text-ink">
-                    ONLINE
-                  </span>
+                  <SellerLevelBadge
+                    level={shop.levelBadge.level}
+                    name={shop.levelBadge.name}
+                    tone={shop.levelBadge.tone}
+                  />
+                  <SellerActivityBadge lastActiveAt={shop.lastActiveAt} />
                 </div>
                 <div className="mt-1.5 flex items-center gap-1.5">
                   <RatingStars rating={shop.avgRating} />

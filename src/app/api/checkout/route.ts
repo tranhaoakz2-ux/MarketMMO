@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { requireUser } from "@/lib/authz";
 import { ESCROW_HOLD_DAYS, MAX_CHECKOUT_ITEM_QUANTITY, SERVICE_DELIVERY_METHODS } from "@/lib/constants";
 import { accrueCommission } from "@/lib/commission";
-import { feeAmountOf, getEffectiveFeePercent } from "@/lib/platform-fee";
+import { feeAmountOf, getEffectiveFeePercent, getEffectiveFeePercentPerSeller } from "@/lib/platform-fee";
 import { computeDiscountAmount, distributeDiscount, isDiscountCodeUsable } from "@/lib/discount";
 import { computeEffectivePrice } from "@/lib/mega-sale";
 import { generateOrderCode, ORDER_CODE_MAX_RETRIES } from "@/lib/order-code";
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
       const order = await prisma.$transaction(async (tx) => {
       const products = await tx.product.findMany({
         where: { id: { in: items.map((i) => i.productId) } },
-        include: { variants: true, seller: { select: { suspended: true } }, serverDetail: true },
+        include: { variants: true, seller: { select: { suspended: true, level: true } }, serverDetail: true },
       });
 
       let total = 0;
@@ -546,8 +546,23 @@ export async function POST(req: Request) {
 
       // Phí sàn: % HIỆU LỰC tại thời điểm đặt đơn (lịch phí đang áp, else mặc
       // định) — tính hoàn toàn ở server, freeze vào từng OrderItem (không hồi
-      // tố khi admin đổi % sau). Áp cho MỌI đơn/mọi seller.
+      // tố khi admin đổi % sau). Áp cho MỌI đơn/mọi seller. Biến này GIỮ
+      // NGUYÊN ý nghĩa cũ — chỉ dùng cho accrueCommission() bên dưới (field
+      // audit "marginPercentApplied", KHÔNG phải nguồn tính tiền hoa hồng
+      // thật — số tiền thật luôn tính lại từ platformFeeAmount đã đóng băng
+      // trên từng OrderItem lúc giải ngân, xem finalizeOrderCommission()).
       const feePercent = await getEffectiveFeePercent(tx);
+
+      // Phí sàn THỰC ÁP cho từng dòng hàng — TRỪ theo hạng của ĐÚNG seller
+      // dòng đó (Hạng người bán, mặc định feeDiscountPercent=0 mọi hạng nên
+      // map này trả về giống hệt feePercent ở trên cho tới khi admin tự đặt
+      // % giảm khác 0 — xem getEffectiveFeePercentPerSeller() trong
+      // src/lib/platform-fee.ts). 1 đơn có thể gồm nhiều seller khác hạng
+      // nhau nên KHÔNG thể dùng chung 1 con số như feePercent ở trên.
+      const uniqueSellersInOrder = Array.from(
+        new Map(products.map((p) => [p.sellerId, { id: p.sellerId, level: p.seller.level }])).values()
+      );
+      const sellerFeePercentMap = await getEffectiveFeePercentPerSeller(tx, feePercent, uniqueSellersInOrder);
 
       // Tạo từng OrderItem TUẦN TỰ (không dùng nested `items: { create: [...] }`
       // như trước) để lấy được đúng id của từng OrderItem ngay sau khi tạo —
@@ -556,9 +571,12 @@ export async function POST(req: Request) {
       // tự mảng gốc, không thể tin tưởng để ghép cặp chính xác).
       for (const item of itemsToCreate) {
         // Phí sàn tính trên giá SAU giảm giá (item.price đã là đơn giá sau khi
-        // áp mã giảm giá) × quantity.
+        // áp mã giảm giá) × quantity. % dùng riêng theo hạng seller của dòng
+        // hàng này (xem sellerFeePercentMap ở trên) — fallback feePercent gốc
+        // nếu vì lý do gì đó không có trong map (không nên xảy ra, phòng thủ).
         const lineBase = item.price * item.quantity;
-        const platformFeeAmount = feeAmountOf(lineBase, feePercent);
+        const sellerFeePercent = sellerFeePercentMap.get(item.sellerId) ?? feePercent;
+        const platformFeeAmount = feeAmountOf(lineBase, sellerFeePercent);
         // Đặt trước: escrowReleaseAt = deliveryDeadline (KHÔNG phải mặc định
         // ESCROW_HOLD_DAYS) — job giải ngân (POST /api/admin/escrow/release)
         // dùng chính mốc này để biết khi nào đơn "đến hạn xét duyệt" (rồi tự
@@ -599,7 +617,7 @@ export async function POST(req: Request) {
             deliveredPayload: item.deliveredPayload,
             deliveredExpiresAt: item.deliveredExpiresAt,
             deliveredPayloadEncryption: item.deliveredPayloadEncryption,
-            platformFeePercent: feePercent,
+            platformFeePercent: sellerFeePercent,
             platformFeeAmount,
             warrantyHours: item.warrantyHours,
             isPreOrder: item.isPreOrder,

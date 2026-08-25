@@ -13,6 +13,7 @@ import type { ListingSortKey } from "@/lib/product-listing-sort";
 import { isOutOfStock } from "@/lib/stock-status";
 import { getAuctionSetting, findCurrentWeekSession } from "@/lib/auction";
 import { getAuctionWindowFor, isWithinAuctionWindow } from "@/lib/auction-schedule";
+import { getSellerLevelConfigs, resolveLevelBadge, type SellerLevelBadge } from "@/lib/seller-level";
 
 // seller.user chỉ cần lastActiveAt (hiện "Online X trước" ở trang chi tiết
 // sản phẩm, xem mapProduct() bên dưới) — TRƯỚC ĐÂY `include: true` kéo TOÀN
@@ -612,6 +613,7 @@ export type SellerShopInfo = {
   description: string;
   specialty: string | null;
   level: number;
+  levelBadge: SellerLevelBadge;
   verified: boolean;
   suspended: boolean;
   avatarUrl: string | null;
@@ -621,17 +623,21 @@ export type SellerShopInfo = {
   totalSold: number;
   avgRating: number;
   reviewCount: number;
+  lastActiveAt: Date | null;
 };
 
 export async function getSellerBySlug(slug: string): Promise<SellerShopInfo | null> {
-  const seller = await prisma.seller.findUnique({ where: { slug } });
+  const seller = await prisma.seller.findUnique({
+    where: { slug },
+    include: { user: { select: { lastActiveAt: true } } },
+  });
   if (!seller) return null;
 
   // status: "APPROVED" + isActive: true — cùng quy tắc lọc đã áp dụng cho
   // mọi query công khai khác trong file này (sản phẩm PENDING/REJECTED/đã
   // ẩn không tính vào số liệu gian hàng công khai).
   const productWhere: Prisma.ProductWhereInput = { sellerId: seller.id, status: "APPROVED", isActive: true };
-  const [productAgg, reviewAgg] = await Promise.all([
+  const [productAgg, reviewAgg, levelConfigs] = await Promise.all([
     prisma.product.aggregate({ where: productWhere, _count: { _all: true }, _sum: { sold: true } }),
     // hidden: false — review admin đã ẩn (spam/xúc phạm) không tính vào rating
     // trung bình, cùng quy tắc ratingStats() đã dùng trước đây.
@@ -640,6 +646,7 @@ export async function getSellerBySlug(slug: string): Promise<SellerShopInfo | nu
       _avg: { rating: true },
       _count: { rating: true },
     }),
+    getSellerLevelConfigs(),
   ]);
 
   return {
@@ -650,6 +657,7 @@ export async function getSellerBySlug(slug: string): Promise<SellerShopInfo | nu
     description: seller.description,
     specialty: seller.specialty,
     level: seller.level,
+    levelBadge: resolveLevelBadge(seller.level, levelConfigs),
     verified: seller.verified,
     suspended: seller.suspended,
     avatarUrl: seller.avatarUrl,
@@ -659,6 +667,7 @@ export async function getSellerBySlug(slug: string): Promise<SellerShopInfo | nu
     totalSold: productAgg._sum.sold ?? 0,
     avgRating: reviewAgg._avg.rating ?? 0,
     reviewCount: reviewAgg._count.rating,
+    lastActiveAt: seller.user.lastActiveAt,
   };
 }
 
@@ -846,14 +855,17 @@ export async function getMySellerProducts(userId: string): Promise<Product[]> {
 }
 
 export async function getAllSellersWithStats() {
-  const sellers = await prisma.seller.findMany({
-    where: { suspended: false },
-    include: {
-      products: { select: { id: true } },
-      reviews: { where: { hidden: false }, select: { rating: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const [sellers, levelConfigs] = await Promise.all([
+    prisma.seller.findMany({
+      where: { suspended: false },
+      include: {
+        products: { select: { id: true } },
+        reviews: { where: { hidden: false }, select: { rating: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    getSellerLevelConfigs(),
+  ]);
 
   return sellers.map((s) => ({
     id: s.id,
@@ -861,6 +873,7 @@ export async function getAllSellersWithStats() {
     slug: s.slug,
     description: s.description,
     level: s.level,
+    levelBadge: resolveLevelBadge(s.level, levelConfigs),
     verified: s.verified,
     avatarUrl: s.avatarUrl,
     coverUrl: s.coverUrl,
@@ -904,6 +917,11 @@ export async function getFeaturedSellers(limit = 8) {
     autoFillRows = candidates
       .map((s) => ({ row: s, stats: ratingStats(s.reviews) }))
       .sort((a, b) => {
+        // Hạng người bán làm tiêu chí phụ ĐẦU TIÊN (trước rating) — hạng cao
+        // hơn xếp trên khi tự động điền seller "đáng giới thiệu". KHÔNG phá
+        // thứ tự ghim tay của admin (pinnedRows đứng riêng, không qua sort
+        // này) — chỉ ảnh hưởng phần TỰ ĐỘNG điền thêm.
+        if (b.row.level !== a.row.level) return b.row.level - a.row.level;
         if (b.stats.avgRating !== a.stats.avgRating) return b.stats.avgRating - a.stats.avgRating;
         if (b.row.products.length !== a.row.products.length) return b.row.products.length - a.row.products.length;
         return b.row.createdAt.getTime() - a.row.createdAt.getTime();
@@ -912,12 +930,14 @@ export async function getFeaturedSellers(limit = 8) {
       .map((x) => x.row);
   }
 
+  const levelConfigs = await getSellerLevelConfigs();
   return [...pinnedRows, ...autoFillRows].map((s) => ({
     id: s.id,
     shopName: s.shopName,
     slug: s.slug,
     description: s.description,
     level: s.level,
+    levelBadge: resolveLevelBadge(s.level, levelConfigs),
     verified: s.verified,
     avatarUrl: s.avatarUrl,
     coverUrl: s.coverUrl,

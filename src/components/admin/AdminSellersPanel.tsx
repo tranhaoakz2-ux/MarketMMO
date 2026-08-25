@@ -5,7 +5,7 @@
 // vẫn THẬT: fetch GET /api/admin/sellers?q=, PATCH /api/admin/sellers/[id]
 // {action:"suspend"|"unsuspend"|"verify"|"unverify", reason?} — không đổi 1
 // dòng logic nghiệp vụ. API route đã có sẵn requireAdmin() (không đụng tới).
-import { BadgeCheck, ExternalLink, Lock, Pin, PinOff, Store, Unlock } from "lucide-react";
+import { BadgeCheck, ExternalLink, Lock, Pin, PinOff, ShieldOff, Store, Unlock } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
@@ -15,6 +15,7 @@ import {
   EmptyState,
   Field,
   SearchInput,
+  Select,
   StatusBadge,
   TableSkeleton,
   Textarea,
@@ -28,6 +29,10 @@ type AdminSeller = {
   slug: string;
   avatarUrl: string | null;
   level: number;
+  levelOverride: number | null;
+  levelDowngradePendingTo: number | null;
+  levelDowngradePendingSince: string | null;
+  levelRecomputedAt: string | null;
   verified: boolean;
   isFeatured: boolean;
   suspended: boolean;
@@ -45,6 +50,8 @@ export default function AdminSellersPanel() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [suspendTarget, setSuspendTarget] = useState<AdminSeller | null>(null);
   const [reason, setReason] = useState("");
+  const [overrideTarget, setOverrideTarget] = useState<AdminSeller | null>(null);
+  const [overrideLevel, setOverrideLevel] = useState("1");
 
   const load = async (query: string) => {
     setLoading(true);
@@ -103,6 +110,30 @@ export default function AdminSellersPanel() {
     load(q);
   };
 
+  const confirmOverride = async () => {
+    if (!overrideTarget) return;
+    setBusyId(overrideTarget.id);
+    await fetch(`/api/admin/sellers/${overrideTarget.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "set_level_override", level: Number(overrideLevel) }),
+    });
+    setBusyId(null);
+    setOverrideTarget(null);
+    load(q);
+  };
+
+  const handleClearOverride = async (id: string) => {
+    setBusyId(id);
+    await fetch(`/api/admin/sellers/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "clear_level_override" }),
+    });
+    setBusyId(null);
+    load(q);
+  };
+
   const handleToggleFeatured = async (seller: AdminSeller) => {
     setBusyId(seller.id);
     await fetch(`/api/admin/sellers/${seller.id}`, {
@@ -133,6 +164,12 @@ export default function AdminSellersPanel() {
             </Link>
             <p className="mt-0.5 flex max-w-[300px] items-center gap-1 truncate text-xs text-[var(--adm-muted)]">
               <span className="truncate">{s.user.email}</span> · LV {s.level}
+              {s.levelOverride !== null && (
+                <span title="Đã khoá hạng"><Lock className="h-3 w-3 shrink-0 text-[var(--adm-danger)]" /></span>
+              )}
+              {s.levelOverride === null && s.levelDowngradePendingTo !== null && (
+                <span className="shrink-0 text-[var(--adm-danger)]">(chờ tụt LV{s.levelDowngradePendingTo})</span>
+              )}
               {s.verified && <BadgeCheck className="h-3 w-3 shrink-0 text-[var(--adm-success)]" />}
               {s.isFeatured && <Pin className="h-3 w-3 shrink-0 text-[var(--adm-brand)]" />}
             </p>
@@ -168,6 +205,23 @@ export default function AdminSellersPanel() {
               </>
             )}
           </Button>
+          {s.levelOverride !== null ? (
+            <Button size="sm" variant="secondary" disabled={busyId === s.id} onClick={() => handleClearOverride(s.id)}>
+              <ShieldOff className="h-3.5 w-3.5" /> Gỡ khoá hạng
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busyId === s.id}
+              onClick={() => {
+                setOverrideLevel(String(s.level));
+                setOverrideTarget(s);
+              }}
+            >
+              <Lock className="h-3.5 w-3.5" /> Khoá hạng
+            </Button>
+          )}
           {s.suspended ? (
             <Button size="sm" variant="success" disabled={busyId === s.id} onClick={() => handleUnsuspend(s.id)}>
               <Unlock className="h-3.5 w-3.5" /> Mở khoá
@@ -221,6 +275,40 @@ export default function AdminSellersPanel() {
                 <Lock className="h-3.5 w-3.5" /> Xác nhận khoá
               </Button>
               <Button variant="secondary" onClick={() => setSuspendTarget(null)}>
+                Huỷ
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {overrideTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setOverrideTarget(null)}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-6 shadow-2xl"
+          >
+            <h3 className="text-base font-black text-[var(--adm-text)]">Khoá hạng {overrideTarget.shopName}?</h3>
+            <p className="mt-1 text-xs text-[var(--adm-muted)]">
+              Hạng sẽ đổi thành giá trị chọn bên dưới NGAY và không còn tự động tăng/tụt theo chỉ số thật nữa (cron/sự
+              kiện bỏ qua hoàn toàn seller này) cho tới khi gỡ khoá.
+            </p>
+            <div className="mt-3">
+              <Field label="Hạng ghi đè">
+                <Select value={overrideLevel} onChange={(e) => setOverrideLevel(e.target.value)}>
+                  <option value="1">LV1 — Người bán mới</option>
+                  <option value="2">LV2 — Đồng</option>
+                  <option value="3">LV3 — Bạc</option>
+                  <option value="4">LV4 — Vàng</option>
+                  <option value="5">LV5 — Kim cương</option>
+                </Select>
+              </Field>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Button variant="primary" disabled={busyId === overrideTarget.id} onClick={confirmOverride}>
+                <Lock className="h-3.5 w-3.5" /> Xác nhận khoá hạng
+              </Button>
+              <Button variant="secondary" onClick={() => setOverrideTarget(null)}>
                 Huỷ
               </Button>
             </div>

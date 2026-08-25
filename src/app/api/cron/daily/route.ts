@@ -4,6 +4,7 @@ import { releaseDueEscrow } from "@/lib/escrow";
 import { closeDueAuctionSessions } from "@/lib/auction";
 import { refundOverdueManualProvisionItems } from "@/lib/manual-provision";
 import { expireStaleBankDeposits } from "@/lib/payment/deposit";
+import { sweepAllSellerLevels } from "@/lib/seller-level";
 
 // Cron DUY NHẤT/ngày (gộp escrow + đấu giá để không vượt giới hạn 2 cron của
 // gói Vercel Hobby) — cấu hình lịch chạy trong vercel.json ("crons"), bảo vệ
@@ -39,19 +40,37 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Không có quyền." }, { status: 401 });
   }
 
-  const [{ released }, { sessionsClosed }, { refunded: manualProvisionRefunded }, bankDepositsExpired] =
-    await Promise.all([
-      releaseDueEscrow({ type: "SYSTEM" }),
-      closeDueAuctionSessions(),
-      // Đơn giao thủ công (VPS/Server) seller không nhập credential đúng hạn —
-      // tự huỷ + hoàn 100% cho buyer, xem src/lib/manual-provision.ts.
-      refundOverdueManualProvisionItems({ type: "SYSTEM" }),
-      // Lưới an toàn cho lệnh nạp ngân hàng quá hạn — bản thân đã được quét
-      // LƯỜI ở GET /api/wallet/deposit/[id] và GET /api/admin/deposits (gần
-      // như tức thời), đây chỉ vét những lệnh không ai đọc trạng thái tới
-      // (buyer đóng tab luôn). Chỉ đổi status, KHÔNG đụng walletBalance.
-      expireStaleBankDeposits(),
-    ]);
+  const [
+    { released },
+    { sessionsClosed },
+    { refunded: manualProvisionRefunded },
+    bankDepositsExpired,
+    { processed: sellerLevelsProcessed },
+  ] = await Promise.all([
+    releaseDueEscrow({ type: "SYSTEM" }),
+    closeDueAuctionSessions(),
+    // Đơn giao thủ công (VPS/Server) seller không nhập credential đúng hạn —
+    // tự huỷ + hoàn 100% cho buyer, xem src/lib/manual-provision.ts.
+    refundOverdueManualProvisionItems({ type: "SYSTEM" }),
+    // Lưới an toàn cho lệnh nạp ngân hàng quá hạn — bản thân đã được quét
+    // LƯỜI ở GET /api/wallet/deposit/[id] và GET /api/admin/deposits (gần
+    // như tức thời), đây chỉ vét những lệnh không ai đọc trạng thái tới
+    // (buyer đóng tab luôn). Chỉ đổi status, KHÔNG đụng walletBalance.
+    expireStaleBankDeposits(),
+    // Lưới an toàn cho Hạng người bán — bản thân đã tính lại NGAY mỗi lần có
+    // sự kiện thật (giải ngân/khiếu nại xử lý xong/review mới), đây chỉ vét
+    // các trường hợp KHÔNG có sự kiện nào kích hoạt (vd đang "chờ tụt hạng"
+    // đã đủ downgradeGraceDays nhưng seller không có hoạt động mới nào để tự
+    // trigger). KHÔNG đụng WalletTransaction/escrow — chỉ Seller.level +
+    // các bảng SellerLevel*.
+    sweepAllSellerLevels(),
+  ]);
 
-  return NextResponse.json({ released, sessionsClosed, manualProvisionRefunded, bankDepositsExpired });
+  return NextResponse.json({
+    released,
+    sessionsClosed,
+    manualProvisionRefunded,
+    bankDepositsExpired,
+    sellerLevelsProcessed,
+  });
 }

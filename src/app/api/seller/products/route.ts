@@ -26,6 +26,7 @@ import {
 } from "@/lib/constants";
 import { getMySellerProducts } from "@/lib/queries";
 import { prisma } from "@/lib/prisma";
+import { getSellerLevelConfigs } from "@/lib/seller-level";
 import { slugifyFieldKey, slugifyProduct } from "@/lib/slug";
 import { saveProductImage } from "@/lib/uploads";
 import { toWarrantyHours } from "@/lib/warranty";
@@ -51,6 +52,27 @@ export async function POST(req: Request) {
     SELLER_PRODUCT_CREATE_WINDOW_MS
   );
   if (error) return error;
+
+  // Giới hạn số sản phẩm ĐANG SỐNG theo Hạng người bán (xem
+  // src/lib/seller-level.ts) — CHỈ chặn đăng MỚI, không đụng sản phẩm cũ dù
+  // seller có sẵn nhiều hơn hạn mới (vd vừa bị tụt hạng). Đếm cùng tập
+  // status "PENDING"/"APPROVED" đã dùng cho kiểm tra trùng lặp bên dưới —
+  // giữ nhất quán 1 định nghĩa "đang bán/chờ duyệt" duy nhất trong file này.
+  const levelConfigs = await getSellerLevelConfigs();
+  const productLimit = levelConfigs.find((c) => c.level === seller!.level)?.productLimit ?? null;
+  if (productLimit !== null) {
+    const activeProductCount = await prisma.product.count({
+      where: { sellerId: seller!.id, status: { in: ["PENDING", "APPROVED"] } },
+    });
+    if (activeProductCount >= productLimit) {
+      return NextResponse.json(
+        {
+          error: `Bạn đã đạt giới hạn ${productLimit} sản phẩm đang bán/chờ duyệt của hạng hiện tại. Nâng hạng (bán thêm, giữ rating tốt) hoặc liên hệ admin để tăng giới hạn.`,
+        },
+        { status: 400 }
+      );
+    }
+  }
 
   const form = await req.formData().catch(() => null);
   if (!form) {

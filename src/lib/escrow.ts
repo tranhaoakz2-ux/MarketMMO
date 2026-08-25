@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { finalizeOrderCommission } from "@/lib/commission";
 import { logOrderStatusChange, type OrderStatusActor } from "@/lib/order-status-history";
+import { recomputeSellerLevelBestEffort } from "@/lib/seller-level";
 import { purgeServiceIntakeSecrets } from "@/lib/service-intake";
 import { getEffectiveEscrowReleaseAt, markReceivedIfNeeded } from "@/lib/warranty";
 
@@ -24,6 +25,10 @@ export async function releaseDueEscrow(actor: OrderStatusActor): Promise<{ relea
   });
 
   let released = 0;
+  // Gom sellerId của MỌI item thật sự giải ngân trong lượt chạy này — tính
+  // lại hạng SAU vòng lặp (best-effort, KHÔNG chặn giải ngân nếu lỗi), gom
+  // vào Set để 1 seller có nhiều item release cùng lượt chỉ tính lại 1 lần.
+  const sellersToRecompute = new Set<string>();
   for (const item of dueItems) {
     // CHẶN RÒ TIỀN ĐẶT TRƯỚC (ưu tiên #1, xây lại 2026-08-14): đơn đặt trước
     // mà seller CHƯA GIAO (deliveredPayload vẫn null) TUYỆT ĐỐI không được
@@ -110,6 +115,7 @@ export async function releaseDueEscrow(actor: OrderStatusActor): Promise<{ relea
     });
     if (!paid) continue;
     released++;
+    sellersToRecompute.add(item.sellerId);
 
     const remaining = await prisma.orderItem.count({
       where: { orderId: item.orderId, status: { not: "RELEASED" } },
@@ -122,6 +128,10 @@ export async function releaseDueEscrow(actor: OrderStatusActor): Promise<{ relea
     }
     // Chốt hoa hồng khi đơn đã settle xong (PENDING→ELIGIBLE/CANCELLED).
     await prisma.$transaction((t) => finalizeOrderCommission(t, item.orderId));
+  }
+
+  for (const sellerId of sellersToRecompute) {
+    await recomputeSellerLevelBestEffort(sellerId);
   }
 
   return { released };

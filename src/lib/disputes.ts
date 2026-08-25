@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { finalizeOrderCommission } from "@/lib/commission";
 import { logOrderStatusChange, type OrderStatusActor } from "@/lib/order-status-history";
+import { recomputeSellerLevelBestEffort } from "@/lib/seller-level";
 import { purgeServiceIntakeSecrets } from "@/lib/service-intake";
 
 // HOÀN TOÀN BỘ 1 khiếu nại — DÙNG CHUNG cho admin (POST /api/admin/disputes/[id]
@@ -81,6 +82,9 @@ export async function fullRefundDispute(
   if (done) {
     // Đơn có thể đã settle xong sau khi huỷ item này → chốt lại hoa hồng.
     await prisma.$transaction((t) => finalizeOrderCommission(t, item.orderId));
+    // OrderItem→CANCELLED tính vào tỉ lệ khiếu nại của seller (Hạng người
+    // bán) — tính lại NGAY, best-effort, không chặn nếu lỗi.
+    await recomputeSellerLevelBestEffort(item.sellerId);
   }
   return { done, amount, orderId: item.orderId, productName: item.productName };
 }

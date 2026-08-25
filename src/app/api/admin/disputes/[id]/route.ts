@@ -5,6 +5,7 @@ import { logAdminAction } from "@/lib/audit";
 import { finalizeOrderCommission } from "@/lib/commission";
 import { fullRefundDispute } from "@/lib/disputes";
 import { logOrderStatusChange } from "@/lib/order-status-history";
+import { recomputeSellerLevelBestEffort } from "@/lib/seller-level";
 import { purgeServiceIntakeSecrets } from "@/lib/service-intake";
 
 export async function POST(
@@ -160,6 +161,7 @@ export async function POST(
       await prisma.order.update({ where: { id: item.orderId }, data: { status: "RELEASED" } });
     }
     await prisma.$transaction((t) => finalizeOrderCommission(t, item.orderId));
+    await recomputeSellerLevelBestEffort(item.sellerId);
     await logAdminAction({
       adminId: session!.user!.id,
       action: "Hoàn một phần khiếu nại",
@@ -227,6 +229,7 @@ export async function POST(
       await prisma.order.update({ where: { id: item.orderId }, data: { status: "RELEASED" } });
     }
     await prisma.$transaction((t) => finalizeOrderCommission(t, item.orderId));
+    await recomputeSellerLevelBestEffort(item.sellerId);
     await logAdminAction({
       adminId: session!.user!.id,
       action: "Giải ngân khiếu nại cho seller",
@@ -339,6 +342,7 @@ export async function POST(
       );
     }
 
+    await recomputeSellerLevelBestEffort(item.sellerId);
     await logAdminAction({
       adminId: session!.user!.id,
       action: "Đền bù từ quỹ bảo hiểm",
@@ -366,6 +370,7 @@ export async function POST(
     if (gate.count === 0) {
       return NextResponse.json({ error: "Khiếu nại này đã được xử lý." }, { status: 400 });
     }
+    await recomputeSellerLevelBestEffort(item.sellerId);
     await logAdminAction({
       adminId: session!.user!.id,
       action: "Từ chối khiếu nại bảo hành sau giải ngân",

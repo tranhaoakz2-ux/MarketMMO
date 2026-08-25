@@ -17,6 +17,7 @@ import {
   LayoutGrid,
   Library,
   Lock,
+  Medal,
   Menu,
   PackageSearch,
   Scale,
@@ -62,6 +63,7 @@ export default function AdminSidebar({
       items: [
         { href: "/admin/nguoi-dung", icon: Users, label: "Người dùng" },
         { href: "/admin/nguoi-ban", icon: Store, label: "Người bán" },
+        { href: "/admin/hang-nguoi-ban", icon: Medal, label: "Hạng người bán" },
         { href: "/admin/don-hang", icon: ShoppingBag, label: "Đơn hàng & Ký quỹ" },
         { href: "/admin/noi-dung", icon: ImageIcon, label: "Nội dung trang web" },
         { href: "/admin/noi-bat", icon: Sparkles, label: "Nổi bật trang chủ" },

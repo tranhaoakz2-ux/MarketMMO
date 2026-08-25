@@ -704,6 +704,8 @@ gian — đọc để hiểu schema đã tiến hoá thế nào:
 | `2026-08-19-usdt-deposit-intent.sql` | Model `UsdtDepositIntent` — vá lỗ hổng front-run TxID nạp USDT (buyer đặt trước số USDT định danh riêng, xem §11) |
 | `2026-08-21-product-requires-expiry.sql` | `Product.requiresExpiryStock` — loại "Tài khoản AI" tách UI khỏi Sản phẩm thường (vẫn `productType=PRODUCT`+`AUTO_STOCK`), ép server bắt buộc `ProductStockItem.expiresAt` cho mọi lô kho khi bật cờ này |
 | `2026-08-24-deposit-code-expiry.sql` | `WalletTransaction.depositCode` (UNIQUE có điều kiện) + `expiresAt` — làm lại luồng nạp ngân hàng thành wizard 3 bước với QR VietQR auto-fill, mã CK sinh ở server thay vì client (xem §11) |
+| `2026-08-24-dvnet-webhook.sql` | Unique index chống trùng nạp USDT qua cổng DV.net (non-custodial) — provider thứ 2 song song TronGrid, chọn qua `PaymentConfig "usdt_provider"` |
+| `2026-08-25-seller-level.sql` | 4 cột `Seller.levelOverride/levelDowngradePendingTo/levelDowngradePendingSince/levelRecomputedAt` + model `SellerLevelConfig`/`SellerLevelSetting`/`SellerLevelHistory` + index `OrderItem(sellerId,status,createdAt)` — hệ thống hạng người bán tính tự động từ dữ liệu thật (đơn hoàn thành theo buyer khác nhau, rating, tỉ lệ khiếu nại), thay số tĩnh cũ |
 
 > Khi thêm schema mới: tạo file `prisma/pending-sql/YYYY-MM-DD-mo-ta-ngan.sql`,
 > để user tự chạy trên Neon, rồi mới cập nhật `schema.prisma` + chạy `npx
