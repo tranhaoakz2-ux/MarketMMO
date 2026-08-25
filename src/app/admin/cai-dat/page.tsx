@@ -1,4 +1,5 @@
 import { Card, PageHeader, SectionTitle, StatusBadge } from "@/components/admin-demo/AdminDemoKit";
+import AdminAccountSecurityPanel from "@/components/admin/AdminAccountSecurityPanel";
 import AdminPaymentConfigPanel from "@/components/admin/AdminPaymentConfigPanel";
 import { requireAdminPage } from "@/lib/authz";
 
@@ -45,6 +46,11 @@ export default async function AdminSettingsPage() {
         title="Cài đặt hệ thống"
         subtitle="Cấu hình thanh toán sửa trực tiếp bên dưới. Các tích hợp khác qua biến môi trường (.env), không sửa được trực tiếp tại đây vì lý do bảo mật."
       />
+
+      <div>
+        <SectionTitle>Tài khoản quản trị</SectionTitle>
+        <AdminAccountSecurityPanel />
+      </div>
 
       <div>
         <SectionTitle>Cấu hình thanh toán</SectionTitle>

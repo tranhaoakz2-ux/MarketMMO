@@ -151,21 +151,44 @@ async function main() {
   }
 
   console.log("Seeding admin account...");
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@marketmmo.pro";
-  const adminPassword = process.env.ADMIN_PASSWORD || "Admin@123456";
-  const adminHash = await bcrypt.hash(adminPassword, 10);
-  await prisma.user.upsert({
-    where: { email: adminEmail },
-    update: { passwordHash: adminHash, role: "ADMIN" },
-    create: {
-      email: adminEmail,
-      username: "admin",
-      name: "Quản trị viên",
-      passwordHash: adminHash,
-      role: "ADMIN",
-      walletBalance: 0,
-    },
-  });
+  // CHỈ tạo admin mặc định khi CHƯA có bất kỳ tài khoản ADMIN nào trong DB —
+  // trước đây upsert theo ADMIN_EMAIL sẽ GHI ĐÈ mật khẩu/role mỗi lần seed
+  // chạy lại, kể cả khi admin THẬT đã tự đổi mật khẩu/email qua /admin/cai-dat
+  // (xem AdminAccountSecurityPanel.tsx) — chạy lại seed (hoặc lỡ có ai chạy
+  // với ALLOW_REMOTE_SEED=yes) sẽ reset mật khẩu về mặc định, hoặc tệ hơn:
+  // nếu ADMIN_EMAIL trên Vercel chưa cập nhật theo email mới, sẽ TẠO MỚI 1
+  // tài khoản admin "cửa sau" ở email mặc định cũ với mật khẩu mặc định. Đã
+  // có admin rồi thì seed KHÔNG ĐỤNG GÌ tới tài khoản admin nữa.
+  // Hoisted ra ngoài if/else — forumAuthorEmails + dòng log cuối cùng bên
+  // dưới đều cần adminEmail dù rơi vào nhánh nào. adminPasswordNote CHỈ in
+  // ra mật khẩu thật khi seed vừa TỰ TẠO nó — tránh in nhầm
+  // "Admin@123456" ra log như thể đó vẫn là mật khẩu hiện tại khi thực ra
+  // seed không hề đụng tới mật khẩu admin đã có.
+  let adminEmail: string;
+  let adminPasswordNote: string;
+  const existingAdmin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+  if (existingAdmin) {
+    adminEmail = existingAdmin.email ?? "(không có email)";
+    adminPasswordNote = "(giữ nguyên — seed không đụng tới mật khẩu admin đã có)";
+    console.log(`Đã có tài khoản ADMIN (${adminEmail}) — bỏ qua seed admin.`);
+  } else {
+    adminEmail = process.env.ADMIN_EMAIL || "admin@marketmmo.pro";
+    const adminPassword = process.env.ADMIN_PASSWORD || "Admin@123456";
+    adminPasswordNote = adminPassword;
+    const adminHash = await bcrypt.hash(adminPassword, 10);
+    await prisma.user.upsert({
+      where: { email: adminEmail },
+      update: { passwordHash: adminHash, role: "ADMIN" },
+      create: {
+        email: adminEmail,
+        username: "admin",
+        name: "Quản trị viên",
+        passwordHash: adminHash,
+        role: "ADMIN",
+        walletBalance: 0,
+      },
+    });
+  }
 
   console.log("Seeding demo buyer account...");
   const buyerHash = await bcrypt.hash("Buyer@123", 10);
@@ -279,7 +302,7 @@ async function main() {
   }
 
   console.log("Seed hoàn tất.");
-  console.log(`Admin: ${adminEmail} / ${adminPassword}`);
+  console.log(`Admin: ${adminEmail} / ${adminPasswordNote}`);
   console.log("Demo buyer: buyer@marketmmo.pro / Buyer@123 (ví 500.000đ)");
   console.log("Seller demo: <slug>@marketmmo.pro / Seller@123 (vd: marketmmo-store@marketmmo.pro)");
 }
