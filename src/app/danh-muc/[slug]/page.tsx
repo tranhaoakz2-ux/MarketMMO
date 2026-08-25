@@ -13,6 +13,7 @@ import { getRecentForumPosts } from "@/lib/forum";
 import { getCategoryBySlug, getCategoryTree, getProductsByCategory } from "@/lib/queries";
 import { LISTING_SORT_OPTIONS, parseListingSortKey } from "@/lib/product-listing-sort";
 import { absoluteUrl } from "@/lib/seo";
+import { stripLeadingEmoji } from "@/lib/text";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +28,9 @@ export async function generateMetadata({
   const category = await getCategoryBySlug(slug);
   if (!category) return {};
 
-  const title = `${category.name} — Mua bán ${category.name} uy tín | MaketMMO`;
-  const description = `Danh sách sản phẩm/dịch vụ ${category.name} trên MaketMMO — giao dịch ký quỹ an toàn, giao hàng tự động 24/7.`;
+  const categoryName = stripLeadingEmoji(category.name);
+  const title = `${categoryName} — Mua bán ${categoryName} uy tín | MaketMMO`;
+  const description = `Danh sách sản phẩm/dịch vụ ${categoryName} trên MaketMMO — giao dịch ký quỹ an toàn, giao hàng tự động 24/7.`;
   const url = absoluteUrl(`/danh-muc/${slug}`);
 
   return {
@@ -62,6 +64,7 @@ export default async function CategoryPage({
   const recentPosts = await getRecentForumPosts(6);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
+  const categoryName = stripLeadingEmoji(category.name);
 
   return (
     <>
@@ -72,9 +75,9 @@ export default async function CategoryPage({
             items={[
               { label: "Trang chủ", href: "/" },
               ...(category.parent
-                ? [{ label: category.parent.name, href: `/danh-muc/${category.parent.slug}` }]
+                ? [{ label: stripLeadingEmoji(category.parent.name), href: `/danh-muc/${category.parent.slug}` }]
                 : []),
-              { label: category.name },
+              { label: categoryName },
             ]}
           />
         </div>
@@ -90,7 +93,7 @@ export default async function CategoryPage({
           <div className="min-w-0 flex-1">
             <Reveal>
               <h1 className="mb-4 flex items-center gap-2 text-2xl font-black text-foreground">
-                {category.name}
+                {categoryName}
               </h1>
             </Reveal>
 
@@ -171,7 +174,7 @@ export default async function CategoryPage({
 
             <Reveal delay={0.1}>
               <p className="mt-6 text-sm leading-relaxed text-muted">
-                <strong className="text-foreground">{category.name}</strong> là danh
+                <strong className="text-foreground">{categoryName}</strong> là danh
                 mục sản phẩm số được giao dịch phổ biến trên MaketMMO — hỗ trợ
                 đầy đủ các phương thức kiếm tiền online. Mọi giao dịch đều
                 được ký quỹ an toàn và giao hàng tự động ngay sau khi thanh

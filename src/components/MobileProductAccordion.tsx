@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import type { CategoryMenuNode } from "@/components/ProductMegaMenu";
+import { stripLeadingEmoji } from "@/lib/text";
 
 // Bản mobile của ProductMegaMenu.tsx — hover không dùng được trên cảm ứng
 // nên chuyển sang accordion (bấm nhóm cha để mở/đóng danh sách con). Dùng
@@ -42,7 +43,7 @@ export default function MobileProductAccordion({
                   onClick={onNavigate}
                   className="flex flex-1 items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-alt hover:text-brand-dark"
                 >
-                  {parent.name}
+                  {stripLeadingEmoji(parent.name)}
                 </Link>
                 {hasChildren && (
                   <button
@@ -64,7 +65,7 @@ export default function MobileProductAccordion({
                       onClick={onNavigate}
                       className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-foreground/70 hover:bg-surface-alt hover:text-brand-dark"
                     >
-                      {child.name}
+                      {stripLeadingEmoji(child.name)}
                     </Link>
                   ))}
                 </div>

@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CategoryTreeNode } from "@/lib/queries";
 import { PRODUCT_SORT_OPTIONS, type ProductSortKey } from "@/lib/product-sort";
+import { stripLeadingEmoji } from "@/lib/text";
 
 // Sentinel slug cho nhóm ảo "Khác" (danh mục lá chưa gán nhóm cha nào) —
 // không trùng với slug thật nào trong DB (slug thật luôn qua slugifyCategory,
@@ -36,7 +37,7 @@ function CategoryChip({
       href={`/danh-muc/${slug}`}
       className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-surface-alt px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-brand-light"
     >
-      {name}
+      {stripLeadingEmoji(name)}
       <span className="text-muted">({count})</span>
     </Link>
   );
@@ -213,7 +214,7 @@ export default function CategoryTabs({
                   : "bg-surface-alt text-muted hover:text-foreground"
               }`}
             >
-              {g.name}
+              {stripLeadingEmoji(g.name)}
             </button>
           ))}
         </div>

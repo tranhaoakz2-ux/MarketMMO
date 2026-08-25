@@ -2,6 +2,7 @@
 
 import { ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { stripLeadingEmoji } from "@/lib/text";
 
 export type CategoryMenuNode = {
   slug: string;
@@ -48,7 +49,7 @@ export default function ProductMegaMenu({ tree }: { tree: CategoryMenuNode[] }) 
                   href={`/danh-muc/${parent.slug}`}
                   className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-foreground/80 transition hover:bg-surface-alt hover:text-brand-dark group-hover/item:bg-surface-alt group-hover/item:text-brand-dark"
                 >
-                  <span className="flex items-center gap-2">{parent.name}</span>
+                  <span className="flex items-center gap-2">{stripLeadingEmoji(parent.name)}</span>
                   {parent.children.length > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
                 </Link>
 
@@ -61,7 +62,7 @@ export default function ProductMegaMenu({ tree }: { tree: CategoryMenuNode[] }) 
                           href={`/danh-muc/${child.slug}`}
                           className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-foreground/80 transition hover:bg-surface-alt hover:text-brand-dark"
                         >
-                          {child.name}
+                          {stripLeadingEmoji(child.name)}
                         </Link>
                       ))}
                     </div>

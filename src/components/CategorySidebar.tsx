@@ -4,6 +4,7 @@ import { Check, ChevronDown, ChevronRight, Heart, MessageSquare, Search } from "
 import Link from "next/link";
 import { useState } from "react";
 import Avatar from "@/components/Avatar";
+import { stripLeadingEmoji } from "@/lib/text";
 
 // Cây danh mục động — nhóm cha lồng category con (đệ quy, không giới hạn
 // tầng), khớp CategoryTreeNode trả về từ getCategoryTree() (src/lib/queries.ts).
@@ -75,7 +76,7 @@ function CategoryTreeRow({
           <span
             className={`truncate text-sm text-foreground ${active ? "font-semibold" : "font-bold"}`}
           >
-            {node.name}
+            {stripLeadingEmoji(node.name)}
           </span>
         </Link>
         {hasChildren && (

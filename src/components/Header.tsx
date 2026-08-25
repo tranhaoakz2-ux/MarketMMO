@@ -14,6 +14,7 @@ import ProductMegaMenu, { type CategoryMenuNode } from "@/components/ProductMega
 import ThemeToggle from "@/components/ThemeToggle";
 import { useCart } from "@/context/CartContext";
 import { formatVnd } from "@/lib/format";
+import { stripLeadingEmoji } from "@/lib/text";
 
 // Phải khớp CHÍNH XÁC DEFAULTS.header_ticker_text trong src/lib/site-config.ts
 // (state khởi tạo dùng giá trị này trước khi fetch xong, tránh flash nội dung).
@@ -101,15 +102,15 @@ export default function Header() {
   // định (admin đặt qua /admin/danh-muc) — đổi TÊN nhóm cha không ảnh hưởng
   // (chỉ đọc theo slug), thêm/bớt/sửa danh mục CON trong nhóm này tự phản
   // ánh ngay lần fetch categoryTree kế tiếp, không cần sửa code.
+  // Không render icon/emoji ở đây nữa (kể cả Category.emoji riêng) — 1 số
+  // category có emoji, 1 số không nên hiện lộn xộn, không đồng nhất. Chỉ
+  // hiện CHỮ, và strip luôn emoji lỡ gõ thẳng vào đầu Category.name (khác
+  // field emoji) để không lộ ra dù admin có đặt tên kiểu "🎵 TikTok" —
+  // stripLeadingEmoji() chỉ xử lý lúc hiển thị, không đụng dữ liệu DB.
   const serviceCategory = categoryTree.find((c) => c.slug === "dich-vu");
   const serviceMenuItems: MegaMenuItem[] = (serviceCategory?.children ?? []).map((child) => ({
-    label: child.name,
+    label: stripLeadingEmoji(child.name),
     href: `/danh-muc/${child.slug}`,
-    icon: (
-      <span className="text-base leading-none" aria-hidden>
-        {child.emoji}
-      </span>
-    ),
   }));
   // Chưa fetch xong / nhóm cha "Dịch Vụ" chưa tồn tại -> rơi về "/danh-muc"
   // (trang tổng, giống hệt cách "Sản phẩm" xử lý) thay vì trỏ cứng vào 1
