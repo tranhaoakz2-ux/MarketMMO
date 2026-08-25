@@ -118,30 +118,9 @@ export default function TotpTool() {
             Mã xác thực của bạn
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
-            <p className="font-mono text-[44px] font-black leading-none tracking-wide text-foreground sm:text-[64px]">
-              {displayCode}
-            </p>
-            <button
-              onClick={handleCopy}
-              aria-label="Sao chép mã"
-              className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-black transition ${
-                copied
-                  ? "bg-success text-white"
-                  : "bg-ink text-white hover:-translate-y-0.5 hover:bg-brand hover:text-ink hover:shadow-md"
-              }`}
-            >
-              {copied ? (
-                <>
-                  <Check className="h-4 w-4" /> Đã chép
-                </>
-              ) : (
-                <>
-                  <Copy className="h-4 w-4" /> Sao chép
-                </>
-              )}
-            </button>
-          </div>
+          <p className="font-mono text-[44px] font-black leading-none tracking-wide text-foreground sm:text-[64px]">
+            {displayCode}
+          </p>
 
           {/* Vòng đếm ngược tròn thay cho thanh tiến trình cũ — cùng số liệu
               (progressPercent từ remaining/30), chỉ đổi cách vẽ. */}
@@ -172,6 +151,33 @@ export default function TotpTool() {
             </span>
           </div>
           <p className="text-xs text-muted">Mã tự động cập nhật sau mỗi 30 giây</p>
+
+          {/* Nút Sao chép tách riêng khỏi hàng mã số — trước đây nằm chung 1
+              hàng với mã 6 số khiến cả hàng bị justify-center theo TỔNG chiều
+              rộng (mã + nút), làm mã nhìn lệch trái thay vì cân giữa ô. Giờ
+              đặt ở góc phải-dưới của ô, không ảnh hưởng gì tới việc mã số tự
+              căn giữa độc lập ở trên. */}
+          <div className="flex w-full justify-end">
+            <button
+              onClick={handleCopy}
+              aria-label="Sao chép mã"
+              className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-black transition ${
+                copied
+                  ? "bg-success text-white"
+                  : "bg-ink text-white hover:-translate-y-0.5 hover:bg-brand hover:text-ink hover:shadow-md"
+              }`}
+            >
+              {copied ? (
+                <>
+                  <Check className="h-4 w-4" /> Đã chép
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" /> Sao chép
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
