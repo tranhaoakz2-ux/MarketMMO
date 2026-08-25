@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Menu, Search, ShoppingBag, TrendingUp, User, Wallet, X } from "lucide-react";
+import { LogOut, Menu, Search, ShoppingBag, User, Wallet, X } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,7 +13,6 @@ import NavMegaMenu, { type MegaMenuItem } from "@/components/NavMegaMenu";
 import ProductMegaMenu, { type CategoryMenuNode } from "@/components/ProductMegaMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useCart } from "@/context/CartContext";
-import { getCategoryIcon, getCategoryIconColor } from "@/lib/categoryIcons";
 import { formatVnd } from "@/lib/format";
 
 // Phải khớp CHÍNH XÁC DEFAULTS.header_ticker_text trong src/lib/site-config.ts
@@ -29,48 +28,6 @@ const simpleNavLinks = [
   { label: "Diễn đàn", href: "/dien-dan" },
 ];
 
-const BoostingIcon = getCategoryIcon("boosting");
-const ChatGptIcon = getCategoryIcon("chatgpt");
-const YoutubeIcon = getCategoryIcon("youtube");
-
-const serviceMenuItems: MegaMenuItem[] = [
-  {
-    label: "Boosting / Cày thuê",
-    href: "/danh-muc/boosting",
-    icon: (
-      <BoostingIcon
-        className={`h-5 w-5 ${getCategoryIconColor("boosting")}`}
-        strokeWidth={2.5}
-      />
-    ),
-  },
-  {
-    label: "Tăng tương tác MXH",
-    href: "/danh-muc/boosting",
-    icon: <TrendingUp className="h-5 w-5 text-emerald-500" strokeWidth={2.5} />,
-  },
-  {
-    label: "Nâng cấp ChatGPT",
-    href: "/danh-muc/chatgpt",
-    icon: (
-      <ChatGptIcon
-        className={`h-5 w-5 ${getCategoryIconColor("chatgpt")}`}
-        strokeWidth={2.5}
-      />
-    ),
-  },
-  {
-    label: "Nâng cấp YouTube Premium",
-    href: "/danh-muc/youtube",
-    icon: (
-      <YoutubeIcon
-        className={`h-5 w-5 ${getCategoryIconColor("youtube")}`}
-        strokeWidth={2.5}
-      />
-    ),
-  },
-];
-
 const depositMenuItems: MegaMenuItem[] = [
   {
     label: "Nạp tiền ngay",
@@ -84,11 +41,11 @@ const depositMenuItems: MegaMenuItem[] = [
   },
 ];
 
-// "Trang chủ"/"Sản phẩm" tách riêng khỏi danh sách phẳng này — render tường
-// minh trước, "Sản phẩm" qua MobileProductAccordion (cây động, xem bên
-// dưới) — giữ đúng thứ tự cũ (Trang chủ, Sản phẩm, Dịch vụ, ...).
+// "Trang chủ"/"Sản phẩm"/"Dịch vụ" tách riêng khỏi danh sách phẳng này —
+// render tường minh trước, "Sản phẩm" qua MobileProductAccordion (cây động),
+// "Dịch vụ" tính động từ categoryTree (xem serviceHref/serviceCategory trong
+// component bên dưới) — giữ đúng thứ tự cũ (Trang chủ, Sản phẩm, Dịch vụ, ...).
 const mobileNavLinks = [
-  { label: "Dịch vụ", href: "/danh-muc/boosting" },
   { label: "Nạp tiền", href: "/nap-tien" },
   { label: "Tin nhắn", href: "/tin-nhan" },
   { label: "Đơn Hàng", href: "/don-hang" },
@@ -136,6 +93,28 @@ export default function Header() {
       active = false;
     };
   }, []);
+
+  // Dropdown "Dịch vụ" ĐỘNG hoàn toàn từ CÙNG categoryTree đã fetch cho
+  // "Sản phẩm" ở trên — KHÔNG còn mảng hardcode riêng (bug thật đã gặp:
+  // "Dịch vụ" từng liệt kê Boosting/ChatGPT/YouTube... lệch hẳn với danh mục
+  // con thật của nhóm cha "Dịch Vụ" trong DB). "dich-vu" là slug nhóm cha cố
+  // định (admin đặt qua /admin/danh-muc) — đổi TÊN nhóm cha không ảnh hưởng
+  // (chỉ đọc theo slug), thêm/bớt/sửa danh mục CON trong nhóm này tự phản
+  // ánh ngay lần fetch categoryTree kế tiếp, không cần sửa code.
+  const serviceCategory = categoryTree.find((c) => c.slug === "dich-vu");
+  const serviceMenuItems: MegaMenuItem[] = (serviceCategory?.children ?? []).map((child) => ({
+    label: child.name,
+    href: `/danh-muc/${child.slug}`,
+    icon: (
+      <span className="text-base leading-none" aria-hidden>
+        {child.emoji}
+      </span>
+    ),
+  }));
+  // Chưa fetch xong / nhóm cha "Dịch Vụ" chưa tồn tại -> rơi về "/danh-muc"
+  // (trang tổng, giống hệt cách "Sản phẩm" xử lý) thay vì trỏ cứng vào 1
+  // danh mục con cụ thể có thể không còn tồn tại.
+  const serviceHref = serviceCategory ? `/danh-muc/${serviceCategory.slug}` : "/danh-muc";
 
   const isSeller =
     status === "authenticated" &&
@@ -287,11 +266,7 @@ export default function Header() {
             Trang chủ
           </Link>
           <ProductMegaMenu tree={categoryTree} />
-          <NavMegaMenu
-            label="Dịch vụ"
-            href="/danh-muc/boosting"
-            items={serviceMenuItems}
-          />
+          <NavMegaMenu label="Dịch vụ" href={serviceHref} items={serviceMenuItems} />
           <NavMegaMenu label="Nạp tiền" href="/nap-tien" items={depositMenuItems} />
           {simpleNavLinks.slice(1).map((link) => (
             <Link
@@ -328,6 +303,13 @@ export default function Header() {
               Trang chủ
             </Link>
             <MobileProductAccordion tree={categoryTree} onNavigate={() => setMenuOpen(false)} />
+            <Link
+              href={serviceHref}
+              onClick={() => setMenuOpen(false)}
+              className="rounded-lg px-2 py-2.5 hover:bg-surface-alt hover:text-brand-dark"
+            >
+              Dịch vụ
+            </Link>
             {mobileNavLinks.map((link) => (
               <Link
                 key={link.label}
