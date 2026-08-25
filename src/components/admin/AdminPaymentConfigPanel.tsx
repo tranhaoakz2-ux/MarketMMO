@@ -125,6 +125,7 @@ export default function AdminPaymentConfigPanel() {
   ];
   const bankKeys: PaymentConfigKey[] = ["bank_name", "bank_account_number", "bank_account_holder", "bank_bin"];
   const sepayKeys: PaymentConfigKey[] = ["sepay_webhook_secret", "sepay_api_key"];
+  const bankManualApprovalKeys: PaymentConfigKey[] = ["bank_manual_approval_enabled"];
   const dvnetKeys: PaymentConfigKey[] = ["dvnet_api_key", "dvnet_webhook_secret", "dvnet_api_base_url"];
 
   const groupDirty = (keys: PaymentConfigKey[]) => keys.some((k) => dirty.has(k));
@@ -383,6 +384,58 @@ export default function AdminPaymentConfigPanel() {
             Lưu
           </Button>
           <Button size="sm" variant="secondary" disabled={saving !== null} onClick={() => restoreToEnv(sepayKeys)}>
+            <RotateCcw className="h-3.5 w-3.5" /> Khôi phục .env
+          </Button>
+        </div>
+      </Card>
+
+      {/* Duyệt tay nạp ngân hàng — công tắc khẩn cấp khi SePay lỗi/bảo trì */}
+      <Card>
+        <SectionTitle
+          aside={
+            <StatusBadge tone={values.bank_manual_approval_enabled === "true" ? "warn" : "success"} dot>
+              {values.bank_manual_approval_enabled === "true" ? "ĐANG BẬT" : "Đang tắt (mặc định)"}
+            </StatusBadge>
+          }
+        >
+          Duyệt tay nạp ngân hàng (công tắc khẩn cấp)
+        </SectionTitle>
+        <p className="mb-4 text-xs leading-relaxed text-[var(--adm-muted)]">
+          Mặc định TẮT — mọi lệnh nạp ngân hàng chỉ được cộng tiền tự động qua webhook SePay, nút &quot;Duyệt&quot;
+          ở trang Nạp tiền bị khoá cho lệnh ngân hàng (không ảnh hưởng lệnh USDT xác minh thất bại — luôn duyệt tay
+          được). Chỉ BẬT tạm thời khi SePay lỗi/bảo trì để tự xác nhận tay đã thấy tiền về, nhớ TẮT lại sau khi xong
+          — mỗi lần duyệt đều ghi log admin + số tiền ở Nhật ký quản trị.
+        </p>
+        <div className="max-w-xs">
+          <Field label="Trạng thái công tắc">
+            <Select
+              value={values.bank_manual_approval_enabled || "false"}
+              onChange={(e) => setField("bank_manual_approval_enabled", e.target.value)}
+            >
+              <option value="false">Tắt — chỉ webhook SePay tự động (mặc định)</option>
+              <option value="true">Bật — admin được duyệt tay tạm thời</option>
+            </Select>
+          </Field>
+        </div>
+        <div className="mt-4 flex items-center gap-2">
+          <Button
+            size="sm"
+            disabled={!groupDirty(bankManualApprovalKeys) || saving !== null}
+            onClick={() => save(bankManualApprovalKeys)}
+          >
+            {saving === bankManualApprovalKeys.join(",") ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Save className="h-3.5 w-3.5" />
+            )}
+            Lưu
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={saving !== null}
+            onClick={() => restoreToEnv(bankManualApprovalKeys)}
+          >
             <RotateCcw className="h-3.5 w-3.5" /> Khôi phục .env
           </Button>
         </div>

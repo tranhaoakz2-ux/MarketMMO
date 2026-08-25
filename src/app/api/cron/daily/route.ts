@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { releaseDueEscrow } from "@/lib/escrow";
 import { closeDueAuctionSessions } from "@/lib/auction";
 import { refundOverdueManualProvisionItems } from "@/lib/manual-provision";
+import { expireStaleBankDeposits } from "@/lib/payment/deposit";
 
 // Cron DUY NHẤT/ngày (gộp escrow + đấu giá để không vượt giới hạn 2 cron của
 // gói Vercel Hobby) — cấu hình lịch chạy trong vercel.json ("crons"), bảo vệ
@@ -38,13 +39,19 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Không có quyền." }, { status: 401 });
   }
 
-  const [{ released }, { sessionsClosed }, { refunded: manualProvisionRefunded }] = await Promise.all([
-    releaseDueEscrow({ type: "SYSTEM" }),
-    closeDueAuctionSessions(),
-    // Đơn giao thủ công (VPS/Server) seller không nhập credential đúng hạn —
-    // tự huỷ + hoàn 100% cho buyer, xem src/lib/manual-provision.ts.
-    refundOverdueManualProvisionItems({ type: "SYSTEM" }),
-  ]);
+  const [{ released }, { sessionsClosed }, { refunded: manualProvisionRefunded }, bankDepositsExpired] =
+    await Promise.all([
+      releaseDueEscrow({ type: "SYSTEM" }),
+      closeDueAuctionSessions(),
+      // Đơn giao thủ công (VPS/Server) seller không nhập credential đúng hạn —
+      // tự huỷ + hoàn 100% cho buyer, xem src/lib/manual-provision.ts.
+      refundOverdueManualProvisionItems({ type: "SYSTEM" }),
+      // Lưới an toàn cho lệnh nạp ngân hàng quá hạn — bản thân đã được quét
+      // LƯỜI ở GET /api/wallet/deposit/[id] và GET /api/admin/deposits (gần
+      // như tức thời), đây chỉ vét những lệnh không ai đọc trạng thái tới
+      // (buyer đóng tab luôn). Chỉ đổi status, KHÔNG đụng walletBalance.
+      expireStaleBankDeposits(),
+    ]);
 
-  return NextResponse.json({ released, sessionsClosed, manualProvisionRefunded });
+  return NextResponse.json({ released, sessionsClosed, manualProvisionRefunded, bankDepositsExpired });
 }

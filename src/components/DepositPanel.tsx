@@ -24,6 +24,7 @@ import Reveal from "@/components/Reveal";
 import { formatVnd } from "@/lib/format";
 import type { BankInfo, UsdtInfo } from "@/lib/payment/deposit";
 import {
+  BANK_DEPOSIT_EXPIRY_MINUTES,
   MAX_BANK_DEPOSIT_VND,
   MAX_USDT_DEPOSIT_VND,
   MIN_BANK_DEPOSIT_VND,
@@ -92,12 +93,14 @@ const statusStyle: Record<WalletTxStatus, string> = {
   PENDING: "bg-brand-light text-brand-dark",
   CONFIRMED: "bg-success/10 text-success",
   REJECTED: "bg-danger/10 text-danger",
+  EXPIRED: "bg-muted/10 text-muted",
 };
 
 const statusDotStyle: Record<WalletTxStatus, string> = {
   PENDING: "bg-brand-dark",
   CONFIRMED: "bg-success",
   REJECTED: "bg-danger",
+  EXPIRED: "bg-muted",
 };
 
 // Card khung ngoài dùng chung — cùng ngôn ngữ thiết kế với
@@ -256,6 +259,7 @@ export default function DepositPanel({
   useEffect(() => {
     if (!(method === "bank" && bankPhase === "created" && bankDeposit)) return;
     let cancelled = false;
+    let interval: ReturnType<typeof setInterval> | null = null;
     const poll = async () => {
       const res = await fetch(`/api/wallet/deposit/${bankDeposit.id}`);
       if (!res.ok || cancelled) return;
@@ -266,12 +270,20 @@ export default function DepositPanel({
         await update();
         loadTransactions();
       }
+      // Dừng poll khi đã tới trạng thái CUỐI — CONFIRMED không đổi nữa;
+      // EXPIRED cũng gần như cuối (chỉ đổi lại nếu admin duyệt tay thủ công
+      // trong lúc công tắc duyệt tay đang bật, trường hợp hiếm, buyer refresh
+      // trang là thấy cập nhật, không cần poll nền tiếp).
+      if ((data.status === "CONFIRMED" || data.status === "EXPIRED") && interval) {
+        clearInterval(interval);
+        interval = null;
+      }
     };
     poll();
-    const interval = setInterval(poll, 4000);
+    interval = setInterval(poll, 4000);
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [method, bankPhase, bankDeposit?.id]);
@@ -755,7 +767,29 @@ export default function DepositPanel({
           {method === "bank" && bankPhase === "created" && bankDeposit && (
             <Reveal delay={0.11}>
               <SectionCard icon={Building2} title="Bước 3 — Quét mã & chuyển khoản">
-                {bankStatus === "CONFIRMED" ? (
+                {bankStatus === "EXPIRED" ? (
+                  <div className="flex flex-col items-center gap-3 py-6 text-center">
+                    <span className="grid h-14 w-14 place-items-center rounded-full bg-muted/10 text-muted">
+                      <Clock className="h-7 w-7" />
+                    </span>
+                    <div>
+                      <p className="text-base font-black text-foreground">Yêu cầu đã hết hạn</p>
+                      <p className="mt-1 text-sm text-muted">
+                        Quá {BANK_DEPOSIT_EXPIRY_MINUTES} phút mà hệ thống chưa nhận được chuyển khoản khớp mã{" "}
+                        <span className="font-bold text-foreground">{bankDeposit.code}</span>. Nếu bạn ĐÃ chuyển
+                        khoản, đừng lo — liên hệ admin qua Zalo/Messenger (góc dưới bên phải trang) kèm mã trên,
+                        tiền sẽ được đối chiếu và cộng đúng, không bị mất.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleBankReset}
+                      className="mt-1 flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-xs font-bold text-ink transition hover:bg-brand-dark"
+                    >
+                      Tạo yêu cầu mới
+                    </button>
+                  </div>
+                ) : bankStatus === "CONFIRMED" ? (
                   <div className="flex flex-col items-center gap-3 py-6 text-center">
                     <span className="grid h-14 w-14 place-items-center rounded-full bg-success/10 text-success">
                       <CheckCircle2 className="h-7 w-7" />
@@ -810,7 +844,7 @@ export default function DepositPanel({
                         ? "—"
                         : new Date(bankDeposit.expiresAt).getTime() - nowMs > 0
                           ? `Hết hạn sau ${formatCountdown(new Date(bankDeposit.expiresAt).getTime() - nowMs)}`
-                          : "Đã hết hạn — chuyển khoản trễ vẫn được cộng tiền, có thể chậm hơn"}
+                          : "Đang chờ hệ thống cập nhật trạng thái hết hạn..."}
                     </div>
 
                     {/* Số tiền + nội dung nhấn mạnh trực quan riêng — khách hay

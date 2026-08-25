@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { logAdminAction } from "@/lib/audit";
+import { isBankManualApprovalEnabled } from "@/lib/payment/deposit";
 
 export async function POST(
   req: Request,
@@ -18,11 +19,32 @@ export async function POST(
   if (!tx || tx.type !== "DEPOSIT") {
     return NextResponse.json({ error: "Không tìm thấy yêu cầu nạp tiền." }, { status: 404 });
   }
-  if (tx.status !== "PENDING") {
+  // Lệnh ngân hàng đã tự EXPIRED (quá 15 phút, xem expireStaleBankDeposits())
+  // vẫn được phép DUYỆT TAY — công tắc duyệt tay dùng đúng lúc SePay hỏng/
+  // chậm, khi đó lệnh rất dễ vượt 15 phút TRƯỚC KHI admin kịp xử lý dù tiền
+  // đã về thật. Chỉ nới cho "approve" + method="bank"; mọi trường hợp khác
+  // (reject, method khác) vẫn đòi PENDING nghiêm ngặt như cũ.
+  const isExpiredBankApproval =
+    action === "approve" && tx.method === "bank" && tx.status === "EXPIRED";
+  if (tx.status !== "PENDING" && !isExpiredBankApproval) {
     return NextResponse.json({ error: "Yêu cầu này đã được xử lý." }, { status: 400 });
   }
 
   if (action === "approve") {
+    // Chặn duyệt tay NGÂN HÀNG khi công tắc "bank_manual_approval_enabled"
+    // đang TẮT (mặc định) — webhook SePay là nguồn duyệt duy nhất lúc đó,
+    // tránh admin lỡ tay cộng tiền cho lệnh chưa thực sự có tiền về. KHÔNG
+    // áp cho method khác (vd "usdt" — nhánh xác minh on-chain thất bại vẫn
+    // luôn cần admin tự đối chiếu tay, không liên quan công tắc này).
+    if (tx.method === "bank" && !(await isBankManualApprovalEnabled())) {
+      return NextResponse.json(
+        {
+          error:
+            "Duyệt tay nạp ngân hàng đang TẮT — mọi lệnh xử lý tự động qua webhook SePay. Bật công tắc ở /admin/cai-dat nếu cần duyệt tay tạm thời.",
+        },
+        { status: 403 }
+      );
+    }
     // amount TUỲ CHỌN — chỉ dùng cho các bản ghi "chờ xác minh thủ công" do
     // luồng tự động hoá USDT tạo ra khi verify on-chain thất bại (amount=0
     // lúc tạo, vì chưa biết số VNĐ đúng) — admin tự đối chiếu Tronscan rồi
@@ -36,12 +58,15 @@ export async function POST(
     }
     const creditAmount = amountOverride ?? tx.amount;
 
-    // Gate NGUYÊN TỬ (bug B6): chỉ khi updateMany chuyển được PENDING→CONFIRMED
-    // (count===1) mới cộng ví — 2 lần bấm "Duyệt" song song thì chỉ 1 lệnh
-    // khớp, lệnh kia count===0 (đã CONFIRMED) → không cộng lần 2.
+    // Gate NGUYÊN TỬ (bug B6): chỉ khi updateMany chuyển được PENDING/EXPIRED
+    // →CONFIRMED (count===1) mới cộng ví — 2 lần bấm "Duyệt" song song thì chỉ
+    // 1 lệnh khớp, lệnh kia count===0 (đã CONFIRMED) → không cộng lần 2. Nhận
+    // cả "EXPIRED" vì nhánh isExpiredBankApproval ở trên đã cho qua guard đầu
+    // hàm — chỉ method="bank" mới có thể ở trạng thái EXPIRED nên không ảnh
+    // hưởng gì các method khác.
     const credited = await prisma.$transaction(async (t) => {
       const gate = await t.walletTransaction.updateMany({
-        where: { id, type: "DEPOSIT", status: "PENDING" },
+        where: { id, type: "DEPOSIT", status: { in: ["PENDING", "EXPIRED"] } },
         data: {
           status: "CONFIRMED",
           confirmedAt: new Date(),
@@ -63,7 +88,7 @@ export async function POST(
       action: "Duyệt nạp tiền",
       targetType: "WalletTransaction",
       targetId: id,
-      detail: `+${creditAmount}đ cho user ${tx.userId}${amountOverride !== undefined ? " (admin nhập tay)" : ""}`,
+      detail: `+${creditAmount}đ cho user ${tx.userId} (method=${tx.method ?? "?"})${amountOverride !== undefined ? ", admin nhập tay" : ""}${isExpiredBankApproval ? ", duyệt tay khi công tắc đang BẬT (lệnh đã hết hạn)" : ""}`,
     });
     return NextResponse.json({ ok: true });
   }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { expireStaleBankDeposits } from "@/lib/payment/deposit";
 
 // Buyer poll trạng thái 1 yêu cầu nạp tiền (mỗi 3-5s, xem DepositPanel.tsx)
 // trong lúc chờ webhook SePay khớp giao dịch — để trang tự chuyển "Nạp
@@ -12,6 +13,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (error) return error;
 
   const { id } = await params;
+
+  // Lazy sweep: nếu ĐÚNG lệnh này đang PENDING quá hạn, chuyển EXPIRED ngay
+  // trước khi đọc — buyer poll mỗi 4s nên thấy "hết hạn" gần như tức thời,
+  // không cần đợi cron. Quét TOÀN CỤC (không chỉ id này) vì chi phí rẻ (1
+  // updateMany có index) và tiện làm sạch luôn các lệnh cũ khác không ai poll.
+  await expireStaleBankDeposits();
+
   const tx = await prisma.walletTransaction.findUnique({
     where: { id },
     select: { userId: true, type: true, status: true, amount: true, method: true },

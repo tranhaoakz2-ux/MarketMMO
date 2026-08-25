@@ -40,7 +40,13 @@ export type WalletTxType =
   // giá đè/admin từ chối, status đổi PENDING → REJECTED + hoàn lại ví.
   | "AUCTION_HOLD";
 
-export type WalletTxStatus = "PENDING" | "CONFIRMED" | "REJECTED";
+// "EXPIRED" — CHỈ áp dụng cho nạp ngân hàng (method="bank") quá
+// BANK_DEPOSIT_EXPIRY_MINUTES mà chưa khớp được webhook SePay nào (xem
+// expireStaleBankDeposits() trong src/lib/payment/deposit.ts). Đây là
+// TRẠNG THÁI, KHÔNG PHẢI xoá — depositCode/userId/amount vẫn giữ nguyên
+// trong bản ghi để tiền về trễ vẫn có đường khớp lại (rơi vào "Giao dịch
+// SePay chưa khớp lệnh" nếu webhook không tìm thấy status PENDING nữa).
+export type WalletTxStatus = "PENDING" | "CONFIRMED" | "REJECTED" | "EXPIRED";
 
 export type DisputeStatus =
   | "OPEN"
@@ -270,6 +276,7 @@ export const walletTxStatusLabel: Record<WalletTxStatus, string> = {
   PENDING: "Chờ duyệt",
   CONFIRMED: "Đã cộng tiền",
   REJECTED: "Từ chối",
+  EXPIRED: "Đã hết hạn",
 };
 
 export const walletTxTypeLabel: Record<WalletTxType, string> = {

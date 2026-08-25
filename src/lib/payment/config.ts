@@ -22,7 +22,8 @@ export type PaymentConfigKey =
   | "usdt_provider"
   | "dvnet_api_key"
   | "dvnet_webhook_secret"
-  | "dvnet_api_base_url";
+  | "dvnet_api_base_url"
+  | "bank_manual_approval_enabled";
 
 const ENV_FALLBACK: Record<PaymentConfigKey, string | undefined> = {
   vnpay_tmn_code: process.env.VNPAY_TMN_CODE,
@@ -65,6 +66,14 @@ const ENV_FALLBACK: Record<PaymentConfigKey, string | undefined> = {
   // DVNET_DEFAULT_BASE_URL trong dvnet.ts), chỉ cần điền nếu dashboard DV.net
   // cấp domain/subdomain API riêng khác domain mặc định.
   dvnet_api_base_url: process.env.DVNET_API_BASE_URL,
+  // Công tắc "duyệt tay nạp ngân hàng" — MẶC ĐỊNH TẮT (chuỗi khác "true" đều
+  // coi là tắt, kể cả rỗng/chưa cấu hình). Webhook SePay vẫn LUÔN chạy tự
+  // động bất kể công tắc này — công tắc chỉ kiểm soát việc admin có được
+  // BẤM "Duyệt" tay cho 1 lệnh nạp NGÂN HÀNG đang PENDING hay không (chặn ở
+  // cả UI /admin/nap-tien lẫn API POST /api/admin/deposits/[id], xem route
+  // đó). Bật tạm thời khi SePay lỗi/bảo trì, tắt lại khi xong — không ảnh
+  // hưởng nhánh duyệt tay riêng của USDT xác minh thất bại (method="usdt").
+  bank_manual_approval_enabled: process.env.BANK_MANUAL_APPROVAL_ENABLED,
 };
 
 export const ALL_PAYMENT_CONFIG_KEYS = Object.keys(ENV_FALLBACK) as PaymentConfigKey[];

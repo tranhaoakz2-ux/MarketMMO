@@ -52,6 +52,10 @@ const toneOf: Record<WalletTxStatus, Tone> = {
   PENDING: "warn",
   CONFIRMED: "success",
   REJECTED: "danger",
+  // EXPIRED chỉ thực sự xảy ra cho nạp ngân hàng (method="bank"), không bao
+  // giờ xuất hiện ở rút tiền — có mặt ở đây thuần để thoả kiểu dùng chung
+  // WalletTxStatus.
+  EXPIRED: "danger",
 };
 
 const RATE_SOURCE_LABEL: Record<string, string> = {

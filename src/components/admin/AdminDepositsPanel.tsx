@@ -58,6 +58,7 @@ const toneOf: Record<WalletTxStatus, Tone> = {
   PENDING: "warn",
   CONFIRMED: "success",
   REJECTED: "danger",
+  EXPIRED: "danger",
 };
 
 // Ô tìm + chọn user để gán 1 giao dịch SePay chưa khớp — tách component
@@ -130,6 +131,10 @@ export default function AdminDepositsPanel() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [manualAmount, setManualAmount] = useState<Record<string, string>>({});
+  // Công tắc "duyệt tay nạp ngân hàng" (mặc định TẮT, xem /admin/cai-dat) —
+  // đọc kèm trong GET /api/admin/deposits, KHÔNG ảnh hưởng nhánh USDT xác
+  // minh thất bại (luôn hiện/luôn duyệt tay được bất kể công tắc này).
+  const [bankManualApprovalEnabled, setBankManualApprovalEnabled] = useState(false);
 
   const [unmatched, setUnmatched] = useState<SepayUnmatched[]>([]);
   const [unmatchedLoading, setUnmatchedLoading] = useState(true);
@@ -141,6 +146,7 @@ export default function AdminDepositsPanel() {
     if (res.ok) {
       const data = await res.json();
       setDeposits(data.deposits);
+      setBankManualApprovalEnabled(Boolean(data.bankManualApprovalEnabled));
     }
     setLoading(false);
   };
@@ -184,8 +190,19 @@ export default function AdminDepositsPanel() {
     load();
   };
 
-  const pending = deposits.filter((d) => d.status === "PENDING");
-  const processed = deposits.filter((d) => d.status !== "PENDING");
+  // Lệnh method="bank" (PENDING hoặc EXPIRED) chỉ hiện ở khu "chờ duyệt" khi
+  // công tắc duyệt tay đang BẬT — khi TẮT, webhook SePay là nguồn duyệt duy
+  // nhất, hàng chờ ngân hàng ẩn khỏi khu vực thao tác (rơi xuống lịch sử để
+  // vẫn có dấu vết, KHÔNG có nút Duyệt/Từ chối). Lệnh method khác (vd "usdt"
+  // xác minh thất bại) luôn hiện bình thường, không phụ thuộc công tắc này.
+  const isActionable = (d: Deposit) => {
+    if (d.method === "bank") {
+      return bankManualApprovalEnabled && (d.status === "PENDING" || d.status === "EXPIRED");
+    }
+    return d.status === "PENDING";
+  };
+  const pending = deposits.filter(isActionable);
+  const processed = deposits.filter((d) => !isActionable(d));
 
   const columns: Column<Deposit>[] = [
     {
@@ -202,6 +219,17 @@ export default function AdminDepositsPanel() {
   return (
     <div className="flex flex-col gap-6">
       <div>
+        <div
+          className={`mb-3 flex items-center gap-2 rounded-lg border px-3.5 py-2.5 text-xs font-semibold ${
+            bankManualApprovalEnabled
+              ? "border-[var(--adm-warn)]/30 bg-[var(--adm-warn)]/10 text-[var(--adm-warn)]"
+              : "border-[var(--adm-border)] bg-[var(--adm-surface-2)] text-[var(--adm-muted)]"
+          }`}
+        >
+          {bankManualApprovalEnabled
+            ? "⚠ Duyệt tay nạp ngân hàng đang BẬT — nhớ tắt lại ở Cài đặt sau khi SePay hoạt động trở lại."
+            : "Duyệt tay nạp ngân hàng đang TẮT — mọi lệnh ngân hàng chỉ cộng tiền tự động qua webhook SePay (bật ở /admin/cai-dat nếu SePay lỗi/bảo trì)."}
+        </div>
         <h2 className="mb-3 text-sm font-black text-[var(--adm-text)]">
           {loading ? "Đang tải..." : `Yêu cầu nạp tiền chờ duyệt (${pending.length})`}
         </h2>
@@ -216,6 +244,7 @@ export default function AdminDepositsPanel() {
               // on-chain thất bại — amount=0 lúc tạo vì chưa biết số VNĐ
               // đúng, admin phải tự đối chiếu Tronscan rồi nhập tay.
               const isManualUsdtFallback = d.method === "usdt" && d.amount === 0;
+              const isExpiredBankRow = d.method === "bank" && d.status === "EXPIRED";
               const manualValue = manualAmount[d.id] ?? "";
               const manualNum = Number(manualValue);
               const manualValid = Number.isInteger(manualNum) && manualNum > 0;
@@ -226,6 +255,12 @@ export default function AdminDepositsPanel() {
                     <p className="text-xs text-[var(--adm-muted)]">
                       {walletMethodLabel[d.method ?? ""] ?? d.method ?? "—"} · {new Date(d.createdAt).toLocaleString("vi-VN")}
                     </p>
+                    {isExpiredBankRow && (
+                      <p className="mt-1 text-xs font-semibold text-[var(--adm-warn)]">
+                        ⚠ Lệnh đã quá 15 phút (EXPIRED) — chỉ duyệt được vì công tắc duyệt tay đang bật, tự xác nhận
+                        đã thấy đúng số tiền về tài khoản ngân hàng trước khi bấm.
+                      </p>
+                    )}
                     {d.note && (
                       <p className={`mt-1 text-xs ${isManualUsdtFallback ? "font-semibold text-[var(--adm-warn)]" : "text-[var(--adm-muted)]"}`}>
                         {isManualUsdtFallback ? "⚠ " : "Ghi chú: "}
