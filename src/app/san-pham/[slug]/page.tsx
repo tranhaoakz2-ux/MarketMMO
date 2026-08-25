@@ -29,9 +29,10 @@ import ProductInfoTabs from "@/components/ProductInfoTabs";
 import ProductThumbnail from "@/components/ProductThumbnail";
 import RatingStars from "@/components/RatingStars";
 import Reveal from "@/components/Reveal";
+import SellerActivityBadge from "@/components/SellerActivityBadge";
 import ServiceBuyBox from "@/components/ServiceBuyBox";
 import TutTrickBuyBox from "@/components/TutTrickBuyBox";
-import { formatLastActive, formatVnd } from "@/lib/format";
+import { formatVnd } from "@/lib/format";
 import { getRecentForumPosts } from "@/lib/forum";
 import { getProductBySlugDb, getProductReviews, getRelatedProductsDb } from "@/lib/queries";
 import { absoluteUrl, DEFAULT_OG_IMAGE, truncate } from "@/lib/seo";
@@ -175,10 +176,7 @@ export default async function ProductDetailPage({
                     <BadgeCheck className="h-3.5 w-3.5" /> Đã xác thực
                   </span>
                 )}
-                <span className="flex items-center gap-1 text-xs font-semibold text-muted">
-                  <Clock className="h-3.5 w-3.5 text-brand-dark" />
-                  {formatLastActive(product.sellerLastActiveAt)}
-                </span>
+                <SellerActivityBadge lastActiveAt={product.sellerLastActiveAt} />
                 <span className="ml-auto flex items-center gap-1.5 rounded-full bg-info px-3 py-1.5 text-xs font-black text-white shadow-sm">
                   <ShieldCheck className="h-4 w-4" /> Bảo hiểm:{" "}
                   {formatVnd(product.sellerInsuranceBalance ?? 0)}

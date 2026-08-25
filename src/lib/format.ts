@@ -55,14 +55,24 @@ export function formatWithdrawRecipient(
   return legacyNote ?? "—";
 }
 
-export function formatLastActive(date: Date | string | null | undefined): string {
-  if (!date) return "Chưa hoạt động";
+// "unknown" = lastActiveAt null (vd seller demo chưa từng đăng nhập thật qua
+// callback jwt() trong auth.ts) — CỐ TÌNH tách riêng khỏi "offline" để nơi
+// gọi không tô chấm ĐỎ cho trường hợp này (đỏ dễ hiểu lầm là "vừa offline",
+// trong khi thực ra chưa có dữ liệu hoạt động nào). Cùng mẫu trả về
+// {label, tone} như formatDaysRemaining() ở trên — nơi gọi tự map tone sang
+// màu chấm phù hợp, hàm này không biết gì về UI.
+export type LastActiveTone = "online" | "offline" | "unknown";
+
+export function formatLastActive(
+  date: Date | string | null | undefined
+): { label: string; tone: LastActiveTone } {
+  if (!date) return { label: "Chưa hoạt động", tone: "unknown" };
   const d = typeof date === "string" ? new Date(date) : date;
   const diffMin = Math.floor((Date.now() - d.getTime()) / 60000);
-  if (diffMin < 5) return "Đang online";
-  if (diffMin < 60) return `Online ${diffMin} phút trước`;
+  if (diffMin < 5) return { label: "Đang online", tone: "online" };
+  if (diffMin < 60) return { label: `Đã offline ${diffMin} phút trước`, tone: "offline" };
   const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `Online ${diffHour} giờ trước`;
+  if (diffHour < 24) return { label: `Đã offline ${diffHour} giờ trước`, tone: "offline" };
   const diffDay = Math.floor(diffHour / 24);
-  return `Online ${diffDay} ngày trước`;
+  return { label: `Đã offline ${diffDay} ngày trước`, tone: "offline" };
 }
