@@ -51,14 +51,16 @@ export default function ProductInfoTabs({
 
   return (
     <div className="overflow-hidden rounded-xl border border-border-c bg-surface shadow-sm">
-      <div className="grid grid-cols-3">
+      <div className="grid grid-cols-3 divide-x divide-border-c border-b border-border-c">
         {(Object.keys(TAB_LABELS) as TabKey[]).map((key) => (
           <button
             key={key}
             type="button"
             onClick={() => setTab(key)}
             className={`px-5 py-4 text-center text-sm font-bold transition sm:text-base ${
-              tab === key ? "bg-ink text-white" : "bg-brand text-ink hover:bg-brand-dark"
+              tab === key
+                ? "bg-brand text-ink"
+                : "bg-surface text-muted hover:bg-surface-alt"
             }`}
           >
             {TAB_LABELS[key]}
