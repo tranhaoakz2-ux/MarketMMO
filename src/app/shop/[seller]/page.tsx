@@ -106,15 +106,29 @@ export default async function ShopPage({
     <>
       <Header />
       <main className="flex-1 bg-background">
-        {/* Ảnh bìa gian hàng (Seller.coverUrl, Trang Bán Hàng > Hồ sơ cá nhân)
-            — giữ nguyên gradient cũ làm fallback khi seller chưa upload. */}
-        <div className="relative h-32 overflow-hidden bg-gradient-to-r from-ink to-ink-soft sm:h-40">
-          {shop.coverUrl && (
-            <Image src={shop.coverUrl} alt="" fill className="object-cover" sizes="100vw" priority />
-          )}
-        </div>
-
+        {/* Ảnh bìa + card hồ sơ dùng CHUNG 1 khung bao (max-w-7xl + padding
+            ngang) để 2 khối luôn CÙNG bề rộng/CÙNG lề trái-phải — TRƯỚC ĐÂY
+            ảnh bìa nằm NGOÀI khung này (full-bleed hết viewport) trong khi
+            card hồ sơ bên dưới bị bó trong max-w-7xl, khiến ảnh bìa rộng hơn
+            và tràn ra 2 bên mép card, nhìn lệch. Bo góc trên của ảnh bìa
+            (rounded-t-2xl) khớp đúng góc bo của card (rounded-2xl) để 2 khối
+            liền thành 1 mảng thị giác duy nhất. */}
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {/* Ảnh bìa gian hàng (Seller.coverUrl, Trang Bán Hàng > Hồ sơ cá nhân)
+              — giữ nguyên gradient cũ làm fallback khi seller chưa upload. */}
+          <div className="relative h-32 overflow-hidden rounded-t-2xl bg-gradient-to-r from-ink to-ink-soft sm:h-40">
+            {shop.coverUrl && (
+              <Image
+                src={shop.coverUrl}
+                alt=""
+                fill
+                className="object-cover"
+                sizes="(min-width: 1472px) 1472px, 100vw"
+                priority
+              />
+            )}
+          </div>
+
           <Reveal>
             <div className="-mt-14 flex flex-col gap-4 rounded-2xl border border-border-c bg-surface p-6 shadow-sm sm:flex-row sm:items-center">
               <div className="relative shrink-0">
