@@ -20,10 +20,11 @@ export async function GET() {
   return NextResponse.json({ banners });
 }
 
-// POST — tạo 1 dòng mới. slot="LARGE" tạo thoải mái (thêm slide), sortOrder
-// tự động = lớn nhất hiện có +1 nếu không truyền. slot="SMALL_1"/"SMALL_2"
-// chỉ được giữ ĐÚNG 1 dòng — chặn tạo dòng thứ 2, admin phải PATCH dòng đã
-// có thay vì tạo mới (tránh dữ liệu mập mờ dòng nào mới được đọc).
+// POST — tạo 1 dòng mới cho BẤT KỲ slot nào (LARGE/SMALL_1/SMALL_2đều không
+// giới hạn số slide — trước đây SMALL_1/SMALL_2 chỉ được giữ đúng 1 dòng,
+// giới hạn đó nằm ở tầng API/UI, không phải schema, đã gỡ để cả 3 vị trí
+// đồng nhất). sortOrder tự động = lớn nhất hiện có TRONG ĐÚNG SLOT ĐÓ +1 nếu
+// không truyền.
 export async function POST(req: Request) {
   const { session, error } = await requireAdmin();
   if (error) return error;
@@ -32,16 +33,6 @@ export async function POST(req: Request) {
   const slot = typeof body?.slot === "string" ? body.slot : "";
   if (!VALID_SLOTS.includes(slot)) {
     return NextResponse.json({ error: "Vị trí banner không hợp lệ." }, { status: 400 });
-  }
-
-  if (slot !== "LARGE") {
-    const existing = await prisma.homeBanner.findFirst({ where: { slot } });
-    if (existing) {
-      return NextResponse.json(
-        { error: "Vị trí này đã có sẵn 1 banner — sửa banner hiện có thay vì tạo mới." },
-        { status: 400 }
-      );
-    }
   }
 
   let sortOrder = Number.isInteger(body?.sortOrder) ? (body.sortOrder as number) : null;
@@ -61,11 +52,9 @@ export async function POST(req: Request) {
   const ctaLabel = typeof body?.ctaLabel === "string" && body.ctaLabel.trim() ? body.ctaLabel.trim() : null;
   const ctaHref = typeof body?.ctaHref === "string" && body.ctaHref.trim() ? body.ctaHref.trim() : null;
 
-  // Banner NHỎ (SMALL_1/SMALL_2) render cả thẻ thành href công khai cho MỌI
-  // khách trang chủ — chặn cứng định dạng sai/nguy hiểm (javascript:, data:...).
-  // Banner LỚN giữ nguyên hành vi cũ 100% (không validate) — không đổi gì ở
-  // luồng đang chạy đúng.
-  if (slot !== "LARGE" && ctaHref && !isValidCtaHref(ctaHref)) {
+  // Cả 3 slot đều render thành href công khai cho MỌI khách trang chủ khi có
+  // ảnh/slide — chặn cứng định dạng sai/nguy hiểm (javascript:, data:...).
+  if (ctaHref && !isValidCtaHref(ctaHref)) {
     return NextResponse.json(
       { error: "Link đích không hợp lệ — phải bắt đầu bằng \"/\" (nội bộ) hoặc \"http(s)://\" (bên ngoài)." },
       { status: 400 }

@@ -60,23 +60,26 @@ function toSlide(row: HomeBannerRow, fallback: HomeBannerSlide): HomeBannerSlide
   };
 }
 
-/** Dùng cho trang chủ (Server Component) — đã resolve DB/mặc định, sẵn sàng render. */
+/** Dùng cho trang chủ (Server Component) — đã resolve DB/mặc định, sẵn sàng render.
+    CẢ 3 slot giờ đều là mảng nhiều slide (trước đây small1/small2 chỉ 1 dòng
+    cố định) — rỗng thì fallback về đúng 1 slide mặc định trong code, cùng
+    pattern đã dùng cho `large` từ trước. */
 export async function getHomeBanners(): Promise<{
   large: HomeBannerSlide[];
-  small1: HomeBannerSlide;
-  small2: HomeBannerSlide;
+  small1: HomeBannerSlide[];
+  small2: HomeBannerSlide[];
 }> {
   const rows = await prisma.homeBanner.findMany({
     where: { isActive: true },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
   const largeRows = rows.filter((r) => r.slot === "LARGE");
-  const small1Row = rows.find((r) => r.slot === "SMALL_1") ?? null;
-  const small2Row = rows.find((r) => r.slot === "SMALL_2") ?? null;
+  const small1Rows = rows.filter((r) => r.slot === "SMALL_1");
+  const small2Rows = rows.filter((r) => r.slot === "SMALL_2");
 
   return {
     large: largeRows.length > 0 ? largeRows.map((r) => toSlide(r, DEFAULT_LARGE_SLIDE)) : [DEFAULT_LARGE_SLIDE],
-    small1: small1Row ? toSlide(small1Row, DEFAULT_SMALL_1) : DEFAULT_SMALL_1,
-    small2: small2Row ? toSlide(small2Row, DEFAULT_SMALL_2) : DEFAULT_SMALL_2,
+    small1: small1Rows.length > 0 ? small1Rows.map((r) => toSlide(r, DEFAULT_SMALL_1)) : [DEFAULT_SMALL_1],
+    small2: small2Rows.length > 0 ? small2Rows.map((r) => toSlide(r, DEFAULT_SMALL_2)) : [DEFAULT_SMALL_2],
   };
 }

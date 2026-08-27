@@ -1,11 +1,10 @@
 "use client";
 
-// Panel quản trị Banner trang chủ (model HomeBanner) — thay hệ thống 4 ô ảnh
-// cố định cũ trong AdminSiteContentPanel (SiteConfig chỉ lưu URL ảnh đơn,
-// không đủ cho thiết kế banner mới có tiêu đề/mô tả/CTA + số lượng slide
-// động). slot="LARGE": danh sách kéo-thả sắp thứ tự (giống
-// AdminFeaturedPanel), thêm/sửa/xoá tự do. slot="SMALL_1"/"SMALL_2": đúng 1
-// dòng mỗi loại, sửa tại chỗ, không thêm/xoá được.
+// Panel quản trị Banner trang chủ (model HomeBanner) — CẢ 3 vị trí
+// (LARGE/SMALL_1/SMALL_2) đều dùng chung 1 khối UI (BannerSlotSection):
+// danh sách kéo-thả sắp thứ tự, thêm/sửa (modal có sẵn ô chọn ảnh)/xoá slide
+// tự do, không giới hạn số lượng — trước đây SMALL_1/SMALL_2 chỉ giữ đúng 1
+// dòng cố định (sửa tại chỗ, không thêm/xoá được), giờ đồng nhất với LARGE.
 import {
   AlertTriangle,
   GripVertical,
@@ -29,9 +28,11 @@ import {
 } from "@/components/admin-demo/AdminDemoKit";
 import { isValidCtaHref } from "@/lib/banner-link";
 
+type Slot = "LARGE" | "SMALL_1" | "SMALL_2";
+
 type HomeBannerRow = {
   id: string;
-  slot: "LARGE" | "SMALL_1" | "SMALL_2";
+  slot: Slot;
   sortOrder: number;
   imageUrl: string | null;
   title: string | null;
@@ -41,27 +42,12 @@ type HomeBannerRow = {
   isActive: boolean;
 };
 
-type FormState = {
-  mode: "create" | "edit";
-  id?: string;
-  title: string;
-  description: string;
-  ctaLabel: string;
-  ctaHref: string;
-};
-
-const EMPTY_FORM: Omit<FormState, "mode"> = { title: "", description: "", ctaLabel: "", ctaHref: "" };
-
 export default function AdminHomeBannerPanel() {
   const [banners, setBanners] = useState<HomeBannerRow[] | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [form, setForm] = useState<FormState | null>(null);
-  const [formBusy, setFormBusy] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const uploadInputRef = useRef<HTMLInputElement>(null);
-  const pendingUploadTargetId = useRef<string | null>(null);
+  const [rowBusyId, setRowBusyId] = useState<string | null>(null);
+  const rowUploadInputRef = useRef<HTMLInputElement>(null);
+  const pendingRowUploadTarget = useRef<{ id: string; slot: Slot } | null>(null);
 
   const load = async () => {
     const res = await fetch("/api/admin/home-banners");
@@ -77,18 +63,6 @@ export default function AdminHomeBannerPanel() {
     })();
   }, []);
 
-  if (!banners) {
-    return (
-      <Card>
-        <ListSkeleton rows={3} />
-      </Card>
-    );
-  }
-
-  const large = banners.filter((b) => b.slot === "LARGE").sort((a, b) => a.sortOrder - b.sortOrder);
-  const small1 = banners.find((b) => b.slot === "SMALL_1") ?? null;
-  const small2 = banners.find((b) => b.slot === "SMALL_2") ?? null;
-
   const uploadImage = async (file: File): Promise<string | null> => {
     const form = new FormData();
     form.append("file", file);
@@ -101,39 +75,23 @@ export default function AdminHomeBannerPanel() {
     return data.url as string;
   };
 
-  // Ảnh cho slide LARGE đã tồn tại (id thật) -> PATCH ngay imageUrl. Ảnh cho
-  // slot SMALL_1/SMALL_2 khi CHƯA có dòng nào (id=null) -> POST tạo mới kèm
-  // luôn imageUrl vừa upload trong 1 lần gọi.
-  const handlePickImage = (targetId: string | null, slot: HomeBannerRow["slot"]) => {
-    pendingUploadTargetId.current = targetId ?? `NEW:${slot}`;
-    uploadInputRef.current?.click();
+  // Upload NHANH thay ảnh cho 1 slide ĐÃ TỒN TẠI ngay từ dòng danh sách,
+  // không cần mở modal sửa (PATCH imageUrl ngay lập tức).
+  const pickRowImage = (id: string, slot: Slot) => {
+    pendingRowUploadTarget.current = { id, slot };
+    rowUploadInputRef.current?.click();
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRowFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
-    const target = pendingUploadTargetId.current;
+    const target = pendingRowUploadTarget.current;
     if (!file || !target) return;
-    setBusyId(target);
+    setRowBusyId(target.id);
     setError(null);
     const url = await uploadImage(file);
-    if (!url) {
-      setBusyId(null);
-      return;
-    }
-    if (target.startsWith("NEW:")) {
-      const slot = target.slice(4) as HomeBannerRow["slot"];
-      const res = await fetch("/api/admin/home-banners", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slot, imageUrl: url }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        setError(data?.error ?? "Không thể lưu ảnh.");
-      }
-    } else {
-      const res = await fetch(`/api/admin/home-banners/${target}`, {
+    if (url) {
+      const res = await fetch(`/api/admin/home-banners/${target.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageUrl: url }),
@@ -143,19 +101,19 @@ export default function AdminHomeBannerPanel() {
         setError(data?.error ?? "Không thể lưu ảnh.");
       }
     }
-    setBusyId(null);
+    setRowBusyId(null);
     await load();
   };
 
   const clearImage = async (id: string) => {
-    setBusyId(id);
+    setRowBusyId(id);
     setError(null);
     const res = await fetch(`/api/admin/home-banners/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ imageUrl: "" }),
     });
-    setBusyId(null);
+    setRowBusyId(null);
     if (!res.ok) {
       const data = await res.json().catch(() => null);
       setError(data?.error ?? "Không thể xoá ảnh.");
@@ -164,12 +122,129 @@ export default function AdminHomeBannerPanel() {
     await load();
   };
 
-  const openCreateLarge = () => {
+  if (!banners) {
+    return (
+      <Card>
+        <ListSkeleton rows={3} />
+      </Card>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <input
+        ref={rowUploadInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleRowFileChange}
+      />
+
+      {error && (
+        <p className="flex items-center gap-1.5 rounded-lg bg-[var(--adm-danger-bg)] px-3 py-2 text-xs font-semibold text-[var(--adm-danger)]">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {error}
+        </p>
+      )}
+
+      <BannerSlotSection
+        slot="LARGE"
+        title="Banner lớn"
+        rows={banners.filter((b) => b.slot === "LARGE").sort((a, b) => a.sortOrder - b.sortOrder)}
+        showCtaLabelField
+        limits={{ title: 80, description: 200, ctaLabel: 30, ctaHref: 200 }}
+        emptyHint="Chưa có slide nào — trang chủ đang hiện 1 slide mặc định trong code."
+        rowBusyId={rowBusyId}
+        onPickRowImage={pickRowImage}
+        onClearImage={clearImage}
+        uploadImage={uploadImage}
+        onReload={load}
+        setError={setError}
+      />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <BannerSlotSection
+          slot="SMALL_1"
+          title="Banner nhỏ 1 — Giao dịch an toàn"
+          rows={banners.filter((b) => b.slot === "SMALL_1").sort((a, b) => a.sortOrder - b.sortOrder)}
+          showCtaLabelField={false}
+          limits={{ title: 40, description: 60, ctaHref: 200 }}
+          emptyHint="Chưa có slide nào — trang chủ đang hiện 1 thẻ mặc định trong code."
+          rowBusyId={rowBusyId}
+          onPickRowImage={pickRowImage}
+          onClearImage={clearImage}
+          uploadImage={uploadImage}
+          onReload={load}
+          setError={setError}
+        />
+        <BannerSlotSection
+          slot="SMALL_2"
+          title="Banner nhỏ 2 — Giao hàng tự động"
+          rows={banners.filter((b) => b.slot === "SMALL_2").sort((a, b) => a.sortOrder - b.sortOrder)}
+          showCtaLabelField={false}
+          limits={{ title: 40, description: 60, ctaHref: 200 }}
+          emptyHint="Chưa có slide nào — trang chủ đang hiện 1 thẻ mặc định trong code."
+          rowBusyId={rowBusyId}
+          onPickRowImage={pickRowImage}
+          onClearImage={clearImage}
+          uploadImage={uploadImage}
+          onReload={load}
+          setError={setError}
+        />
+      </div>
+    </div>
+  );
+}
+
+type FormState = {
+  mode: "create" | "edit";
+  id?: string;
+  title: string;
+  description: string;
+  ctaLabel: string;
+  ctaHref: string;
+  imageUrl: string;
+};
+
+function BannerSlotSection({
+  slot,
+  title,
+  rows,
+  showCtaLabelField,
+  limits,
+  emptyHint,
+  rowBusyId,
+  onPickRowImage,
+  onClearImage,
+  uploadImage,
+  onReload,
+  setError,
+}: {
+  slot: Slot;
+  title: string;
+  rows: HomeBannerRow[];
+  showCtaLabelField: boolean;
+  limits: { title: number; description: number; ctaLabel?: number; ctaHref: number };
+  emptyHint: string;
+  rowBusyId: string | null;
+  onPickRowImage: (id: string, slot: Slot) => void;
+  onClearImage: (id: string) => void;
+  uploadImage: (file: File) => Promise<string | null>;
+  onReload: () => Promise<void>;
+  setError: (msg: string | null) => void;
+}) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [form, setForm] = useState<FormState | null>(null);
+  const [formBusy, setFormBusy] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const modalUploadInputRef = useRef<HTMLInputElement>(null);
+
+  const openCreate = () => {
     setFormError(null);
-    setForm({ mode: "create", ...EMPTY_FORM });
+    setForm({ mode: "create", title: "", description: "", ctaLabel: "", ctaHref: "", imageUrl: "" });
   };
 
-  const openEditLarge = (row: HomeBannerRow) => {
+  const openEdit = (row: HomeBannerRow) => {
     setFormError(null);
     setForm({
       mode: "edit",
@@ -178,6 +253,7 @@ export default function AdminHomeBannerPanel() {
       description: row.description ?? "",
       ctaLabel: row.ctaLabel ?? "",
       ctaHref: row.ctaHref ?? "",
+      imageUrl: row.imageUrl ?? "",
     });
   };
 
@@ -186,22 +262,37 @@ export default function AdminHomeBannerPanel() {
     setFormError(null);
   };
 
+  const handleModalFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !form) return;
+    setImageUploading(true);
+    const url = await uploadImage(file);
+    setImageUploading(false);
+    if (url) setForm((f) => (f ? { ...f, imageUrl: url } : f));
+  };
+
   const submitForm = async () => {
     if (!form) return;
+    if (form.ctaHref.trim() && !isValidCtaHref(form.ctaHref)) {
+      setFormError('Link đích không hợp lệ — phải bắt đầu bằng "/" (nội bộ) hoặc "http(s)://" (bên ngoài).');
+      return;
+    }
     setFormBusy(true);
     setFormError(null);
-    const payload = {
+    const payload: Record<string, string> = {
       title: form.title.trim(),
       description: form.description.trim(),
-      ctaLabel: form.ctaLabel.trim(),
       ctaHref: form.ctaHref.trim(),
+      imageUrl: form.imageUrl.trim(),
     };
+    if (showCtaLabelField) payload.ctaLabel = form.ctaLabel.trim();
     const res =
       form.mode === "create"
         ? await fetch("/api/admin/home-banners", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ slot: "LARGE", ...payload }),
+            body: JSON.stringify({ slot, ...payload }),
           })
         : await fetch(`/api/admin/home-banners/${form.id}`, {
             method: "PATCH",
@@ -215,21 +306,19 @@ export default function AdminHomeBannerPanel() {
       return;
     }
     closeForm();
-    await load();
+    await onReload();
   };
 
-  const removeLarge = async (row: HomeBannerRow) => {
+  const removeRow = async (row: HomeBannerRow) => {
     if (!confirm(`Xoá slide "${row.title || "(chưa đặt tên)"}"?`)) return;
-    setBusyId(row.id);
     setError(null);
     const res = await fetch(`/api/admin/home-banners/${row.id}`, { method: "DELETE" });
-    setBusyId(null);
     if (!res.ok) {
       const data = await res.json().catch(() => null);
       setError(data?.error ?? "Không thể xoá.");
       return;
     }
-    await load();
+    await onReload();
   };
 
   const handleDrop = async (dropIndex: number) => {
@@ -237,131 +326,96 @@ export default function AdminHomeBannerPanel() {
       setDragIndex(null);
       return;
     }
-    const next = [...large];
+    const next = [...rows];
     const [moved] = next.splice(dragIndex, 1);
     next.splice(dropIndex, 0, moved);
     setDragIndex(null);
-    setBanners((prev) =>
-      prev ? [...prev.filter((b) => b.slot !== "LARGE"), ...next.map((b, i) => ({ ...b, sortOrder: i }))] : prev
-    );
+    setError(null);
     const res = await fetch("/api/admin/home-banners/reorder", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order: next.map((b) => b.id) }),
+      body: JSON.stringify({ slot, order: next.map((b) => b.id) }),
     });
     if (!res.ok) {
       setError("Không thể lưu thứ tự — đã tải lại danh sách.");
-      await load();
     }
+    await onReload();
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <input ref={uploadInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileChange} />
-
-      {error && (
-        <p className="flex items-center gap-1.5 rounded-lg bg-[var(--adm-danger-bg)] px-3 py-2 text-xs font-semibold text-[var(--adm-danger)]">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {error}
+    <Card>
+      <SectionTitle
+        aside={
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="h-3.5 w-3.5" /> Thêm slide
+          </Button>
+        }
+      >
+        {title} ({rows.length} slide)
+      </SectionTitle>
+      <p className="mb-3 text-xs text-[var(--adm-muted)]">
+        Kéo-thả để sắp thứ tự trượt. Slide chưa có ảnh riêng tự hiện phong cách mặc định.
+      </p>
+      {rows.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-[var(--adm-border)] px-3 py-6 text-center text-xs text-[var(--adm-muted)]">
+          {emptyHint}
         </p>
-      )}
-
-      <Card>
-        <SectionTitle
-          aside={
-            <Button size="sm" onClick={openCreateLarge}>
-              <Plus className="h-3.5 w-3.5" /> Thêm slide
-            </Button>
-          }
-        >
-          Banner lớn ({large.length} slide)
-        </SectionTitle>
-        <p className="mb-3 text-xs text-[var(--adm-muted)]">
-          Kéo-thả để sắp thứ tự trượt. Slide chưa có ảnh riêng tự hiện phong cách mặc định (nền vàng + chữ + nút).
-        </p>
-        {large.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-[var(--adm-border)] px-3 py-6 text-center text-xs text-[var(--adm-muted)]">
-            Chưa có slide nào — trang chủ đang hiện 1 slide mặc định trong code.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {large.map((row, i) => (
-              <div
-                key={row.id}
-                draggable
-                onDragStart={() => setDragIndex(i)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => handleDrop(i)}
-                onDragEnd={() => setDragIndex(null)}
-                className={`flex items-center gap-3 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-surface-2)] p-3 transition ${
-                  dragIndex === i ? "opacity-40" : ""
-                }`}
-              >
-                <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-[var(--adm-muted)]" />
-                {row.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- ảnh admin-only, URL bất kỳ (Blob/local)
-                  <img src={row.imageUrl} alt="" className="h-12 w-20 shrink-0 rounded-lg object-cover" />
-                ) : (
-                  <span className="grid h-12 w-20 shrink-0 place-items-center rounded-lg bg-[var(--adm-brand)] text-[10px] font-bold text-[#14141f]">
-                    Mặc định
-                  </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-[var(--adm-text)]">
-                    {row.title || "(dùng tiêu đề mặc định)"}
-                  </p>
-                  <p className="truncate text-xs text-[var(--adm-muted)]">
-                    {row.description || "(dùng mô tả mặc định)"}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={busyId === row.id}
-                    onClick={() => handlePickImage(row.id, "LARGE")}
-                  >
-                    {busyId === row.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                  </Button>
-                  {row.imageUrl && (
-                    <Button size="sm" variant="ghost" disabled={busyId === row.id} onClick={() => clearImage(row.id)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                  <Button size="sm" variant="ghost" onClick={() => openEditLarge(row)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button size="sm" variant="danger" disabled={busyId === row.id} onClick={() => removeLarge(row)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {rows.map((row, i) => (
+            <div
+              key={row.id}
+              draggable
+              onDragStart={() => setDragIndex(i)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDrop(i)}
+              onDragEnd={() => setDragIndex(null)}
+              className={`flex items-center gap-3 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-surface-2)] p-3 transition ${
+                dragIndex === i ? "opacity-40" : ""
+              }`}
+            >
+              <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-[var(--adm-muted)]" />
+              {row.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- ảnh admin-only, URL bất kỳ (Blob/local)
+                <img src={row.imageUrl} alt="" className="h-12 w-20 shrink-0 rounded-lg object-cover" />
+              ) : (
+                <span className="grid h-12 w-20 shrink-0 place-items-center rounded-lg bg-[var(--adm-brand)] text-[10px] font-bold text-[#14141f]">
+                  Mặc định
+                </span>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-[var(--adm-text)]">
+                  {row.title || "(dùng tiêu đề mặc định)"}
+                </p>
+                <p className="truncate text-xs text-[var(--adm-muted)]">
+                  {row.description || "(dùng mô tả mặc định)"}
+                </p>
               </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <SmallBannerEditor
-          row={small1}
-          slot="SMALL_1"
-          label="Banner nhỏ 1 — Giao dịch an toàn"
-          busy={busyId}
-          onPickImage={handlePickImage}
-          onClearImage={clearImage}
-          onSaved={load}
-          setError={setError}
-        />
-        <SmallBannerEditor
-          row={small2}
-          slot="SMALL_2"
-          label="Banner nhỏ 2 — Giao hàng tự động"
-          busy={busyId}
-          onPickImage={handlePickImage}
-          onClearImage={clearImage}
-          onSaved={load}
-          setError={setError}
-        />
-      </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={rowBusyId === row.id}
+                  onClick={() => onPickRowImage(row.id, slot)}
+                >
+                  {rowBusyId === row.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                </Button>
+                {row.imageUrl && (
+                  <Button size="sm" variant="ghost" disabled={rowBusyId === row.id} onClick={() => onClearImage(row.id)}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => openEdit(row)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="sm" variant="danger" onClick={() => removeRow(row)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {form && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={closeForm}>
@@ -371,29 +425,82 @@ export default function AdminHomeBannerPanel() {
           >
             <div className="mb-4 flex items-start justify-between gap-3">
               <h3 className="text-base font-black text-[var(--adm-text)]">
-                {form.mode === "create" ? "Thêm slide banner lớn" : "Sửa slide banner lớn"}
+                {form.mode === "create" ? `Thêm slide — ${title}` : `Sửa slide — ${title}`}
               </h3>
               <button onClick={closeForm} className="text-[var(--adm-muted)] hover:text-[var(--adm-text)]">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="flex flex-col gap-3">
-              <Field label="Tiêu đề" hint="Để trống dùng tiêu đề mặc định (chỉ áp dụng khi slide chưa có ảnh riêng).">
-                <TextInput value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} maxLength={80} />
+              <input
+                ref={modalUploadInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleModalFileChange}
+              />
+              <Field label="Ảnh" hint="Bắt buộc để slide hiện ảnh thật — bỏ trống thì dùng phong cách mặc định (nền màu + chữ).">
+                <div className="flex items-center gap-3">
+                  {form.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- ảnh admin-only, URL bất kỳ (Blob/local)
+                    <img src={form.imageUrl} alt="" className="h-16 w-28 shrink-0 rounded-lg object-cover" />
+                  ) : (
+                    <span className="grid h-16 w-28 shrink-0 place-items-center rounded-lg bg-[var(--adm-surface-2)] text-[var(--adm-muted)]">
+                      <ImagePlus className="h-5 w-5" />
+                    </span>
+                  )}
+                  <div className="flex flex-col gap-1.5">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      type="button"
+                      disabled={imageUploading}
+                      onClick={() => modalUploadInputRef.current?.click()}
+                    >
+                      {imageUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                      {form.imageUrl ? "Đổi ảnh" : "Tải ảnh"}
+                    </Button>
+                    {form.imageUrl && (
+                      <Button size="sm" variant="ghost" type="button" onClick={() => setForm((f) => (f ? { ...f, imageUrl: "" } : f))}>
+                        <X className="h-3.5 w-3.5" /> Bỏ ảnh
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </Field>
-              <Field label="Mô tả ngắn">
+              <Field label="Tiêu đề" hint="Để trống dùng tiêu đề mặc định (chỉ áp dụng khi slide chưa có ảnh riêng).">
+                <TextInput
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  maxLength={limits.title}
+                />
+              </Field>
+              <Field label={slot === "LARGE" ? "Mô tả ngắn" : "Phụ đề"}>
                 <Textarea
                   rows={2}
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  maxLength={200}
+                  maxLength={limits.description}
                 />
               </Field>
-              <Field label="Nút CTA — nhãn" hint="Để trống thì ẩn hẳn nút (chỉ áp dụng khi chưa có ảnh riêng).">
-                <TextInput value={form.ctaLabel} onChange={(e) => setForm({ ...form, ctaLabel: e.target.value })} maxLength={30} />
-              </Field>
-              <Field label="Nút CTA — link" hint="Ảnh có sẵn cũng dùng link này khi bấm vào banner. Vd: /danh-muc/gmail">
-                <TextInput value={form.ctaHref} onChange={(e) => setForm({ ...form, ctaHref: e.target.value })} maxLength={200} />
+              {showCtaLabelField && (
+                <Field label="Nút CTA — nhãn" hint="Để trống thì ẩn hẳn nút (chỉ áp dụng khi chưa có ảnh riêng).">
+                  <TextInput
+                    value={form.ctaLabel}
+                    onChange={(e) => setForm({ ...form, ctaLabel: e.target.value })}
+                    maxLength={limits.ctaLabel}
+                  />
+                </Field>
+              )}
+              <Field
+                label="Link đích (tuỳ chọn)"
+                hint='Để trống = ảnh chỉ trang trí, không bấm được. Nội bộ: "/danh-muc/gmail" (cùng tab). Bên ngoài: "https://..." (tự mở tab mới).'
+              >
+                <TextInput
+                  value={form.ctaHref}
+                  onChange={(e) => setForm({ ...form, ctaHref: e.target.value })}
+                  maxLength={limits.ctaHref}
+                />
               </Field>
               {formError && (
                 <p className="flex items-center gap-1.5 rounded-lg bg-[var(--adm-danger-bg)] px-3 py-2 text-xs font-semibold text-[var(--adm-danger)]">
@@ -413,140 +520,6 @@ export default function AdminHomeBannerPanel() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function SmallBannerEditor({
-  row,
-  slot,
-  label,
-  busy,
-  onPickImage,
-  onClearImage,
-  onSaved,
-  setError,
-}: {
-  row: HomeBannerRow | null;
-  slot: "SMALL_1" | "SMALL_2";
-  label: string;
-  busy: string | null;
-  onPickImage: (id: string | null, slot: HomeBannerRow["slot"]) => void;
-  onClearImage: (id: string) => void;
-  onSaved: () => Promise<void>;
-  setError: (msg: string | null) => void;
-}) {
-  const [title, setTitle] = useState(row?.title ?? "");
-  const [description, setDescription] = useState(row?.description ?? "");
-  const [ctaHref, setCtaHref] = useState(row?.ctaHref ?? "");
-  const [saving, setSaving] = useState(false);
-  const dirtyRef = useRef(false);
-
-  useEffect(() => {
-    if (dirtyRef.current) return;
-    setTitle(row?.title ?? "");
-    setDescription(row?.description ?? "");
-    setCtaHref(row?.ctaHref ?? "");
-  }, [row]);
-
-  const save = async () => {
-    setError(null);
-    // Báo sớm ở client — chốt chặn THẬT nằm ở server (POST/PATCH
-    // /api/admin/home-banners, xem src/lib/banner-link.ts).
-    if (ctaHref.trim() && !isValidCtaHref(ctaHref)) {
-      setError('Link đích không hợp lệ — phải bắt đầu bằng "/" (nội bộ) hoặc "http(s)://" (bên ngoài).');
-      return;
-    }
-    setSaving(true);
-    const payload = { title: title.trim(), description: description.trim(), ctaHref: ctaHref.trim() };
-    const res = row
-      ? await fetch(`/api/admin/home-banners/${row.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        })
-      : await fetch("/api/admin/home-banners", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slot, ...payload }),
-        });
-    setSaving(false);
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      setError(data?.error ?? "Không thể lưu.");
-      return;
-    }
-    dirtyRef.current = false;
-    await onSaved();
-  };
-
-  const busyThis = busy === (row?.id ?? `NEW:${slot}`);
-
-  return (
-    <Card>
-      <SectionTitle>{label}</SectionTitle>
-      <div className="mb-3 flex items-center gap-3">
-        {row?.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- ảnh admin-only, URL bất kỳ (Blob/local)
-          <img src={row.imageUrl} alt="" className="h-16 w-28 shrink-0 rounded-lg object-cover" />
-        ) : (
-          <span className="grid h-16 w-28 shrink-0 place-items-center rounded-lg bg-[var(--adm-surface-2)] text-[var(--adm-muted)]">
-            <ImagePlus className="h-5 w-5" />
-          </span>
-        )}
-        <div className="flex flex-col gap-1.5">
-          <Button size="sm" variant="secondary" disabled={busyThis} onClick={() => onPickImage(row?.id ?? null, slot)}>
-            {busyThis ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-            Tải ảnh
-          </Button>
-          {row?.imageUrl && (
-            <Button size="sm" variant="ghost" disabled={busyThis} onClick={() => onClearImage(row.id)}>
-              <X className="h-3.5 w-3.5" /> Bỏ ảnh
-            </Button>
-          )}
-        </div>
-      </div>
-      <div className="flex flex-col gap-3">
-        <Field label="Tiêu đề" hint="Để trống dùng tiêu đề mặc định.">
-          <TextInput
-            value={title}
-            onChange={(e) => {
-              dirtyRef.current = true;
-              setTitle(e.target.value);
-            }}
-            maxLength={40}
-          />
-        </Field>
-        <Field label="Phụ đề">
-          <TextInput
-            value={description}
-            onChange={(e) => {
-              dirtyRef.current = true;
-              setDescription(e.target.value);
-            }}
-            maxLength={60}
-          />
-        </Field>
-        <Field
-          label="Link đích (tuỳ chọn)"
-          hint='Để trống = chỉ trang trí, không bấm được. Nội bộ: "/danh-muc/gmail". Bên ngoài: "https://...", tự mở tab mới.'
-        >
-          <TextInput
-            value={ctaHref}
-            onChange={(e) => {
-              dirtyRef.current = true;
-              setCtaHref(e.target.value);
-            }}
-            maxLength={200}
-          />
-        </Field>
-        <div>
-          <Button size="sm" disabled={saving} onClick={save}>
-            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Lưu
-          </Button>
-        </div>
-      </div>
     </Card>
   );
 }

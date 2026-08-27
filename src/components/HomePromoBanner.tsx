@@ -10,39 +10,84 @@ import type { HomeBannerSlide } from "@/lib/home-banners";
 const ROTATE_INTERVAL_MS = 5000;
 const DRAG_THRESHOLD_RATIO = 0.15;
 
-// Banner trang chủ mới — 1 banner LỚN dạng slider (2/3 chiều ngang, đọc số
-// lượng slide + nội dung từ HomeBanner slot="LARGE" qua Admin > Nội dung
-// trang web) + 2 banner NHỎ cố định bên phải (1/3, slot="SMALL_1"/"SMALL_2").
-// Slide/card nào CHƯA có ảnh riêng (imageUrl null — bảng mới ban đầu rỗng,
-// hoặc admin chưa gán ảnh) tự hiện phong cách mặc định (nền màu + icon +
-// chữ) thay vì vỡ layout. Thay hẳn PromoBanner.tsx cũ (chỉ có ảnh, không
-// chữ/CTA, 2 khối bằng nhau 50/50).
+// Banner trang chủ — 1 banner LỚN dạng slider (2/3 chiều ngang) + 2 banner
+// NHỎ dạng slider (1/3, xếp dọc bên phải) — CẢ 3 vị trí đều đọc số lượng
+// slide + nội dung từ HomeBanner (Admin > Nội dung trang web), không giới
+// hạn số slide. Slide/card nào CHƯA có ảnh riêng (imageUrl null) tự hiện
+// phong cách mặc định (nền màu + icon + chữ) thay vì vỡ layout.
 export default function HomePromoBanner({
   large,
   small1,
   small2,
 }: {
   large: HomeBannerSlide[];
-  small1: HomeBannerSlide;
-  small2: HomeBannerSlide;
+  small1: HomeBannerSlide[];
+  small2: HomeBannerSlide[];
 }) {
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
       <div className="lg:col-span-2">
-        <LargeBannerSlider slides={large} />
+        <BannerSlider
+          slides={large}
+          className="aspect-[16/9] rounded-2xl sm:aspect-[21/9]"
+          showArrows
+          renderSlide={(slide) => <LargeSlideContent slide={slide} />}
+        />
       </div>
       <div className="grid grid-cols-2 gap-3 lg:flex lg:h-full lg:flex-col">
-        <SmallBannerCard slide={small1} variant="light" Icon={ShieldCheck} />
-        <SmallBannerCard slide={small2} variant="dark" Icon={Zap} />
+        <BannerSlider
+          slides={small1}
+          className="h-28 rounded-2xl sm:h-36 lg:h-auto lg:flex-1"
+          showArrows={false}
+          renderSlide={(slide) => <SmallSlideContent slide={slide} variant="light" Icon={ShieldCheck} />}
+        />
+        <BannerSlider
+          slides={small2}
+          className="h-28 rounded-2xl sm:h-36 lg:h-auto lg:flex-1"
+          showArrows={false}
+          renderSlide={(slide) => <SmallSlideContent slide={slide} variant="dark" Icon={Zap} />}
+        />
       </div>
     </div>
+  );
+}
+
+// Bọc link AN TOÀN + NHẤT QUÁN cho mọi banner (lớn lẫn nhỏ): rỗng = chỉ
+// trang trí (KHÔNG bấm được, không ép về link mặc định nào); nội bộ ("/...")
+// = chuyển trong tab (<Link>); ngoài sàn (http(s)://, khác hostname) = mở
+// tab mới kèm rel="noopener noreferrer" (an toàn — link chỉ do admin đặt,
+// đã validate ở server qua isValidCtaHref() trước khi lưu). Dùng `div` khi
+// không có link để không tạo phần tử tương tác thừa (đúng ngữ nghĩa/a11y).
+function BannerLinkWrap({
+  href,
+  className,
+  children,
+}: {
+  href: string;
+  className: string;
+  children: React.ReactNode;
+}) {
+  if (!href) {
+    return <div className={className}>{children}</div>;
+  }
+  if (isExternalHref(href)) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
   );
 }
 
 function LargeSlideContent({ slide }: { slide: HomeBannerSlide }) {
   if (slide.imageUrl) {
     return (
-      <Link href={slide.ctaHref || "/danh-muc"} className="relative block h-full w-full" draggable={false}>
+      <BannerLinkWrap href={slide.ctaHref} className="relative block h-full w-full">
         <Image
           src={slide.imageUrl}
           alt={slide.title}
@@ -51,7 +96,7 @@ function LargeSlideContent({ slide }: { slide: HomeBannerSlide }) {
           sizes="(min-width: 1024px) 66vw, 100vw"
           className="pointer-events-none object-cover"
         />
-      </Link>
+      </BannerLinkWrap>
     );
   }
 
@@ -79,7 +124,68 @@ function LargeSlideContent({ slide }: { slide: HomeBannerSlide }) {
   );
 }
 
-function LargeBannerSlider({ slides }: { slides: HomeBannerSlide[] }) {
+function SmallSlideContent({
+  slide,
+  variant,
+  Icon,
+}: {
+  slide: HomeBannerSlide;
+  variant: "light" | "dark";
+  Icon: typeof ShieldCheck;
+}) {
+  const content = (
+    <div className="flex h-full items-center gap-3 px-4 py-4 sm:px-5">
+      <span
+        className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${
+          variant === "light" ? "bg-brand-light text-brand-dark" : "bg-brand/15 text-brand"
+        }`}
+      >
+        <Icon className="h-5 w-5" strokeWidth={2.2} />
+      </span>
+      <div className="min-w-0">
+        <p className={`truncate text-sm font-black ${variant === "light" ? "text-ink" : "text-brand"}`}>
+          {slide.title}
+        </p>
+        <p className={`mt-0.5 truncate text-xs font-medium ${variant === "light" ? "text-muted" : "text-white/60"}`}>
+          {slide.description}
+        </p>
+      </div>
+    </div>
+  );
+
+  if (slide.imageUrl) {
+    return (
+      <BannerLinkWrap href={slide.ctaHref} className="relative block h-full w-full">
+        <Image src={slide.imageUrl} alt={slide.title} fill sizes="33vw" className="object-cover" />
+        <div className={`absolute inset-0 ${variant === "light" ? "bg-white/70" : "bg-ink/70"}`} />
+        <div className="relative h-full">{content}</div>
+      </BannerLinkWrap>
+    );
+  }
+
+  return (
+    <BannerLinkWrap href={slide.ctaHref} className="block h-full w-full">
+      {content}
+    </BannerLinkWrap>
+  );
+}
+
+// Slider dùng CHUNG cho banner lớn LẪN 2 banner nhỏ — auto-rotate (dừng khi
+// hover/đang kéo), kéo/vuốt đổi slide, dots điều hướng, mũi tên (tuỳ chọn
+// qua `showArrows` — banner nhỏ tắt để đỡ rối trên khung hẹp). Chỉ 1 slide
+// thì tự tắt hẳn timer/dots/mũi tên/kéo — mỗi vị trí banner tự quyết định
+// khung/tỉ lệ qua `className` (không áp cứng 1 tỉ lệ cho mọi nơi gọi).
+function BannerSlider({
+  slides,
+  className,
+  showArrows,
+  renderSlide,
+}: {
+  slides: HomeBannerSlide[];
+  className: string;
+  showArrows: boolean;
+  renderSlide: (slide: HomeBannerSlide) => React.ReactNode;
+}) {
   const count = slides.length;
   const [index, setIndex] = useState(0);
   const [dragPx, setDragPx] = useState(0);
@@ -127,7 +233,7 @@ function LargeBannerSlider({ slides }: { slides: HomeBannerSlide[] }) {
   return (
     <div
       ref={containerRef}
-      className="group relative aspect-[16/9] touch-pan-y select-none overflow-hidden rounded-2xl sm:aspect-[21/9]"
+      className={`group relative touch-pan-y select-none overflow-hidden ${className}`}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={endDrag}
@@ -144,7 +250,7 @@ function LargeBannerSlider({ slides }: { slides: HomeBannerSlide[] }) {
       }}
     >
       <div
-        className="flex h-full cursor-grab active:cursor-grabbing"
+        className={`flex h-full ${count > 1 ? "cursor-grab active:cursor-grabbing" : ""}`}
         style={{
           width: `${count * 100}%`,
           transform: `translateX(calc(-${index * (100 / count)}% + ${dragPx}px))`,
@@ -153,31 +259,35 @@ function LargeBannerSlider({ slides }: { slides: HomeBannerSlide[] }) {
       >
         {slides.map((slide, i) => (
           <div key={slide.id ?? `default-${i}`} className="h-full shrink-0" style={{ width: `${100 / count}%` }}>
-            <LargeSlideContent slide={slide} />
+            {renderSlide(slide)}
           </div>
         ))}
       </div>
 
       {count > 1 && (
         <>
-          <button
-            type="button"
-            onClick={() => goTo(index - 1)}
-            aria-label="Slide trước"
-            className="absolute left-3 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/30 text-white opacity-0 backdrop-blur transition hover:bg-black/50 group-hover:opacity-100"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => goTo(index + 1)}
-            aria-label="Slide sau"
-            className="absolute right-3 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/30 text-white opacity-0 backdrop-blur transition hover:bg-black/50 group-hover:opacity-100"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
+          {showArrows && (
+            <>
+              <button
+                type="button"
+                onClick={() => goTo(index - 1)}
+                aria-label="Slide trước"
+                className="absolute left-3 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/30 text-white opacity-0 backdrop-blur transition hover:bg-black/50 group-hover:opacity-100"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => goTo(index + 1)}
+                aria-label="Slide sau"
+                className="absolute right-3 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/30 text-white opacity-0 backdrop-blur transition hover:bg-black/50 group-hover:opacity-100"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </>
+          )}
 
-          <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1.5 backdrop-blur">
+          <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1.5 backdrop-blur">
             {slides.map((slide, i) => (
               <button
                 key={slide.id ?? `dot-${i}`}
@@ -191,71 +301,5 @@ function LargeBannerSlider({ slides }: { slides: HomeBannerSlide[] }) {
         </>
       )}
     </div>
-  );
-}
-
-function SmallBannerCard({
-  slide,
-  variant,
-  Icon,
-}: {
-  slide: HomeBannerSlide;
-  variant: "light" | "dark";
-  Icon: typeof ShieldCheck;
-}) {
-  const content = (
-    <div className="flex h-full items-center gap-3 px-4 py-4 sm:px-5">
-      <span
-        className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${
-          variant === "light" ? "bg-brand-light text-brand-dark" : "bg-brand/15 text-brand"
-        }`}
-      >
-        <Icon className="h-5 w-5" strokeWidth={2.2} />
-      </span>
-      <div className="min-w-0">
-        <p className={`truncate text-sm font-black ${variant === "light" ? "text-ink" : "text-brand"}`}>
-          {slide.title}
-        </p>
-        <p className={`mt-0.5 truncate text-xs font-medium ${variant === "light" ? "text-muted" : "text-white/60"}`}>
-          {slide.description}
-        </p>
-      </div>
-    </div>
-  );
-
-  // Có link (admin đặt qua ctaHref) thì thêm hiệu ứng hover gợi ý bấm được —
-  // KHÔNG đổi gì khi không có link (giữ nguyên trang trí tĩnh như trước).
-  const baseClass = `relative h-28 overflow-hidden rounded-2xl sm:h-36 lg:h-auto lg:flex-1 ${
-    variant === "light" ? "border-2 border-brand bg-surface" : "bg-ink"
-  } ${slide.ctaHref ? "transition hover:-translate-y-0.5 hover:shadow-md" : ""}`;
-
-  const inner = slide.imageUrl ? (
-    <>
-      <Image src={slide.imageUrl} alt={slide.title} fill sizes="33vw" className="object-cover" />
-      <div className={`absolute inset-0 ${variant === "light" ? "bg-white/70" : "bg-ink/70"}`} />
-      <div className="relative h-full">{content}</div>
-    </>
-  ) : (
-    content
-  );
-
-  // Rỗng = trang trí tĩnh y hệt trước đây (KHÔNG bấm được) — chỉ khi admin
-  // đặt ctaHref mới bọc thành link. Ngoài sàn (isExternalHref) mở tab mới +
-  // rel="noopener noreferrer" (an toàn, không cần hộp thoại xác nhận — link
-  // chỉ do admin đặt).
-  if (!slide.ctaHref) {
-    return <div className={baseClass}>{inner}</div>;
-  }
-  if (isExternalHref(slide.ctaHref)) {
-    return (
-      <a href={slide.ctaHref} target="_blank" rel="noopener noreferrer" className={baseClass}>
-        {inner}
-      </a>
-    );
-  }
-  return (
-    <Link href={slide.ctaHref} className={baseClass}>
-      {inner}
-    </Link>
   );
 }

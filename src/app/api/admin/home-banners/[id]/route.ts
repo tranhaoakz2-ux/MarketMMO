@@ -36,16 +36,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     isActive?: boolean;
   } = {};
 
-  // Banner NHỎ (SMALL_1/SMALL_2) render cả thẻ thành href công khai cho MỌI
-  // khách trang chủ — chặn cứng định dạng sai/nguy hiểm (javascript:, data:...).
-  // Banner LỚN (existing.slot==="LARGE") giữ nguyên hành vi cũ 100% — không
-  // validate, không đổi gì ở luồng đang chạy đúng.
-  if (
-    existing.slot !== "LARGE" &&
-    typeof body.ctaHref === "string" &&
-    body.ctaHref.trim() &&
-    !isValidCtaHref(body.ctaHref)
-  ) {
+  // Cả 3 slot đều render thành href công khai cho MỌI khách trang chủ khi có
+  // ảnh/slide — chặn cứng định dạng sai/nguy hiểm (javascript:, data:...).
+  if (typeof body.ctaHref === "string" && body.ctaHref.trim() && !isValidCtaHref(body.ctaHref)) {
     return NextResponse.json(
       { error: "Link đích không hợp lệ — phải bắt đầu bằng \"/\" (nội bộ) hoặc \"http(s)://\" (bên ngoài)." },
       { status: 400 }
@@ -76,10 +69,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   return NextResponse.json({ banner });
 }
 
-// DELETE — CHỈ cho xoá slide slot="LARGE" (banner nhiều slide, xoá bớt hợp
-// lý). "SMALL_1"/"SMALL_2" luôn phải có đúng 1 dòng để trang chủ có chỗ
-// hiện — chặn xoá, admin muốn "reset" thì PATCH từng field về rỗng thay vì
-// xoá cả dòng.
+// DELETE — cho xoá slide ở BẤT KỲ slot nào, kể cả xoá hết về 0 dòng (trang
+// chủ tự fallback về 1 slide mặc định trong code khi 1 slot rỗng, xem
+// getHomeBanners() trong src/lib/home-banners.ts) — trước đây SMALL_1/
+// SMALL_2 bị chặn xoá cứng vì luôn phải giữ đúng 1 dòng, giới hạn đó đã gỡ.
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { session, error } = await requireAdmin();
   if (error) return error;
@@ -89,18 +82,12 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   if (!existing) {
     return NextResponse.json({ error: "Không tìm thấy banner." }, { status: 404 });
   }
-  if (existing.slot !== "LARGE") {
-    return NextResponse.json(
-      { error: "Không thể xoá banner nhỏ cố định — sửa nội dung thay vì xoá." },
-      { status: 400 }
-    );
-  }
 
   await prisma.homeBanner.delete({ where: { id } });
 
   await logAdminAction({
     adminId: session!.user!.id,
-    action: "Xoá slide banner lớn trang chủ",
+    action: `Xoá slide banner trang chủ (${existing.slot})`,
     targetType: "HomeBanner",
     targetId: id,
   });
