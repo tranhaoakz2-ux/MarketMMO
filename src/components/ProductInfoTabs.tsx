@@ -6,11 +6,11 @@ import Avatar from "@/components/Avatar";
 import RatingStars from "@/components/RatingStars";
 import ReviewForm from "@/components/ReviewForm";
 
-type TabKey = "description" | "api" | "reviews";
+type TabKey = "description" | "warranty" | "reviews";
 
 const TAB_LABELS: Record<TabKey, string> = {
   description: "MÔ TẢ SẢN PHẨM",
-  api: "TÍCH HỢP API",
+  warranty: "CHÍNH SÁCH BẢO HÀNH",
   reviews: "ĐÁNH GIÁ (REVIEWS)",
 };
 
@@ -24,6 +24,7 @@ type ProductReview = {
 
 export default function ProductInfoTabs({
   description,
+  warrantyPolicy,
   rating,
   reviewCount,
   sellerShopHref,
@@ -32,6 +33,11 @@ export default function ProductInfoTabs({
   productReviews,
 }: {
   description: string[];
+  /** Chính sách bảo hành seller tự viết (Product.warrantyPolicy) — null/rỗng
+      = seller chưa điền, hiện dòng mặc định thay vì để trống trơn. LUÔN
+      render dạng text thuần (interpolation JSX, KHÔNG dangerouslySetInnerHTML)
+      — nội dung do seller nhập, không được tin để render HTML/script. */
+  warrantyPolicy: string | null;
   /** null = chưa có đánh giá THẬT nào cho sản phẩm này — hiện "Chưa có đánh
       giá" thay vì vẽ sao 0 sao (dễ hiểu nhầm là sản phẩm tệ). */
   rating: number | null;
@@ -68,15 +74,20 @@ export default function ProductInfoTabs({
         </div>
       )}
 
-      {tab === "api" && (
-        <div className="flex flex-col gap-3 p-6 text-sm leading-relaxed text-foreground/80">
-          <p>
-            Sản phẩm này hỗ trợ giao hàng/kích hoạt tự động qua hệ thống API của
-            MaketMMO dành cho đối tác/nhà phát triển.
-          </p>
-          <Link href="/tai-lieu-api" className="font-semibold text-brand-dark hover:underline">
-            Xem tài liệu tích hợp API →
-          </Link>
+      {tab === "warranty" && (
+        <div className="p-6 text-sm leading-relaxed text-foreground/80">
+          {warrantyPolicy && warrantyPolicy.trim() ? (
+            // whitespace-pre-line giữ xuống dòng seller gõ MÀ KHÔNG cần
+            // dangerouslySetInnerHTML — {warrantyPolicy} là interpolation JSX
+            // thường, React tự escape mọi ký tự đặc biệt (<, >, &...), không
+            // có cách nào seller chèn được HTML/script qua field này.
+            <p className="whitespace-pre-line">{warrantyPolicy}</p>
+          ) : (
+            <p className="text-muted">
+              Người bán chưa cung cấp chính sách bảo hành cho sản phẩm này. Vui
+              lòng nhắn người bán trước khi mua.
+            </p>
+          )}
         </div>
       )}
 

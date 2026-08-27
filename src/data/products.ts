@@ -130,6 +130,18 @@ export type Product = {
       riêng tư). warrantyValue=0 nghĩa là "Không bảo hành". */
   warrantyValue?: number;
   warrantyUnit?: "hour" | "day";
+  /** Chính sách bảo hành dạng TEXT TỰ DO seller viết (điều kiện đổi/hoàn,
+      trường hợp không bảo hành...) — KHÁC warrantyValue/warrantyUnit (đó là
+      THỜI GIAN dạng số). null/rỗng = seller chưa điền, trang sản phẩm tự
+      hiện dòng mặc định (xem ProductInfoTabs.tsx). AN TOÀN hiển thị công
+      khai, luôn render dạng text thuần (không dangerouslySetInnerHTML). */
+  warrantyPolicy?: string | null;
+  /** true = sản phẩm đã có ≥1 OrderItem, KHOÁ VĨNH VIỄN việc sửa
+      warrantyPolicy (chống seller hạ chính sách sau khi buyer đã mua) — chỉ
+      có khi fetch qua getMySellerProducts (trang quản lý của seller), CHỈ
+      dùng để hiện UI; chốt chặn thật nằm ở server
+      (PATCH /api/seller/products/[productId]). */
+  warrantyPolicyLocked?: boolean;
   /** Chỉ có ý nghĩa khi productType="PRODUCT". "AUTO_STOCK" (mặc định, giao
       ngay từ kho text) | "MANUAL_PROVISION" (VPS/Server — seller tự nhập
       credential theo TỪNG đơn sau khi thanh toán, xem CLAUDE.md). */

@@ -510,6 +510,15 @@ model Product {
   // khai báo bảo hành.
   warrantyValue Int    @default(0)
   warrantyUnit  String @default("day")
+  // Chính sách bảo hành dạng TEXT TỰ DO seller tự viết (điều kiện đổi/hoàn,
+  // trường hợp không bảo hành...) — KHÁC warrantyValue/warrantyUnit ở trên
+  // (đó là THỜI GIAN dạng số). CHỈ điền được lúc đăng sản phẩm mới VÀ (sau
+  // đăng) khi sản phẩm CHƯA có OrderItem nào — hết đơn đầu tiên thì KHOÁ
+  // VĨNH VIỄN, chặn ở server (PATCH /api/seller/products/[productId], đếm
+  // lại OrderItem thật, không tin cờ từ client) — chống seller hạ chính sách
+  // sau khi buyer đã mua dựa trên chính sách ban đầu. Nullable, không
+  // default — null hiển thị dòng mặc định ở trang sản phẩm (ProductInfoTabs).
+  warrantyPolicy String?
 
   // Ảnh sản phẩm thật do seller tự upload (Vercel Blob URL hoặc đường dẫn
   // /uploads/products/... khi chạy dev local không có BLOB_READ_WRITE_TOKEN

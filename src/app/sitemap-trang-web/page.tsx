@@ -21,7 +21,6 @@ const staticGroups = [
     title: "Hỗ trợ & pháp lý",
     links: [
       { label: "Câu hỏi thường gặp", href: "/cau-hoi-thuong-gap" },
-      { label: "Tài liệu tích hợp API", href: "/tai-lieu-api" },
       { label: "Điều khoản dịch vụ", href: "/dieu-khoan-dich-vu" },
       { label: "Điều khoản bán hàng", href: "/dieu-khoan-ban-hang" },
       { label: "Chính sách bảo mật", href: "/chinh-sach-bao-mat" },

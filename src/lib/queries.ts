@@ -133,6 +133,7 @@ function mapProduct(p: ProductWithRelations): Product {
     })),
     warrantyValue: p.warrantyValue,
     warrantyUnit: p.warrantyUnit as "hour" | "day",
+    warrantyPolicy: p.warrantyPolicy,
     deliveryMethod: p.deliveryMethod as "AUTO_STOCK" | "MANUAL_PROVISION",
     requiresExpiryStock: p.requiresExpiryStock,
     serverDetail: p.serverDetail
@@ -849,6 +850,20 @@ export async function getMySellerProducts(userId: string): Promise<Product[]> {
       variant.stockManaged = totalMap.has(variantKey);
       variant.stockAvailable = availableMap.get(variantKey) ?? 0;
     }
+  }
+
+  // Khoá sửa "Chính sách bảo hành" NGAY KHI sản phẩm có đơn đầu tiên — chống
+  // seller hạ chính sách sau khi buyer đã mua dựa trên chính sách ban đầu.
+  // CHỈ để hiện UI (disable form/hiện ghi chú khoá) — chốt chặn thật đếm lại
+  // OrderItem ở server, xem PATCH /api/seller/products/[productId].
+  const orderedProductIds = await prisma.orderItem.findMany({
+    where: { productId: { in: productIds } },
+    select: { productId: true },
+    distinct: ["productId"],
+  });
+  const orderedProductIdSet = new Set(orderedProductIds.map((o) => o.productId));
+  for (const product of products) {
+    product.warrantyPolicyLocked = orderedProductIdSet.has(product.id);
   }
 
   return products;

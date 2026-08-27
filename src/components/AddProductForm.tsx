@@ -13,6 +13,7 @@ import {
   PRODUCT_NAME_MIN_LENGTH,
   PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH,
   PRODUCT_SHORT_DESCRIPTION_MIN_LENGTH,
+  PRODUCT_WARRANTY_POLICY_MAX_LENGTH,
   SERVER_BILLING_CYCLE_LABEL,
   SERVER_BILLING_CYCLES,
   SERVER_KIND_LABEL,
@@ -200,6 +201,13 @@ export default function AddProductForm({
   const [warrantyValue, setWarrantyValue] = useState("7");
   const [warrantyUnit, setWarrantyUnit] = useState<"hour" | "day">("day");
   const [noWarranty, setNoWarranty] = useState(false);
+  // Chính sách bảo hành dạng text tự do (Product.warrantyPolicy) — KHÔNG bắt
+  // buộc, ĐỘC LẬP với warrantyValue/warrantyUnit ở trên (đó là THỜI GIAN dạng
+  // số). Chỉ điền được Ở ĐÂY (lúc đăng mới) — sau khi sản phẩm có đơn đầu
+  // tiên sẽ KHOÁ VĨNH VIỄN, không sửa được nữa (xem WarrantyPolicyModal.tsx/
+  // PATCH /api/seller/products/[productId]), chống seller hạ chính sách sau
+  // khi buyer đã mua.
+  const [warrantyPolicy, setWarrantyPolicy] = useState("");
 
   // Đổi loại sản phẩm — reset noWarranty nếu đang chọn "Sản phẩm" (checkbox
   // "Không bảo hành" bị khoá/ẩn tác dụng cho loại này, tránh state kẹt lại
@@ -603,6 +611,10 @@ export default function AddProductForm({
         return;
       }
     }
+    if (warrantyPolicy.trim().length > PRODUCT_WARRANTY_POLICY_MAX_LENGTH) {
+      setError(`Chính sách bảo hành tối đa ${PRODUCT_WARRANTY_POLICY_MAX_LENGTH.toLocaleString("vi-VN")} ký tự.`);
+      return;
+    }
 
     setLoading(true);
     const form = new FormData();
@@ -650,6 +662,9 @@ export default function AddProductForm({
     } else {
       form.append("warrantyValue", warrantyValue);
       form.append("warrantyUnit", warrantyUnit);
+    }
+    if (warrantyPolicy.trim()) {
+      form.append("warrantyPolicy", warrantyPolicy.trim());
     }
     if (productType === "SERVICE") {
       form.append("serviceDeliveryMethods", JSON.stringify(serviceDeliveryMethods));
@@ -1069,6 +1084,34 @@ export default function AddProductForm({
             Không bảo hành (bán đứt)
           </label>
         </div>
+      </div>
+
+      <div className="rounded-xl border border-dashed border-border-c bg-surface-alt/50 p-3">
+        <p className="text-sm font-bold text-foreground">Chính sách bảo hành (không bắt buộc)</p>
+        <p className="text-[11px] text-muted">
+          Giải thích rõ điều kiện đổi/hoàn, trường hợp không được bảo hành... giúp buyer yên tâm
+          hơn. Buyer sẽ thấy đúng nội dung này ở tab &ldquo;Chính sách Bảo hành&rdquo; trên trang
+          sản phẩm.{" "}
+          <b>
+            Chỉ điền được lúc đăng sản phẩm — sau khi có đơn hàng đầu tiên sẽ KHOÁ VĨNH VIỄN, không
+            sửa lại được nữa (chống hạ chính sách sau khi buyer đã mua).
+          </b>
+        </p>
+        <textarea
+          value={warrantyPolicy}
+          onChange={(e) => setWarrantyPolicy(e.target.value)}
+          maxLength={PRODUCT_WARRANTY_POLICY_MAX_LENGTH}
+          rows={4}
+          placeholder={
+            'VD: "Bảo hành 7 ngày kể từ khi nhận hàng. Đổi mới nếu tài khoản không đăng nhập được ' +
+            'do lỗi từ người bán. Không bảo hành nếu buyer tự đổi mật khẩu/bật 2FA làm mất quyền ' +
+            'truy cập, hoặc vi phạm điều khoản nền tảng gốc."'
+          }
+          className="mt-2 w-full rounded-lg border border-border-c px-3 py-2 text-sm bg-surface text-foreground focus:border-brand-dark focus:outline-none"
+        />
+        <p className="mt-1 text-right text-[11px] text-muted">
+          {warrantyPolicy.length}/{PRODUCT_WARRANTY_POLICY_MAX_LENGTH}
+        </p>
       </div>
 
       {(productType === "PRODUCT" || productType === "TOOL" || productType === "SERVICE") && (

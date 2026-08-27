@@ -134,6 +134,9 @@ export const PRODUCT_SHORT_DESCRIPTION_MIN_LENGTH = 10;
 export const PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH = 200;
 export const PRODUCT_DESCRIPTION_MIN_LENGTH = 20;
 export const PRODUCT_DESCRIPTION_MAX_LENGTH = 4000;
+// Chính sách bảo hành (Product.warrantyPolicy) — không bắt buộc, không có
+// min. 3.000 ký tự đủ cho vài đoạn điều kiện/quy trình đổi-hoàn chi tiết.
+export const PRODUCT_WARRANTY_POLICY_MAX_LENGTH = 3000;
 
 // Trần số field buyer-cần-nhập cho 1 dịch vụ (PRODUCT_LISTING_AUDIT.md #7) —
 // seller khai quá nhiều field vừa khó dùng cho buyer vừa có thể lạm dụng để

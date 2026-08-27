@@ -1,0 +1,11 @@
+-- Thêm chính sách bảo hành dạng text tự do do seller tự viết cho TỪNG sản
+-- phẩm (khác Product.warrantyValue/warrantyUnit — đó là THỜI GIAN bảo hành
+-- dạng số, field này là NỘI DUNG/điều kiện bảo hành seller giải thích bằng
+-- lời). Áp dụng cho cả 4 loại (PRODUCT/SERVICE/TUT_TRICK/TOOL) vì đều dùng
+-- chung model Product.
+--
+-- Nullable, KHÔNG có default — sản phẩm cũ (seller chưa từng điền) giữ NULL,
+-- trang sản phẩm tự hiện dòng "chưa cung cấp chính sách bảo hành" khi NULL/
+-- rỗng (xem ProductInfoTabs.tsx) thay vì cần backfill giá trị mặc định nào.
+-- An toàn 100% cho dữ liệu cũ, không đổi hành vi bất kỳ query nào khác.
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "warrantyPolicy" TEXT;

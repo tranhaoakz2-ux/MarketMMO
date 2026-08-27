@@ -290,6 +290,7 @@ export default async function ProductDetailPage({
           <Reveal>
             <ProductInfoTabs
               description={product.description}
+              warrantyPolicy={product.warrantyPolicy ?? null}
               rating={product.rating}
               reviewCount={product.reviewCount}
               sellerShopHref={`/shop/${slugifySeller(product.seller)}`}

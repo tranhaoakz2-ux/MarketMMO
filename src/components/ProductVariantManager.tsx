@@ -1,6 +1,6 @@
 "use client";
 
-import { Database, Flame, Layers, LogIn, Package, PackageX, Plus, Store, Trash2, X } from "lucide-react";
+import { Database, Flame, Layers, Lock, LogIn, Package, PackageX, Plus, ShieldCheck, Store, Trash2, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -10,6 +10,7 @@ import { isOutOfStock } from "@/lib/stock-status";
 import type { Product } from "@/data/products";
 import MegaSaleBadge from "@/components/MegaSaleBadge";
 import MegaSaleModal from "@/components/MegaSaleModal";
+import WarrantyPolicyModal from "@/components/WarrantyPolicyModal";
 import {
   Card,
   Column,
@@ -467,6 +468,7 @@ export default function ProductVariantManager() {
   const [forbidden, setForbidden] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [megaSaleId, setMegaSaleId] = useState<string | null>(null);
+  const [warrantyPolicyId, setWarrantyPolicyId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
@@ -546,6 +548,7 @@ export default function ProductVariantManager() {
   const rejectedWithNote = filtered.filter((p) => p.status === "REJECTED" && p.adminNote);
   const active = products.find((p) => p.id === activeId) ?? null;
   const megaSaleProduct = products.find((p) => p.id === megaSaleId) ?? null;
+  const warrantyPolicyProduct = products.find((p) => p.id === warrantyPolicyId) ?? null;
   // Tab thứ 5, thêm vào CUỐI hàng tab status — nhãn kèm số đếm khi >0.
   const statusFilterOptions = [
     ...FILTERS,
@@ -652,6 +655,23 @@ export default function ProductVariantManager() {
           >
             <Flame className="h-4 w-4" />
           </button>
+          <button
+            title={
+              p.warrantyPolicyLocked
+                ? "Chính sách bảo hành đã khoá (đã có đơn hàng)"
+                : "Chính sách bảo hành"
+            }
+            onClick={() => setWarrantyPolicyId(p.id)}
+            className={`grid h-8 w-8 place-items-center rounded-lg border transition ${
+              p.warrantyPolicyLocked
+                ? "border-border-c bg-surface-alt text-muted"
+                : p.warrantyPolicy
+                  ? "border-brand-dark bg-brand-light/30 text-brand-dark"
+                  : "border-border-c bg-surface text-foreground hover:border-brand-dark hover:text-brand-dark"
+            }`}
+          >
+            {p.warrantyPolicyLocked ? <Lock className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+          </button>
         </div>
       ),
     },
@@ -734,6 +754,13 @@ export default function ProductVariantManager() {
       {active && <ManageModal product={active} onClose={() => setActiveId(null)} onChanged={load} />}
       {megaSaleProduct && (
         <MegaSaleModal product={megaSaleProduct} onClose={() => setMegaSaleId(null)} onChanged={load} />
+      )}
+      {warrantyPolicyProduct && (
+        <WarrantyPolicyModal
+          product={warrantyPolicyProduct}
+          onClose={() => setWarrantyPolicyId(null)}
+          onChanged={load}
+        />
       )}
     </Card>
   );

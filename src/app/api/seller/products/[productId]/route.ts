@@ -4,6 +4,7 @@ import {
   MAX_PREORDER_DELIVERY_HOURS,
   MIN_ITEM_PRICE_AFTER_DISCOUNT,
   MIN_PREORDER_DELIVERY_HOURS,
+  PRODUCT_WARRANTY_POLICY_MAX_LENGTH,
 } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { toWarrantyHours } from "@/lib/warranty";
@@ -121,6 +122,39 @@ export async function PATCH(
       },
     });
     return NextResponse.json({ megaSaleActive: updated.megaSaleActive });
+  }
+
+  // Chính sách bảo hành (Product.warrantyPolicy) — CHỈ sửa được khi sản phẩm
+  // CHƯA có đơn nào. Chốt chặn THẬT nằm ở đây: đếm lại OrderItem trực tiếp
+  // từ DB, KHÔNG tin cờ `warrantyPolicyLocked` client gửi lên (client chỉ
+  // dùng cờ đó để hiện UI khoá) — chống seller hạ chính sách bảo hành sau
+  // khi buyer đã mua dựa trên chính sách ban đầu.
+  if (body && typeof body === "object" && "warrantyPolicy" in body) {
+    const hasOrder = await prisma.orderItem.findFirst({
+      where: { productId },
+      select: { id: true },
+    });
+    if (hasOrder) {
+      return NextResponse.json(
+        {
+          error:
+            "Sản phẩm đã có đơn hàng, không thể sửa chính sách bảo hành để bảo vệ người mua.",
+        },
+        { status: 400 }
+      );
+    }
+    const raw = typeof body.warrantyPolicy === "string" ? body.warrantyPolicy.trim() : "";
+    if (raw.length > PRODUCT_WARRANTY_POLICY_MAX_LENGTH) {
+      return NextResponse.json(
+        { error: `Chính sách bảo hành tối đa ${PRODUCT_WARRANTY_POLICY_MAX_LENGTH.toLocaleString("vi-VN")} ký tự.` },
+        { status: 400 }
+      );
+    }
+    const updated = await prisma.product.update({
+      where: { id: productId },
+      data: { warrantyPolicy: raw.length > 0 ? raw : null },
+    });
+    return NextResponse.json({ warrantyPolicy: updated.warrantyPolicy });
   }
 
   if (typeof body?.preOrder !== "boolean") {

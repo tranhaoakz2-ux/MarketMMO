@@ -13,6 +13,7 @@ import {
   PRODUCT_NAME_MIN_LENGTH,
   PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH,
   PRODUCT_SHORT_DESCRIPTION_MIN_LENGTH,
+  PRODUCT_WARRANTY_POLICY_MAX_LENGTH,
   SELLER_PRODUCT_CREATE_LIMIT,
   SELLER_PRODUCT_CREATE_WINDOW_MS,
   SERVER_BILLING_CYCLES,
@@ -450,6 +451,18 @@ export async function POST(req: Request) {
     );
   }
 
+  // Chính sách bảo hành dạng text tự do (Product.warrantyPolicy) — KHÔNG bắt
+  // buộc, chỉ điền được lúc đăng mới (sau khi có đơn đầu tiên sẽ bị khoá,
+  // xem PATCH /api/seller/products/[productId]).
+  const warrantyPolicyRaw = String(form.get("warrantyPolicy") ?? "").trim();
+  if (warrantyPolicyRaw.length > PRODUCT_WARRANTY_POLICY_MAX_LENGTH) {
+    return NextResponse.json(
+      { error: `Chính sách bảo hành tối đa ${PRODUCT_WARRANTY_POLICY_MAX_LENGTH.toLocaleString("vi-VN")} ký tự.` },
+      { status: 400 }
+    );
+  }
+  const warrantyPolicy = warrantyPolicyRaw.length > 0 ? warrantyPolicyRaw : null;
+
   // Chỉ cho gán vào danh mục APPROVED hoặc PENDING (đang chờ duyệt) — chặn hẳn
   // category REJECTED (hoặc không tồn tại) để sản phẩm không treo ở danh mục đã
   // bị từ chối/ẩn. Nhất quán với getSellerVisibleCategories() dùng cho dropdown.
@@ -508,6 +521,7 @@ export async function POST(req: Request) {
           toolDeliveryLink,
           warrantyValue,
           warrantyUnit,
+          warrantyPolicy,
           deliveryMethod,
           requiresExpiryStock,
         },

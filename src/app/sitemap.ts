@@ -25,7 +25,6 @@ const STATIC_PAGES: { path: string; priority: number; changeFrequency: MetadataR
   { path: "/dieu-khoan-dich-vu", priority: 0.2, changeFrequency: "yearly" },
   { path: "/dieu-khoan-ban-hang", priority: 0.2, changeFrequency: "yearly" },
   { path: "/chinh-sach-bao-mat", priority: 0.2, changeFrequency: "yearly" },
-  { path: "/tai-lieu-api", priority: 0.2, changeFrequency: "monthly" },
 ];
 
 // getCategoryTree() chỉ trả về gốc (roots) kèm children lồng nhau — flatten
