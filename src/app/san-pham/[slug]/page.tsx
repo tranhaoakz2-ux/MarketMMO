@@ -302,7 +302,7 @@ export default async function ProductDetailPage({
 
           {related.length > 0 && (
             <Reveal delay={0.05} className="mt-8">
-              <div className="rounded-lg bg-ink px-4 py-3 text-sm font-black text-white">
+              <div className="rounded-lg bg-brand px-4 py-3 text-sm font-black text-ink">
                 SẢN PHẨM TƯƠNG TỰ
               </div>
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -314,7 +314,7 @@ export default async function ProductDetailPage({
           )}
 
           <Reveal delay={0.1} className="mt-8">
-            <div className="rounded-lg bg-gradient-to-r from-success to-emerald-400 px-4 py-3 text-sm font-black text-white">
+            <div className="rounded-lg bg-brand px-4 py-3 text-sm font-black text-ink">
               BÀI VIẾT THAM KHẢO
             </div>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
