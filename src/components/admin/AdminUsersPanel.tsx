@@ -117,6 +117,19 @@ export default function AdminUsersPanel() {
 
   const columns: Column<AdminUser>[] = [
     {
+      key: "memberCode",
+      header: "ID",
+      render: (u) =>
+        u.memberCode ? (
+          <div className="flex items-center gap-1">
+            <span className="font-mono text-xs font-bold text-[var(--adm-text)]">{u.memberCode}</span>
+            <CopyMemberCodeButton code={u.memberCode} />
+          </div>
+        ) : (
+          <span className="text-xs text-[var(--adm-muted)]">—</span>
+        ),
+    },
+    {
       key: "user",
       header: "Người dùng",
       primary: true,
@@ -124,12 +137,6 @@ export default function AdminUsersPanel() {
         <div className="min-w-0">
           <p className="max-w-[320px] truncate font-bold text-[var(--adm-text)]">{u.name ?? u.username ?? "—"}</p>
           <p className="max-w-[320px] truncate text-xs text-[var(--adm-muted)]">{u.email ?? u.username}</p>
-          {u.memberCode && (
-            <div className="mt-0.5 flex items-center gap-1">
-              <span className="font-mono text-[11px] font-bold text-[var(--adm-brand)]">{u.memberCode}</span>
-              <CopyMemberCodeButton code={u.memberCode} />
-            </div>
-          )}
         </div>
       ),
     },
