@@ -36,6 +36,12 @@ model User {
   phone         String?
   role          String    @default("BUYER")
   walletBalance Int       @default(0)
+  // Mã thành viên ngắn, dễ đọc cho admin tra cứu (KHÁC `id` ở trên — cuid
+  // nội bộ, không đổi) — dạng "MMO000001", tăng dần theo thứ tự tạo tài
+  // khoản, gán CỐ ĐỊNH vĩnh viễn lúc đăng ký (xem src/lib/member-code.ts).
+  // Nullable — tài khoản tạo trước tính năng này chưa có cho tới khi chạy
+  // scripts/backfill-member-codes.ts (chạy tay, không tự động).
+  memberCode    String?   @unique
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   // Cập nhật trong callback jwt() của Auth.js (src/auth.ts) mỗi khi có phiên
@@ -1420,6 +1426,16 @@ model CommissionSetting {
   enabled              Boolean  @default(true)
   updatedAt            DateTime @updatedAt
   updatedById          String?
+}
+
+// Bộ đếm tuần tự sinh User.memberCode ("MMO000001", "MMO000002"...) —
+// singleton (id "singleton"), tăng NGUYÊN TỬ qua UPDATE...SET nextNumber =
+// nextNumber + 1 (Postgres tự khoá dòng, đăng ký đồng thời tự tuần tự hoá,
+// xem ensureMemberCode() trong src/lib/member-code.ts). nextNumber luôn là
+// SỐ SẼ CẤP TIẾP THEO (chưa dùng).
+model MemberCodeCounter {
+  id         String @id
+  nextNumber Int    @default(1)
 }
 
 // PHÍ SÀN — % chung cho MỌI seller/mọi đơn. Singleton (id "singleton") lưu %

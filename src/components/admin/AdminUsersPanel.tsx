@@ -6,7 +6,7 @@
 // {action:"ban"|"unban", reason?} — không đổi 1 dòng logic nghiệp vụ, chỉ đổi
 // phần trình bày (raw CSS grid → DataTable responsive, "Đang tải..." →
 // skeleton). API route đã có sẵn requireAdmin() (không đụng tới).
-import { Lock, Unlock, Users as UsersIcon } from "lucide-react";
+import { Check, Copy, Lock, Unlock, Users as UsersIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Button,
@@ -24,6 +24,7 @@ import { roleLabel, type Role } from "@/lib/constants";
 
 type AdminUser = {
   id: string;
+  memberCode: string | null;
   name: string | null;
   username: string | null;
   email: string | null;
@@ -34,6 +35,31 @@ type AdminUser = {
   bannedAt: string | null;
   createdAt: string;
 };
+
+// Nút sao chép mã thành viên — thuần UI, không đụng dữ liệu (cùng ý tưởng
+// CopyOrderCodeButton.tsx nhưng dùng token --adm-* cho đúng theme tối admin).
+function CopyMemberCodeButton({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      aria-label="Sao chép mã thành viên"
+      className={`grid h-5 w-5 shrink-0 place-items-center rounded transition ${
+        copied ? "text-[var(--adm-success)]" : "text-[var(--adm-muted)] hover:bg-[var(--adm-surface-2)] hover:text-[var(--adm-brand)]"
+      }`}
+    >
+      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+    </button>
+  );
+}
 
 export default function AdminUsersPanel() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -98,6 +124,12 @@ export default function AdminUsersPanel() {
         <div className="min-w-0">
           <p className="max-w-[320px] truncate font-bold text-[var(--adm-text)]">{u.name ?? u.username ?? "—"}</p>
           <p className="max-w-[320px] truncate text-xs text-[var(--adm-muted)]">{u.email ?? u.username}</p>
+          {u.memberCode && (
+            <div className="mt-0.5 flex items-center gap-1">
+              <span className="font-mono text-[11px] font-bold text-[var(--adm-brand)]">{u.memberCode}</span>
+              <CopyMemberCodeButton code={u.memberCode} />
+            </div>
+          )}
         </div>
       ),
     },
@@ -140,7 +172,7 @@ export default function AdminUsersPanel() {
   return (
     <div className="flex flex-col gap-4">
       <form onSubmit={handleSearch} className="flex items-center gap-2">
-        <SearchInput value={q} onChange={setQ} placeholder="Tìm theo email, username hoặc tên..." />
+        <SearchInput value={q} onChange={setQ} placeholder="Tìm theo email, username, tên hoặc mã thành viên (MMO...)..." />
         <Button type="submit" variant="primary">Tìm</Button>
       </form>
 

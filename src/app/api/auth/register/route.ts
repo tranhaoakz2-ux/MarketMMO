@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
+import { ensureMemberCode } from "@/lib/member-code";
 import { generateReferralCode } from "@/lib/referral";
 import { rateLimit } from "@/lib/rate-limit";
 import { sendSystemMessage } from "@/lib/system-bot";
@@ -158,6 +159,16 @@ export async function POST(req: Request) {
       { error: "Không thể tạo tài khoản, vui lòng thử lại." },
       { status: 500 }
     );
+  }
+
+  // Mã thành viên (Admin > Người dùng tra cứu) — gán NGAY lúc đăng ký, best-
+  // effort: bộ đếm đã nguyên tử nên gần như không bao giờ lỗi, nhưng lỡ có
+  // (vd DB tạm gián đoạn) cũng không được chặn cả luồng đăng ký vốn đã thành
+  // công (tài khoản vẫn tạo được, chỉ tạm thời chưa có mã).
+  try {
+    await ensureMemberCode(user.id);
+  } catch (err) {
+    console.error("Không thể gán mã thành viên lúc đăng ký:", err);
   }
 
   // Tin nhắn chào mừng chỉ mang tính thông báo — không để lỗi gửi tin (nếu

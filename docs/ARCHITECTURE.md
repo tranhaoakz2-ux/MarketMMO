@@ -707,6 +707,7 @@ gian — đọc để hiểu schema đã tiến hoá thế nào:
 | `2026-08-24-dvnet-webhook.sql` | Unique index chống trùng nạp USDT qua cổng DV.net (non-custodial) — provider thứ 2 song song TronGrid, chọn qua `PaymentConfig "usdt_provider"` |
 | `2026-08-25-seller-level.sql` | 4 cột `Seller.levelOverride/levelDowngradePendingTo/levelDowngradePendingSince/levelRecomputedAt` + model `SellerLevelConfig`/`SellerLevelSetting`/`SellerLevelHistory` + index `OrderItem(sellerId,status,createdAt)` — hệ thống hạng người bán tính tự động từ dữ liệu thật (đơn hoàn thành theo buyer khác nhau, rating, tỉ lệ khiếu nại), thay số tĩnh cũ |
 | `2026-08-25-product-warranty-policy.sql` | `Product.warrantyPolicy` (TEXT, nullable) — chính sách bảo hành dạng text tự do seller viết lúc đăng, KHOÁ vĩnh viễn ngay khi sản phẩm có đơn đầu tiên (chặn ở server, chống hạ chính sách sau khi buyer đã mua) |
+| `2026-08-28-member-code.sql` | `User.memberCode` (TEXT, UNIQUE, nullable) + model `MemberCodeCounter` (singleton, bộ đếm tuần tự) — mã thành viên ngắn "MMO000001..." cho admin tra cứu, gán cố định lúc đăng ký |
 
 > Khi thêm schema mới: tạo file `prisma/pending-sql/YYYY-MM-DD-mo-ta-ngan.sql`,
 > để user tự chạy trên Neon, rồi mới cập nhật `schema.prisma` + chạy `npx

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import CopyOrderCodeButton from "@/components/CopyOrderCodeButton";
 import Reveal from "@/components/Reveal";
 import UserAvatarUploader from "@/components/UserAvatarUploader";
 import { roleLabel, type Role } from "@/lib/constants";
@@ -90,6 +91,7 @@ export default function UserProfilePanel({
   walletBalance,
   role,
   referralCode,
+  memberCode,
 }: {
   name: string;
   email: string | null;
@@ -101,6 +103,7 @@ export default function UserProfilePanel({
   walletBalance: number;
   role: Role;
   referralCode: string | null;
+  memberCode: string | null;
 }) {
   const [name, setName] = useState(initialName);
   const [phone, setPhone] = useState(initialPhone ?? "");
@@ -337,6 +340,15 @@ export default function UserProfilePanel({
                 <Wallet className="h-4 w-4 text-brand-dark" /> Tài khoản &amp; Ví
               </h2>
               <dl className="flex flex-col gap-3 text-sm">
+                {memberCode && (
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted">Mã thành viên</dt>
+                    <dd className="flex items-center gap-1">
+                      <span className="font-mono font-bold text-foreground">{memberCode}</span>
+                      <CopyOrderCodeButton code={memberCode} />
+                    </dd>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <dt className="text-muted">Vai trò</dt>
                   <dd className="font-bold text-foreground">{roleLabel[role]}</dd>

@@ -5,6 +5,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@/lib/constants";
+import { ensureMemberCode } from "@/lib/member-code";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -112,6 +113,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: "/dang-nhap",
   },
   providers,
+  events: {
+    // Chỉ user tạo qua OAuth (Google) đi qua đây — Credentials tự
+    // prisma.user.create() thẳng ở POST /api/auth/register (đã tự gán mã ở
+    // đó), KHÔNG qua adapter.createUser() nên không trigger lại ở đây (không
+    // gán trùng). Best-effort — lỗi gán mã không được chặn đăng nhập OAuth.
+    async createUser({ user }) {
+      if (!user.id) return;
+      await ensureMemberCode(user.id).catch((err) => {
+        console.error("Không thể gán mã thành viên cho user OAuth:", err);
+      });
+    },
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

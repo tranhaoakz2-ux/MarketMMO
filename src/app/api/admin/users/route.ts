@@ -18,6 +18,7 @@ export async function GET(req: Request) {
             { email: { contains: q, mode: "insensitive" } },
             { username: { contains: q, mode: "insensitive" } },
             { name: { contains: q, mode: "insensitive" } },
+            { memberCode: { contains: q, mode: "insensitive" } },
           ],
         }
       : undefined,
@@ -25,6 +26,7 @@ export async function GET(req: Request) {
     take: 50,
     select: {
       id: true,
+      memberCode: true,
       name: true,
       username: true,
       email: true,

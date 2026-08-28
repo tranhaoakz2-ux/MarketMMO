@@ -31,6 +31,7 @@ export default async function UserProfilePage() {
       walletBalance: true,
       role: true,
       referralCode: true,
+      memberCode: true,
     },
   });
   if (!user) redirect("/dang-nhap?callbackUrl=/ho-so-ca-nhan");
@@ -56,6 +57,7 @@ export default async function UserProfilePage() {
               walletBalance={user.walletBalance}
               role={user.role as "BUYER" | "SELLER" | "ADMIN"}
               referralCode={user.referralCode}
+              memberCode={user.memberCode}
             />
           </Reveal>
         </div>
