@@ -342,10 +342,10 @@ export default function UserProfilePanel({
               <dl className="flex flex-col gap-3 text-sm">
                 {memberCode && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-muted">Mã thành viên</dt>
+                    <dt className="text-muted">ID</dt>
                     <dd className="flex items-center gap-1">
                       <span className="font-mono font-bold text-foreground">{memberCode}</span>
-                      <CopyOrderCodeButton code={memberCode} />
+                      <CopyOrderCodeButton code={memberCode} label="Sao chép ID" />
                     </dd>
                   </div>
                 )}
