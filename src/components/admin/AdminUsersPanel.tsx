@@ -179,7 +179,7 @@ export default function AdminUsersPanel() {
   return (
     <div className="flex flex-col gap-4">
       <form onSubmit={handleSearch} className="flex items-center gap-2">
-        <SearchInput value={q} onChange={setQ} placeholder="Tìm theo email, username, tên hoặc ID (MMO...)..." />
+        <SearchInput value={q} onChange={setQ} placeholder="Tìm theo email, username, tên hoặc ID (MM...)..." />
         <Button type="submit" variant="primary">Tìm</Button>
       </form>
 

@@ -1428,11 +1428,13 @@ model CommissionSetting {
   updatedById          String?
 }
 
-// Bộ đếm tuần tự sinh User.memberCode ("MMO000001", "MMO000002"...) —
-// singleton (id "singleton"), tăng NGUYÊN TỬ qua UPDATE...SET nextNumber =
-// nextNumber + 1 (Postgres tự khoá dòng, đăng ký đồng thời tự tuần tự hoá,
-// xem ensureMemberCode() trong src/lib/member-code.ts). nextNumber luôn là
-// SỐ SẼ CẤP TIẾP THEO (chưa dùng).
+// KHÔNG CÒN DÙNG (2026-08-28→2026-08-29) — trước đây là bộ đếm tuần tự sinh
+// User.memberCode kiểu "MMO000001", "MMO000002"... Đã đổi sang sinh NGẪU
+// NHIÊN ("MM" + 8 chữ số, retry khi va UNIQUE constraint — xem
+// ensureMemberCode() trong src/lib/member-code.ts) để mã không lộ thứ tự/
+// tổng số tài khoản. Giữ lại model + bảng (không xoá) để khỏi phải chạy thêm
+// 1 lượt SQL DROP TABLE trên Neon — bảng này an toàn, không còn code nào
+// đọc/ghi vào nó nữa.
 model MemberCodeCounter {
   id         String @id
   nextNumber Int    @default(1)
