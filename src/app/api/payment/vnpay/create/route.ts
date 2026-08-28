@@ -7,10 +7,14 @@ export async function POST(req: Request) {
   const { session, error } = await requireUser();
   if (error) return error;
 
+  // Kill-switch (xem VNPAY_DISABLED trong src/lib/payment/vnpay.ts) — VNPay
+  // đã ngừng hỗ trợ trên sàn, isVnpayConfigured() luôn trả false bất kể cấu
+  // hình. Thông báo lỗi ghi rõ "đã ngừng hỗ trợ" thay vì "chưa cấu hình" để
+  // không gây hiểu nhầm đây chỉ là thiếu key tạm thời.
   if (!(await isVnpayConfigured())) {
     return NextResponse.json(
       {
-        error: "VNPay chưa được cấu hình. Vui lòng dùng nạp tiền thủ công.",
+        error: "VNPay đã ngừng hỗ trợ trên sàn. Vui lòng dùng Chuyển khoản ngân hàng hoặc USDT.",
       },
       { status: 400 }
     );

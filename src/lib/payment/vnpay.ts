@@ -19,7 +19,17 @@ import { getPaymentConfig } from "@/lib/payment/config";
  * orderInfo) — lỗi thật đã phát hiện khi rà lại code trước khi dùng key thật.
  */
 
+// KILL-SWITCH: VNPay đã ngừng hỗ trợ trên sàn (dùng chuyển khoản ngân hàng
+// qua SePay + USDT thay thế) — cờ CỐ Ý luôn true, ĐỘC LẬP với việc admin/env
+// có điền vnpay_tmn_code/vnpay_hash_secret hay không, để tính năng không thể
+// vô tình "sống lại" nếu sau này ai đó điền key thật vào mà không biết VNPay
+// đã bị tắt chủ ý. Đổi false (và bỏ dòng return sớm bên dưới) nếu sau này
+// quyết định bật lại VNPay — code tích hợp (chữ ký, create/ipn/return) vẫn
+// giữ nguyên, không xoá.
+export const VNPAY_DISABLED = true;
+
 export async function isVnpayConfigured(): Promise<boolean> {
+  if (VNPAY_DISABLED) return false;
   const [tmnCode, secret] = await Promise.all([
     getPaymentConfig("vnpay_tmn_code"),
     getPaymentConfig("vnpay_hash_secret"),

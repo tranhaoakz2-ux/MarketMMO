@@ -78,3 +78,45 @@ export async function expireStaleBankDeposits(): Promise<number> {
   });
   return result.count;
 }
+
+// Số giờ giữ lại 1 lệnh nạp ĐÃ HẾT HẠN/BỊ TỪ CHỐI trước khi xoá hẳn khỏi
+// lịch sử — đệm CỐ Ý cho trường hợp buyer chuyển khoản đúng lúc gần hết hạn
+// nhưng webhook SePay báo về trễ (SePay tự retry tối đa 5 giờ, cộng thêm dư
+// giờ cho các trường hợp bất thường khác).
+export const STALE_DEPOSIT_RETENTION_HOURS = 24;
+
+// Xoá VĨNH VIỄN các lệnh nạp CHƯA TỪNG có tiền thật về (EXPIRED/REJECTED, dứt
+// khoát không phải CONFIRMED) đã ở trạng thái đó ĐỦ LÂU (mặc định 24h — xem
+// STALE_DEPOSIT_RETENTION_HOURS) — chỉ để dọn "lịch sử" gọn gàng, KHÔNG BAO
+// GIỜ đụng walletBalance vì các dòng này chưa từng cộng tiền cho ai.
+//
+// AN TOÀN TIỀN VỀ TRỄ SAU KHI XOÁ: webhook SePay (POST /api/webhook/sepay)
+// CHỈ khớp giao dịch còn status:"PENDING" (xem query candidates trong route
+// đó) — 1 dòng EXPIRED/REJECTED ĐÃ KHÔNG CÒN được webhook nhìn thấy để khớp
+// NGAY TỪ LÚC đổi trạng thái (không phải từ lúc bị xoá), nên xoá hẳn record
+// sau 24h KHÔNG làm thay đổi hành vi khớp tiền chút nào — tiền về trễ với mã
+// đó (dù record còn hay đã xoá) đều tự động rơi vào nhánh "không khớp được"
+// có sẵn của webhook, lưu vào SepayUnmatchedTransaction cho admin gán tay,
+// KHÔNG bao giờ bị bỏ sót hay âm thầm mất. Chỉ xoá `type:"DEPOSIT"` (không
+// đụng PURCHASE/PAYOUT/REFUND/WITHDRAW...) và tuyệt đối loại trừ
+// status:"CONFIRMED" — không có điều kiện nào trong hàm này match được dòng
+// đã nạp thành công.
+export async function deleteStaleRejectedDeposits(): Promise<number> {
+  const cutoff = new Date(Date.now() - STALE_DEPOSIT_RETENTION_HOURS * 3600_000);
+  const result = await prisma.walletTransaction.deleteMany({
+    where: {
+      type: "DEPOSIT",
+      OR: [
+        // EXPIRED không có mốc thời gian riêng lúc chuyển trạng thái (xem
+        // expireStaleBankDeposits() ở trên, chỉ đổi status) — nhưng bản thân
+        // `expiresAt` CHÍNH LÀ mốc "hết hạn", dùng thẳng làm mốc tính 24h.
+        { status: "EXPIRED", expiresAt: { lte: cutoff } },
+        // REJECTED luôn có confirmedAt được set (admin từ chối tay ở POST
+        // /api/admin/deposits/[id], hoặc VNPay/IPN/return đánh dấu thất bại)
+        // — dùng làm mốc "bị từ chối lúc nào".
+        { status: "REJECTED", confirmedAt: { lte: cutoff } },
+      ],
+    },
+  });
+  return result.count;
+}

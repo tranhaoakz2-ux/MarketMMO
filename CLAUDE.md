@@ -39,7 +39,8 @@ pháp lý chính thức — xem `docs/ARCHITECTURE.md` để biết logic thật
   password, bcrypt) + Google OAuth (env-gated) + Turnstile chống bot
   (env-gated, fail-closed ở production). Session JWT, refresh
   role/walletBalance/banned từ DB mỗi request. Chi tiết: `docs/ARCHITECTURE.md` §1.
-- **Thanh toán**: VNPay (chờ key thật), SePay webhook (chờ key thật, tự
+- **Thanh toán**: VNPay (**ngừng hỗ trợ có chủ đích** từ 2026-08-29, kill-switch
+  trong code — xem `docs/ARCHITECTURE.md` §11), SePay webhook (chờ key thật, tự
   động hoá nạp bank), USDT TRC20 (xác minh on-chain thật qua TronGrid, hoạt
   động ngay khi có địa chỉ ví), bank thủ công. Admin cấu hình qua
   `/admin/cai-dat` (model `PaymentConfig`, ưu tiên hơn `.env`). Chi tiết:
@@ -267,7 +268,9 @@ screenshot` để chụp lại, so với thiết kế gốc trước khi coi là
 
 ## Trạng thái hiện tại — còn thiếu / cần lưu ý
 
-- **VNPay & SePay webhook**: khung code đầy đủ, đã rà lỗi kỹ, nhưng **chưa
+- **VNPay**: ngừng hỗ trợ có chủ đích (không phải thiếu key) — xem
+  `VNPAY_DISABLED` trong `src/lib/payment/vnpay.ts`.
+- **SePay webhook**: khung code đầy đủ, đã rà lỗi kỹ, nhưng **chưa
   hoạt động thật** — thiếu key/secret thật trong `.env`/`PaymentConfig`.
   USDT TRC20 sẵn sàng hoạt động ngay khi có địa chỉ ví thật (không phụ
   thuộc secret bên thứ 3).

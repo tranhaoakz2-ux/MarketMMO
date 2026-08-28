@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { releaseDueEscrow } from "@/lib/escrow";
 import { closeDueAuctionSessions } from "@/lib/auction";
 import { refundOverdueManualProvisionItems } from "@/lib/manual-provision";
-import { expireStaleBankDeposits } from "@/lib/payment/deposit";
+import { deleteStaleRejectedDeposits, expireStaleBankDeposits } from "@/lib/payment/deposit";
 import { sweepAllSellerLevels } from "@/lib/seller-level";
 
 // Cron DUY NHẤT/ngày (gộp escrow + đấu giá để không vượt giới hạn 2 cron của
@@ -46,6 +46,7 @@ export async function GET(req: Request) {
     { refunded: manualProvisionRefunded },
     bankDepositsExpired,
     { processed: sellerLevelsProcessed },
+    staleDepositsDeleted,
   ] = await Promise.all([
     releaseDueEscrow({ type: "SYSTEM" }),
     closeDueAuctionSessions(),
@@ -64,6 +65,12 @@ export async function GET(req: Request) {
     // trigger). KHÔNG đụng WalletTransaction/escrow — chỉ Seller.level +
     // các bảng SellerLevel*.
     sweepAllSellerLevels(),
+    // Dọn lịch sử: xoá HẲN các lệnh nạp EXPIRED/REJECTED đã đủ
+    // STALE_DEPOSIT_RETENTION_HOURS (24h) — CHỈ đơn CHƯA từng có tiền thật về,
+    // không bao giờ đụng CONFIRMED. Xem giải thích an toàn đầy đủ (vì sao
+    // không ảnh hưởng khớp webhook SePay trễ hạn) trong
+    // src/lib/payment/deposit.ts.
+    deleteStaleRejectedDeposits(),
   ]);
 
   return NextResponse.json({
@@ -72,5 +79,6 @@ export async function GET(req: Request) {
     manualProvisionRefunded,
     bankDepositsExpired,
     sellerLevelsProcessed,
+    staleDepositsDeleted,
   });
 }

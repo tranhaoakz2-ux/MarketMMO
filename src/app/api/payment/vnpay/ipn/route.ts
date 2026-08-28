@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyVnpayReturn } from "@/lib/payment/vnpay";
+import { VNPAY_DISABLED, verifyVnpayReturn } from "@/lib/payment/vnpay";
 
 // IPN (Instant Payment Notification) VNPay — server-to-server, VNPay CHỦ ĐỘNG
 // gọi (có retry) sau khi giao dịch hoàn tất. Đây là NGUỒN CHÂN LÝ để cộng ví,
@@ -16,6 +16,13 @@ import { verifyVnpayReturn } from "@/lib/payment/vnpay";
 const R = (RspCode: string, Message: string) => NextResponse.json({ RspCode, Message });
 
 async function handle(query: Record<string, string>) {
+  // Kill-switch (xem VNPAY_DISABLED trong src/lib/payment/vnpay.ts) — không
+  // còn WalletTransaction method="VNPAY" nào được tạo mới (POST
+  // /api/payment/vnpay/create đã chặn), chặn thêm ở đây cho chắc thay vì chỉ
+  // dựa vào việc không còn dòng PENDING nào để khớp.
+  if (VNPAY_DISABLED) {
+    return R("99", "VNPay is disabled");
+  }
   // 1. Chữ ký
   if (!(await verifyVnpayReturn(query))) {
     return R("97", "Invalid signature");

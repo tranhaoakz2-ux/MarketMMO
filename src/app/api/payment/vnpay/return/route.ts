@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyVnpayReturn } from "@/lib/payment/vnpay";
+import { VNPAY_DISABLED, verifyVnpayReturn } from "@/lib/payment/vnpay";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -10,6 +10,14 @@ export async function GET(req: Request) {
   });
 
   const redirectBase = new URL("/nap-tien", url.origin);
+
+  // Kill-switch (xem VNPAY_DISABLED trong src/lib/payment/vnpay.ts) — VNPay
+  // đã ngừng hỗ trợ, không còn phiên thanh toán VNPay thật nào redirect về
+  // đây (POST /api/payment/vnpay/create đã chặn tạo mới).
+  if (VNPAY_DISABLED) {
+    redirectBase.searchParams.set("status", "disabled");
+    return NextResponse.redirect(redirectBase);
+  }
 
   const valid = await verifyVnpayReturn(query);
   if (!valid) {

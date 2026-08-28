@@ -7,12 +7,13 @@ import { getBankInfo, getUsdtInfo } from "@/lib/payment/deposit";
 import { getDvnetConfig, getUsdtProvider } from "@/lib/payment/dvnet";
 import { getUsdtDepositRate } from "@/lib/payment/exchange-rate";
 import { isSepayConfigured } from "@/lib/payment/sepay";
-import { isVnpayConfigured } from "@/lib/payment/vnpay";
 import { PRIVATE_ROBOTS } from "@/lib/seo";
 
 export default async function DepositPage() {
-  const [vnpayEnabled, bankInfo, usdtInfoRaw, sepayEnabled, usdtProvider, dvnetConfig] = await Promise.all([
-    isVnpayConfigured(),
+  // VNPay đã ngừng hỗ trợ trên sàn (xem VNPAY_DISABLED trong
+  // src/lib/payment/vnpay.ts) — không còn gọi isVnpayConfigured()/truyền
+  // prop vnpayEnabled cho DepositPanel nữa, ẩn hoàn toàn khỏi trang nạp tiền.
+  const [bankInfo, usdtInfoRaw, sepayEnabled, usdtProvider, dvnetConfig] = await Promise.all([
     getBankInfo(),
     getUsdtInfo(),
     isSepayConfigured(),
@@ -52,7 +53,6 @@ export default async function DepositPage() {
         <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6 lg:px-8">
           <Reveal>
             <DepositPanel
-              vnpayEnabled={vnpayEnabled}
               bankInfo={bankInfo}
               usdtInfo={usdtInfo}
               usdtEnabled={usdtEnabled}

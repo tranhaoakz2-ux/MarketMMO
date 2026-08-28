@@ -13,7 +13,6 @@ import {
   DollarSign,
   History,
   LogIn,
-  QrCode,
   RefreshCw,
   Wallet,
 } from "lucide-react";
@@ -36,7 +35,10 @@ import {
 
 const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
 
-type DepositMethod = "vnpay" | "bank" | "usdt";
+// VNPay đã ngừng hỗ trợ trên sàn (xem VNPAY_DISABLED trong
+// src/lib/payment/vnpay.ts) — bỏ hẳn khỏi lựa chọn phương thức, chỉ còn
+// "bank" (SePay) và "usdt".
+type DepositMethod = "bank" | "usdt";
 
 // Yêu cầu nạp NGÂN HÀNG đã được SERVER tạo (POST /api/wallet/deposit-request)
 // — code/expiresAt do server sinh, KHÔNG tin số/mã từ client. Chỉ tồn tại
@@ -206,14 +208,12 @@ function CopyField({
 }
 
 export default function DepositPanel({
-  vnpayEnabled,
   bankInfo,
   usdtInfo,
   usdtEnabled,
   usdtProvider,
   sepayEnabled,
 }: {
-  vnpayEnabled: boolean;
   bankInfo: BankInfo | null;
   usdtInfo: UsdtInfo | null;
   /** USDT tab bật hay không — trongrid xét usdtInfo, dvnet xét cấu hình DV.net (xem nap-tien/page.tsx). */
@@ -223,7 +223,7 @@ export default function DepositPanel({
 }) {
   const { data: session, status, update } = useSession();
   const [amount, setAmount] = useState<number | null>(100000);
-  const [method, setMethod] = useState<DepositMethod>(vnpayEnabled ? "vnpay" : "bank");
+  const [method, setMethod] = useState<DepositMethod>("bank");
   const [txid, setTxid] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -434,27 +434,6 @@ export default function DepositPanel({
     setError(null);
     setMessage(null);
 
-    if (method === "vnpay") {
-      if (!amount || amount < 10000) {
-        setError("Số tiền nạp tối thiểu là 10.000đ.");
-        return;
-      }
-      setLoading(true);
-      const res = await fetch("/api/payment/vnpay/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount }),
-      });
-      const data = await res.json();
-      setLoading(false);
-      if (!res.ok) {
-        setError(data.error ?? "Không thể tạo thanh toán VNPay.");
-        return;
-      }
-      window.location.href = data.url;
-      return;
-    }
-
     if (method === "usdt" && usdtProvider === "trongrid") {
       if (!usdtInfo) {
         setError("Nạp tiền bằng USDT chưa được bật.");
@@ -589,50 +568,6 @@ export default function DepositPanel({
           <Reveal delay={0.05}>
             <SectionCard icon={CreditCard} title="Chọn phương thức nạp tiền">
               <div className="flex flex-col gap-2.5">
-                <label
-                  className={`relative flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors ${
-                    method === "vnpay"
-                      ? "border-brand-dark bg-brand-light/30 shadow-sm"
-                      : "border-border-c bg-surface hover:border-brand-dark/40 hover:bg-surface-alt"
-                  } ${!vnpayEnabled ? "cursor-not-allowed opacity-60 hover:border-border-c hover:bg-surface" : ""}`}
-                >
-                  <input
-                    type="radio"
-                    name="method"
-                    checked={method === "vnpay"}
-                    disabled={!vnpayEnabled}
-                    onChange={() => setMethod("vnpay")}
-                    className="sr-only"
-                  />
-                  <span
-                    className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
-                      method === "vnpay" ? "bg-brand text-ink" : "bg-surface-alt text-foreground/60"
-                    }`}
-                  >
-                    <QrCode className="h-5 w-5" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <p className="text-sm font-bold text-foreground">VNPay — tự động cộng tiền</p>
-                      {!vnpayEnabled && (
-                        <span className="rounded-full border border-border-c bg-surface-alt px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-muted">
-                          Chưa cấu hình
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-0.5 text-xs text-muted">
-                      {vnpayEnabled
-                        ? "Chuyển hướng sang VNPay, số dư cộng ngay sau khi thanh toán"
-                        : "Thiếu VNPAY_TMN_CODE/VNPAY_HASH_SECRET trong .env"}
-                    </p>
-                  </div>
-                  {method === "vnpay" && (
-                    <span className="absolute right-3 top-3 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-ink">
-                      <Check className="h-3 w-3" strokeWidth={3} />
-                    </span>
-                  )}
-                </label>
-
                 <label
                   className={`relative flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors ${
                     method === "bank"
@@ -1088,11 +1023,9 @@ export default function DepositPanel({
                 >
                   {loading
                     ? "Đang xử lý..."
-                    : method === "vnpay"
-                      ? `Nạp ${amount ? formatVnd(amount) : ""}`
-                      : method === "usdt"
-                        ? "Xác minh & nạp tiền"
-                        : `Xác nhận nạp ${amount ? formatVnd(amount) : ""}`}
+                    : method === "usdt"
+                      ? "Xác minh & nạp tiền"
+                      : `Xác nhận nạp ${amount ? formatVnd(amount) : ""}`}
                 </button>
               )}
             </div>
