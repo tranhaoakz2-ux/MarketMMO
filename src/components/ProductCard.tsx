@@ -16,8 +16,8 @@ export default function ProductCard({ product }: { product: Product }) {
       className="group relative flex flex-col rounded-lg border-2 border-brand bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-dark hover:shadow-[0_12px_28px_rgba(224,196,0,0.35),0_4px_10px_rgba(0,0,0,0.05)]"
     >
       {outOfStock && (
-        <span className="absolute -right-2.5 -top-2.5 z-10 flex items-center gap-1 rounded-full bg-ink px-2.5 py-1 text-[10px] font-black text-white shadow">
-          <PackageX className="h-3 w-3" /> HẾT HÀNG
+        <span className="absolute -right-2.5 -top-2.5 z-10 flex items-center gap-1 rounded-full bg-danger px-2.5 py-1 text-sm font-black text-white shadow-lg">
+          <PackageX className="h-4 w-4" /> HẾT HÀNG
         </span>
       )}
       {product.megaSale?.active && !outOfStock && (
