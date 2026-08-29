@@ -1101,7 +1101,7 @@ export default function AddProductForm({
           value={warrantyPolicy}
           onChange={(e) => setWarrantyPolicy(e.target.value)}
           maxLength={PRODUCT_WARRANTY_POLICY_MAX_LENGTH}
-          rows={4}
+          rows={8}
           placeholder={
             'VD: "Bảo hành 7 ngày kể từ khi nhận hàng. Đổi mới nếu tài khoản không đăng nhập được ' +
             'do lỗi từ người bán. Không bảo hành nếu buyer tự đổi mật khẩu/bật 2FA làm mất quyền ' +
@@ -1216,7 +1216,7 @@ export default function AddProductForm({
                     <textarea
                       value={v.stockItems}
                       onChange={(e) => updateVariant(v.key, "stockItems", e.target.value)}
-                      rows={2}
+                      rows={8}
                       placeholder={
                         productType === "PRODUCT" && deliveryMethod === "MANUAL_PROVISION"
                           ? "Mỗi dòng là 1 máy chủ sẽ giao TỰ ĐỘNG cho khách (sẽ được MÃ HOÁ), đúng 4 phần IP|Port|User|Pass, ví dụ:\n103.10.20.30|22|root|MatKhau123\n103.10.20.31|22|root|MatKhau456"
@@ -1261,7 +1261,7 @@ export default function AddProductForm({
                         <textarea
                           value={v.expiresAtItems}
                           onChange={(e) => updateVariant(v.key, "expiresAtItems", e.target.value)}
-                          rows={2}
+                          rows={6}
                           placeholder={
                             "Ngày hết hạn của TỪNG dòng ở ô kho phía trên, khớp đúng theo số thứ tự dòng — để trống dòng nào nếu dòng đó không có hạn, vd:\n2026-04-20\n2026-05-15"
                           }
@@ -1291,7 +1291,7 @@ export default function AddProductForm({
             <textarea
               value={baseStockItems}
               onChange={(e) => setBaseStockItems(e.target.value)}
-              rows={3}
+              rows={8}
               placeholder={
                 productType === "TOOL"
                   ? "Mỗi dòng là 1 tài khoản tool sẽ giao TỰ ĐỘNG cho khách (sẽ được MÃ HOÁ), ví dụ:\ntool1@example.com|MatKhau123\ntool2@example.com|MatKhau456"
@@ -1345,7 +1345,7 @@ export default function AddProductForm({
                 <textarea
                   value={baseExpiresAtItems}
                   onChange={(e) => setBaseExpiresAtItems(e.target.value)}
-                  rows={3}
+                  rows={6}
                   placeholder={
                     "Ngày hết hạn của TỪNG dòng ở ô kho phía trên, khớp đúng theo số thứ tự dòng — để trống dòng nào nếu dòng đó không có hạn, vd:\n2026-04-20\n2026-05-15"
                   }
@@ -1524,7 +1524,7 @@ export default function AddProductForm({
             required
             minLength={20}
             maxLength={20000}
-            rows={6}
+            rows={12}
             value={tutTrickContent}
             onChange={(e) => setTutTrickContent(e.target.value)}
             placeholder={"Viết đầy đủ quy trình/cách làm, ví dụ:\nBước 1: ...\nBước 2: ...\nLưu ý: ..."}
@@ -1547,7 +1547,7 @@ export default function AddProductForm({
             required
             minLength={20}
             maxLength={20000}
-            rows={6}
+            rows={12}
             value={toolUsageGuide}
             onChange={(e) => setToolUsageGuide(e.target.value)}
             placeholder={"Viết đầy đủ quy trình sử dụng, ví dụ:\nBước 1: Đăng nhập bằng tài khoản đã nhận...\nBước 2: ...\nLưu ý: ..."}
@@ -1735,7 +1735,7 @@ export default function AddProductForm({
           required
           minLength={PRODUCT_DESCRIPTION_MIN_LENGTH}
           maxLength={PRODUCT_DESCRIPTION_MAX_LENGTH}
-          rows={5}
+          rows={8}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder={"Mỗi dòng là 1 đoạn mô tả, ví dụ:\nTài khoản chính chủ, đã xác minh 2 lớp.\nBảo hành 7 ngày lỗi 1 đổi 1.\nGiao hàng tự động ngay sau khi thanh toán."}
