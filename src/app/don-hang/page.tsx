@@ -263,7 +263,7 @@ export default async function OrdersPage() {
                         categorySlug={row.categorySlug}
                         boxClassName="h-24 w-24 shrink-0 rounded-xl bg-surface-alt ring-1 ring-border-c sm:h-28 sm:w-28"
                         iconClassName="h-9 w-9 text-foreground/60 sm:h-10 sm:w-10"
-                        sizes="112px"
+                        sizes="(min-width: 640px) 112px, 96px"
                       />
 
                       <div className="min-w-0 flex-1">

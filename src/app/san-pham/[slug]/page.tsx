@@ -127,7 +127,7 @@ export default async function ProductDetailPage({
                   categorySlug={product.categorySlug}
                   boxClassName="h-[294px] w-full rounded-xl border-2 border-brand bg-surface-alt"
                   iconClassName="h-[92px] w-[92px] text-foreground/70"
-                  sizes="380px"
+                  sizes="(min-width: 1024px) 380px, 100vw"
                 />
               </div>
 

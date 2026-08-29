@@ -156,7 +156,7 @@ export default function CartPage() {
                           categorySlug={line.categorySlug ?? ""}
                           boxClassName="h-24 w-24 sm:h-28 sm:w-28 rounded-xl bg-surface-alt ring-1 ring-border-c"
                           iconClassName="h-9 w-9 text-foreground/60 sm:h-10 sm:w-10"
-                          sizes="112px"
+                          sizes="(min-width: 640px) 112px, 96px"
                         />
                       </Link>
 

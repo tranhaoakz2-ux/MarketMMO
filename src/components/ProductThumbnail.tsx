@@ -26,7 +26,7 @@ export default function ProductThumbnail({
   if (imageUrl) {
     return (
       <span className={`relative block overflow-hidden ${boxClassName}`}>
-        <Image src={imageUrl} alt="" fill className="object-cover" sizes={sizes} />
+        <Image src={imageUrl} alt="" fill quality={90} className="object-cover" sizes={sizes} />
       </span>
     );
   }

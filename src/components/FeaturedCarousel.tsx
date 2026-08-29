@@ -23,7 +23,7 @@ function FeaturedCard({ product }: { product: Product }) {
           categorySlug={product.categorySlug}
           boxClassName="h-[253px] w-full rounded-lg border-2 border-brand bg-surface-alt"
           iconClassName="h-16 w-16 text-foreground/70"
-          sizes="204px"
+          sizes="(min-width: 640px) 204px, 187px"
         />
         {/* 2 nguồn gốc khác nhau, 2 nhãn khác nhau: featuredViaAuction = đang
             thắng đấu giá vị trí vàng THẬT (Product.featuredUntil > now, xem
