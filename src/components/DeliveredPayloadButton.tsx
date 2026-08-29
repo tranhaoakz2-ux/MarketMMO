@@ -57,6 +57,7 @@ export default function DeliveredPayloadButton({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [copiedAll, setCopiedAll] = useState(false);
   const [contents, setContents] = useState<string[]>([]);
   const [expiresAtList, setExpiresAtList] = useState<(string | null)[]>([]);
   const [usageGuide, setUsageGuide] = useState<string | null>(null);
@@ -121,6 +122,16 @@ export default function DeliveredPayloadButton({
     await navigator.clipboard.writeText(text);
     setCopiedIndex(idx);
     setTimeout(() => setCopiedIndex((i) => (i === idx ? null : i)), 1500);
+  };
+
+  // Copy TOÀN BỘ contents (mỗi tài khoản/đơn vị đã giao) vào clipboard 1 lần
+  // — mỗi phần tử 1 dòng, cách nhau \n, để buyer dán thẳng vào file .txt là
+  // mỗi tài khoản 1 dòng. Dùng lại đúng cơ chế navigator.clipboard.writeText
+  // như handleCopy() ở trên, chỉ khác input là cả mảng join lại.
+  const handleCopyAll = async () => {
+    await navigator.clipboard.writeText(contents.join("\n"));
+    setCopiedAll(true);
+    setTimeout(() => setCopiedAll(false), 1500);
   };
 
   if (!open) {
@@ -208,6 +219,22 @@ export default function DeliveredPayloadButton({
         {mode === "tool" && contents.length > 0 && (
           <p className="text-[10px] font-bold uppercase text-muted">Tài khoản của bạn</p>
         )}
+        {contents.length > 1 && (
+          <button
+            onClick={handleCopyAll}
+            className="flex items-center justify-center gap-1.5 self-start rounded border border-border-c bg-surface px-2.5 py-1.5 text-[11px] font-semibold text-foreground transition hover:border-brand-dark hover:text-brand-dark"
+          >
+            {copiedAll ? (
+              <>
+                <Check className="h-3 w-3 text-success" /> Đã copy!
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" /> Copy toàn bộ ({contents.length})
+              </>
+            )}
+          </button>
+        )}
         {contents.map((content, idx) => (
           <div key={idx} className="flex items-start justify-between gap-2 rounded border border-border-c bg-surface p-2.5">
             <p className="min-w-0 flex-1 whitespace-pre-wrap text-[12px] leading-relaxed text-foreground">
@@ -256,6 +283,22 @@ export default function DeliveredPayloadButton({
 
   return (
     <div className="mt-1.5 flex w-64 flex-col gap-1.5 rounded-lg border border-success/30 bg-success/5 p-2">
+      {contents.length > 1 && (
+        <button
+          onClick={handleCopyAll}
+          className="flex items-center justify-center gap-1.5 self-start rounded border border-border-c bg-surface px-2.5 py-1.5 text-[11px] font-semibold text-foreground transition hover:border-brand-dark hover:text-brand-dark"
+        >
+          {copiedAll ? (
+            <>
+              <Check className="h-3 w-3 text-success" /> Đã copy!
+            </>
+          ) : (
+            <>
+              <Copy className="h-3 w-3" /> Copy toàn bộ ({contents.length})
+            </>
+          )}
+        </button>
+      )}
       {contents.map((content, idx) => {
         const expiresAtRaw = expiresAtList[idx];
         const expiry = expiresAtRaw ? formatDaysRemaining(expiresAtRaw) : null;
