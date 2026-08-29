@@ -400,6 +400,7 @@ export default function AddProductForm({
     setWarrantyValue("7");
     setWarrantyUnit("day");
     setNoWarranty(false);
+    setWarrantyPolicy("");
   };
 
   // Đăng sản phẩm + phiên bản + nhập kho TRONG CÙNG 1 LẦN GỬI — thay vì phải
