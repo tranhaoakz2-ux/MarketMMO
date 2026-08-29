@@ -1014,8 +1014,8 @@ export default function AddProductForm({
               <input
                 type="number"
                 required
-                min={1000}
-                step={1000}
+                min={1}
+                step={1}
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="VD: 15000"
@@ -1174,8 +1174,8 @@ export default function AddProductForm({
                   <input
                     type="number"
                     required
-                    min={1000}
-                    step={1000}
+                    min={1}
+                    step={1}
                     value={v.price}
                     onChange={(e) => updateVariant(v.key, "price", e.target.value)}
                     placeholder="Giá (đ)"

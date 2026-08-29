@@ -152,10 +152,10 @@ export async function POST(req: Request) {
   // lọt qua rồi gây lỗi runtime không kiểm soát lúc ghi DB. Giờ ép nguyên +
   // chặn trần hợp lý.
   const price = Number(priceRaw);
-  if (!Number.isInteger(price) || price < 1000 || price > MAX_PRODUCT_PRICE_VND) {
+  if (!Number.isInteger(price) || price < 1 || price > MAX_PRODUCT_PRICE_VND) {
     return NextResponse.json(
       {
-        error: `Giá phải là số nguyên, từ 1.000đ đến ${MAX_PRODUCT_PRICE_VND.toLocaleString("vi-VN")}đ.`,
+        error: `Giá phải là số nguyên, từ 1đ đến ${MAX_PRODUCT_PRICE_VND.toLocaleString("vi-VN")}đ.`,
       },
       { status: 400 }
     );

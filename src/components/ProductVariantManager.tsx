@@ -287,8 +287,8 @@ function AddVariantForm({
       <input
         type="number"
         required
-        min={1000}
-        step={1000}
+        min={1}
+        step={1}
         value={price}
         onChange={(e) => setPrice(e.target.value)}
         placeholder="Giá (đ)"

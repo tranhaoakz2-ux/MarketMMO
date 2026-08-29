@@ -67,8 +67,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (body.price !== undefined) {
     const price = Number(body.price);
-    if (!Number.isFinite(price) || price < 1000) {
-      return NextResponse.json({ error: "Giá phải là số, tối thiểu 1.000đ." }, { status: 400 });
+    if (!Number.isInteger(price) || price < 1) {
+      return NextResponse.json({ error: "Giá phải là số nguyên, tối thiểu 1đ." }, { status: 400 });
     }
     data.price = price;
   }
@@ -78,8 +78,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       data.priceMax = null;
     } else {
       const priceMax = Number(body.priceMax);
-      if (!Number.isFinite(priceMax) || priceMax < 1000) {
-        return NextResponse.json({ error: "Giá cao nhất không hợp lệ." }, { status: 400 });
+      if (!Number.isInteger(priceMax) || priceMax < 1) {
+        return NextResponse.json({ error: "Giá cao nhất phải là số nguyên, tối thiểu 1đ." }, { status: 400 });
       }
       data.priceMax = priceMax;
     }

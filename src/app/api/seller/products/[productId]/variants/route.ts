@@ -30,10 +30,10 @@ export async function POST(
   // PRODUCT_LISTING_AUDIT.md #5 — cùng lớp bug với sản phẩm gốc: giá không
   // nguyên/vượt Int32 lọt qua Number.isFinite rồi gây lỗi runtime khi ghi
   // Postgres Int.
-  if (!Number.isInteger(price) || price < 1000 || price > MAX_PRODUCT_PRICE_VND) {
+  if (!Number.isInteger(price) || price < 1 || price > MAX_PRODUCT_PRICE_VND) {
     return NextResponse.json(
       {
-        error: `Giá phiên bản phải là số nguyên, từ 1.000đ đến ${MAX_PRODUCT_PRICE_VND.toLocaleString("vi-VN")}đ.`,
+        error: `Giá phiên bản phải là số nguyên, từ 1đ đến ${MAX_PRODUCT_PRICE_VND.toLocaleString("vi-VN")}đ.`,
       },
       { status: 400 }
     );
