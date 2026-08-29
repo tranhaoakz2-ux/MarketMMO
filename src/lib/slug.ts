@@ -20,16 +20,18 @@ function toAsciiSlug(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-// Slug gian hàng người bán — GIỮ NGUYÊN hành vi cũ (không strip dấu), KHÔNG
-// sửa cùng lúc với danh mục/sản phẩm dù có cùng dạng lỗi tiềm ẩn: trang chi
-// tiết sản phẩm (san-pham/[slug]/page.tsx) TỰ TÍNH LẠI slug gian hàng từ
-// product.seller (tên) mỗi lần render thay vì đọc Seller.slug đã lưu — đổi
-// thuật toán ở đây mà không đồng thời sửa cách tính lại đó sẽ làm link "Xem
-// Shop" của seller có tên tiếng Việt ĐANG hoạt động (slug cũ đã lưu trong DB
-// từ lúc đăng ký) trỏ sai sang slug mới không tồn tại. Cần xử lý riêng nếu
-// muốn sửa — ngoài phạm vi lần sửa bug danh mục/sản phẩm 404 này.
+// Slug gian hàng người bán — dùng CHUNG chuẩn toAsciiSlug() với sản phẩm/
+// danh mục (2026-08-29, vá bug 404 "slug lưu ký tự lạ" — trước đây hàm này
+// chỉ lowercase + thay khoảng trắng, GIỮ NGUYÊN dấu tiếng Việt/ký tự Latin có
+// dấu như "ö", khiến slug lưu trong DB có thể chứa ký tự ngoài a-z0-9-, gây
+// 404 khi route [seller] không khớp được). CHỈ áp dụng cho slug MỚI sinh ra ở
+// POST /api/seller/register — KHÔNG hồi tố slug cũ đã lưu (seller đã đăng ký
+// trước đây vẫn giữ nguyên slug hiện có, kể cả nếu có ký tự lạ; xử lý dữ liệu
+// cũ là việc RIÊNG, không tự động chạy kèm đây). Cơ chế chống trùng slug khi
+// đăng ký (nối thêm 5 ký tự cuối userId nếu đã có seller khác trùng slug) đã
+// có sẵn ở route register, không phụ thuộc thuật toán slugify bên trong.
 export function slugifySeller(name: string): string {
-  return name.toLowerCase().trim().replace(/\s+/g, "-");
+  return toAsciiSlug(name);
 }
 
 /** Dùng chung cho slug sản phẩm — bỏ dấu tiếng Việt, chỉ còn a-z0-9- (xem toAsciiSlug ở trên). */
