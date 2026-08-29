@@ -105,15 +105,13 @@ export default function ProductCard({ product }: { product: Product }) {
               lượt xem
             </span>
             {outOfStock && (
-              <span className="mt-0.5 inline-flex w-fit rounded-md bg-danger p-1 shadow-lg">
-                <Image
-                  src="/images/het-hang.png"
-                  alt="Hết hàng"
-                  width={1609}
-                  height={622}
-                  className="block h-auto w-12 sm:w-16"
-                />
-              </span>
+              <Image
+                src="/images/het-hang.png"
+                alt="Hết hàng"
+                width={1609}
+                height={622}
+                className="mt-0.5 h-auto w-12 sm:w-16"
+              />
             )}
           </div>
           <div className="shrink-0 text-right">

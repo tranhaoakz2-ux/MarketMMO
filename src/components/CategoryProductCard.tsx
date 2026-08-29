@@ -53,15 +53,13 @@ export default function CategoryProductCard({ product }: { product: Product }) {
               Tồn kho: {product.stock}
             </p>
             {outOfStock && (
-              <span className="mt-1 inline-flex w-fit rounded-md bg-danger p-1 shadow-lg">
-                <Image
-                  src="/images/het-hang.png"
-                  alt="Hết hàng"
-                  width={1609}
-                  height={622}
-                  className="block h-auto w-14 sm:w-20"
-                />
-              </span>
+              <Image
+                src="/images/het-hang.png"
+                alt="Hết hàng"
+                width={1609}
+                height={622}
+                className="mt-1 h-auto w-14 sm:w-20"
+              />
             )}
             {product.megaSale?.active ? (
               <>
