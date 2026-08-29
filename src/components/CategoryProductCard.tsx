@@ -42,13 +42,15 @@ export default function CategoryProductCard({ product }: { product: Product }) {
                   trùng" ở góc trên-trái khi sản phẩm hết hàng — 2 nhãn cùng vị
                   trí, loại trừ lẫn nhau, không chồng lên nhau. */}
               {outOfStock ? (
-                <Image
-                  src="/images/het-hang.png"
-                  alt="Hết hàng"
-                  width={1609}
-                  height={622}
-                  className="absolute left-0 top-0 h-auto w-14 sm:w-20"
-                />
+                <span className="absolute left-0 top-0 rounded-md bg-danger p-1 shadow-lg">
+                  <Image
+                    src="/images/het-hang.png"
+                    alt="Hết hàng"
+                    width={1609}
+                    height={622}
+                    className="block h-auto w-14 sm:w-20"
+                  />
+                </span>
               ) : (
                 <span className="absolute left-0 top-0 rounded bg-brand px-1.5 py-[3px] text-[10px] font-extrabold uppercase text-ink">
                   Không trùng

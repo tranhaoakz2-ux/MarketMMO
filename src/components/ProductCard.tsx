@@ -33,13 +33,15 @@ export default function ProductCard({ product }: { product: Product }) {
                 sizes="(min-width: 640px) 120px, 96px"
               />
               {outOfStock && (
-                <Image
-                  src="/images/het-hang.png"
-                  alt="Hết hàng"
-                  width={1609}
-                  height={622}
-                  className="absolute left-0 top-0 h-auto w-12 sm:w-16"
-                />
+                <span className="absolute left-0 top-0 rounded-md bg-danger p-1 shadow-lg">
+                  <Image
+                    src="/images/het-hang.png"
+                    alt="Hết hàng"
+                    width={1609}
+                    height={622}
+                    className="block h-auto w-12 sm:w-16"
+                  />
+                </span>
               )}
               {product.hot && (
                 <span
