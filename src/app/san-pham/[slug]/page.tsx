@@ -38,7 +38,6 @@ import { getRecentForumPosts } from "@/lib/forum";
 import { getProductBySlugDb, getProductReviews, getRelatedProductsDb } from "@/lib/queries";
 import { absoluteUrl, DEFAULT_OG_IMAGE, truncate } from "@/lib/seo";
 import { getSellerLevelConfigs, resolveLevelBadge } from "@/lib/seller-level";
-import { slugifySeller } from "@/lib/slug";
 import { formatProductWarranty } from "@/lib/warranty";
 
 export const dynamic = "force-dynamic";
@@ -136,7 +135,7 @@ export default async function ProductDetailPage({
                   <Heart className="h-3.5 w-3.5" /> Thêm sản phẩm Yêu thích
                 </button>
                 <Link
-                  href={`/shop/${slugifySeller(product.seller)}`}
+                  href={`/shop/${product.sellerSlug}`}
                   className="flex items-center justify-center gap-1.5 rounded-lg border border-border-c py-2 text-xs font-semibold text-foreground hover:bg-surface-alt"
                 >
                   <Store className="h-3.5 w-3.5" /> Xem Shop
@@ -167,7 +166,7 @@ export default async function ProductDetailPage({
               <div className="flex flex-wrap items-center gap-2.5 rounded-xl bg-surface-alt px-3.5 py-3">
                 <SellerAvatar avatarUrl={product.sellerAvatarUrl} shopName={product.seller} size={32} />
                 <Link
-                  href={`/shop/${slugifySeller(product.seller)}`}
+                  href={`/shop/${product.sellerSlug}`}
                   className="text-sm font-bold text-success hover:underline"
                 >
                   {product.seller}
@@ -293,7 +292,7 @@ export default async function ProductDetailPage({
               warrantyPolicy={product.warrantyPolicy ?? null}
               rating={product.rating}
               reviewCount={product.reviewCount}
-              sellerShopHref={`/shop/${slugifySeller(product.seller)}`}
+              sellerShopHref={`/shop/${product.sellerSlug}`}
               sellerId={product.sellerId ?? null}
               productId={product.id}
               productReviews={productReviews}

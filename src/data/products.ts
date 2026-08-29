@@ -40,6 +40,8 @@ export type Product = {
   sold: number;
   views: number;
   seller: string;
+  /** Slug THẬT đã lưu lúc seller đăng ký (Seller.slug, KHÔNG đổi khi seller đổi tên shop sau này) — dùng cho link "Xem gian hàng" (/shop/[sellerSlug]), KHÔNG tự tính lại từ `seller` (tên) vì tên có thể đã đổi, gây 404. Chỉ có khi fetch qua getProductBySlugDb (trang chi tiết) — seed/mock data không set field này. */
+  sellerSlug?: string;
   sellerLevel: number;
   /** Avatar gian hàng — null/undefined nếu seller chưa upload (UI fallback chữ cái đầu tên shop, xem SellerAvatar.tsx). Seed/mock data không có ảnh thật. */
   sellerAvatarUrl?: string | null;

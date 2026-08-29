@@ -95,6 +95,11 @@ function mapProduct(p: ProductWithRelations): Product {
     sold: p.sold,
     views: p.views,
     seller: p.seller.shopName,
+    // Slug THẬT đã lưu lúc seller đăng ký (Seller.slug, KHÔNG đổi khi seller
+    // sau này đổi tên shop) — dùng cho link "Xem gian hàng", KHÔNG tự tính
+    // lại từ `seller` (tên) ở trên vì tên có thể đã đổi, gây 404 (xem
+    // src/lib/slug.ts, slugifySeller()).
+    sellerSlug: p.seller.slug,
     sellerLevel: p.seller.level,
     sellerAvatarUrl: p.seller.avatarUrl,
     verified: p.verified,
