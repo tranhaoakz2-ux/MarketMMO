@@ -1,0 +1,14 @@
+-- Thêm cột Product.pausedBySeller — seller tự bật/tắt "tạm ẩn không cho mua"
+-- CHO 1 SẢN PHẨM CỤ THỂ, ĐỘC LẬP với số lượng kho (Product.stock/
+-- ProductVariant.stock) — dùng khi 1 lô hàng bị lỗi (sai pass...) nhưng kho
+-- vẫn còn số lượng, seller muốn tạm ẩn không cho mua tới khi xử lý xong.
+-- Khác hẳn Product.isActive (admin ẩn/hiện, không phải seller) và
+-- Product.status (luồng duyệt đăng, không phải tạm dừng bán).
+--
+-- AN TOÀN MIGRATION: ADD COLUMN với DEFAULT cố định (false) — Postgres 11+
+-- áp default này KHÔNG rewrite toàn bảng, chỉ ghi metadata, chạy gần như tức
+-- thời dù bảng có bao nhiêu dòng. Toàn bộ sản phẩm hiện có tự động nhận
+-- pausedBySeller=false (y hệt hành vi cũ — vẫn mua bình thường), không xoá/
+-- đổi cột hay dòng nào khác. IF NOT EXISTS để chạy lại an toàn nếu lỡ chạy
+-- 2 lần.
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "pausedBySeller" BOOLEAN NOT NULL DEFAULT false;

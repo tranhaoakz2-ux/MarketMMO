@@ -138,6 +138,17 @@ export async function POST(req: Request) {
         if (!product.isActive) {
           throw new Error(`"${product.name}" hiện đã bị ẩn khỏi sàn, không thể mua.`);
         }
+        // Seller tự tạm dừng bán, ĐỘC LẬP với số lượng kho (vd 1 lô hàng bị
+        // lỗi mật khẩu nhưng Product.stock vẫn còn số lượng) — chặn CỨNG ở
+        // đây, cùng nhóm với 3 điều kiện chặn cứng ở trên, để áp dụng cho MỌI
+        // loại hàng (kể cả dịch vụ/TUT_TRICK/VPS thủ công và sản phẩm dùng
+        // "kho thật" — 2 nhánh đó có luồng kiểm tra tồn kho RIÊNG, tách biệt
+        // hoàn toàn khỏi điều kiện `product.stock < quantity` bên dưới, nên
+        // không thể chỉ thêm điều kiện vào đúng chỗ đó). Khớp đúng hành vi
+        // isOutOfStock() dùng ở UI (src/lib/stock-status.ts).
+        if (product.pausedBySeller) {
+          throw new Error(`"${product.name}" hiện đang hết hàng, không thể mua.`);
+        }
         if (product.seller.suspended) {
           throw new Error(`Gian hàng bán "${product.name}" hiện đang bị tạm khoá, không thể mua.`);
         }

@@ -547,6 +547,16 @@ model Product {
   // bị admin ẩn), khác REJECTED (seller coi như sản phẩm không tồn tại).
   isActive  Boolean  @default(true)
 
+  // Seller tự tạm dừng bán 1 sản phẩm CỦA CHÍNH MÌNH, ĐỘC LẬP với số lượng
+  // kho (Product.stock/ProductVariant.stock) — dùng khi 1 lô hàng bị lỗi (vd
+  // sai mật khẩu) nhưng kho vẫn còn số lượng, seller muốn chặn mua tạm thời
+  // tới khi xử lý xong. KHÁC HẲN `isActive` ở trên (đó là quyền ADMIN, không
+  // phải seller) và `status` (luồng duyệt đăng, không phải tạm dừng bán).
+  // true = coi như hết hàng ở mọi nơi (xem isOutOfStock() trong
+  // src/lib/stock-status.ts) — ẩn khỏi khả năng mua, KHÔNG ẩn khỏi listing
+  // công khai (khác isActive), seller vẫn thấy đầy đủ trong trang quản lý.
+  pausedBySeller Boolean @default(false)
+
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
   sellerId   String

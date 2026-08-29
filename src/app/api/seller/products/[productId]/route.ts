@@ -157,6 +157,23 @@ export async function PATCH(
     return NextResponse.json({ warrantyPolicy: updated.warrantyPolicy });
   }
 
+  // "Hết hàng" — seller tự bật/tắt tạm dừng bán, ĐỘC LẬP với số lượng kho
+  // (Product.stock/ProductVariant.stock KHÔNG đổi gì) — vd 1 lô hàng bị lỗi
+  // mật khẩu nhưng kho vẫn còn số lượng. Chốt chặn mua THẬT nằm ở POST
+  // /api/checkout (kiểm tra product.pausedBySeller trước khi trừ kho/tạo
+  // đơn) — field này ở đây chỉ đổi cờ, không có validate gì thêm (cùng độ
+  // đơn giản với việc tắt Mega Sale ở trên).
+  if (body && typeof body === "object" && "pausedBySeller" in body) {
+    if (typeof body.pausedBySeller !== "boolean") {
+      return NextResponse.json({ error: "Dữ liệu không hợp lệ." }, { status: 400 });
+    }
+    const updated = await prisma.product.update({
+      where: { id: productId },
+      data: { pausedBySeller: body.pausedBySeller },
+    });
+    return NextResponse.json({ pausedBySeller: updated.pausedBySeller });
+  }
+
   if (typeof body?.preOrder !== "boolean") {
     return NextResponse.json({ error: "Dữ liệu không hợp lệ." }, { status: 400 });
   }

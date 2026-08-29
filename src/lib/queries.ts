@@ -111,6 +111,7 @@ function mapProduct(p: ProductWithRelations): Product {
     status: p.status as "PENDING" | "APPROVED" | "REJECTED",
     adminNote: p.adminNote,
     isActive: p.isActive,
+    pausedBySeller: p.pausedBySeller,
     variants: p.variants.map((v) => ({
       id: v.id,
       label: v.label,
@@ -1427,6 +1428,7 @@ export async function getSellerOutOfStockCount(sellerId: string): Promise<number
       productType: true,
       deliveryMethod: true,
       preOrder: true,
+      pausedBySeller: true,
       variants: { select: { stock: true } },
     },
   });

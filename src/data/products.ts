@@ -72,6 +72,12 @@ export type Product = {
       true ở DB) vì mapProduct() luôn map field này, không như status/
       adminNote (chỉ có ý nghĩa cho seller xem sản phẩm của chính mình). */
   isActive?: boolean;
+  /** Seller tự tạm dừng bán sản phẩm này, ĐỘC LẬP với số lượng kho — khác
+      hẳn `isActive` ở trên (đó là quyền admin). true = coi như hết hàng ở
+      mọi nơi (xem isOutOfStock() trong src/lib/stock-status.ts). Luôn có
+      giá trị khi fetch qua DB (default false), mapProduct() luôn map field
+      này giống isActive. */
+  pausedBySeller?: boolean;
   /** Đã có kho dữ liệu giao hàng thật (ProductStockItem) hay chưa — chỉ có khi fetch qua getMySellerProducts, áp dụng cho sản phẩm KHÔNG có variant nào. */
   stockManaged?: boolean;
   /** Số bản ghi kho thật còn AVAILABLE (sản phẩm không có variant) — chỉ có khi fetch qua getMySellerProducts. */

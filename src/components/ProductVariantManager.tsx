@@ -471,6 +471,10 @@ export default function ProductVariantManager() {
   const [warrantyPolicyId, setWarrantyPolicyId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  // Chặn double-click khi đang gọi PATCH bật/tắt "Hết hàng" (không cần modal
+  // — chỉ là 1 cờ boolean, khác Mega Sale/Chính sách bảo hành cần nhập thêm
+  // dữ liệu nên phải mở modal riêng).
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -485,6 +489,20 @@ export default function ProductVariantManager() {
       setProducts(data.products);
     }
     setLoading(false);
+  };
+
+  // Bật/tắt "Hết hàng" — gọi PATCH ngay khi bấm (không mở modal, không cần
+  // nhập thêm gì), rồi load() lại danh sách để mọi nơi (badge, banner cảnh
+  // báo hết hàng) tự cập nhật theo isOutOfStock() dùng chung.
+  const togglePause = async (p: Product) => {
+    setTogglingId(p.id);
+    await fetch(`/api/seller/products/${p.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pausedBySeller: !p.pausedBySeller }),
+    });
+    await load();
+    setTogglingId(null);
   };
 
   useEffect(() => {
@@ -671,6 +689,23 @@ export default function ProductVariantManager() {
             }`}
           >
             {p.warrantyPolicyLocked ? <Lock className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            title={
+              p.pausedBySeller
+                ? "Đang tạm dừng bán — bấm để mở bán lại"
+                : "Tạm dừng bán (hết hàng thủ công), độc lập với số lượng kho"
+            }
+            onClick={() => togglePause(p)}
+            disabled={togglingId === p.id}
+            className={`grid h-8 w-8 place-items-center rounded-lg border transition disabled:opacity-50 ${
+              p.pausedBySeller
+                ? "border-danger bg-danger/10 text-danger"
+                : "border-border-c bg-surface text-foreground hover:border-brand-dark hover:text-brand-dark"
+            }`}
+          >
+            <PackageX className="h-4 w-4" />
           </button>
         </div>
       ),
