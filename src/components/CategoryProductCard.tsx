@@ -38,24 +38,9 @@ export default function CategoryProductCard({ product }: { product: Product }) {
                 iconClassName="h-12 w-12 text-foreground/70 sm:h-16 sm:w-16"
                 sizes="(min-width: 640px) 170px, 100px"
               />
-              {/* HẾT HÀNG (ảnh public/images/het-hang.png) thay thế "Không
-                  trùng" ở góc trên-trái khi sản phẩm hết hàng — 2 nhãn cùng vị
-                  trí, loại trừ lẫn nhau, không chồng lên nhau. */}
-              {outOfStock ? (
-                <span className="absolute left-0 top-0 rounded-md bg-danger p-1 shadow-lg">
-                  <Image
-                    src="/images/het-hang.png"
-                    alt="Hết hàng"
-                    width={1609}
-                    height={622}
-                    className="block h-auto w-14 sm:w-20"
-                  />
-                </span>
-              ) : (
-                <span className="absolute left-0 top-0 rounded bg-brand px-1.5 py-[3px] text-[10px] font-extrabold uppercase text-ink">
-                  Không trùng
-                </span>
-              )}
+              <span className="absolute left-0 top-0 rounded bg-brand px-1.5 py-[3px] text-[10px] font-extrabold uppercase text-ink">
+                Không trùng
+              </span>
               {product.hot && (
                 <span className="absolute bottom-1 right-1 flex items-center gap-0.5 rounded bg-brand px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-ink">
                   <Crown className="h-2.5 w-2.5" /> Tài trợ
@@ -67,6 +52,17 @@ export default function CategoryProductCard({ product }: { product: Product }) {
             <p className={`text-sm font-bold ${outOfStock ? "text-danger" : "text-success"}`}>
               Tồn kho: {product.stock}
             </p>
+            {outOfStock && (
+              <span className="mt-1 inline-flex w-fit rounded-md bg-danger p-1 shadow-lg">
+                <Image
+                  src="/images/het-hang.png"
+                  alt="Hết hàng"
+                  width={1609}
+                  height={622}
+                  className="block h-auto w-14 sm:w-20"
+                />
+              </span>
+            )}
             {product.megaSale?.active ? (
               <>
                 <p className="mt-1 text-xs text-muted line-through">

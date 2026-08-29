@@ -32,17 +32,6 @@ export default function ProductCard({ product }: { product: Product }) {
                 iconClassName="h-10 w-10 text-foreground/70 sm:h-12 sm:w-12"
                 sizes="(min-width: 640px) 120px, 96px"
               />
-              {outOfStock && (
-                <span className="absolute left-0 top-0 rounded-md bg-danger p-1 shadow-lg">
-                  <Image
-                    src="/images/het-hang.png"
-                    alt="Hết hàng"
-                    width={1609}
-                    height={622}
-                    className="block h-auto w-12 sm:w-16"
-                  />
-                </span>
-              )}
               {product.hot && (
                 <span
                   className={`absolute flex items-center gap-0.5 rounded-full bg-danger px-1.5 py-0.5 text-[9px] font-bold text-white shadow ${
@@ -115,6 +104,17 @@ export default function ProductCard({ product }: { product: Product }) {
               <Eye className="h-3.5 w-3.5" /> {product.views.toLocaleString("vi-VN")}{" "}
               lượt xem
             </span>
+            {outOfStock && (
+              <span className="mt-0.5 inline-flex w-fit rounded-md bg-danger p-1 shadow-lg">
+                <Image
+                  src="/images/het-hang.png"
+                  alt="Hết hàng"
+                  width={1609}
+                  height={622}
+                  className="block h-auto w-12 sm:w-16"
+                />
+              </span>
+            )}
           </div>
           <div className="shrink-0 text-right">
             {product.megaSale?.active ? (
