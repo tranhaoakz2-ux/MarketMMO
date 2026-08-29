@@ -1,4 +1,5 @@
-import { BadgeCheck, Crown, PackageX, ShieldCheck, Star } from "lucide-react";
+import { BadgeCheck, Crown, ShieldCheck, Star } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import MegaSaleLogo from "@/components/MegaSaleLogo";
 import ProductThumbnail from "@/components/ProductThumbnail";
@@ -46,12 +47,19 @@ export default function CategoryProductCard({ product }: { product: Product }) {
                 </span>
               )}
             </div>
-            {/* HẾT HÀNG — nằm NGAY DƯỚI ảnh (không phải góc trên-phải card,
-                chỗ đó dành cho nhãn Mega Sale), khớp đúng độ rộng khung ảnh. */}
+            {/* HẾT HÀNG — ảnh do admin/seller cung cấp (public/images/het-hang.png,
+                tỉ lệ gốc 1609x622), nằm NGAY DƯỚI ảnh sản phẩm, rộng ~64-66%
+                khung ảnh để không lấn/vỡ layout card. width/height truyền
+                đúng tỉ lệ gốc — next/image tự nén khi trả về, không phải
+                nguyên file 1.2MB. */}
             {outOfStock && (
-              <span className="flex w-[100px] items-center justify-center gap-1 rounded-full bg-danger px-2.5 py-1 text-sm font-black text-white shadow-lg sm:w-[170px]">
-                <PackageX className="h-4 w-4" /> HẾT HÀNG
-              </span>
+              <Image
+                src="/images/het-hang.png"
+                alt="Hết hàng"
+                width={1609}
+                height={622}
+                className="h-auto w-16 sm:w-28"
+              />
             )}
           </div>
           <div className="min-w-0 text-left sm:mt-2 sm:w-full sm:text-center">
