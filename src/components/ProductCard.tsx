@@ -32,9 +32,15 @@ export default function ProductCard({ product }: { product: Product }) {
                 iconClassName="h-10 w-10 text-foreground/70 sm:h-12 sm:w-12"
                 sizes="(min-width: 640px) 120px, 96px"
               />
-              <span className="absolute left-0 top-0 rounded-br-lg bg-brand px-2.5 py-1 text-[11px] font-black text-ink">
-                {product.categoryLabel}
-              </span>
+              {outOfStock && (
+                <Image
+                  src="/images/het-hang.png"
+                  alt="Hết hàng"
+                  width={1609}
+                  height={622}
+                  className="absolute left-0 top-0 h-auto w-12 sm:w-16"
+                />
+              )}
               {product.hot && (
                 <span
                   className={`absolute flex items-center gap-0.5 rounded-full bg-danger px-1.5 py-0.5 text-[9px] font-bold text-white shadow ${
@@ -50,20 +56,6 @@ export default function ProductCard({ product }: { product: Product }) {
                 </span>
               )}
             </div>
-            {/* HẾT HÀNG — ảnh do admin/seller cung cấp (public/images/het-hang.png,
-                tỉ lệ gốc 1609x622), nằm NGAY DƯỚI ảnh sản phẩm, rộng ~65-67%
-                khung ảnh để không lấn/vỡ layout card. width/height truyền
-                đúng tỉ lệ gốc — next/image tự nén khi trả về, không phải
-                nguyên file 1.2MB. */}
-            {outOfStock && (
-              <Image
-                src="/images/het-hang.png"
-                alt="Hết hàng"
-                width={1609}
-                height={622}
-                className="h-auto w-16 sm:w-20"
-              />
-            )}
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col">

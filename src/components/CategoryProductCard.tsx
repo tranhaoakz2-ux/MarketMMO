@@ -38,29 +38,28 @@ export default function CategoryProductCard({ product }: { product: Product }) {
                 iconClassName="h-12 w-12 text-foreground/70 sm:h-16 sm:w-16"
                 sizes="(min-width: 640px) 170px, 100px"
               />
-              <span className="absolute left-0 top-0 rounded bg-brand px-1.5 py-[3px] text-[10px] font-extrabold uppercase text-ink">
-                Không trùng
-              </span>
+              {/* HẾT HÀNG (ảnh public/images/het-hang.png) thay thế "Không
+                  trùng" ở góc trên-trái khi sản phẩm hết hàng — 2 nhãn cùng vị
+                  trí, loại trừ lẫn nhau, không chồng lên nhau. */}
+              {outOfStock ? (
+                <Image
+                  src="/images/het-hang.png"
+                  alt="Hết hàng"
+                  width={1609}
+                  height={622}
+                  className="absolute left-0 top-0 h-auto w-14 sm:w-20"
+                />
+              ) : (
+                <span className="absolute left-0 top-0 rounded bg-brand px-1.5 py-[3px] text-[10px] font-extrabold uppercase text-ink">
+                  Không trùng
+                </span>
+              )}
               {product.hot && (
                 <span className="absolute bottom-1 right-1 flex items-center gap-0.5 rounded bg-brand px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-ink">
                   <Crown className="h-2.5 w-2.5" /> Tài trợ
                 </span>
               )}
             </div>
-            {/* HẾT HÀNG — ảnh do admin/seller cung cấp (public/images/het-hang.png,
-                tỉ lệ gốc 1609x622), nằm NGAY DƯỚI ảnh sản phẩm, rộng ~64-66%
-                khung ảnh để không lấn/vỡ layout card. width/height truyền
-                đúng tỉ lệ gốc — next/image tự nén khi trả về, không phải
-                nguyên file 1.2MB. */}
-            {outOfStock && (
-              <Image
-                src="/images/het-hang.png"
-                alt="Hết hàng"
-                width={1609}
-                height={622}
-                className="h-auto w-16 sm:w-28"
-              />
-            )}
           </div>
           <div className="min-w-0 text-left sm:mt-2 sm:w-full sm:text-center">
             <p className={`text-sm font-bold ${outOfStock ? "text-danger" : "text-success"}`}>
