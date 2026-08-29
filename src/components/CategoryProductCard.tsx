@@ -21,11 +21,6 @@ export default function CategoryProductCard({ product }: { product: Product }) {
       href={`/san-pham/${product.slug}`}
       className="group relative flex flex-col rounded-lg border-2 border-transparent bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand hover:shadow-[0_12px_28px_rgba(224,196,0,0.25),0_4px_10px_rgba(0,0,0,0.05)]"
     >
-      {outOfStock && (
-        <span className="absolute -right-2.5 -top-2.5 z-10 flex items-center gap-1 rounded-full bg-danger px-2.5 py-1 text-sm font-black text-white shadow-lg">
-          <PackageX className="h-4 w-4" /> HẾT HÀNG
-        </span>
-      )}
       {product.megaSale?.active && !outOfStock && (
         <span className="absolute -right-2.5 -top-2.5 z-10">
           <MegaSaleLogo size={64} className="h-12 w-12 sm:h-16 sm:w-16" />
@@ -33,20 +28,29 @@ export default function CategoryProductCard({ product }: { product: Product }) {
       )}
       <div className="flex flex-col overflow-hidden rounded-lg sm:flex-row">
         <div className="flex flex-row items-center gap-4 border-b border-dashed border-border-c p-4 sm:w-[220px] sm:shrink-0 sm:flex-col sm:border-b-0 sm:border-r">
-          <div className="relative h-[100px] w-[100px] shrink-0 sm:h-[170px] sm:w-[170px]">
-            <ProductThumbnail
-              imageUrl={product.imageUrl}
-              categorySlug={product.categorySlug}
-              boxClassName="h-full w-full rounded bg-surface-alt ring-1 ring-border-c"
-              iconClassName="h-12 w-12 text-foreground/70 sm:h-16 sm:w-16"
-              sizes="(min-width: 640px) 170px, 100px"
-            />
-            <span className="absolute left-0 top-0 rounded bg-brand px-1.5 py-[3px] text-[10px] font-extrabold uppercase text-ink">
-              Không trùng
-            </span>
-            {product.hot && (
-              <span className="absolute bottom-1 right-1 flex items-center gap-0.5 rounded bg-brand px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-ink">
-                <Crown className="h-2.5 w-2.5" /> Tài trợ
+          <div className="flex shrink-0 flex-col items-center gap-1.5">
+            <div className="relative h-[100px] w-[100px] sm:h-[170px] sm:w-[170px]">
+              <ProductThumbnail
+                imageUrl={product.imageUrl}
+                categorySlug={product.categorySlug}
+                boxClassName="h-full w-full rounded bg-surface-alt ring-1 ring-border-c"
+                iconClassName="h-12 w-12 text-foreground/70 sm:h-16 sm:w-16"
+                sizes="(min-width: 640px) 170px, 100px"
+              />
+              <span className="absolute left-0 top-0 rounded bg-brand px-1.5 py-[3px] text-[10px] font-extrabold uppercase text-ink">
+                Không trùng
+              </span>
+              {product.hot && (
+                <span className="absolute bottom-1 right-1 flex items-center gap-0.5 rounded bg-brand px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-ink">
+                  <Crown className="h-2.5 w-2.5" /> Tài trợ
+                </span>
+              )}
+            </div>
+            {/* HẾT HÀNG — nằm NGAY DƯỚI ảnh (không phải góc trên-phải card,
+                chỗ đó dành cho nhãn Mega Sale), khớp đúng độ rộng khung ảnh. */}
+            {outOfStock && (
+              <span className="flex w-[100px] items-center justify-center gap-1 rounded-full bg-danger px-2.5 py-1 text-sm font-black text-white shadow-lg sm:w-[170px]">
+                <PackageX className="h-4 w-4" /> HẾT HÀNG
               </span>
             )}
           </div>

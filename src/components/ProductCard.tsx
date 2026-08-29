@@ -15,11 +15,6 @@ export default function ProductCard({ product }: { product: Product }) {
       href={`/san-pham/${product.slug}`}
       className="group relative flex flex-col rounded-lg border-2 border-brand bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-dark hover:shadow-[0_12px_28px_rgba(224,196,0,0.35),0_4px_10px_rgba(0,0,0,0.05)]"
     >
-      {outOfStock && (
-        <span className="absolute -right-2.5 -top-2.5 z-10 flex items-center gap-1 rounded-full bg-danger px-2.5 py-1 text-sm font-black text-white shadow-lg">
-          <PackageX className="h-4 w-4" /> HẾT HÀNG
-        </span>
-      )}
       {product.megaSale?.active && !outOfStock && (
         <span className="absolute -right-2.5 -top-2.5 z-10">
           <MegaSaleLogo size={52} className="h-11 w-11 sm:h-[52px] sm:w-[52px]" />
@@ -27,29 +22,38 @@ export default function ProductCard({ product }: { product: Product }) {
       )}
       <div className="flex flex-col overflow-hidden rounded-lg">
         <div className="flex gap-[15px] p-[15px]">
-          <div className="relative shrink-0">
-            <ProductThumbnail
-              imageUrl={product.imageUrl}
-              categorySlug={product.categorySlug}
-              boxClassName="h-24 w-24 rounded-md bg-surface-alt ring-1 ring-border-c sm:h-[120px] sm:w-[120px]"
-              iconClassName="h-10 w-10 text-foreground/70 sm:h-12 sm:w-12"
-              sizes="(min-width: 640px) 120px, 96px"
-            />
-            <span className="absolute left-0 top-0 rounded-br-lg bg-brand px-2.5 py-1 text-[11px] font-black text-ink">
-              {product.categoryLabel}
-            </span>
-            {product.hot && (
-              <span
-                className={`absolute flex items-center gap-0.5 rounded-full bg-danger px-1.5 py-0.5 text-[9px] font-bold text-white shadow ${
-                  product.megaSale?.active ? "-bottom-1.5 -left-1.5" : "-right-1.5 -top-1.5"
-                }`}
-              >
-                <Flame className="h-2.5 w-2.5" /> HOT
+          <div className="flex shrink-0 flex-col gap-1.5">
+            <div className="relative">
+              <ProductThumbnail
+                imageUrl={product.imageUrl}
+                categorySlug={product.categorySlug}
+                boxClassName="h-24 w-24 rounded-md bg-surface-alt ring-1 ring-border-c sm:h-[120px] sm:w-[120px]"
+                iconClassName="h-10 w-10 text-foreground/70 sm:h-12 sm:w-12"
+                sizes="(min-width: 640px) 120px, 96px"
+              />
+              <span className="absolute left-0 top-0 rounded-br-lg bg-brand px-2.5 py-1 text-[11px] font-black text-ink">
+                {product.categoryLabel}
               </span>
-            )}
-            {product.preOrder && (
-              <span className="absolute -bottom-1.5 -right-1.5 flex items-center gap-0.5 rounded-full bg-info px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
-                <Clock className="h-2.5 w-2.5" /> ĐẶT TRƯỚC
+              {product.hot && (
+                <span
+                  className={`absolute flex items-center gap-0.5 rounded-full bg-danger px-1.5 py-0.5 text-[9px] font-bold text-white shadow ${
+                    product.megaSale?.active ? "-bottom-1.5 -left-1.5" : "-right-1.5 -top-1.5"
+                  }`}
+                >
+                  <Flame className="h-2.5 w-2.5" /> HOT
+                </span>
+              )}
+              {product.preOrder && (
+                <span className="absolute -bottom-1.5 -right-1.5 flex items-center gap-0.5 rounded-full bg-info px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
+                  <Clock className="h-2.5 w-2.5" /> ĐẶT TRƯỚC
+                </span>
+              )}
+            </div>
+            {/* HẾT HÀNG — nằm NGAY DƯỚI ảnh (không phải góc trên-phải card,
+                chỗ đó dành cho nhãn Mega Sale), khớp đúng độ rộng khung ảnh. */}
+            {outOfStock && (
+              <span className="flex w-24 items-center justify-center gap-1 rounded-full bg-danger px-2.5 py-1 text-sm font-black text-white shadow-lg sm:w-[120px]">
+                <PackageX className="h-4 w-4" /> HẾT HÀNG
               </span>
             )}
           </div>
