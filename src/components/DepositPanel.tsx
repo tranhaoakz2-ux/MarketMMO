@@ -22,6 +22,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import Reveal from "@/components/Reveal";
+import { useSuppressRefresh } from "@/hooks/useRefreshOnReturn";
 import { formatVnd } from "@/lib/format";
 import type { BankInfo, UsdtInfo } from "@/lib/payment/deposit";
 import {
@@ -422,6 +423,22 @@ export default function DepositPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dvnetIntent?.id]);
 
+  // Đã sang màn QR/thanh toán (Bước 3 ngân hàng, hoặc Bước 2 USDT đã có
+  // intent) — CHỈ ẨN HIỂN THỊ khối chọn phương thức + số tiền, không đụng
+  // state/API nào. VNPay redirect thẳng ra ngoài trang nên không có "màn
+  // thanh toán trong trang" tương ứng — không cần (và không có gì) để ẩn.
+  // Tính TRƯỚC 2 early return bên dưới (KHÔNG được gọi hook sau early return)
+  // vì useSuppressRefresh() ngay sau đây cũng là 1 hook.
+  const inPaymentStep =
+    (method === "bank" && bankPhase === "created") ||
+    (method === "usdt" && usdtProvider === "trongrid" && !!usdtIntent) ||
+    (method === "usdt" && usdtProvider === "dvnet" && !!dvnetIntent);
+
+  // Buyer đang có 1 lệnh nạp mở (QR/countdown ngân hàng hoặc USDT) — chặn
+  // useRefreshOnReturn() refetch ngầm lúc quay lại tab, tránh làm gián đoạn
+  // màn hình đang chờ tiền (xem src/hooks/useRefreshOnReturn.ts).
+  useSuppressRefresh("deposit-in-progress", inPaymentStep);
+
   if (status === "loading") return null;
 
   if (!session) {
@@ -611,15 +628,6 @@ export default function DepositPanel({
     setMessage(null);
     setError(null);
   };
-
-  // Đã sang màn QR/thanh toán (Bước 3 ngân hàng, hoặc Bước 2 USDT đã có
-  // intent) — CHỈ ẨN HIỂN THỊ khối chọn phương thức + số tiền, không đụng
-  // state/API nào. VNPay redirect thẳng ra ngoài trang nên không có "màn
-  // thanh toán trong trang" tương ứng — không cần (và không có gì) để ẩn.
-  const inPaymentStep =
-    (method === "bank" && bankPhase === "created") ||
-    (method === "usdt" && usdtProvider === "trongrid" && !!usdtIntent) ||
-    (method === "usdt" && usdtProvider === "dvnet" && !!dvnetIntent);
 
   // Countdown hiển thị cho lệnh DV.net — CHỈ để hiện chữ "Đã hết hạn" trên
   // UI, KHÔNG chặn buyer chuyển tiền/bấm Hủy sau mốc này: DV.net không tự

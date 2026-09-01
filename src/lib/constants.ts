@@ -2,6 +2,12 @@
 // và đặt lại mật khẩu (quên mật khẩu). Xem LAUNCH_AUDIT.md #22.
 export const MIN_PASSWORD_LENGTH = 8;
 
+// Ngưỡng thời gian tab bị ẩn (Page Visibility API) trước khi tự refetch NGẦM
+// dữ liệu server lúc buyer quay lại tab — xem src/hooks/useRefreshOnReturn.ts.
+// KHÔNG reload cả trang (router.refresh() + refresh session ví), giữ nguyên
+// scroll/state client.
+export const REFRESH_AFTER_MS = 30 * 60 * 1000; // 30 phút
+
 export type Role = "BUYER" | "SELLER" | "ADMIN";
 
 export const roleLabel: Record<Role, string> = {
