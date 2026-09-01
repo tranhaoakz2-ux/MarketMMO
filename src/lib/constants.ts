@@ -46,7 +46,11 @@ export type WalletTxType =
 // TRẠNG THÁI, KHÔNG PHẢI xoá — depositCode/userId/amount vẫn giữ nguyên
 // trong bản ghi để tiền về trễ vẫn có đường khớp lại (rơi vào "Giao dịch
 // SePay chưa khớp lệnh" nếu webhook không tìm thấy status PENDING nữa).
-export type WalletTxStatus = "PENDING" | "CONFIRMED" | "REJECTED" | "EXPIRED";
+// CANCELLED: buyer TỰ HUỶ lệnh nạp đang PENDING (hiện chỉ áp dụng cho DV.net,
+// xem POST /api/wallet/deposit/[id]) — KHÁC EXPIRED (hệ thống tự chuyển do
+// quá hạn): CANCELLED là buyer chủ động. Không xoá record, webhook vẫn khớp
+// lại được nếu tiền về sau đó (xem POST /api/webhook/dvnet).
+export type WalletTxStatus = "PENDING" | "CONFIRMED" | "REJECTED" | "EXPIRED" | "CANCELLED";
 
 export type DisputeStatus =
   | "OPEN"
@@ -368,6 +372,7 @@ export const walletTxStatusLabel: Record<WalletTxStatus, string> = {
   CONFIRMED: "Đã cộng tiền",
   REJECTED: "Từ chối",
   EXPIRED: "Đã hết hạn",
+  CANCELLED: "Đã huỷ",
 };
 
 export const walletTxTypeLabel: Record<WalletTxType, string> = {

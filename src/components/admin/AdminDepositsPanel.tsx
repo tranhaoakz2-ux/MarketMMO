@@ -59,6 +59,7 @@ const toneOf: Record<WalletTxStatus, Tone> = {
   CONFIRMED: "success",
   REJECTED: "danger",
   EXPIRED: "danger",
+  CANCELLED: "danger",
 };
 
 // Ô tìm + chọn user để gán 1 giao dịch SePay chưa khớp — tách component

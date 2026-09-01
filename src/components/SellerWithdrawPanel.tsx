@@ -41,9 +41,11 @@ const STATUS_TONE: Record<WalletTxStatus, Tone> = {
   PENDING: "warn",
   CONFIRMED: "success",
   REJECTED: "danger",
-  // EXPIRED chỉ thực sự xảy ra cho nạp ngân hàng, không bao giờ ở rút tiền —
-  // có mặt thuần để thoả kiểu dùng chung WalletTxStatus.
+  // EXPIRED chỉ thực sự xảy ra cho nạp ngân hàng, CANCELLED chỉ xảy ra cho
+  // nạp DV.net — cả 2 không bao giờ ở rút tiền, có mặt thuần để thoả kiểu
+  // dùng chung WalletTxStatus.
   EXPIRED: "danger",
+  CANCELLED: "danger",
 };
 
 const METHOD_OPTIONS = [

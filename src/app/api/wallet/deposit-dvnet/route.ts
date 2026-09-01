@@ -120,7 +120,7 @@ export async function POST(req: Request) {
     }
 
     try {
-      const { payUrl } = await createDvnetDeposit({
+      const { payUrl, walletAddress } = await createDvnetDeposit({
         config: dvnetConfig,
         amount: usdtAmount,
         currency: currencyCode,
@@ -128,16 +128,19 @@ export async function POST(req: Request) {
       });
       // Ghi thêm dòng "pay_url: ..." vào note (xem regex đọc lại ở GET bên
       // dưới) — CHỈ để khôi phục UI khi buyer refresh trang giữa chừng,
-      // không phải nguồn dữ liệu nghiệp vụ nào khác đọc lại.
+      // không phải nguồn dữ liệu nghiệp vụ nào khác đọc lại. depositAddress
+      // lưu cột riêng (đã thêm ở migration trước) — null nếu DV.net không
+      // trả address, không chặn gì.
       await prisma.walletTransaction.update({
         where: { id: walletTxId },
-        data: { note: `${baseNote}\npay_url: ${payUrl}` },
+        data: { note: `${baseNote}\npay_url: ${payUrl}`, depositAddress: walletAddress },
       });
       return NextResponse.json({
         id: walletTxId,
         vndAmount,
         usdtAmount,
         payUrl,
+        depositAddress: walletAddress,
         expiresAt,
       });
     } catch (err) {
@@ -154,10 +157,17 @@ export async function POST(req: Request) {
 }
 
 const PAY_URL_LINE = /^pay_url: (\S+)$/m;
+// Số USDT ước tính đã được viết sẵn vào baseNote lúc tạo lệnh (POST bên
+// trên: "... ước tính 12.34 USDT theo tỷ giá ...") — KHÔNG có cột riêng lưu
+// số này cho lệnh nạp (cột usdtAmount trên WalletTransaction chỉ dành cho
+// type="WITHDRAW", xem schema.prisma), nên đọc lại bằng regex thay vì thêm
+// cột mới. Nếu đổi câu chữ baseNote ở POST, PHẢI sửa regex này theo.
+const USDT_AMOUNT_LINE = /ước tính ([\d.]+) USDT/;
 
 // Trả yêu cầu PENDING gần nhất còn hiệu lực của user hiện tại (nếu có) — để
-// buyer refresh trang giữa chừng không mất link thanh toán đã tạo (đọc lại
-// từ dòng "pay_url: ..." trong note, xem POST bên trên).
+// buyer refresh trang giữa chừng không mất địa chỉ/QR/countdown đã tạo (đọc
+// lại từ cột depositAddress + các dòng "pay_url: ..."/"ước tính ... USDT"
+// trong note, xem POST bên trên).
 export async function GET() {
   const { session, error } = await requireUser();
   if (error) return error;
@@ -166,14 +176,24 @@ export async function GET() {
   const tx = await prisma.walletTransaction.findFirst({
     where: { userId, type: "DEPOSIT", method: "dvnet", status: "PENDING", expiresAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
-    select: { id: true, amount: true, expiresAt: true, note: true },
+    select: { id: true, amount: true, expiresAt: true, note: true, status: true, depositAddress: true },
   });
   if (!tx) return NextResponse.json({ intent: null });
 
   const payUrl = tx.note?.match(PAY_URL_LINE)?.[1] ?? null;
   if (!payUrl) return NextResponse.json({ intent: null });
+  const usdtAmountMatch = tx.note?.match(USDT_AMOUNT_LINE)?.[1];
+  const usdtAmount = usdtAmountMatch ? Number(usdtAmountMatch) : null;
 
   return NextResponse.json({
-    intent: { id: tx.id, vndAmount: tx.amount, payUrl, expiresAt: tx.expiresAt },
+    intent: {
+      id: tx.id,
+      vndAmount: tx.amount,
+      usdtAmount,
+      payUrl,
+      depositAddress: tx.depositAddress,
+      expiresAt: tx.expiresAt,
+      status: tx.status,
+    },
   });
 }

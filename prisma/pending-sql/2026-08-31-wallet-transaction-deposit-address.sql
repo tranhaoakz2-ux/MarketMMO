@@ -1,0 +1,12 @@
+-- Thêm cột WalletTransaction.depositAddress — lưu địa chỉ ví TRC20 mà cổng
+-- nạp USDT (DV.net, và sau này có thể CoinRemitter) cấp riêng cho MỖI lệnh
+-- nạp, để tự hiện lại địa chỉ/QR ngay trên site thay vì chỉ đưa buyer sang
+-- payUrl của cổng thứ 3 (xem khảo sát luồng USDT trước đó — hiện code CHỈ
+-- đọc data.pay_url từ response DV.net, bỏ qua hẳn data.address[].address).
+--
+-- AN TOÀN MIGRATION: ADD COLUMN nullable (không NOT NULL, không DEFAULT) —
+-- Postgres chỉ ghi metadata, không rewrite bảng, chạy gần như tức thời dù
+-- bảng có bao nhiêu dòng. Toàn bộ WalletTransaction hiện có (mọi type/method
+-- khác) tự nhận NULL, không đổi/xoá bất kỳ cột hay dòng nào khác.
+-- IF NOT EXISTS để chạy lại an toàn nếu lỡ chạy 2 lần.
+ALTER TABLE "WalletTransaction" ADD COLUMN IF NOT EXISTS "depositAddress" TEXT;

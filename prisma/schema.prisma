@@ -1226,6 +1226,12 @@ model WalletTransaction {
   // (an toàn cho khách), chỉ ghi thêm adminNote đánh dấu khớp trễ hạn.
   depositCode String? @unique
   expiresAt   DateTime?
+  // Địa chỉ ví (TRC20...) cổng nạp USDT cấp riêng cho lượt nạp này (vd
+  // DV.net trả về data.address[].address — hiện code chưa đọc field này,
+  // xem src/lib/payment/dvnet.ts) — cột chờ sẵn để hiện lại địa chỉ/QR ngay
+  // trên site thay vì chỉ đưa buyer sang payUrl của cổng thứ 3. Nullable —
+  // chỉ có giá trị khi cổng nạp thực sự cấp địa chỉ riêng theo từng lệnh.
+  depositAddress String?
 
   // Khoá ngoại thật tới đơn hàng liên quan (AUDIT LỖ HỔNG 1 — trước đây chỉ
   // nối qua chuỗi tự do trong `note`, không JOIN được, không đáng tin cậy

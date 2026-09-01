@@ -116,6 +116,11 @@ export async function findUsdtTrc20CurrencyCode(config: DvnetConfig): Promise<st
 export type CreateDvnetDepositResult = {
   payUrl: string;
   dvnetId: string;
+  // Địa chỉ ví TRC20 DV.net cấp riêng cho lượt nạp này (data.address[0].address,
+  // xem comment đầu file) — để hiện QR/địa chỉ ngay trên sàn thay vì đẩy buyer
+  // sang payUrl. null nếu DV.net không trả mảng address (hiếm, nhưng KHÔNG
+  // chặn tạo lệnh — nơi gọi tự fallback về payUrl khi null).
+  walletAddress: string | null;
 };
 
 export async function createDvnetDeposit(params: {
@@ -131,14 +136,17 @@ export async function createDvnetDeposit(params: {
       currency: params.currency,
       store_external_id: params.storeExternalId,
     }),
-  })) as { data?: { pay_url?: string; id?: string } };
+  })) as { data?: { pay_url?: string; id?: string; address?: { address?: string }[] } };
 
   const payUrl = body?.data?.pay_url;
   const dvnetId = body?.data?.id;
   if (!payUrl || !dvnetId) {
     throw new Error("DV.net không trả về pay_url/id hợp lệ.");
   }
-  return { payUrl, dvnetId };
+  // Phần tử ĐẦU của mảng address — KHÔNG throw nếu rỗng/thiếu, đây là field
+  // "cố gắng lấy thêm", pay_url vẫn luôn là nguồn tin cậy bắt buộc ở trên.
+  const walletAddress = body?.data?.address?.[0]?.address ?? null;
+  return { payUrl, dvnetId, walletAddress };
 }
 
 // Payload webhook "PaymentReceived" — CHỈ các field ta thực sự dùng, đọc từ

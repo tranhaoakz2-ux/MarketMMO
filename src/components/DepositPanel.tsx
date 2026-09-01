@@ -15,10 +15,12 @@ import {
   LogIn,
   RefreshCw,
   Wallet,
+  XCircle,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import Reveal from "@/components/Reveal";
 import { formatVnd } from "@/lib/format";
 import type { BankInfo, UsdtInfo } from "@/lib/payment/deposit";
@@ -69,15 +71,19 @@ type UsdtDepositIntentView = {
   expiresAt: string;
 };
 
-// Yêu cầu nạp qua DV.net đang chờ — xem POST /api/wallet/deposit-dvnet. Khác
-// UsdtDepositIntentView ở chỗ không có address/usdtAmount cố định để hiển thị
-// (DV.net tự quản lý trên trang pay_url riêng), buyer chỉ cần mở payUrl rồi
-// chờ webhook tự cộng tiền — trang này poll trạng thái qua GET
-// /api/wallet/deposit/[id] (cùng route dùng cho luồng ngân hàng).
+// Yêu cầu nạp qua DV.net đang chờ — xem POST /api/wallet/deposit-dvnet. Ưu
+// tiên hiện QR + địa chỉ ví (depositAddress) NGAY trên sàn; payUrl chỉ còn
+// dùng làm fallback khi DV.net không trả địa chỉ ví (hiếm). usdtAmount là số
+// ƯỚC TÍNH lúc tạo lệnh (đọc lại từ note qua regex ở route, không có cột
+// riêng) — số cộng thật tính lại lúc webhook về, có thể chênh lệch nhỏ.
+// Trang này poll trạng thái qua GET /api/wallet/deposit/[id] (cùng route
+// dùng cho luồng ngân hàng), và huỷ qua POST cùng route (xem Việc 2).
 type DvnetDepositView = {
   id: string;
   vndAmount: number;
+  usdtAmount: number | null;
   payUrl: string;
+  depositAddress: string | null;
   expiresAt: string;
 };
 
@@ -96,6 +102,7 @@ const statusStyle: Record<WalletTxStatus, string> = {
   CONFIRMED: "bg-success/10 text-success",
   REJECTED: "bg-danger/10 text-danger",
   EXPIRED: "bg-muted/10 text-muted",
+  CANCELLED: "bg-muted/10 text-muted",
 };
 
 const statusDotStyle: Record<WalletTxStatus, string> = {
@@ -103,6 +110,7 @@ const statusDotStyle: Record<WalletTxStatus, string> = {
   CONFIRMED: "bg-success",
   REJECTED: "bg-danger",
   EXPIRED: "bg-muted",
+  CANCELLED: "bg-muted",
 };
 
 // Card khung ngoài dùng chung — cùng ngôn ngữ thiết kế với
@@ -207,6 +215,40 @@ function CopyField({
   );
 }
 
+// QR sinh NGAY tại trình duyệt buyer bằng thư viện qrcode (không gọi ra
+// ngoài, khác cơ chế VietQR ở luồng ngân hàng — VietQR là ảnh hosted bên thứ
+// 3 chuyên cho QR ngân hàng, KHÔNG mã hoá được chuỗi tự do như địa chỉ ví).
+// QR chỉ chứa đúng chuỗi địa chỉ TRC20, không thêm tiền tố/định dạng gì khác
+// để ví buyer quét ra đúng địa chỉ.
+function DvnetAddressQr({ address }: { address: string }) {
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    QRCode.toDataURL(address, { width: 208, margin: 1 })
+      .then((url) => {
+        if (!cancelled) setDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setDataUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [address]);
+
+  return (
+    <div className="grid h-52 w-52 place-items-center rounded-2xl border border-border-c bg-white p-3 shadow-sm">
+      {dataUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- QR sinh động tại client (data URL), không phải asset tĩnh trong repo
+        <img src={dataUrl} alt="Mã QR địa chỉ ví USDT-TRC20" className="h-full w-full object-contain" />
+      ) : (
+        <span className="text-xs font-semibold text-muted">Đang tạo mã QR...</span>
+      )}
+    </div>
+  );
+}
+
 export default function DepositPanel({
   bankInfo,
   usdtInfo,
@@ -234,6 +276,11 @@ export default function DepositPanel({
   const [dvnetIntent, setDvnetIntent] = useState<DvnetDepositView | null>(null);
   const [dvnetIntentLoading, setDvnetIntentLoading] = useState(false);
   const [dvnetStatus, setDvnetStatus] = useState<WalletTxStatus>("PENDING");
+  const [dvnetCancelling, setDvnetCancelling] = useState(false);
+  // Đồng hồ đếm ngược tới expiresAt — cùng nguyên tắc nowMs của luồng ngân
+  // hàng (seed null, tính thật trong effect, tránh hydration mismatch). Tách
+  // state riêng vì dvnetIntent có thể tồn tại độc lập với method/bankPhase.
+  const [dvnetNowMs, setDvnetNowMs] = useState<number | null>(null);
 
   // Bước 2 (nhập số tiền) -> Bước 3 (QR + đối soát) của luồng NGÂN HÀNG —
   // "created" chỉ bật sau khi server tạo xong WalletTransaction thật.
@@ -325,7 +372,10 @@ export default function DepositPanel({
       const res = await fetch("/api/wallet/deposit-dvnet");
       if (res.ok) {
         const data = await res.json();
-        if (data.intent) setDvnetIntent(data.intent);
+        if (data.intent) {
+          setDvnetIntent(data.intent);
+          setDvnetNowMs(Date.now());
+        }
       }
     })();
   }, [session, usdtProvider]);
@@ -345,6 +395,10 @@ export default function DepositPanel({
       if (data.status === "CONFIRMED") {
         await update();
         loadTransactions();
+      } else if (data.status === "CANCELLED") {
+        // Lệnh vừa bị huỷ (từ chính request Hủy ở tab/thiết bị khác) — ẩn
+        // khỏi UI luôn, không chờ buyer tự bấm lại gì thêm.
+        setDvnetIntent(null);
       }
     };
     poll();
@@ -353,6 +407,18 @@ export default function DepositPanel({
       cancelled = true;
       clearInterval(interval);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dvnetIntent?.id]);
+
+  // Đồng hồ đếm ngược tới expiresAt của lệnh DV.net — CHỈ thuê bao interval ở
+  // đây (không tự setState đồng bộ trong thân effect, cùng nguyên tắc countdown
+  // ngân hàng ở trên). Giá trị ĐẦU được seed lúc tạo lệnh (handleCreateDvnetIntent)
+  // hoặc lúc khôi phục lệnh cũ sau refresh (effect phía trên) — cả 2 đều set
+  // ngoài effect này (trong handler/callback async, không phải thân effect).
+  useEffect(() => {
+    if (!dvnetIntent) return;
+    const t = setInterval(() => setDvnetNowMs(Date.now()), 1000);
+    return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dvnetIntent?.id]);
 
@@ -427,7 +493,33 @@ export default function DepositPanel({
     }
     setDvnetStatus("PENDING");
     setDvnetIntent(data);
-    window.open(data.payUrl, "_blank", "noopener,noreferrer");
+    setDvnetNowMs(Date.now());
+    // Có địa chỉ ví riêng (depositAddress) -> hiện QR/địa chỉ NGAY trên sàn,
+    // không cần rời trang. CHỈ khi DV.net không trả địa chỉ (hiếm, xem
+    // src/lib/payment/dvnet.ts) mới fallback về hành vi cũ: tự mở payUrl.
+    if (!data.depositAddress) {
+      window.open(data.payUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  // Buyer tự huỷ lệnh nạp DV.net đang PENDING (đổi ý/tạo nhầm) — xem POST
+  // /api/wallet/deposit/[id] (Việc 2). Huỷ xong ẩn khỏi UI luôn, KHÔNG chờ
+  // poll (poll cũng tự ẩn nếu status đổi CANCELLED từ nơi khác, xem effect ở
+  // trên) — chủ động ẩn ngay ở đây cho phản hồi tức thời.
+  const handleCancelDvnetIntent = async () => {
+    if (!dvnetIntent) return;
+    setDvnetCancelling(true);
+    setError(null);
+    const res = await fetch(`/api/wallet/deposit/${dvnetIntent.id}`, { method: "POST" });
+    const data = await res.json().catch(() => null);
+    setDvnetCancelling(false);
+    if (!res.ok) {
+      setError(data?.error ?? "Không thể huỷ lệnh nạp lúc này.");
+      return;
+    }
+    setDvnetIntent(null);
+    setDvnetStatus("PENDING");
+    loadTransactions();
   };
 
   const handleSubmit = async () => {
@@ -528,6 +620,14 @@ export default function DepositPanel({
     (method === "bank" && bankPhase === "created") ||
     (method === "usdt" && usdtProvider === "trongrid" && !!usdtIntent) ||
     (method === "usdt" && usdtProvider === "dvnet" && !!dvnetIntent);
+
+  // Countdown hiển thị cho lệnh DV.net — CHỈ để hiện chữ "Đã hết hạn" trên
+  // UI, KHÔNG chặn buyer chuyển tiền/bấm Hủy sau mốc này: DV.net không tự
+  // hết hạn lệnh (xem comment ở POST /api/wallet/deposit-dvnet), status vẫn
+  // PENDING vô thời hạn tới khi webhook khớp hoặc buyer tự huỷ.
+  const dvnetMsLeft =
+    dvnetIntent && dvnetNowMs !== null ? new Date(dvnetIntent.expiresAt).getTime() - dvnetNowMs : null;
+  const dvnetExpired = dvnetMsLeft !== null && dvnetMsLeft <= 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -910,9 +1010,9 @@ export default function DepositPanel({
               <SectionCard icon={DollarSign} title="Bước 1 — Tạo yêu cầu nạp qua DV.net">
                 <div className="flex flex-col gap-4">
                   <p className="text-xs leading-relaxed text-muted">
-                    Hệ thống sẽ mở 1 trang thanh toán riêng của DV.net cho lượt nạp này — chọn mạng/coin và thanh
-                    toán trên trang đó, ví sẽ tự động được cộng tiền ngay sau khi DV.net xác nhận nhận được, không
-                    cần quay lại nhập mã giao dịch.
+                    Hệ thống sẽ cấp cho bạn 1 địa chỉ ví USDT-TRC20 riêng cho lượt nạp này — quét mã QR hoặc copy địa
+                    chỉ ngay trên trang này để chuyển, ví sẽ tự động được cộng tiền ngay sau khi DV.net xác nhận nhận
+                    được, không cần quay lại nhập mã giao dịch.
                   </p>
                   <button
                     type="button"
@@ -924,7 +1024,7 @@ export default function DepositPanel({
                   >
                     {dvnetIntentLoading
                       ? "Đang tạo yêu cầu..."
-                      : `Mở trang thanh toán DV.net cho ${amount ? formatVnd(amount) : ""}`}
+                      : `Tạo lệnh nạp qua DV.net cho ${amount ? formatVnd(amount) : ""}`}
                   </button>
                 </div>
               </SectionCard>
@@ -933,7 +1033,7 @@ export default function DepositPanel({
 
           {method === "usdt" && usdtProvider === "dvnet" && dvnetIntent && (
             <Reveal delay={0.11}>
-              <SectionCard icon={DollarSign} title="Bước 2 — Hoàn tất thanh toán trên DV.net">
+              <SectionCard icon={DollarSign} title="Bước 2 — Chuyển USDT & chờ xác nhận">
                 {dvnetStatus === "CONFIRMED" ? (
                   <div className="flex flex-col items-center gap-3 py-6 text-center">
                     <span className="grid h-14 w-14 place-items-center rounded-full bg-success/10 text-success">
@@ -956,7 +1056,65 @@ export default function DepositPanel({
                       Nạp thêm lần nữa
                     </button>
                   </div>
+                ) : dvnetIntent.depositAddress ? (
+                  // Có địa chỉ ví riêng — hiện QR + địa chỉ + số tiền + countdown +
+                  // Hủy NGAY trên sàn, theo brand vàng (bg-brand)/đen (text-ink),
+                  // KHÔNG còn đẩy buyer sang trang DV.net.
+                  <div className="flex flex-col gap-4">
+                    <p className="flex items-center gap-2 rounded-xl bg-brand-light/25 px-3.5 py-2.5 text-xs font-semibold text-brand-dark">
+                      <Clock className="h-4 w-4 shrink-0 animate-pulse" /> Đang chờ DV.net xác nhận thanh toán —
+                      trang này tự cập nhật, không cần tải lại.
+                    </p>
+
+                    <div className="flex justify-center">
+                      <DvnetAddressQr address={dvnetIntent.depositAddress} />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <CopyField label="Địa chỉ ví USDT-TRC20" value={dvnetIntent.depositAddress} />
+                      {dvnetIntent.usdtAmount !== null && (
+                        <CopyField
+                          label="Số USDT cần gửi"
+                          value={`${dvnetIntent.usdtAmount} USDT`}
+                          emphasize
+                        />
+                      )}
+                    </div>
+
+                    <p className="flex items-center justify-center gap-2 text-sm font-black">
+                      <Clock className="h-4 w-4 shrink-0" />
+                      {dvnetExpired ? (
+                        <span className="text-danger">Đã hết hạn</span>
+                      ) : (
+                        <span className="text-brand-dark">
+                          Hết hạn sau {dvnetMsLeft !== null ? formatCountdown(dvnetMsLeft) : "--:--"}
+                        </span>
+                      )}
+                    </p>
+
+                    <p className="flex items-start gap-2 rounded-xl bg-danger/10 px-3.5 py-2.5 text-xs font-semibold text-danger">
+                      <AlertTriangle className="h-4 w-4 shrink-0" /> Chỉ gửi USDT-TRC20 (mạng Tron). Gửi đúng số
+                      tiền — gửi sai mạng hoặc sai số tiền có thể mất tiền vĩnh viễn.
+                    </p>
+
+                    <p className="text-xs leading-relaxed text-muted">
+                      Sẽ cộng vào ví ước tính <b className="text-foreground">{formatVnd(dvnetIntent.vndAmount)}</b>{" "}
+                      (số cộng thật tính theo đúng số USD DV.net xác nhận đã nhận) — tiền về trễ vẫn được cộng bình
+                      thường, kể cả sau khi hết hạn đếm ngược ở trên.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={handleCancelDvnetIntent}
+                      disabled={dvnetCancelling}
+                      className="flex items-center justify-center gap-1.5 rounded-full border border-danger/40 py-2.5 text-xs font-black text-danger transition hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <XCircle className="h-3.5 w-3.5" /> {dvnetCancelling ? "Đang huỷ..." : "Hủy lệnh"}
+                    </button>
+                  </div>
                 ) : (
+                  // Fallback — DV.net không trả địa chỉ ví riêng (hiếm): giữ NGUYÊN
+                  // hành vi cũ, đẩy buyer sang trang thanh toán của DV.net.
                   <div className="flex flex-col gap-4">
                     <p className="flex items-center gap-2 rounded-xl bg-brand-light/25 px-3.5 py-2.5 text-xs font-semibold text-brand-dark">
                       <Clock className="h-4 w-4 shrink-0 animate-pulse" /> Đang chờ DV.net xác nhận thanh toán —
