@@ -4,7 +4,7 @@ import FeaturedProductsPanel from "@/components/FeaturedProductsPanel";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Pagination from "@/components/Pagination";
-import HomePromoBanner from "@/components/HomePromoBanner";
+import HomeHeroBanner from "@/components/HomeHeroBanner";
 import ProductCard from "@/components/ProductCard";
 import Reveal from "@/components/Reveal";
 import SellerFeaturedPanel from "@/components/SellerFeaturedPanel";
@@ -18,7 +18,6 @@ import {
   getProductCountByCategory,
 } from "@/lib/queries";
 import { parseProductSortKey } from "@/lib/product-sort";
-import { getHomeBanners } from "@/lib/home-banners";
 import { getSearchTags } from "@/lib/site-config";
 import { getAuctionWindowFor, getNextWindowStart, isWithinAuctionWindow } from "@/lib/auction-schedule";
 
@@ -47,14 +46,13 @@ export default async function Home({
   // countBySlug (số sản phẩm theo từng category cho CategoryTabs) TRƯỚC ĐÂY
   // đếm bằng cách duyệt qua TOÀN BỘ `products` đã tải — giờ getAllProducts()
   // chỉ trả 1 trang nên phải đếm riêng ở DB (getProductCountByCategory()).
-  const [{ items: pagedProducts, total }, countBySlug, featured, sellers, categoryTree, banners, searchTags] =
+  const [{ items: pagedProducts, total }, countBySlug, featured, sellers, categoryTree, searchTags] =
     await Promise.all([
       getAllProducts({ sort: sortKey, page: currentPage, pageSize: PAGE_SIZE }),
       getProductCountByCategory(),
       getFeaturedProducts(),
       getFeaturedSellers(),
       getCategoryTree(),
-      getHomeBanners(),
       getSearchTags(),
     ]);
 
@@ -75,7 +73,7 @@ export default async function Home({
         <h1 className="sr-only">MaketMMO — Sàn giao dịch tài khoản, vật phẩm & dịch vụ MMO uy tín</h1>
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
           <Reveal>
-            <HomePromoBanner large={banners.large} small1={banners.small1} small2={banners.small2} />
+            <HomeHeroBanner />
           </Reveal>
 
           <Reveal delay={0.05}>
