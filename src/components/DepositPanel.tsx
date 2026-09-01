@@ -488,7 +488,7 @@ export default function DepositPanel({
     const data = await res.json();
     setDvnetIntentLoading(false);
     if (!res.ok) {
-      setError(data.error ?? "Không thể tạo yêu cầu nạp qua DV.net.");
+      setError(data.error ?? "Không thể tạo yêu cầu nạp USDT lúc này.");
       return;
     }
     setDvnetStatus("PENDING");
@@ -729,7 +729,7 @@ export default function DepositPanel({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <p className="text-sm font-bold text-foreground">
-                        USDT {usdtProvider === "dvnet" ? "(qua DV.net)" : "(mạng TRC20)"}
+                        USDT {usdtProvider === "dvnet" ? "(TRC20)" : "(mạng TRC20)"}
                       </p>
                       {!usdtEnabled && (
                         <span className="rounded-full border border-border-c bg-surface-alt px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-muted">
@@ -741,7 +741,7 @@ export default function DepositPanel({
                       {usdtEnabled && usdtInfo
                         ? `Quy đổi theo tỷ giá 1 USDT ≈ ${usdtInfo.rate.toLocaleString("vi-VN")}đ`
                         : usdtEnabled
-                          ? "Mở trang thanh toán DV.net riêng cho lượt nạp này"
+                          ? "Nhận địa chỉ ví USDT-TRC20 riêng cho lượt nạp này, không cần rời trang"
                           : "Tính năng nạp USDT hiện chưa khả dụng"}
                     </p>
                   </div>
@@ -1007,12 +1007,12 @@ export default function DepositPanel({
 
           {method === "usdt" && usdtProvider === "dvnet" && usdtEnabled && !dvnetIntent && (
             <Reveal delay={0.11}>
-              <SectionCard icon={DollarSign} title="Bước 1 — Tạo yêu cầu nạp qua DV.net">
+              <SectionCard icon={DollarSign} title="Bước 1 — Tạo lệnh nạp USDT">
                 <div className="flex flex-col gap-4">
                   <p className="text-xs leading-relaxed text-muted">
                     Hệ thống sẽ cấp cho bạn 1 địa chỉ ví USDT-TRC20 riêng cho lượt nạp này — quét mã QR hoặc copy địa
-                    chỉ ngay trên trang này để chuyển, ví sẽ tự động được cộng tiền ngay sau khi DV.net xác nhận nhận
-                    được, không cần quay lại nhập mã giao dịch.
+                    chỉ ngay trên trang này để chuyển, ví sẽ tự động được cộng tiền ngay sau khi hệ thống xác nhận
+                    nhận được, không cần quay lại nhập mã giao dịch.
                   </p>
                   <button
                     type="button"
@@ -1024,7 +1024,7 @@ export default function DepositPanel({
                   >
                     {dvnetIntentLoading
                       ? "Đang tạo yêu cầu..."
-                      : `Tạo lệnh nạp qua DV.net cho ${amount ? formatVnd(amount) : ""}`}
+                      : `Tạo lệnh nạp USDT cho ${amount ? formatVnd(amount) : ""}`}
                   </button>
                 </div>
               </SectionCard>
@@ -1062,7 +1062,7 @@ export default function DepositPanel({
                   // KHÔNG còn đẩy buyer sang trang DV.net.
                   <div className="flex flex-col gap-4">
                     <p className="flex items-center gap-2 rounded-xl bg-brand-light/25 px-3.5 py-2.5 text-xs font-semibold text-brand-dark">
-                      <Clock className="h-4 w-4 shrink-0 animate-pulse" /> Đang chờ DV.net xác nhận thanh toán —
+                      <Clock className="h-4 w-4 shrink-0 animate-pulse" /> Đang chờ xác nhận thanh toán —
                       trang này tự cập nhật, không cần tải lại.
                     </p>
 
@@ -1099,8 +1099,8 @@ export default function DepositPanel({
 
                     <p className="text-xs leading-relaxed text-muted">
                       Sẽ cộng vào ví ước tính <b className="text-foreground">{formatVnd(dvnetIntent.vndAmount)}</b>{" "}
-                      (số cộng thật tính theo đúng số USD DV.net xác nhận đã nhận) — tiền về trễ vẫn được cộng bình
-                      thường, kể cả sau khi hết hạn đếm ngược ở trên.
+                      (số cộng thật tính theo số USDT nhận được trên mạng blockchain) — tiền về trễ vẫn được cộng
+                      bình thường, kể cả sau khi hết hạn đếm ngược ở trên.
                     </p>
 
                     <button
@@ -1117,7 +1117,7 @@ export default function DepositPanel({
                   // hành vi cũ, đẩy buyer sang trang thanh toán của DV.net.
                   <div className="flex flex-col gap-4">
                     <p className="flex items-center gap-2 rounded-xl bg-brand-light/25 px-3.5 py-2.5 text-xs font-semibold text-brand-dark">
-                      <Clock className="h-4 w-4 shrink-0 animate-pulse" /> Đang chờ DV.net xác nhận thanh toán —
+                      <Clock className="h-4 w-4 shrink-0 animate-pulse" /> Đang chờ xác nhận thanh toán —
                       trang này tự cập nhật, không cần tải lại.
                     </p>
                     <a
@@ -1126,12 +1126,12 @@ export default function DepositPanel({
                       rel="noopener noreferrer"
                       className="flex items-center justify-center gap-2 rounded-full bg-brand py-3 text-sm font-black text-ink shadow-sm transition hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-md"
                     >
-                      Mở lại trang thanh toán DV.net
+                      Mở lại trang thanh toán
                     </a>
                     <p className="text-xs leading-relaxed text-muted">
                       Sẽ cộng vào ví ước tính{" "}
                       <b className="text-foreground">{formatVnd(dvnetIntent.vndAmount)}</b> (số cộng thật tính theo
-                      đúng số USD DV.net xác nhận đã nhận). Yêu cầu hết hạn lúc{" "}
+                      số USDT nhận được trên mạng blockchain). Yêu cầu hết hạn lúc{" "}
                       <b className="text-foreground">{new Date(dvnetIntent.expiresAt).toLocaleString("vi-VN")}</b> —
                       tiền về trễ vẫn được cộng bình thường.
                     </p>
@@ -1223,7 +1223,11 @@ export default function DepositPanel({
                         </span>
                       </div>
                       <div className="flex items-center justify-between gap-2 text-xs text-muted">
-                        <span>{walletMethodLabel[tx.method ?? ""] ?? tx.method ?? "—"}</span>
+                        <span>
+                          {tx.method === "dvnet"
+                            ? "USDT (TRC20)"
+                            : (walletMethodLabel[tx.method ?? ""] ?? tx.method ?? "—")}
+                        </span>
                         <span>{new Date(tx.createdAt).toLocaleString("vi-VN")}</span>
                       </div>
                     </div>

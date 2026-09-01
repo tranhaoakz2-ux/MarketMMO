@@ -79,7 +79,7 @@ async function dvnetFetch(config: DvnetConfig, path: string, init?: RequestInit)
   const body = await res.json().catch(() => null);
   if (!res.ok) {
     const message = (body as { message?: string } | null)?.message ?? `HTTP ${res.status}`;
-    throw new Error(`DV.net API lỗi: ${message}`);
+    throw new Error(`Cổng nạp USDT lỗi: ${message}`);
   }
   return body;
 }
@@ -105,7 +105,7 @@ export async function findUsdtTrc20CurrencyCode(config: DvnetConfig): Promise<st
   );
   if (!match) {
     throw new Error(
-      "Không tìm thấy USDT-TRC20 trong danh sách currency của tài khoản DV.net — kiểm tra lại đã bật đúng mạng/coin trên dashboard DV.net chưa."
+      "Không tìm thấy USDT-TRC20 trong danh sách currency được hỗ trợ — vui lòng thử lại sau hoặc liên hệ hỗ trợ."
     );
   }
 
@@ -141,7 +141,7 @@ export async function createDvnetDeposit(params: {
   const payUrl = body?.data?.pay_url;
   const dvnetId = body?.data?.id;
   if (!payUrl || !dvnetId) {
-    throw new Error("DV.net không trả về pay_url/id hợp lệ.");
+    throw new Error("Không nhận được thông tin thanh toán hợp lệ từ cổng nạp USDT.");
   }
   // Phần tử ĐẦU của mảng address — KHÔNG throw nếu rỗng/thiếu, đây là field
   // "cố gắng lấy thêm", pay_url vẫn luôn là nguồn tin cậy bắt buộc ở trên.

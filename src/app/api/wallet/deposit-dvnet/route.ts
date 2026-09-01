@@ -48,12 +48,12 @@ export async function POST(req: Request) {
 
   const provider = await getUsdtProvider();
   if (provider !== "dvnet") {
-    return NextResponse.json({ error: "Cổng nạp DV.net chưa được bật." }, { status: 503 });
+    return NextResponse.json({ error: "Cổng nạp USDT chưa được bật." }, { status: 503 });
   }
 
   const dvnetConfig = await getDvnetConfig();
   if (!dvnetConfig) {
-    return NextResponse.json({ error: "DV.net chưa được cấu hình đầy đủ." }, { status: 503 });
+    return NextResponse.json({ error: "Cổng nạp USDT chưa được cấu hình đầy đủ." }, { status: 503 });
   }
 
   const body = await req.json().catch(() => null);
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
   try {
     currencyCode = await findUsdtTrc20CurrencyCode(dvnetConfig);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Không lấy được danh sách currency từ DV.net.";
+    const message = err instanceof Error ? err.message : "Không lấy được danh sách currency hỗ trợ lúc này.";
     return NextResponse.json({ error: message }, { status: 503 });
   }
 
@@ -148,7 +148,7 @@ export async function POST(req: Request) {
       // luôn bản ghi vừa tạo thay vì để lại 1 dòng PENDING chết không ai xử
       // lý được (không có pay_url, buyer không thể thanh toán).
       await prisma.walletTransaction.delete({ where: { id: walletTxId } }).catch(() => {});
-      const message = err instanceof Error ? err.message : "Không thể tạo yêu cầu nạp qua DV.net.";
+      const message = err instanceof Error ? err.message : "Không thể tạo yêu cầu nạp USDT lúc này.";
       return NextResponse.json({ error: message }, { status: 503 });
     }
   }

@@ -54,7 +54,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: "Không tìm thấy yêu cầu nạp tiền." }, { status: 404 });
   }
   if (tx.method !== "dvnet") {
-    return NextResponse.json({ error: "Chỉ huỷ được lệnh nạp qua DV.net." }, { status: 400 });
+    return NextResponse.json({ error: "Không thể huỷ lệnh nạp này qua đây." }, { status: 400 });
   }
   if (tx.status !== "PENDING") {
     return NextResponse.json(
