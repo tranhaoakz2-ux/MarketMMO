@@ -29,7 +29,7 @@ export default function HomeHeroBanner() {
         <span className="mmo-star" style={{ top: "62%", left: "22%", animationDelay: "1.6s" }} />
         <span className="mmo-star" style={{ bottom: "12%", left: "48%", animationDelay: ".6s" }} />
 
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:gap-6">
+        <div className="flex flex-col gap-9 lg:flex-row lg:items-center">
           {/* CỘT TRÁI — nội dung */}
           <div className="flex-1 lg:min-w-[300px]">
             <span className="mmo-badge-top">
@@ -40,13 +40,13 @@ export default function HomeHeroBanner() {
             {/* h2 (không phải h1) — page.tsx đã có sẵn 1 h1 sr-only riêng cho
                 SEO ngay phía trên container này, tránh trùng 2 h1/trang. */}
             <h2 className="mmo-title">
-              Chợ tài khoản &amp; dịch vụ
-              <br className="hidden sm:block" /> số cho dân MMO
+              Chợ tài khoản &amp; dịch vụ số dành cho dân MMO
             </h2>
 
             <p className="mmo-desc">
               Mua bán tài khoản, phần mềm, dịch vụ số — giao dịch tự động, ký quỹ an
-              toàn, giá tốt như mua sỉ. Kiểm tra kho thật trước khi thanh toán.
+              toàn, giá tốt như mua sỉ. Hàng nghìn sản phẩm cập nhật liên tục, kiểm tra
+              kho thật trước khi thanh toán.
             </p>
 
             <div className="flex flex-wrap gap-2.5">
@@ -89,7 +89,7 @@ export default function HomeHeroBanner() {
           </div>
 
           {/* CỘT PHẢI — 3 thẻ (trang trí, sau gắn sản phẩm thật) */}
-          <div className="w-full lg:w-[320px] lg:flex-none">
+          <div className="w-full lg:w-[400px] lg:flex-none">
             <div className="mmo-cards-outer">
               <div className="mmo-cards-glow" />
               <div className="mmo-cards-frame">
