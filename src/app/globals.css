@@ -72,8 +72,18 @@
   --font-mono: var(--font-geist-mono);
 }
 
-body {
+/* Nền toàn trang chuyển sang .mmo-bg (BackgroundLayer.tsx) thay vì đặt ở
+   body — body có nền riêng thì stacking context gốc luôn vẽ nền đó SAU
+   (đè lên) mọi con z-index ÂM của body (kể cả position:fixed), làm
+   .mmo-bg không bao giờ hiện được dù z-index đã âm. html vẫn giữ màu nền
+   này (không phải body) làm nền dự phòng — html là gốc của stacking
+   context, nền của nó luôn vẽ TRƯỚC (dưới) mọi con z-index âm nên không
+   tái diễn lỗi tương tự. */
+html {
   background: var(--background);
+}
+
+body {
   color: var(--color-text);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
@@ -424,6 +434,7 @@ body {
   z-index: -1;            /* nằm sau mọi nội dung -> không chặn click */
   pointer-events: none;   /* chắc chắn không bắt chuột */
   overflow: hidden;
+  background: var(--background); /* màu nền trang thật — xem giải thích ở rule html phía trên */
 }
 
 /* ---- LƯỚI Ô VUÔNG ---- */
