@@ -69,7 +69,7 @@
    này là rủi ro thật khi Turbopack dev/HMR patch CSS không đúng như 1 lần
    build sạch — đổi sang cách này để KHÔNG còn phụ thuộc thứ tự nữa. */
 [data-theme="dark"] .mmo-surface-section {
-  background-color: var(--section-navy);
+  background-color: transparent;
 }
 [data-theme="dark"] .mmo-surface-card {
   background-color: var(--card-navy);
