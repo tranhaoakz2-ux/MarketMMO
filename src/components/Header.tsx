@@ -136,10 +136,10 @@ export default function Header() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">{tickerText}</div>
       </div>
 
-      <div className="bg-brand shadow-sm">
+      <div className="bg-[linear-gradient(90deg,#12c9a0_0%,#2bb0bf_45%,#4f6ef2_100%)] shadow-sm">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-2.5 sm:h-[73px] sm:flex-nowrap sm:px-6 sm:py-0 lg:px-8">
           <button
-            className="rounded-lg p-2 hover:bg-black/10 lg:hidden"
+            className="rounded-lg p-2 text-white hover:bg-black/10 lg:hidden"
             onClick={() => setMenuOpen((v) => !v)}
             aria-label="Mở menu"
           >
@@ -157,7 +157,7 @@ export default function Header() {
                 priority
               />
             </span>
-            <span className="text-[26px] font-black tracking-tight text-ink sm:text-[30px]">
+            <span className="text-[26px] font-black tracking-tight text-white sm:text-[30px]">
               MAKET<span className="text-white">MMO</span>
             </span>
           </Link>
@@ -218,7 +218,7 @@ export default function Header() {
                 />
                 <button
                   onClick={() => signOut({ callbackUrl: "/" })}
-                  className="rounded-full p-2.5 text-ink hover:bg-black/10"
+                  className="rounded-full p-2.5 text-white hover:bg-black/10"
                   aria-label="Đăng xuất"
                 >
                   <LogOut className="h-6 w-6" />
@@ -280,13 +280,13 @@ export default function Header() {
           ))}
           <Link
             href={sellerBadgeHref}
-            className="ml-auto whitespace-nowrap rounded-full bg-brand px-3 py-1.5 text-sm font-bold text-ink transition hover:bg-brand-dark"
+            className="ml-auto whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-sm font-bold text-[#141d30] transition hover:bg-surface-alt"
           >
             {sellerBadgeLabel}
           </Link>
           <Link
             href="/nguoi-ban"
-            className="whitespace-nowrap rounded-full bg-brand px-3 py-1.5 text-sm font-bold text-ink transition hover:bg-brand-dark"
+            className="whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-sm font-bold text-[#141d30] transition hover:bg-surface-alt"
           >
             Danh Sách Seller
           </Link>
@@ -324,14 +324,14 @@ export default function Header() {
             <Link
               href={sellerBadgeHref}
               onClick={() => setMenuOpen(false)}
-              className="w-fit rounded-full bg-brand px-3 py-1.5 font-bold text-ink hover:bg-brand-dark"
+              className="w-fit rounded-full bg-white px-3 py-1.5 font-bold text-[#141d30] hover:bg-surface-alt"
             >
               {sellerBadgeLabel}
             </Link>
             <Link
               href="/nguoi-ban"
               onClick={() => setMenuOpen(false)}
-              className="w-fit rounded-full bg-brand px-3 py-1.5 font-bold text-ink hover:bg-brand-dark"
+              className="w-fit rounded-full bg-white px-3 py-1.5 font-bold text-[#141d30] hover:bg-surface-alt"
             >
               Danh Sách Seller
             </Link>

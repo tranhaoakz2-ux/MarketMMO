@@ -240,7 +240,7 @@ export default async function OrdersPage() {
                 {rows.map((row) => (
                   <div
                     key={row.itemId}
-                    className="rounded-2xl border border-border-c bg-surface p-4 shadow-sm transition-all duration-300 hover:border-brand-dark/50 hover:shadow-[0_12px_28px_rgba(224,196,0,0.12),0_4px_10px_rgba(0,0,0,0.04)] sm:p-5"
+                    className="rounded-2xl border border-border-c bg-surface p-4 shadow-sm transition-all duration-300 hover:border-brand-dark/50 hover:shadow-[0_12px_28px_rgba(43,176,191,0.12),0_4px_10px_rgba(0,0,0,0.04)] sm:p-5"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-c pb-3">
                       <div className="flex items-center gap-1">

@@ -11,7 +11,9 @@ const TONE_CLASS: Record<SellerLevelBadgeTone, string> = {
   gray: "border-border-c bg-surface-alt text-muted",
   bronze: "border-amber-700/40 bg-amber-700/10 text-amber-800 dark:text-amber-500",
   silver: "border-slate-400/50 bg-slate-400/10 text-slate-600 dark:text-slate-300",
-  gold: "border-brand-dark bg-brand text-ink shadow-sm",
+  // Ghim màu vàng cũ trực tiếp (không dùng bg-brand/border-brand-dark nữa) —
+  // giữ đúng nghĩa hạng "Vàng" dù --color-brand đã đổi sang teal/xanh dương.
+  gold: "border-[#e0c400] bg-[#ffe600] text-ink shadow-sm",
   diamond: "border-sky-400/50 bg-sky-400/10 text-sky-600 dark:text-sky-300",
 };
 

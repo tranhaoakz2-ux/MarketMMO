@@ -148,7 +148,7 @@ export default function CartPage() {
                   {lines.map((line) => (
                     <div
                       key={`${line.productId}:${line.variantId ?? ""}`}
-                      className="flex gap-4 rounded-2xl border border-border-c bg-surface p-4 shadow-sm transition-all duration-300 hover:border-brand-dark/50 hover:shadow-[0_12px_28px_rgba(224,196,0,0.12),0_4px_10px_rgba(0,0,0,0.04)]"
+                      className="flex gap-4 rounded-2xl border border-border-c bg-surface p-4 shadow-sm transition-all duration-300 hover:border-brand-dark/50 hover:shadow-[0_12px_28px_rgba(43,176,191,0.12),0_4px_10px_rgba(0,0,0,0.04)]"
                     >
                       <Link href={`/san-pham/${line.slug}`} className="shrink-0">
                         <ProductThumbnail
