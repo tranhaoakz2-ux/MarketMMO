@@ -45,6 +45,18 @@
   --color-text: #e9e9f2;
   --color-muted: #a3a3b4;
   --color-info-light: rgba(37, 99, 235, 0.22);
+
+  /* Nền 2 tầng XANH NAVY — CHỈ dùng riêng cho section/card nổi bật trên nền
+     .mmo-bg (#0e0f16), qua class dark:bg-[var(--...)] tường minh ở từng
+     component (FeaturedProductsPanel/SellerFeaturedPanel/CategoryTabs/
+     page.tsx danh sách sản phẩm cho section; ProductCard/CategoryProductCard/
+     thân card seller cho card). CỐ Ý KHÔNG đổi --color-surface (#171821 ở
+     trên) — biến đó dùng CHUNG cho toàn site (modal/form/admin qua
+     --adm-surface: var(--color-surface)...), đổi thẳng sẽ ảnh hưởng ngoài
+     phạm vi các khối này. card (--card-navy) SÁNG HƠN section (--section-navy)
+     để phân tầng: nền đen -> section -> card. */
+  --section-navy: #141d30;
+  --card-navy: #1a2740;
 }
 
 @theme inline {
