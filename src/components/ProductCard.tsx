@@ -14,7 +14,7 @@ export default function ProductCard({ product }: { product: Product }) {
   return (
     <Link
       href={`/san-pham/${product.slug}`}
-      className="group relative flex flex-col rounded-lg border-2 border-brand bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-dark hover:shadow-[0_12px_28px_rgba(224,196,0,0.35),0_4px_10px_rgba(0,0,0,0.05)] dark:bg-[var(--card-navy)]"
+      className="group relative flex flex-col rounded-lg border-2 border-brand bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-dark hover:shadow-[0_12px_28px_rgba(224,196,0,0.35),0_4px_10px_rgba(0,0,0,0.05)] mmo-surface-card"
     >
       {product.megaSale?.active && !outOfStock && (
         <span className="absolute -right-2.5 -top-2.5 z-10">

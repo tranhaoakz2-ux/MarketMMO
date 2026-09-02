@@ -30,7 +30,7 @@ function SellerCard({ seller }: { seller: SellerListItem }) {
       href={`/shop/${seller.slug}`}
       className="group w-[187px] shrink-0 rounded-xl transition hover:-translate-y-0.5 sm:w-[204px]"
     >
-      <div className="overflow-hidden rounded-xl border-2 border-brand bg-surface shadow-sm transition-shadow group-hover:shadow-md dark:bg-[var(--card-navy)]">
+      <div className="overflow-hidden rounded-xl border-2 border-brand bg-surface shadow-sm transition-shadow group-hover:shadow-md mmo-surface-card">
         <div className="relative h-[88px] w-full">
           {seller.coverUrl ? (
             <Image src={seller.coverUrl} alt="" fill sizes="204px" className="object-cover" />

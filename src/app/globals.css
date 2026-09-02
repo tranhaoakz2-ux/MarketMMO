@@ -47,8 +47,9 @@
   --color-info-light: rgba(37, 99, 235, 0.22);
 
   /* Nền 2 tầng XANH NAVY — CHỈ dùng riêng cho section/card nổi bật trên nền
-     .mmo-bg (#0e0f16), qua class dark:bg-[var(--...)] tường minh ở từng
-     component (FeaturedProductsPanel/SellerFeaturedPanel/CategoryTabs/
+     .mmo-bg (#0e0f16), qua class .mmo-surface-section/.mmo-surface-card
+     (định nghĩa ngay dưới, CSS thường — không phải Tailwind dark:bg-[...])
+     ở từng component (FeaturedProductsPanel/SellerFeaturedPanel/CategoryTabs/
      page.tsx danh sách sản phẩm cho section; ProductCard/CategoryProductCard/
      thân card seller cho card). CỐ Ý KHÔNG đổi --color-surface (#171821 ở
      trên) — biến đó dùng CHUNG cho toàn site (modal/form/admin qua
@@ -57,6 +58,21 @@
      để phân tầng: nền đen -> section -> card. */
   --section-navy: #141d30;
   --card-navy: #1a2740;
+}
+
+/* Dùng CSS thường (không phải Tailwind dark:bg-[var(...)]) — độ đặc hiệu
+   [data-theme="dark"] + .class = (0,2,0), CAO HƠN hẳn .bg-surface một class
+   (0,1,0), nên LUÔN thắng bất kể thứ tự 2 rule xuất hiện trước/sau trong
+   stylesheet. Bản dùng dark:bg-[var(--...)] trước đó có độ đặc hiệu BẰNG
+   .bg-surface (do :where() không cộng độ đặc hiệu) — về lý thuyết build đầy
+   đủ vẫn thắng nhờ thứ tự xuất hiện sau (đã verify), nhưng phụ thuộc thứ tự
+   này là rủi ro thật khi Turbopack dev/HMR patch CSS không đúng như 1 lần
+   build sạch — đổi sang cách này để KHÔNG còn phụ thuộc thứ tự nữa. */
+[data-theme="dark"] .mmo-surface-section {
+  background-color: var(--section-navy);
+}
+[data-theme="dark"] .mmo-surface-card {
+  background-color: var(--card-navy);
 }
 
 @theme inline {

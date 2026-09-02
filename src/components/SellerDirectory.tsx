@@ -44,7 +44,7 @@ function SellerDirectoryCard({ seller }: { seller: SellerCardData }) {
   return (
     <Link
       href={`/shop/${seller.slug}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border-c bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-dark hover:shadow-lg dark:bg-[var(--card-navy)]"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-border-c bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-dark hover:shadow-lg mmo-surface-card"
     >
       {/* Dải ảnh bìa — ảnh thật nếu seller đã upload (Trang Bán Hàng > Hồ sơ
           cá nhân), fallback gradient tông vàng thương hiệu thay vì để trống. */}

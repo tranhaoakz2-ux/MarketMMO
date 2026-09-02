@@ -105,7 +105,7 @@ export default async function Home({
           </Reveal>
 
           <Reveal delay={0.1}>
-            <div className="grid grid-cols-1 gap-5 dark:bg-[var(--section-navy)] sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 mmo-surface-section sm:grid-cols-2 lg:grid-cols-3">
               {pagedProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

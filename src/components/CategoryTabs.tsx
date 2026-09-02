@@ -169,7 +169,7 @@ export default function CategoryTabs({
   };
 
   return (
-    <div className="rounded-xl border border-border-c bg-surface p-3 shadow-sm dark:bg-[var(--section-navy)]">
+    <div className="rounded-xl border border-border-c bg-surface p-3 shadow-sm mmo-surface-section">
       {/* Tầng trên — tab nhóm cha, luôn 1 dòng + cuộn ngang. Nút mũi tên chỉ
           hiện khi nội dung thực sự tràn (canScrollLeft/Right), ẩn trên mobile
           vì vuốt tay đã đủ dùng ở đó. */}
