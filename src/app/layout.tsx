@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import BackgroundLayer from "@/components/BackgroundLayer";
 import Providers from "@/components/Providers";
 import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_URL } from "@/lib/seo";
 import "./globals.css";
@@ -57,6 +58,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>
       <body className="min-h-full flex flex-col">
+        <BackgroundLayer />
         <Providers>{children}</Providers>
       </body>
     </html>

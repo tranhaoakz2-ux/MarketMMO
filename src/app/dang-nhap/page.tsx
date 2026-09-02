@@ -28,7 +28,7 @@ export default async function LoginPage({
   return (
     <>
       <Header />
-      <main className="flex-1 bg-background">
+      <main className="flex-1">
         <div className="mx-auto max-w-md px-4 py-8 sm:px-6 lg:px-8">
           <h1 className="sr-only">Đăng nhập hoặc đăng ký tài khoản MaketMMO</h1>
           <AuthForms

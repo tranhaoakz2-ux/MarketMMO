@@ -403,3 +403,76 @@ body {
   .mmo-card { position: relative; top: auto; left: auto; transform: none; display: inline-flex; margin: 4px; width: 92px; height: 120px; }
   .mmo-cards-frame { height: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; padding-top: 40px; }
 }
+
+/* ============================================================
+   BackgroundLayer styles — src/components/BackgroundLayer.tsx
+   Lưới ô vuông + tuyết rơi, đổi màu theo dark/light.
+   Cơ chế theme của dự án: [data-theme="dark"] trên <html>.
+   ============================================================ */
+
+@keyframes mmoSnowFall {
+  0%   { transform: translateY(-10px) translateX(0);   opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { transform: translateY(105vh) translateX(24px); opacity: 0; }
+}
+
+/* Lớp nền phủ toàn trang, cố định, nằm SAU nội dung (z-index âm) */
+.mmo-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;            /* nằm sau mọi nội dung -> không chặn click */
+  pointer-events: none;   /* chắc chắn không bắt chuột */
+  overflow: hidden;
+}
+
+/* ---- LƯỚI Ô VUÔNG ---- */
+.mmo-bg-grid {
+  position: absolute;
+  inset: 0;
+  /* mờ dần ở rìa cho đỡ cứng */
+  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000 60%, transparent 100%);
+  mask-image: radial-gradient(ellipse at 50% 30%, #000 60%, transparent 100%);
+  background-size: 44px 44px;
+}
+
+/* mặc định (light mode): lưới ĐEN mờ */
+.mmo-bg-grid {
+  background-image:
+    linear-gradient(rgba(20,20,25,.13) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20,20,25,.13) 1px, transparent 1px);
+}
+/* dark mode: lưới TRẮNG mờ */
+[data-theme="dark"] .mmo-bg-grid {
+  background-image:
+    linear-gradient(rgba(150,180,230,.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(150,180,230,.16) 1px, transparent 1px);
+}
+
+/* ---- TUYẾT RƠI ---- */
+.mmo-bg-snow { position: absolute; inset: 0; }
+
+.mmo-flake {
+  position: absolute;
+  top: -10px;
+  border-radius: 50%;
+  animation-name: mmoSnowFall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* mặc định (light mode): tuyết VÀNG CHANH */
+.mmo-flake {
+  background: #d4e600;
+  box-shadow: 0 0 3px rgba(180,200,0,.6);
+}
+/* dark mode: tuyết TRẮNG */
+[data-theme="dark"] .mmo-flake {
+  background: #ffffff;
+  box-shadow: none;
+}
+
+/* ---- Tôn trọng "giảm chuyển động": tắt tuyết, giữ lưới tĩnh ---- */
+@media (prefers-reduced-motion: reduce) {
+  .mmo-bg-snow { display: none; }
+}

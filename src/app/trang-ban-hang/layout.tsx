@@ -34,7 +34,7 @@ export default async function SellerDashboardLayout({
   return (
     <>
       <Header />
-      <main className="flex-1 bg-background">
+      <main className="flex-1">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           {seller.suspended && (
             <div className="mb-4 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

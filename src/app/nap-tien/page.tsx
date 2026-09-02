@@ -44,7 +44,7 @@ export default async function DepositPage() {
   return (
     <>
       <Header />
-      <main className="flex-1 bg-background">
+      <main className="flex-1">
         <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 lg:px-8">
           <h1 className="sr-only">Nạp tiền vào ví MaketMMO</h1>
           <Breadcrumb items={[{ label: "Trang chủ", href: "/" }, { label: "Nạp tiền" }]} />

@@ -58,7 +58,7 @@ export default async function ForumPostPage({
   return (
     <>
       <Header />
-      <main className="flex-1 bg-background">
+      <main className="flex-1">
         <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
           <Breadcrumb
             items={[

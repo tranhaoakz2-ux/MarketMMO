@@ -69,7 +69,7 @@ export default async function Home({
   return (
     <>
       <Header />
-      <main className="flex-1 bg-background">
+      <main className="flex-1">
         <h1 className="sr-only">MaketMMO — Sàn giao dịch tài khoản, vật phẩm & dịch vụ MMO uy tín</h1>
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
           <Reveal>

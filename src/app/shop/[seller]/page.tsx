@@ -105,7 +105,7 @@ export default async function ShopPage({
   return (
     <>
       <Header />
-      <main className="flex-1 bg-background">
+      <main className="flex-1">
         {/* Ảnh bìa + card hồ sơ dùng CHUNG 1 khung bao (max-w-7xl + padding
             ngang) để 2 khối luôn CÙNG bề rộng/CÙNG lề trái-phải — TRƯỚC ĐÂY
             ảnh bìa nằm NGOÀI khung này (full-bleed hết viewport) trong khi

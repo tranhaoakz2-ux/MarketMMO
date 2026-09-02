@@ -103,7 +103,7 @@ export default function CartPage() {
   return (
     <>
       <Header />
-      <main className="flex-1 bg-background">
+      <main className="flex-1">
         <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 lg:px-8">
           <Breadcrumb items={[{ label: "Trang chủ", href: "/" }, { label: "Giỏ hàng" }]} />
         </div>

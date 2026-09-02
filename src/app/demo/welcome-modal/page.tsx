@@ -12,7 +12,7 @@ export default function WelcomeModalDemoPage() {
   return (
     <>
       <Header />
-      <main className="flex-1 bg-background">
+      <main className="flex-1">
         <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6 lg:px-8">
           <h1 className="text-2xl font-black text-foreground sm:text-3xl">
             Demo: Popup chào mừng
