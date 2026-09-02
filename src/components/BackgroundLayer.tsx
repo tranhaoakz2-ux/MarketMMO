@@ -1,8 +1,8 @@
 /**
  * BackgroundLayer — lớp nền toàn trang cho MaketMMO
- * - Lưới ô vuông mờ + tuyết rơi (nhiều hạt)
- * - Dark mode: lưới trắng mờ, tuyết trắng
- * - Light mode: lưới đen mờ, tuyết vàng chanh
+ * - Carô nhỏ (30px) + lưới ô vuông (44px) mờ + tuyết rơi (nhiều hạt)
+ * - Dark mode: lưới trắng mờ, carô mờ, tuyết trắng
+ * - Light mode: lưới đen mờ, carô xám nhạt, tuyết đen
  * - Phủ toàn trang, cố định (fixed), z-index âm -> KHÔNG chặn click
  * - Tự tắt tuyết khi máy bật "giảm chuyển động" (xem globals.css)
  *
@@ -30,6 +30,7 @@ const SNOW = [
 export default function BackgroundLayer() {
   return (
     <div className="mmo-bg" aria-hidden="true">
+      <div className="mmo-bg-check" />
       <div className="mmo-bg-grid" />
       <div className="mmo-bg-snow">
         {SNOW.map(([left, size, dur, delay, op], i) => (

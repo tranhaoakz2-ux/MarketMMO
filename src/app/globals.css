@@ -416,8 +416,10 @@ body {
 
 /* ============================================================
    BackgroundLayer styles — src/components/BackgroundLayer.tsx
-   Lưới ô vuông + tuyết rơi, đổi màu theo dark/light.
-   Cơ chế theme của dự án: [data-theme="dark"] trên <html>.
+   Lưới ô vuông (44px) + carô nhỏ (30px) + tuyết rơi.
+   Dark:  lưới trắng mờ, carô mờ, tuyết TRẮNG.
+   Light: lưới đen mờ,   carô xám nhạt, tuyết ĐEN.
+   Theme của dự án: [data-theme="dark"] trên <html>.
    ============================================================ */
 
 @keyframes mmoSnowFall {
@@ -427,63 +429,69 @@ body {
   100% { transform: translateY(105vh) translateX(24px); opacity: 0; }
 }
 
-/* Lớp nền phủ toàn trang, cố định, nằm SAU nội dung (z-index âm) */
+/* Lớp nền phủ toàn trang, cố định, nằm SAU nội dung. Màu nền TỔNG đặt
+   ngay tại đây (var(--background)) — không phụ thuộc background của
+   <body> (body không set nền riêng, xem rule html phía trên trong file
+   này, đã sửa đúng ở lần trước để .mmo-bg không bị che). */
 .mmo-bg {
   position: fixed;
   inset: 0;
-  z-index: -1;            /* nằm sau mọi nội dung -> không chặn click */
-  pointer-events: none;   /* chắc chắn không bắt chuột */
+  z-index: -1;
+  pointer-events: none;
   overflow: hidden;
-  background: var(--background); /* màu nền trang thật — xem giải thích ở rule html phía trên */
+  background: var(--background);
 }
 
-/* ---- LƯỚI Ô VUÔNG ---- */
+/* ---- LỚP CARÔ NHỎ (30px) ---- */
+.mmo-bg-check {
+  position: absolute; inset: 0;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000 65%, transparent 100%);
+  mask-image: radial-gradient(ellipse at 50% 30%, #000 65%, transparent 100%);
+  background-size: 30px 30px;
+  /* light mặc định: carô xám nhạt */
+  background-image: conic-gradient(#e9ebef 0 25%, transparent 0 50%, #e9ebef 0 75%, transparent 0);
+}
+[data-theme="dark"] .mmo-bg-check {
+  background-image: conic-gradient(rgba(255,255,255,.03) 0 25%, transparent 0 50%, rgba(255,255,255,.03) 0 75%, transparent 0);
+}
+
+/* ---- LỚP LƯỚI Ô VUÔNG (44px) ---- */
 .mmo-bg-grid {
-  position: absolute;
-  inset: 0;
-  /* mờ dần ở rìa cho đỡ cứng */
-  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000 60%, transparent 100%);
-  mask-image: radial-gradient(ellipse at 50% 30%, #000 60%, transparent 100%);
+  position: absolute; inset: 0;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000 65%, transparent 100%);
+  mask-image: radial-gradient(ellipse at 50% 30%, #000 65%, transparent 100%);
   background-size: 44px 44px;
-}
-
-/* mặc định (light mode): lưới ĐEN mờ */
-.mmo-bg-grid {
+  /* light mặc định: lưới đen mờ */
   background-image:
-    linear-gradient(rgba(20,20,25,.13) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(20,20,25,.13) 1px, transparent 1px);
+    linear-gradient(rgba(20,20,25,.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20,20,25,.16) 1px, transparent 1px);
 }
-/* dark mode: lưới TRẮNG mờ */
 [data-theme="dark"] .mmo-bg-grid {
   background-image:
-    linear-gradient(rgba(150,180,230,.16) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(150,180,230,.16) 1px, transparent 1px);
+    linear-gradient(rgba(150,180,230,.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(150,180,230,.18) 1px, transparent 1px);
 }
 
 /* ---- TUYẾT RƠI ---- */
 .mmo-bg-snow { position: absolute; inset: 0; }
-
 .mmo-flake {
-  position: absolute;
-  top: -10px;
-  border-radius: 50%;
+  position: absolute; top: -10px; border-radius: 50%;
   animation-name: mmoSnowFall;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
-
-/* mặc định (light mode): tuyết VÀNG CHANH */
+/* light mặc định: tuyết ĐEN */
 .mmo-flake {
-  background: #d4e600;
-  box-shadow: 0 0 3px rgba(180,200,0,.6);
+  background: #111111;
+  box-shadow: 0 0 2px rgba(0,0,0,.4);
 }
-/* dark mode: tuyết TRẮNG */
+/* dark: tuyết TRẮNG */
 [data-theme="dark"] .mmo-flake {
   background: #ffffff;
   box-shadow: none;
 }
 
-/* ---- Tôn trọng "giảm chuyển động": tắt tuyết, giữ lưới tĩnh ---- */
+/* ---- Giảm chuyển động: tắt tuyết, giữ lưới+carô tĩnh ---- */
 @media (prefers-reduced-motion: reduce) {
   .mmo-bg-snow { display: none; }
 }
