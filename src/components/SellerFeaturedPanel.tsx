@@ -4,7 +4,7 @@ import SellerCarousel, { type SellerListItem } from "@/components/SellerCarousel
 
 export default function SellerFeaturedPanel({ items }: { items: SellerListItem[] }) {
   return (
-    <div className="rounded-[10px] border border-border-c bg-surface p-4 shadow-sm mmo-surface-section sm:p-5">
+    <div className="rounded-[10px] border border-border-c bg-surface p-4 shadow-sm mmo-panel-section sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b-2 border-brand pb-3">
         <h2 className="flex items-center gap-2 text-[14.4px] font-black text-foreground">
           <Store className="h-[30px] w-[30px] text-red-600" />

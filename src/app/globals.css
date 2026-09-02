@@ -75,6 +75,14 @@
   background-color: var(--card-navy);
 }
 
+/* .mmo-surface-section giờ trong suốt (để lộ carô/tuyết ở khu lưới sản phẩm
+   thường/CategoryTabs) — 2 panel "Sản Phẩm Nổi Bật"/"Seller Nổi Bật" vẫn cần
+   nền navy ĐẶC để gom nhóm nội dung, nên dùng class RIÊNG, không dùng chung
+   .mmo-surface-section (đổi lại class đó sẽ kéo theo cả lưới/CategoryTabs). */
+[data-theme="dark"] .mmo-panel-section {
+  background-color: var(--section-navy);
+}
+
 @theme inline {
   /* Main content container (mx-auto max-w-7xl dùng khắp Header/Footer/các
      trang) — 80rem mặc định của Tailwind, +15% theo yêu cầu = 92rem
