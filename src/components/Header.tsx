@@ -131,12 +131,12 @@ export default function Header() {
   };
 
   return (
-    <header className="caro-surface sticky top-0 z-50">
+    <header className="sticky top-0 z-50">
       <div className="hidden overflow-hidden bg-ink py-[3px] text-sm font-normal text-white/70 sm:block">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">{tickerText}</div>
       </div>
 
-      <div className="shadow-sm">
+      <div className="caro-surface shadow-sm">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-2.5 sm:h-[73px] sm:flex-nowrap sm:px-6 sm:py-0 lg:px-8">
           <button
             className="rounded-lg p-2 text-foreground hover:bg-black/10 lg:hidden"
@@ -265,7 +265,7 @@ export default function Header() {
         </div>
       </div>
 
-      <div className="hidden border-b border-border-c lg:block">
+      <div className="hidden border-b border-border-c bg-surface lg:block">
         <nav className="mx-auto flex h-[50px] max-w-7xl items-center gap-6 px-4 text-base font-semibold text-foreground/80 sm:px-6 lg:px-8">
           <Link href="/" className="whitespace-nowrap transition hover:text-brand-dark">
             Trang chủ
