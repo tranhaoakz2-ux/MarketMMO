@@ -28,7 +28,7 @@ export default function AccountMenu({ name, role }: { name: string; role: Role }
     <div className="group relative flex h-full items-center">
       <Link
         href="/ho-so-ca-nhan"
-        className="flex h-10 items-center gap-2.5 overflow-hidden rounded-full border-2 border-ink bg-white pr-4 text-sm font-bold text-foreground transition hover:bg-surface-alt dark:bg-ink"
+        className="flex h-10 items-center gap-2.5 overflow-hidden rounded-full bg-[linear-gradient(135deg,#12c9a0_0%,#2bb0bf_45%,#4f6ef2_100%)] pr-4 text-sm font-bold text-white transition hover:brightness-110"
       >
         <Avatar size={40} />
         {name}

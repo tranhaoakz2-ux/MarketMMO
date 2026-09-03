@@ -136,10 +136,10 @@ export default function Header() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">{tickerText}</div>
       </div>
 
-      <div className="bg-[linear-gradient(90deg,#12c9a0_0%,#2bb0bf_45%,#4f6ef2_100%)] shadow-sm">
+      <div className="shadow-sm">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-2.5 sm:h-[73px] sm:flex-nowrap sm:px-6 sm:py-0 lg:px-8">
           <button
-            className="rounded-lg p-2 text-white hover:bg-black/10 lg:hidden"
+            className="rounded-lg p-2 text-foreground hover:bg-black/10 lg:hidden"
             onClick={() => setMenuOpen((v) => !v)}
             aria-label="Mở menu"
           >
@@ -157,8 +157,8 @@ export default function Header() {
                 priority
               />
             </span>
-            <span className="text-[26px] font-black tracking-tight text-white sm:text-[30px]">
-              MAKET<span className="text-white">MMO</span>
+            <span className="text-[26px] font-black tracking-tight text-foreground sm:text-[30px]">
+              MAKET<span className="text-foreground">MMO</span>
             </span>
           </Link>
 
@@ -177,7 +177,7 @@ export default function Header() {
               />
               <button
                 type="submit"
-                className="hidden h-full shrink-0 items-center bg-ink px-4 text-white transition hover:bg-ink-soft sm:flex"
+                className="hidden h-full shrink-0 items-center bg-[linear-gradient(135deg,#12c9a0_0%,#2bb0bf_45%,#4f6ef2_100%)] px-4 text-white transition hover:brightness-110 sm:flex"
                 aria-label="Tìm kiếm"
               >
                 <Search className="h-4 w-4" />
@@ -190,10 +190,10 @@ export default function Header() {
             {status === "authenticated" && <HeaderChatButton />}
             <Link
               href="/gio-hang"
-              className="relative flex items-center justify-center rounded-full border-2 border-ink bg-white px-4 py-2 transition hover:bg-surface-alt dark:bg-ink"
+              className="relative flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#12c9a0_0%,#2bb0bf_45%,#4f6ef2_100%)] px-4 py-2 transition hover:brightness-110"
               aria-label="Giỏ hàng"
             >
-              <ShoppingBag className="h-5 w-5 text-foreground" />
+              <ShoppingBag className="h-5 w-5 text-white" />
               {totalCount > 0 && (
                 <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
                   {totalCount}
@@ -207,9 +207,9 @@ export default function Header() {
               <>
                 <Link
                   href="/nap-tien"
-                  className="flex items-center gap-2 rounded-full border-2 border-ink bg-white px-4 py-2 text-sm font-bold text-foreground transition hover:bg-surface-alt dark:bg-ink"
+                  className="flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#12c9a0_0%,#2bb0bf_45%,#4f6ef2_100%)] px-4 py-2 text-sm font-bold text-white transition hover:brightness-110"
                 >
-                  <Wallet className="h-4 w-4 text-foreground" />
+                  <Wallet className="h-4 w-4 text-white" />
                   {formatVnd(session.user.walletBalance)}
                 </Link>
                 <AccountMenu
@@ -218,7 +218,7 @@ export default function Header() {
                 />
                 <button
                   onClick={() => signOut({ callbackUrl: "/" })}
-                  className="rounded-full p-2.5 text-white hover:bg-black/10"
+                  className="rounded-full bg-[linear-gradient(135deg,#12c9a0_0%,#2bb0bf_45%,#4f6ef2_100%)] p-2.5 text-white transition hover:brightness-110"
                   aria-label="Đăng xuất"
                 >
                   <LogOut className="h-6 w-6" />
@@ -254,7 +254,11 @@ export default function Header() {
               placeholder="Tìm sản phẩm hoặc người bán..."
               className="h-full w-full bg-transparent px-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:outline-none"
             />
-            <button type="submit" className="mr-3.5 shrink-0 text-foreground/40" aria-label="Tìm kiếm">
+            <button
+              type="submit"
+              className="mr-1.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#12c9a0_0%,#2bb0bf_45%,#4f6ef2_100%)] text-white transition hover:brightness-110"
+              aria-label="Tìm kiếm"
+            >
               <Search className="h-4 w-4" />
             </button>
           </form>
@@ -280,13 +284,13 @@ export default function Header() {
           ))}
           <Link
             href={sellerBadgeHref}
-            className="ml-auto whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-sm font-bold text-[#141d30] transition hover:bg-surface-alt"
+            className="ml-auto whitespace-nowrap rounded-full bg-[linear-gradient(135deg,#12c9a0_0%,#2bb0bf_45%,#4f6ef2_100%)] px-3 py-1.5 text-sm font-bold text-white transition hover:brightness-110"
           >
             {sellerBadgeLabel}
           </Link>
           <Link
             href="/nguoi-ban"
-            className="whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-sm font-bold text-[#141d30] transition hover:bg-surface-alt"
+            className="whitespace-nowrap rounded-full bg-[linear-gradient(135deg,#12c9a0_0%,#2bb0bf_45%,#4f6ef2_100%)] px-3 py-1.5 text-sm font-bold text-white transition hover:brightness-110"
           >
             Danh Sách Seller
           </Link>
@@ -324,14 +328,14 @@ export default function Header() {
             <Link
               href={sellerBadgeHref}
               onClick={() => setMenuOpen(false)}
-              className="w-fit rounded-full bg-white px-3 py-1.5 font-bold text-[#141d30] hover:bg-surface-alt"
+              className="w-fit rounded-full bg-[linear-gradient(135deg,#12c9a0_0%,#2bb0bf_45%,#4f6ef2_100%)] px-3 py-1.5 font-bold text-white hover:brightness-110"
             >
               {sellerBadgeLabel}
             </Link>
             <Link
               href="/nguoi-ban"
               onClick={() => setMenuOpen(false)}
-              className="w-fit rounded-full bg-white px-3 py-1.5 font-bold text-[#141d30] hover:bg-surface-alt"
+              className="w-fit rounded-full bg-[linear-gradient(135deg,#12c9a0_0%,#2bb0bf_45%,#4f6ef2_100%)] px-3 py-1.5 font-bold text-white hover:brightness-110"
             >
               Danh Sách Seller
             </Link>
