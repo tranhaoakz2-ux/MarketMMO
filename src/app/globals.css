@@ -27,6 +27,12 @@
   --color-danger: #e6483f;
   --color-info: #2563eb;
   --color-info-light: #dbeafe;
+
+  /* Màu lưới ô vuông/carô dùng chung giữa BackgroundLayer (.mmo-bg-grid/
+     .mmo-bg-check) và mọi bề mặt tái dùng nền carô khác (.caro-surface, xem
+     cuối file) — 1 nguồn duy nhất, đổi ở đây là đổi luôn cả 2 nơi. */
+  --caro-grid-line: rgba(20, 20, 25, 0.16);
+  --caro-check: #e9ebef;
 }
 
 /* CHẾ ĐỘ TỐI — chỉ ghi đè các biến "đổi theo nền" (surface/border/text/muted/
@@ -45,6 +51,8 @@
   --color-text: #e9e9f2;
   --color-muted: #a3a3b4;
   --color-info-light: rgba(37, 99, 235, 0.22);
+  --caro-grid-line: rgba(150, 180, 230, 0.18);
+  --caro-check: rgba(255, 255, 255, 0.03);
 
   /* Nền 2 tầng XANH NAVY — CHỈ dùng riêng cho section/card nổi bật trên nền
      .mmo-bg (#0e0f16), qua class .mmo-surface-section/.mmo-surface-card
@@ -484,11 +492,10 @@ body {
   -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000 65%, transparent 100%);
   mask-image: radial-gradient(ellipse at 50% 30%, #000 65%, transparent 100%);
   background-size: 30px 30px;
-  /* light mặc định: carô xám nhạt */
-  background-image: conic-gradient(#e9ebef 0 25%, transparent 0 50%, #e9ebef 0 75%, transparent 0);
-}
-[data-theme="dark"] .mmo-bg-check {
-  background-image: conic-gradient(rgba(255,255,255,.03) 0 25%, transparent 0 50%, rgba(255,255,255,.03) 0 75%, transparent 0);
+  /* Màu carô đọc từ --caro-check (tự đổi theo [data-theme="dark"], khai ở
+     đầu file) — không hardcode riêng ở đây nữa, dùng chung nguồn với
+     .caro-surface bên dưới. */
+  background-image: conic-gradient(var(--caro-check) 0 25%, transparent 0 50%, var(--caro-check) 0 75%, transparent 0);
 }
 
 /* ---- LỚP LƯỚI Ô VUÔNG (44px) ---- */
@@ -497,15 +504,11 @@ body {
   -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000 65%, transparent 100%);
   mask-image: radial-gradient(ellipse at 50% 30%, #000 65%, transparent 100%);
   background-size: 44px 44px;
-  /* light mặc định: lưới đen mờ */
+  /* Màu lưới đọc từ --caro-grid-line (tự đổi theo [data-theme="dark"]) —
+     cùng lý do như .mmo-bg-check ở trên. */
   background-image:
-    linear-gradient(rgba(20,20,25,.16) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(20,20,25,.16) 1px, transparent 1px);
-}
-[data-theme="dark"] .mmo-bg-grid {
-  background-image:
-    linear-gradient(rgba(150,180,230,.18) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(150,180,230,.18) 1px, transparent 1px);
+    linear-gradient(var(--caro-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--caro-grid-line) 1px, transparent 1px);
 }
 
 /* ---- TUYẾT RƠI ---- */
@@ -530,4 +533,24 @@ body {
 /* ---- Giảm chuyển động: tắt tuyết, giữ lưới+carô tĩnh ---- */
 @media (prefers-reduced-motion: reduce) {
   .mmo-bg-snow { display: none; }
+}
+
+/* .caro-surface — nền carô + lưới TÁI DÙNG được, rút từ .mmo-bg-grid/
+   .mmo-bg-check (cùng đọc --caro-grid-line/--caro-check nên KHÔNG BAO GIỜ
+   lệch màu với BackgroundLayer, đổi ở 1 nguồn là đổi cả 2 nơi), KHÔNG kèm
+   hiệu ứng tuyết. Gộp lưới + carô + màu nền tảng thành nhiều lớp
+   background-image trên ĐÚNG 1 phần tử (không cần div con như .mmo-bg) để
+   gắn thẳng vào bất kỳ khối nào cần nền carô đặc — vd Header.tsx (thanh
+   trên cùng + dải nav) khi header chuyển sang nền trong suốt, cuộn xuống
+   vẫn cần 1 nền mờ đục để không lộ nội dung phía sau. CỐ Ý bỏ mask-image
+   (vignette toả tròn) của .mmo-bg-grid/.mmo-bg-check — mask đó tính theo
+   % chiều cao so với khối full-viewport, áp lên 1 khối thấp như header sẽ
+   méo/mờ sai chỗ, không phải "y hệt nền trang" nữa. */
+.caro-surface {
+  background-color: var(--background);
+  background-image:
+    linear-gradient(var(--caro-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--caro-grid-line) 1px, transparent 1px),
+    conic-gradient(var(--caro-check) 0 25%, transparent 0 50%, var(--caro-check) 0 75%, transparent 0);
+  background-size: 44px 44px, 44px 44px, 30px 30px;
 }

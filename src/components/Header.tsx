@@ -131,7 +131,7 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50">
+    <header className="caro-surface sticky top-0 z-50">
       <div className="hidden overflow-hidden bg-ink py-[3px] text-sm font-normal text-white/70 sm:block">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">{tickerText}</div>
       </div>
@@ -265,7 +265,7 @@ export default function Header() {
         </div>
       </div>
 
-      <div className="hidden border-b border-border-c bg-surface lg:block">
+      <div className="hidden border-b border-border-c lg:block">
         <nav className="mx-auto flex h-[50px] max-w-7xl items-center gap-6 px-4 text-base font-semibold text-foreground/80 sm:px-6 lg:px-8">
           <Link href="/" className="whitespace-nowrap transition hover:text-brand-dark">
             Trang chủ
