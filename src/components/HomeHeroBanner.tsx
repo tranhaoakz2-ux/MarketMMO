@@ -61,28 +61,19 @@ export default function HomeHeroBanner() {
               </span>
             </div>
 
-            {/* NÚT CTA 3 lớp */}
-            <Link href="#danh-sach-san-pham" className="mmo-cta-wrap group">
-              <svg className="mmo-cta-svg" preserveAspectRatio="none">
-                <rect
-                  className="mmo-dash-outer"
-                  x="3"
-                  y="3"
-                  width="calc(100% - 6px)"
-                  height="calc(100% - 6px)"
-                  rx="18"
-                />
-                <rect
-                  className="mmo-dash-inner"
-                  x="8"
-                  y="8"
-                  width="calc(100% - 16px)"
-                  height="calc(100% - 16px)"
-                  rx="15"
-                />
-              </svg>
-              <span className="mmo-cta-btn">
-                Xem tất cả sản phẩm &amp; giá
+            {/* NÚT CTA — style neon + khói teal 3D (.cta-neon, xem globals.css) */}
+            <Link href="#danh-sach-san-pham" className="cta-neon">
+              <span className="sm a s1" aria-hidden="true" />
+              <span className="sm b s2" aria-hidden="true" />
+              <span className="sm c s3" aria-hidden="true" />
+              <span className="sm b s4" aria-hidden="true" />
+              <span className="sm a s5" aria-hidden="true" />
+              <span className="sm c s6" aria-hidden="true" />
+              <span className="sm b s7" aria-hidden="true" />
+              <span className="sm a s8" aria-hidden="true" />
+              <span className="sm c s9" aria-hidden="true" />
+              <span className="cta-lbl">Xem tất cả sản phẩm &amp; giá</span>
+              <span className="cta-ar">
                 <ArrowRight size={22} strokeWidth={2} />
               </span>
             </Link>

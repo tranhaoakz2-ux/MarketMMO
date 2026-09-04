@@ -155,6 +155,70 @@ body {
   scrollbar-width: none;
 }
 
+/* ============================================================
+   .cta-neon — style neon + khói teal 3D dùng cho nút CTA hero
+   "Xem tất cả sản phẩm và giá" (src/components/HomeHeroBanner.tsx).
+   Thay thế hoàn toàn .mmo-cta-wrap, .mmo-cta-svg, .mmo-dash, .mmo-cta-btn
+   ở nút đó (các class mmo-cta/mmo-dash cũ vẫn giữ nguyên trong file này,
+   không xoá, chỉ không còn được JSX tham chiếu tới nữa).
+   ĐẶT Ở ĐÂY thay vì cuối file: build production thực tế cho thấy đặt
+   khối rule này ngay sau caro-surface (cuối file, trước 3 khối keyframes
+   liên tiếp) khiến đúng rule gốc bị mất khỏi CSS đã biên dịch, trong khi
+   mọi rule con và keyframes vẫn ra bình thường. Đổi vị trí lên đây đã
+   verify bằng build thực tế là ra đủ.
+   LƯU Ý CHUNG cho mọi người sửa file này sau: KHÔNG đặt dấu ngoặc nhọn
+   { } bên trong comment CSS — thử nghiệm trực tiếp cho thấy comment
+   chứa "{ }" khiến trình biên dịch CSS của Turbopack báo lỗi cú pháp
+   thật (không phải chỉ mất rule âm thầm như lỗi vị trí ở trên). */
+.cta-neon {
+  position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 14px;
+  padding: 16px 34px; border-radius: 14px; border: 1.8px solid transparent;
+  background:
+    linear-gradient(#05110f, #05110f) padding-box,
+    linear-gradient(120deg, #aefff5, #18ddca 36%, #18ddca 64%, #aefff5) border-box;
+  box-shadow: 0 0 24px rgba(24, 235, 215, .45), 0 0 4px rgba(150, 255, 245, .8), inset 0 0 26px rgba(12, 140, 125, .28);
+  color: #3ef4e0; font-weight: 700; letter-spacing: .4px; text-shadow: 0 0 12px rgba(62, 244, 224, .4);
+  cursor: pointer; text-decoration: none;
+}
+.cta-neon .cta-lbl, .cta-neon .cta-ar { position: relative; z-index: 3; }
+.cta-neon .cta-ar { display: inline-flex; color: #3ef4e0; }
+.cta-neon .sm { position: absolute; border-radius: 50%; z-index: 1; pointer-events: none; }
+.cta-neon .a { background: radial-gradient(closest-side, rgba(17, 197, 172, .7), transparent); }
+.cta-neon .b { background: radial-gradient(closest-side, rgba(27, 216, 191, .55), transparent); }
+.cta-neon .c { background: radial-gradient(closest-side, rgba(13, 176, 153, .62), transparent); }
+.cta-neon .s1 { left: 0%; top: 18%; width: 110px; height: 72px; filter: blur(14px); animation: ctaF1 9s ease-in-out infinite; }
+.cta-neon .s2 { left: 14%; top: -12%; width: 80px; height: 58px; filter: blur(12px); animation: ctaF2 11s ease-in-out infinite -2s; }
+.cta-neon .s3 { left: 26%; top: 38%; width: 92px; height: 60px; filter: blur(15px); animation: ctaF3 8s ease-in-out infinite -4s; }
+.cta-neon .s4 { left: 40%; top: 4%; width: 110px; height: 72px; filter: blur(13px); animation: ctaF2 12s ease-in-out infinite -1s; }
+.cta-neon .s5 { left: 54%; top: 34%; width: 86px; height: 56px; filter: blur(12px); animation: ctaF1 10s ease-in-out infinite -6s; }
+.cta-neon .s6 { left: 66%; top: -8%; width: 96px; height: 64px; filter: blur(15px); animation: ctaF3 13s ease-in-out infinite -3s; }
+.cta-neon .s7 { left: 78%; top: 30%; width: 100px; height: 68px; filter: blur(14px); animation: ctaF2 9.5s ease-in-out infinite -5s; }
+.cta-neon .s8 { right: -2%; top: 14%; width: 110px; height: 72px; filter: blur(16px); animation: ctaF1 11.5s ease-in-out infinite -7s; }
+.cta-neon .s9 { left: 45%; top: 46%; width: 80px; height: 52px; filter: blur(12px); animation: ctaF3 10.5s ease-in-out infinite -2.5s; }
+@keyframes ctaF1 {
+  0%   { transform: translate(0, 0) scale(1); opacity: .5; }
+  25%  { transform: translate(12px, -8px) scale(1.12); opacity: .85; }
+  50%  { transform: translate(18px, 4px) scale(1.2); opacity: .6; }
+  75%  { transform: translate(7px, -4px) scale(1.06); opacity: .78; }
+  100% { transform: translate(0, 0) scale(1); opacity: .5; }
+}
+@keyframes ctaF2 {
+  0%   { transform: translate(0, 0) scale(1); opacity: .45; }
+  30%  { transform: translate(-14px, -6px) scale(1.16); opacity: .78; }
+  60%  { transform: translate(-8px, 7px) scale(1.08); opacity: .55; }
+  100% { transform: translate(0, 0) scale(1); opacity: .45; }
+}
+@keyframes ctaF3 {
+  0%   { transform: translate(0, 0) scale(1); opacity: .5; }
+  40%  { transform: translate(9px, 7px) scale(1.2); opacity: .84; }
+  70%  { transform: translate(-6px, -7px) scale(1.06); opacity: .6; }
+  100% { transform: translate(0, 0) scale(1); opacity: .5; }
+}
+/* Tôn trọng "giảm chuyển động": tắt khói bay, giữ nút vẫn hiện đủ (glow tĩnh). */
+@media (prefers-reduced-motion: reduce) {
+  .cta-neon .sm { animation: none !important; }
+}
+
 /* Auto-scrolling "marquee" carousel (vd: Sản phẩm nổi bật) — track chứa nội
    dung nhân đôi, chạy từ translateX(-50%) -> translateX(0%) để trôi liên tục
    từ trái sang phải rồi lặp lại mượt (không giật ở điểm nối). */
